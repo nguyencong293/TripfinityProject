@@ -27,8 +27,8 @@ CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20) DEFAULT NULL,
     avatar_url VARCHAR(512) DEFAULT NULL,
-    role ENUM('tourist','provider','admin') NOT NULL,
-    status ENUM('active','banned',) NOT NULL DEFAULT 'active',
+    account_role ENUM('tourist','provider','admin') NOT NULL,
+    account_status ENUM('active','banned') NOT NULL DEFAULT 'active',
     date_of_birth DATE DEFAULT NULL,
     gender ENUM('male','female','other') DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -47,9 +47,9 @@ CREATE TABLE IF NOT EXISTS providers (
     bank_account_number VARCHAR(100) DEFAULT NULL,
     bank_name VARCHAR(255) DEFAULT NULL,
     logo_url VARCHAR(512) DEFAULT NULL,
-    description TEXT DEFAULT NULL,
+    provider_description TEXT DEFAULT NULL,
     rating_overall DECIMAL(3,2) NOT NULL DEFAULT 0.00,
-    status ENUM('pending','approved','rejected','suspended') NOT NULL DEFAULT 'pending',
+    provider_status ENUM('pending','approved','rejected','suspended') NOT NULL DEFAULT 'pending',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
@@ -59,9 +59,9 @@ CREATE TABLE IF NOT EXISTS providers (
 CREATE TABLE IF NOT EXISTS services (
     service_id INT AUTO_INCREMENT PRIMARY KEY,
     provider_id INT NOT NULL,
-    type ENUM('tour','hotel','restaurant','activity','other') NOT NULL,
+    service_type ENUM('tour','hotel','restaurant','activity','other') NOT NULL,
     title VARCHAR(255) NOT NULL,
-    description TEXT DEFAULT NULL,
+    service_description TEXT DEFAULT NULL,
     location VARCHAR(255) DEFAULT NULL,
     start_date DATE DEFAULT NULL,
     end_date DATE DEFAULT NULL,
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS services (
     image_urls TEXT DEFAULT NULL, -- JSON array nếu muốn lưu nhiều URL
     rating_average DECIMAL(3,2) NOT NULL DEFAULT 0.00,
     badges VARCHAR(255) DEFAULT NULL, -- lưu dạng 'flash-deal,recommended'
-    status ENUM('published','archived','disabled') NOT NULL DEFAULT 'published',
+    service_status ENUM('published','archived','disabled') NOT NULL DEFAULT 'published',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
@@ -100,8 +100,8 @@ CREATE TABLE IF NOT EXISTS itineraries (
     itinerary_id INT AUTO_INCREMENT PRIMARY KEY,
     tour_id INT NOT NULL,
     day_number INT NOT NULL,
-    date DATE DEFAULT NULL,
-    time VARCHAR(50) DEFAULT NULL,
+    itinerarie_date DATE DEFAULT NULL,
+    itinerarie_time VARCHAR(50) DEFAULT NULL,
     activity_description TEXT NOT NULL,
     location VARCHAR(255) DEFAULT NULL,
     guide_id INT DEFAULT NULL, -- FK → users nếu HDV quản lý qua user
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS group_bookings (
     service_id INT NOT NULL,
     group_name VARCHAR(255) DEFAULT NULL,
     max_participants INT DEFAULT NULL,
-    status ENUM('open','closed','cancelled') NOT NULL DEFAULT 'open',
+    group_booking_status ENUM('open','closed','cancelled') NOT NULL DEFAULT 'open',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (leader_id) REFERENCES users(user_id),
@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     num_children INT NOT NULL DEFAULT 0,
     total_price DECIMAL(12,2) NOT NULL,
     currency_code CHAR(3) NOT NULL,
-    status ENUM('pending','confirmed','cancelled','completed','refunded') NOT NULL DEFAULT 'pending',
+    booking_status ENUM('pending','confirmed','cancelled','completed','refunded') NOT NULL DEFAULT 'pending',
     payment_id INT DEFAULT NULL, -- không đặt FK vì Payments sẽ reference về booking_id
     e_ticket_url VARCHAR(512) DEFAULT NULL,
     qr_code_data TEXT DEFAULT NULL,
@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS payments (
     currency_code CHAR(3) NOT NULL,
     payment_method ENUM('vnpay','momo','visa','mastercard','paypal','other') NOT NULL,
     transaction_id VARCHAR(255) NOT NULL UNIQUE,
-    status ENUM('pending','success','failed','refunded') NOT NULL DEFAULT 'pending',
+    payment_status ENUM('pending','success','failed','refunded') NOT NULL DEFAULT 'pending',
     payment_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS reviews (
     content TEXT NOT NULL,
     image_urls TEXT DEFAULT NULL, -- JSON array lưu URL ảnh nếu có
     likes_count INT NOT NULL DEFAULT 0,
-    status ENUM('approved','rejected') NOT NULL DEFAULT 'approved',
+    review_status ENUM('approved','rejected') NOT NULL DEFAULT 'approved',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id),
@@ -215,7 +215,7 @@ CREATE TABLE IF NOT EXISTS blogs (
     tags VARCHAR(255) DEFAULT NULL, -- lưu 'tag1,tag2,tag3'
     views_count INT NOT NULL DEFAULT 0,
     likes_count INT NOT NULL DEFAULT 0,
-    status ENUM('published','archived') NOT NULL DEFAULT 'published',
+    blog_status ENUM('published','archived') NOT NULL DEFAULT 'published',
     published_at DATETIME DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -223,7 +223,7 @@ CREATE TABLE IF NOT EXISTS blogs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 12. Bảng follows (theo dõi blogger)
-CREATE TABLE IF NOT EXISTS follows (
+CREATE TABLE IF NOT EXISTS follow (
     follow_id INT AUTO_INCREMENT PRIMARY KEY,
     follower_id INT NOT NULL,
     followed_blogger_id INT NOT NULL,
@@ -236,7 +236,7 @@ CREATE TABLE IF NOT EXISTS follows (
 CREATE TABLE IF NOT EXISTS itineraries_downloads (
     itinerary_build_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    name VARCHAR(255) NOT NULL,
+    itineraries_download_name VARCHAR(255) NOT NULL,
     content_json LONGTEXT NOT NULL,
     share_link VARCHAR(512) DEFAULT NULL,
     pdf_export_url VARCHAR(512) DEFAULT NULL,
@@ -270,7 +270,7 @@ CREATE TABLE IF NOT EXISTS chatbot_logs (
     query_text TEXT NOT NULL,
     intent_detected VARCHAR(255) DEFAULT NULL,
     response_text TEXT NOT NULL,
-    language VARCHAR(10) DEFAULT NULL,
+    chatbot_log_language VARCHAR(10) DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -361,8 +361,8 @@ CREATE TABLE IF NOT EXISTS image_search_logs (
 -- 23. Bảng badges (gamification – huy hiệu)
 CREATE TABLE IF NOT EXISTS badges (
     badge_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT DEFAULT NULL,
+    badge_name VARCHAR(255) NOT NULL,
+    badge_description TEXT DEFAULT NULL,
     icon_url VARCHAR(512) DEFAULT NULL,
     criteria_json LONGTEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -395,7 +395,7 @@ CREATE TABLE IF NOT EXISTS points (
 CREATE TABLE IF NOT EXISTS notifications (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    type ENUM('in_app','email','push','sms') NOT NULL,
+    notification_type ENUM('in_app','email','push','sms') NOT NULL,
     category ENUM('booking_confirmation','price_alert','promo','system_alert','social') NOT NULL,
     title VARCHAR(255) DEFAULT NULL,
     content TEXT NOT NULL,
@@ -414,7 +414,7 @@ CREATE TABLE IF NOT EXISTS admin_actions (
     action_type VARCHAR(100) NOT NULL,
     target_type ENUM('user','provider','service','blog','booking','review','other') NOT NULL,
     target_id INT DEFAULT NULL,
-    description TEXT DEFAULT NULL,
+    admin_action_description TEXT DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (admin_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -423,6 +423,6 @@ CREATE TABLE IF NOT EXISTS admin_actions (
 CREATE TABLE IF NOT EXISTS system_settings (
     setting_key VARCHAR(100) PRIMARY KEY,
     setting_value TEXT NOT NULL,
-    description VARCHAR(255) DEFAULT NULL,
+    system_setting_description VARCHAR(255) DEFAULT NULL,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
