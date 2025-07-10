@@ -1,0 +1,52 @@
+services:
+  db:
+    image: mysql:8.0.34
+    container_name: mydb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: tripfinity2025
+      MYSQL_DATABASE: tripfinity
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/tripfinity?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: tripfinity2025
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  flutter_builder:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: flutter_builder
+    command: flutter build apk --release
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+    driver: local
