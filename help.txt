@@ -4,3 +4,5 @@ Lệnh build
 docker-compose up --build -d
 Lệnh đóng
 docker-compose down
+Tạo nơi để chứa apk khi build bằng docker
+mkdir app\build\app\outputs\flutter-apk
