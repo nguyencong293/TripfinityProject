@@ -1,0 +1,6 @@
+Lệnh xoá toàn bộ project đang chạy (container + network + volume đã tạo):
+docker compose down -v --rmi all
+Lệnh build 
+docker-compose up --build -d
+Lệnh đóng
+docker-compose down

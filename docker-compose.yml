@@ -46,6 +46,8 @@ services:
     command: flutter build apk --release
     depends_on:
       - backend
+    volumes:
+      - ./app/build/app/outputs/flutter-apk:/app/build/app/outputs/flutter-apk
 
 volumes:
   db_data:
