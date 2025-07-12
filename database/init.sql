@@ -35,6 +35,11 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE `users` 
+ADD COLUMN `otp_expiry_time` datetime,
+ADD COLUMN `reset_otp` varchar(6)
+;
+
 -- 2. Bảng providers
 CREATE TABLE IF NOT EXISTS providers (
     provider_id INT AUTO_INCREMENT PRIMARY KEY,

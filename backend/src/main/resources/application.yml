@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: student-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    url: jdbc:mysql://${DB_HOST:db}:${DB_PORT:3306}/${DB_NAME:tripfinity}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&useSSL=false&connectionCollation=utf8mb4_unicode_ci
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:tripfinity2025}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:true}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        '[format_sql]': true
+        connection:
+          useUnicode: true
+          characterEncoding: UTF-8
+          CharSet: utf8mb4
+        jdbc:
+          '[time_zone]': UTC
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: tripfinity2025@gmail.com
+    password: fgfc atqj jrxy kjmc
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  app:
+    jwt:
+      secret: oB1VRpuC57rPPWlODQH02IHBGrqWRRQusCJ3zEOcXSvcsSM8lUmVApItEpurp3feDbrhmRjZZvFbFQxwWH9gAg==
+      expiration: 86400
+
+server:
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+
+logging:
+  level:
+    '[com.company.student_backend]': ${LOG_LEVEL:DEBUG}
+    '[org.springframework.web]': ${LOG_LEVEL_WEB:DEBUG}
+    '[org.springframework.security]': ${LOG_LEVEL_SECURITY:WARN}
+    '[org.hibernate.SQL]': ${LOG_LEVEL_SQL:DEBUG}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: ${HEALTH_SHOW_DETAILS:always}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
