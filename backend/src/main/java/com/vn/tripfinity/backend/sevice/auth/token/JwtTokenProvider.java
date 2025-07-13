@@ -1,4 +1,4 @@
-package com.vn.tripfinity.backend.sevice.token;
+package com.vn.tripfinity.backend.sevice.auth.token;
 
 import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;

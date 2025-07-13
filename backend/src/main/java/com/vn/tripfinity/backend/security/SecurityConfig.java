@@ -1,7 +1,7 @@
 package com.vn.tripfinity.backend.security;
 
-import com.vn.tripfinity.backend.sevice.CustomUserDetailsService;
-import com.vn.tripfinity.backend.sevice.token.JwtAuthenticationFilter;
+import com.vn.tripfinity.backend.sevice.auth.CustomUserDetailsService;
+import com.vn.tripfinity.backend.sevice.auth.token.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -54,14 +54,14 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/swagger-resources/**"
-                        ).permitAll()
+//                        .requestMatchers(
+//                                "/v3/api-docs/**",
+//                                "/swagger-ui/**",
+//                                "/swagger-ui.html",
+//                                "/swagger-resources/**"
+//                        ).permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/api/auth/account/user/register").permitAll()
+                        .requestMatchers("/api/auth/account-user/register").permitAll()
                         .requestMatchers("/**").permitAll()
                         .anyRequest().authenticated()) // Mọi yêu cầu khác cần xác thực
                 .authenticationProvider(authenticationProvider())

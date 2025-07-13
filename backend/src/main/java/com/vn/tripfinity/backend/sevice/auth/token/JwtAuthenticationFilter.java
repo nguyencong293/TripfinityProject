@@ -1,4 +1,4 @@
-package com.vn.tripfinity.backend.sevice.token;
+package com.vn.tripfinity.backend.sevice.auth.token;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

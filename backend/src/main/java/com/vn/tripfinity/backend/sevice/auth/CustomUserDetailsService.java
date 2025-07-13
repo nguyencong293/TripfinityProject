@@ -1,6 +1,7 @@
-package com.vn.tripfinity.backend.sevice;
+package com.vn.tripfinity.backend.sevice.auth;
 
 import com.vn.tripfinity.backend.model.User;
+import com.vn.tripfinity.backend.repository.UserRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -25,7 +26,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
-                user.getPassword(),
+                user.getPasswordHash(),
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
         );
     }

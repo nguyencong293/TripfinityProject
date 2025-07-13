@@ -1,7 +1,10 @@
-package com.vn.tripfinity.backend.sevice;
+package com.vn.tripfinity.backend.sevice.auth;
 
-import com.vn.tripfinity.backend.sevice.token.JwtTokenProvider;
-import org.apache.catalina.User;
+import com.vn.tripfinity.backend.dto.auth.LoginRequest;
+import com.vn.tripfinity.backend.dto.auth.LoginResponse;
+import com.vn.tripfinity.backend.model.User;
+import com.vn.tripfinity.backend.repository.UserRepository;
+import com.vn.tripfinity.backend.sevice.auth.token.JwtTokenProvider;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -35,9 +38,9 @@ public class AuthService {
         }
 
         User user = userRepository.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
 
-        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {
             return ResponseEntity.badRequest().body("Mật khẩu không đúng!");
         }
 
@@ -54,6 +57,6 @@ public class AuthService {
         // Generate JWT token
         String jwt = tokenProvider.generateToken((UserDetails) authentication.getPrincipal());
 
-        return ResponseEntity.ok(new LoginResponse(jwt, user.getId(), user.getName(), user.getEmail()));
+        return ResponseEntity.ok(new LoginResponse(jwt, user.getUserId(), user.getFullName(), user.getEmail()));
     }
 }

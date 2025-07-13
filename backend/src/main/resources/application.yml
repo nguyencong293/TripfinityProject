@@ -4,10 +4,10 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
-    url: jdbc:mysql://${DB_HOST:db}:${DB_PORT:3306}/${DB_NAME:tripfinity}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&useSSL=false&connectionCollation=utf8mb4_unicode_ci
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:tripfinity}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&useSSL=false&connectionCollation=utf8mb4_unicode_ci
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:tripfinity2025}
+    password: ${DB_PASSWORD:baby}
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:20}
       minimum-idle: ${DB_POOL_MIN_IDLE:2}
@@ -40,10 +40,11 @@ spring:
           auth: true
           starttls:
             enable: true
-  app:
-    jwt:
-      secret: oB1VRpuC57rPPWlODQH02IHBGrqWRRQusCJ3zEOcXSvcsSM8lUmVApItEpurp3feDbrhmRjZZvFbFQxwWH9gAg==
-      expiration: 86400
+
+app:
+  jwt:
+    secret: oB1VRpuC57rPPWlODQH02IHBGrqWRRQusCJ3zEOcXSvcsSM8lUmVApItEpurp3feDbrhmRjZZvFbFQxwWH9gAg==
+    expiration: 86400
 
 server:
   port: ${SERVER_PORT:8080}
