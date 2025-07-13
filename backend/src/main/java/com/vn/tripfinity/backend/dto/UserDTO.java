@@ -1,6 +1,10 @@
 package com.vn.tripfinity.backend.dto;
 
-import jakarta.validation.constraints.*;
+import com.vn.tripfinity.backend.model.User;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,6 +25,14 @@ public class UserDTO {
     @Size(max = 255)
     private String email;
 
+    @NotBlank(message = "Mật khẩu không được để trống")
+    @Size(min = 6, max = 64, message = "Mật khẩu phải từ 6–64 ký tự")
+//    @Pattern(
+//            regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$",
+//            message = "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt"
+//    )
+    private String passwordHash;
+
     @NotBlank(message = "Họ tên không được để trống")
     @Size(max = 255, message = "Họ tên tối đa 255 ký tự")
     private String fullName;
@@ -31,10 +43,12 @@ public class UserDTO {
     private String avatarUrl;
 
     @NotNull(message = "Quyền truy cập không được để trống")
-    private String accountRole;    // TOURIST, PROVIDER, ADMIN
+    @Builder.Default
+    private String accountRole = User.AccountRole.tourist.name(); // TOURIST, PROVIDER, ADMIN
 
     @NotNull(message = "Trạng thái tài khoản không được để trống")
-    private String accountStatus;  // ACTIVE, BANNED
+    @Builder.Default
+    private String accountStatus = User.AccountStatus.active.name();  // ACTIVE, BANNED
 
     private LocalDate dateOfBirth;
 

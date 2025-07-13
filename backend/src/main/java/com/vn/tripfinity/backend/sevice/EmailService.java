@@ -21,7 +21,7 @@ public class EmailService {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-        helper.setFrom("tripfinity2025@gmail.com", "TripFinity Support");
+        helper.setFrom("tripfinity2025@gmail.com", "TripFinity");
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(body, true);
