@@ -40,6 +40,24 @@ spring:
           auth: true
           starttls:
             enable: true
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: 173444476399-srrjbrmg2c0rsatfd4498t0499gmn104.apps.googleusercontent.com
+            client-secret: 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
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+            user-name-attribute: sub
 
 app:
   jwt:

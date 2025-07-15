@@ -2,6 +2,8 @@ package com.vn.tripfinity.backend.sevice;
 
 import com.vn.tripfinity.backend.dto.UserDTO;
 import com.vn.tripfinity.backend.exception.DuplicateResourceException;
+import com.vn.tripfinity.backend.exception.PasswordMismatchException;
+import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.UserRepository;
 import jakarta.mail.MessagingException;
@@ -12,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +35,10 @@ public class UserService {
 
     public UserDTO createUser(UserDTO userDTO) throws IOException {
         log.debug("Creating user {}", userDTO);
+
+        if (!userDTO.getPasswordHash().equals(userDTO.getConfirmPassword())) {
+            throw new PasswordMismatchException("Mật khẩu nhập lại không khớp");
+        }
         if (userRepository.existsByEmail(userDTO.getEmail())) {
             throw new DuplicateResourceException("Email đã tồn tại: " + userDTO.getEmail());
         }
@@ -45,6 +53,82 @@ public class UserService {
         return convertToDTO(savedUser);
     }
 
+    public String forgotPassword(String email) {
+        log.debug("Processing forgot password for email: {}", email);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại!"));
+
+        String otp = String.format("%06d", new Random().nextInt(999999));
+        LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(5);
+
+        user.setResetOtp(otp);
+        user.setOtpExpiryTime(expiryTime);
+        User savedUser = userRepository.save(user);
+        log.info("OTP generated successfully for user ID: {}", savedUser.getUserId());
+
+        sendPasswordResetEmail(savedUser, otp);
+
+        return "Mã xác minh đã được gửi đến email của bạn.";
+    }
+
+    public boolean verifyOtp(String email, String otp) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại!"));
+
+        // Log kiểm tra OTP và thời gian hết hạn
+        System.out.println("OTP nhận được: " + otp);
+        System.out.println("OTP đã lưu trong cơ sở dữ liệu: " + user.getResetOtp());
+        System.out.println("Thời gian hết hạn OTP: " + user.getOtpExpiryTime());
+
+        if (user.getResetOtp() == null || !user.getResetOtp().equals(otp)) {
+            return false;
+        }
+
+        if (user.getOtpExpiryTime() == null || user.getOtpExpiryTime().isBefore(LocalDateTime.now())) {
+            return false;
+        }
+
+        return true;
+    }
+
+
+    public String resetPassword(String email, String otp, String newPassword, String newConfirmPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại!"));
+
+        if (!newPassword.equals(newConfirmPassword)) {
+            throw new PasswordMismatchException("Mật khẩu nhập lại không khớp");
+        }
+
+        if (user.getResetOtp() == null || !user.getResetOtp().equals(otp)) {
+            return "Mã OTP không đúng hoặc đã hết hạn!";
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setResetOtp(null); // Xóa OTP sau khi sử dụng
+        user.setOtpExpiryTime(null);
+        userRepository.save(user);
+
+        return "Mật khẩu đã được cập nhật thành công.";
+    }
+
+    private void sendPasswordResetEmail(User user, String otp) {
+        EmailTemplateService.EmailData emailData = EmailTemplateService.EmailData.builder()
+                .recipientName(user.getFullName())
+                .mainTitle("Khôi phục mật khẩu")
+                .mainMessage("Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu cho tài khoản của bạn. " +
+                        "Vui lòng sử dụng mã xác minh bên dưới để tiến hành đặt lại mật khẩu.")
+                .highlightText("🔐 Mã xác minh của bạn: " + otp)
+                .ctaButton("Đặt lại mật khẩu", "#")
+                .warningMessage("Mã xác minh có hiệu lực trong 5 phút. Nếu bạn không thực hiện yêu cầu này, " +
+                        "vui lòng bỏ qua email này hoặc liên hệ với chúng tôi ngay lập tức.")
+                .addFeature("⏰", "Có hiệu lực trong 5 phút")
+                .addFeature("🔒", "Bảo mật tuyệt đối")
+                .addFeature("📞", "Hỗ trợ 24/7");
+
+        emailTemplateService.sendEmail(user.getEmail(), EmailTemplateService.EmailType.PASSWORD_RESET, emailData);
+    }
+
     private void sendWelcomeEmail(User user) {
         EmailTemplateService.EmailData emailData = EmailTemplateService.EmailData.builder()
                 .recipientName(user.getFullName())
@@ -52,7 +136,7 @@ public class UserService {
                 .mainMessage("Chúng tôi vô cùng vui mừng chào đón bạn gia nhập cộng đồng du lịch TRIPFINITY! " +
                         "Tài khoản của bạn đã được tạo thành công và sẵn sàng để khám phá những chuyến đi tuyệt vời.")
                 .highlightText("🎉 Chúc mừng! Bạn đã chính thức trở thành thành viên TRIPFINITY")
-                .ctaButton("Bắt đầu khám phá ngay!", "https://tripfinity.com/dashboard")
+                .ctaButton("Bắt đầu khám phá ngay!", "#")
                 .warningMessage("Nếu bạn không thực hiện yêu cầu tạo tài khoản này, vui lòng liên hệ với chúng tôi ngay lập tức để được hỗ trợ.")
                 .addFeature("🗺️", "Khám phá điểm đến")
                 .addFeature("🏨", "Tìm khách sạn")
@@ -63,20 +147,19 @@ public class UserService {
 
 
     private UserDTO convertToDTO(User user) {
-        return new UserDTO(
-                user.getUserId(),
-                user.getEmail(),
-                user.getPasswordHash(),
-                user.getFullName(),
-                user.getPhoneNumber(),
-                user.getAvatarUrl(),
-                user.getAccountRole().name(),
-                user.getAccountStatus().name(),
-                user.getDateOfBirth(),
-                user.getGender() != null ? user.getGender().name() : null,
-                user.getCreatedAt(),
-                user.getUpdatedAt()
-        );
+        return UserDTO.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .phoneNumber(user.getPhoneNumber())
+                .avatarUrl(user.getAvatarUrl())
+                .accountRole(user.getAccountRole().name())
+                .accountStatus(user.getAccountStatus().name())
+                .dateOfBirth(user.getDateOfBirth())
+                .gender(user.getGender() != null ? user.getGender().name() : null)
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
     }
 
     private User convertToEntity(UserDTO userDTO) {

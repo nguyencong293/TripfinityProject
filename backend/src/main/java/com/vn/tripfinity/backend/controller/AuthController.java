@@ -2,9 +2,17 @@ package com.vn.tripfinity.backend.controller;
 
 import com.vn.tripfinity.backend.dto.auth.LoginRequest;
 import com.vn.tripfinity.backend.sevice.auth.AuthService;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,5 +34,24 @@ public class AuthController {
     public ResponseEntity<?> logoutUser() {
         SecurityContextHolder.clearContext();
         return ResponseEntity.ok("User logged out successfully");
+    }
+
+    //    Google Login
+    @GetMapping("/google")
+    public void redirectToGoogle(HttpServletResponse response) throws IOException {
+        response.sendRedirect("/oauth2/authorization/google");
+    }
+
+    @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String,Object>> getCurrentUser(
+            @AuthenticationPrincipal OAuth2User oauth2User) {
+
+        // Nếu oauth2User null thì request chưa authenticated
+        if (oauth2User == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Map<String,Object> attrs = oauth2User.getAttributes();
+        return ResponseEntity.ok(attrs);
     }
 }

@@ -32,6 +32,7 @@ public class UserDTO {
 //            message = "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt"
 //    )
     private String passwordHash;
+    private String confirmPassword;
 
     @NotBlank(message = "Họ tên không được để trống")
     @Size(max = 255, message = "Họ tên tối đa 255 ký tự")
@@ -53,6 +54,9 @@ public class UserDTO {
     private LocalDate dateOfBirth;
 
     private String gender;         // MALE, FEMALE, OTHER
+
+    private String resetOtp;
+    private LocalDateTime otpExpiryTime;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
