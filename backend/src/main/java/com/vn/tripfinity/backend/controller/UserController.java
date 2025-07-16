@@ -5,7 +5,6 @@ import com.vn.tripfinity.backend.dto.ResetPasswordRequest;
 import com.vn.tripfinity.backend.dto.UserDTO;
 import com.vn.tripfinity.backend.dto.VerifyOtpRequest;
 import com.vn.tripfinity.backend.sevice.UserService;
-import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

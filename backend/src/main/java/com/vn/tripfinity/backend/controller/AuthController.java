@@ -2,6 +2,8 @@ package com.vn.tripfinity.backend.controller;
 
 import com.vn.tripfinity.backend.dto.auth.LoginRequest;
 import com.vn.tripfinity.backend.sevice.auth.AuthService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -31,8 +33,22 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logoutUser() {
+    public ResponseEntity<?> logoutUser(HttpServletRequest request,
+                                        HttpServletResponse response) {
+        // Xóa SecurityContext
         SecurityContextHolder.clearContext();
+        // Hủy session nếu có
+        var session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        // Xóa cookie JSESSIONID
+        Cookie cookie = new Cookie("JSESSIONID", null);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+
         return ResponseEntity.ok("User logged out successfully");
     }
 
@@ -43,7 +59,7 @@ public class AuthController {
     }
 
     @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String,Object>> getCurrentUser(
+    public ResponseEntity<Map<String, Object>> getCurrentUser(
             @AuthenticationPrincipal OAuth2User oauth2User) {
 
         // Nếu oauth2User null thì request chưa authenticated
@@ -51,7 +67,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        Map<String,Object> attrs = oauth2User.getAttributes();
+        Map<String, Object> attrs = oauth2User.getAttributes();
         return ResponseEntity.ok(attrs);
     }
 }

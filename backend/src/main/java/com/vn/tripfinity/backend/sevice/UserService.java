@@ -6,7 +6,6 @@ import com.vn.tripfinity.backend.exception.PasswordMismatchException;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.UserRepository;
-import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -71,7 +70,8 @@ public class UserService {
         return "Mã xác minh đã được gửi đến email của bạn.";
     }
 
-    public boolean verifyOtp(String email, String otp) {
+    public boolean verifyOtp(String email,
+                             String otp) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại!"));
 
@@ -92,7 +92,10 @@ public class UserService {
     }
 
 
-    public String resetPassword(String email, String otp, String newPassword, String newConfirmPassword) {
+    public String resetPassword(String email,
+                                String otp,
+                                String newPassword,
+                                String newConfirmPassword) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại!"));
 
@@ -112,7 +115,8 @@ public class UserService {
         return "Mật khẩu đã được cập nhật thành công.";
     }
 
-    private void sendPasswordResetEmail(User user, String otp) {
+    public void sendPasswordResetEmail(User user,
+                                       String otp) {
         EmailTemplateService.EmailData emailData = EmailTemplateService.EmailData.builder()
                 .recipientName(user.getFullName())
                 .mainTitle("Khôi phục mật khẩu")
@@ -129,7 +133,7 @@ public class UserService {
         emailTemplateService.sendEmail(user.getEmail(), EmailTemplateService.EmailType.PASSWORD_RESET, emailData);
     }
 
-    private void sendWelcomeEmail(User user) {
+    public void sendWelcomeEmail(User user) {
         EmailTemplateService.EmailData emailData = EmailTemplateService.EmailData.builder()
                 .recipientName(user.getFullName())
                 .mainTitle("Chào mừng bạn đến với cộng đồng du lịch!")

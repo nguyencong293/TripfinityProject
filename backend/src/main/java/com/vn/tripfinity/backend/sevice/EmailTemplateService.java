@@ -29,7 +29,8 @@ public class EmailTemplateService {
         private final String defaultSubject;
         private final String icon;
 
-        EmailType(String defaultSubject, String icon) {
+        EmailType(String defaultSubject,
+                  String icon) {
             this.defaultSubject = defaultSubject;
             this.icon = icon;
         }
@@ -90,7 +91,8 @@ public class EmailTemplateService {
             return this;
         }
 
-        public EmailData ctaButton(String ctaText, String ctaUrl) {
+        public EmailData ctaButton(String ctaText,
+                                   String ctaUrl) {
             this.ctaText = ctaText;
             this.ctaUrl = ctaUrl;
             return this;
@@ -101,12 +103,14 @@ public class EmailTemplateService {
             return this;
         }
 
-        public EmailData addFeature(String icon, String title) {
+        public EmailData addFeature(String icon,
+                                    String title) {
             this.features.add(new FeatureItem(icon, title));
             return this;
         }
 
-        public EmailData addData(String key, String value) {
+        public EmailData addData(String key,
+                                 String value) {
             this.additionalData.put(key, value);
             return this;
         }
@@ -158,7 +162,8 @@ public class EmailTemplateService {
         private String icon;
         private String title;
 
-        public FeatureItem(String icon, String title) {
+        public FeatureItem(String icon,
+                           String title) {
             this.icon = icon;
             this.title = title;
         }
@@ -173,7 +178,9 @@ public class EmailTemplateService {
     }
 
     // Method chính để gửi email
-    public void sendEmail(String recipientEmail, EmailType emailType, EmailData emailData) {
+    public void sendEmail(String recipientEmail,
+                          EmailType emailType,
+                          EmailData emailData) {
         String subject = emailData.getCustomSubject() != null ?
                 emailData.getCustomSubject() :
                 emailType.getIcon() + " " + emailType.getDefaultSubject();
@@ -189,7 +196,8 @@ public class EmailTemplateService {
     }
 
     // Method tạo template chung
-    private String createEmailTemplate(EmailType emailType, EmailData data) {
+    private String createEmailTemplate(EmailType emailType,
+                                       EmailData data) {
         String template = getBaseEmailTemplate();
 
         // Thay thế các placeholder
