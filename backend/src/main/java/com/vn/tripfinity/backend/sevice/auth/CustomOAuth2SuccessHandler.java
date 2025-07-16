@@ -1,5 +1,6 @@
 package com.vn.tripfinity.backend.sevice.auth;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.UserRepository;
 import com.vn.tripfinity.backend.sevice.UserService;
@@ -14,6 +15,8 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -47,7 +50,12 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
             userService.sendWelcomeEmail(newUser);
         }
-        // Đăng nhập thành công, redirect về trang chủ
-        response.sendRedirect("/");
+        // Trả về JSON message thông báo đăng nhập thành công
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        Map<String, String> result = new HashMap<>();
+        result.put("message", "Đăng nhập Google thành công!");
+        ObjectMapper mapper = new ObjectMapper();
+        response.getWriter().write(mapper.writeValueAsString(result));
     }
 }
