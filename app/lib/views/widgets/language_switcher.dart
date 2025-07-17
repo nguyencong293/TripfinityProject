@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../controllers/language_controller.dart';
+import '../../controllers/language_controller.dart';
+
 
 class LanguageDropdownCard extends StatelessWidget {
   final double? width;
