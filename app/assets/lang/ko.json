@@ -1,0 +1,9 @@
+{
+  "light": "라이트",
+  "dark": "다크",
+  "system": "시스템",
+  "theme_text_style_system": "테마 & 텍스트 스타일 시스템",
+  "theme_controls": "테마 컨트롤",
+  "counter_demo": "카운터 데모",
+  "you_have_pushed": "버튼을 누른 횟수:"
+}

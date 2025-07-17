@@ -1,0 +1,9 @@
+{
+  "light" : "Light",
+  "dark" : "Dark",
+  "system" : "System",
+  "theme_text_style_system" : "Theme & Text Style System",
+  "theme_controls" : "Theme Controls",
+  "counter_demo" : "Counter Demo",
+  "you_have_pushed" : "You have pushed the button this many times:"
+}
