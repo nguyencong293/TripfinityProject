@@ -14,6 +14,8 @@ class AppTheme {
       // Cấu hình cơ bản
       useMaterial3: true,
       brightness: Brightness.light,
+      // Font family
+      fontFamily: AppTextStyles.primaryFontFamily,
 
       // Color scheme
       colorScheme: const ColorScheme.light(
@@ -64,8 +66,8 @@ class AppTheme {
           disabledBackgroundColor: AppColors.lightButtonDisabledBackground,
           disabledForegroundColor: AppColors.lightButtonDisabledText,
           elevation: 2,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
           textStyle: AppTextStyles.buttonText,
         ),
       ),
@@ -74,8 +76,10 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: AppColors.lightPrimary,
           disabledForegroundColor: AppColors.lightButtonDisabledText,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
           textStyle: AppTextStyles.buttonText,
         ),
       ),
@@ -179,6 +183,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
 
+      // Font family
+      fontFamily: AppTextStyles.primaryFontFamily,
+
       // Color scheme
       colorScheme: const ColorScheme.dark(
         primary: AppColors.darkPrimary,
@@ -206,7 +213,7 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: AppColors.darkTextPrimary,
         ),
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
 
       // Card
@@ -228,8 +235,8 @@ class AppTheme {
           disabledBackgroundColor: AppColors.darkButtonDisabledBackground,
           disabledForegroundColor: AppColors.darkButtonDisabledText,
           elevation: 2,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
           textStyle: AppTextStyles.buttonText,
         ),
       ),
@@ -238,8 +245,10 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: AppColors.darkPrimary,
           disabledForegroundColor: AppColors.darkButtonDisabledText,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
           textStyle: AppTextStyles.buttonText,
         ),
       ),

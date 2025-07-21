@@ -110,7 +110,7 @@ extension AppTextStylesExtension on BuildContext {
       AppTextStyles.captionText.copyWith(color: textPrimaryColor);
 
   TextStyle get buttonStyle =>
-      AppTextStyles.buttonText.copyWith(color: textPrimaryColor);
+      AppTextStyles.buttonText.copyWith(color: buttonTextColor);
 
   TextStyle get overLineStyle =>
       AppTextStyles.overLineText.copyWith(color: textPrimaryColor);

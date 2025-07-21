@@ -1,4 +1,5 @@
 import 'package:app/providers/theme_provider.dart';
+import 'package:app/routes/app_router.dart';
 import 'package:app/views/screens/onboarding/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -9,6 +10,7 @@ import 'controllers/language_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppRouter.initialize();
   final langController = LanguageController();
   await langController.init();
 
@@ -30,7 +32,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<ThemeProvider, LanguageController>(
       builder: (context, themeProvider, langController, child) {
-        return MaterialApp(
+        return MaterialApp.router(
           title: 'TripFinity App Project',
           locale: Locale(langController.currentLanguage),
           supportedLocales: langController.languages.keys
@@ -44,7 +46,7 @@ class MainApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.flutterThemeMode,
-          home: OnboardingScreen(),
+          routerConfig: AppRouter.router,
           debugShowCheckedModeBanner: false,
         );
       },

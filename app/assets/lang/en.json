@@ -1,9 +1,13 @@
 {
-  "light" : "Light",
-  "dark" : "Dark",
-  "system" : "System",
-  "theme_text_style_system" : "Theme & Text Style System",
-  "theme_controls" : "Theme Controls",
-  "counter_demo" : "Counter Demo",
-  "you_have_pushed" : "You have pushed the button this many times:"
+  "light": "Light",
+  "dark": "Dark",
+  "system": "System",
+  "onboarding_1": "Discover the world at your fingertips",
+  "onboarding_2": "Easily book tours, enjoy the full experience",
+  "onboarding_3": "Capture every moment on every journey with us",
+  "onboarding_4": "Welcome to TripFinity",
+  "skip": "Skip",
+  "next": "Next",
+  "previous": "Previous",
+  "login": "Login"
 }

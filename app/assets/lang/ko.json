@@ -1,9 +1,13 @@
 {
-  "light": "라이트",
-  "dark": "다크",
+  "light": "밝음",
+  "dark": "어두움",
   "system": "시스템",
-  "theme_text_style_system": "테마 & 텍스트 스타일 시스템",
-  "theme_controls": "테마 컨트롤",
-  "counter_demo": "카운터 데모",
-  "you_have_pushed": "버튼을 누른 횟수:"
+  "onboarding_1": "당신의 손끝에서 세상을 발견하세요",
+  "onboarding_2": "투어를 쉽게 예약하고 완벽하게 경험하세요",
+  "onboarding_3": "모든 여정에서 소중한 순간을 함께 담아보세요",
+  "onboarding_4": "TripFinity에 오신 것을 환영합니다",
+  "skip": "건너뛰기",
+  "next": "다음",
+  "previous": "이전",
+  "login": "로그인"
 }
