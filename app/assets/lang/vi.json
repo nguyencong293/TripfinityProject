@@ -9,5 +9,7 @@
   "skip": "Bỏ qua",
   "next": "Tiếp theo",
   "previous": "Quay lại",
-  "login": "Đăng nhập"
+  "login": "Đăng nhập",
+  "page_not_found": "Trang không tìm thấy",
+  "back_to_home": "Trở lại Trang Chủ"
 }

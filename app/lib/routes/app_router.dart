@@ -1,7 +1,14 @@
+import 'package:app/config/theme/app_colors.dart';
+import 'package:app/config/theme/app_text_styles.dart';
+import 'package:app/services/localization_service.dart';
+import 'package:app/views/screens/onboarding/login_screen.dart';
 import 'package:app/views/screens/onboarding/onboarding_screen.dart';
-import 'package:go_router/go_router.dart';
+import 'package:app/views/screens/onboarding/register_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../views/screens/onboarding/home_screen.dart';
 
 class AppRouter {
   // private constructor
@@ -9,6 +16,8 @@ class AppRouter {
 
   static const String onboarding = '/onboarding';
   static const String home = '/home';
+  static const String register = '/register';
+  static const String login = '/login';
 
   // router configurations
   static late final GoRouter _router;
@@ -53,33 +62,49 @@ class AppRouter {
         name: 'onboarding',
         builder: (context, state) => const OnboardingScreen(),
       ),
+      GoRoute(
+        path: home,
+        name: 'home',
+        builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: register,
+        name: 'register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: login,
+        name: 'login',
+        builder: (context, state) => const LoginScreen(),
+      ),
     ];
   }
 
   /// Build error page
   static Widget _buildErrorPage(BuildContext context, GoRouterState state) {
     return Scaffold(
+      appBar: AppBar(toolbarHeight: 0),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Trang không tìm thấy',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Đường dẫn: ${state.uri}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => context.go(home),
-              child: const Text('Về trang chủ'),
-            ),
-          ],
+        child: Container(
+          width: 300,
+          height: 200,
+          decoration: BoxDecoration(
+            color: context.errorBackgroundColor,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: context.errorColor),
+              const SizedBox(height: 16),
+              Text('page_not_found'.tr, style: context.h5Style),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.go(home),
+                child: Text('back_to_home'.tr),
+              ),
+            ],
+          ),
         ),
       ),
     );
