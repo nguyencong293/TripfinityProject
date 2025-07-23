@@ -2,6 +2,7 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/localization_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -36,6 +37,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         )
         .toList();
     return Scaffold(
+      appBar: AppBar(toolbarHeight: 0), // ẩn luôn phần title/toolbar
       body: SafeArea(
         child: Stack(
           children: [
@@ -43,9 +45,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               controller: _pageController,
               onPageChanged: (i) => setState(() => _currentPage = i),
               itemCount: pages.length,
-              itemBuilder: (_, i) => _buildPage(pages[i]),
+              itemBuilder: (_, i) => Stack(
+                children: [
+                  _buildPage(pages[i]),
+
+                  // thêm logo page cuối
+                  if (i == pages.length - 1)
+                    Center(
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: AppColors.lightBackground,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Image.asset('assets/images/logo_1.png'),
+                      ),
+                    ),
+                ],
+              ),
             ),
-            // Skip button (top right)
             Positioned(
               top: 10,
               right: 10,
@@ -85,21 +104,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         pages.length,
                         (index) => Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: _currentPage == index ? 24 : 8,
-                          height: 8,
+                          width: _currentPage == index ? 12 : 6,
+                          height: 6,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4),
                             color: _currentPage == index
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.4),
+                                ? AppColors.lightPrimary
+                                : Colors.white.withValues(alpha: 0.7),
                           ),
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 24),
-                    ThemeModeDropdown(),
-                    LanguageDropdownCard(),
+                    const SizedBox(height: 30),
 
                     // Navigation buttons
                     Row(
@@ -147,11 +164,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             _currentPage == pages.length - 1
                                 ? 'login'.tr
                                 : 'next'.tr,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: context.buttonStyle,
                           ),
                         ),
                       ],
@@ -186,7 +199,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(30),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -195,11 +208,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 page.title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   fontFamily: AppTextStyles.primaryFontFamily,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
-                  height: 1.2,
                 ),
               ),
               const SizedBox(height: 150),

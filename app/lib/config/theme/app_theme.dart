@@ -44,7 +44,10 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: AppColors.lightButtonTextColor,
         ),
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.white, // nền status bar
+          statusBarIconBrightness: Brightness.dark, // icon tối (đen)
+        ),
       ),
 
       // Card
@@ -67,7 +70,9 @@ class AppTheme {
           disabledForegroundColor: AppColors.lightButtonDisabledText,
           elevation: 2,
           padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
           textStyle: AppTextStyles.buttonText,
         ),
       ),
@@ -90,7 +95,7 @@ class AppTheme {
           disabledForegroundColor: AppColors.lightButtonDisabledText,
           side: const BorderSide(color: AppColors.lightBorderLine),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
           textStyle: AppTextStyles.buttonText,
         ),
       ),
@@ -213,7 +218,10 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: AppColors.darkTextPrimary,
         ),
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.black,
+          statusBarIconBrightness: Brightness.light,
+        ),
       ),
 
       // Card
@@ -236,7 +244,9 @@ class AppTheme {
           disabledForegroundColor: AppColors.darkButtonDisabledText,
           elevation: 2,
           padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
           textStyle: AppTextStyles.buttonText,
         ),
       ),

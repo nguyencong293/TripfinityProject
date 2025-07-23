@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/localization_service.dart';
 
 class LanguageController extends ChangeNotifier {
-  String _currentLanguage = 'en';
+  String _currentLanguage = 'vi';
 
   String get currentLanguage => _currentLanguage;
 
