@@ -27,7 +27,7 @@ class AppRouter {
   /// Initialize the router configuration
   static void initialize() {
     _router = GoRouter(
-      initialLocation: home,
+      initialLocation: register,
       redirect: _handleRedirect,
       routes: _buildRoutes(),
       errorBuilder: _buildErrorPage,
@@ -49,7 +49,7 @@ class AppRouter {
 
     // Đã xem onboarding nhưng vẫn ở onboarding → redirect to home
     if (hasSeenOnboarding && currentPath == onboarding) {
-      return home;
+      return login;
     }
 
     return null;
@@ -84,6 +84,7 @@ class AppRouter {
   static Widget _buildErrorPage(BuildContext context, GoRouterState state) {
     return Scaffold(
       appBar: AppBar(toolbarHeight: 0),
+      backgroundColor: context.backgroundColor,
       body: Center(
         child: Container(
           width: 300,

@@ -9,5 +9,18 @@
   "skip": "Skip",
   "next": "Next",
   "previous": "Previous",
-  "login": "Login"
+  "login": "Login",
+  "page_not_found": "Page not found",
+  "back_to_home": "Back to Home",
+  "register_account": "Register Account",
+  "name_account": "Username",
+  "ent_name_account": "Enter username",
+  "email_account": "Email",
+  "ent_email_account": "Enter your email",
+  "passw_account": "Password",
+  "ent_passw_account": "Enter your password",
+  "re_passw_account": "Confirm Password",
+  "ent_re_passw_account": "Re-enter your password",
+  "register": "Register",
+  "already_have_an_account": "Already have an account?"
 }

@@ -81,10 +81,6 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: AppColors.lightPrimary,
           disabledForegroundColor: AppColors.lightButtonDisabledText,
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
-          ),
           textStyle: AppTextStyles.buttonText,
         ),
       ),
@@ -95,7 +91,9 @@ class AppTheme {
           disabledForegroundColor: AppColors.lightButtonDisabledText,
           side: const BorderSide(color: AppColors.lightBorderLine),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
           textStyle: AppTextStyles.buttonText,
         ),
       ),
@@ -114,7 +112,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(8)),
-          borderSide: BorderSide(color: AppColors.lightPrimary, width: 2),
+          borderSide: BorderSide(color: AppColors.lightPrimary, width: 1.2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -122,7 +120,7 @@ class AppTheme {
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         labelStyle: AppTextStyles.bodyOneText,
-        hintStyle: TextStyle(color: AppColors.lightTextDisabled),
+        hintStyle: TextStyle(fontSize: 12, color: AppColors.lightTextDisabled),
       ),
 
       // Icon theme
@@ -255,10 +253,6 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: AppColors.darkPrimary,
           disabledForegroundColor: AppColors.darkButtonDisabledText,
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
-          ),
           textStyle: AppTextStyles.buttonText,
         ),
       ),
@@ -288,7 +282,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(8)),
-          borderSide: BorderSide(color: AppColors.darkPrimary, width: 2),
+          borderSide: BorderSide(color: AppColors.darkPrimary, width: 1.2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -296,7 +290,7 @@ class AppTheme {
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         labelStyle: AppTextStyles.bodyOneText,
-        hintStyle: TextStyle(color: AppColors.darkTextDisabled),
+        hintStyle: TextStyle(fontSize: 12, color: AppColors.darkTextDisabled),
       ),
 
       // Icon theme

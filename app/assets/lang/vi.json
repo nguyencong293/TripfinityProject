@@ -11,5 +11,16 @@
   "previous": "Quay lại",
   "login": "Đăng nhập",
   "page_not_found": "Trang không tìm thấy",
-  "back_to_home": "Trở lại Trang Chủ"
+  "back_to_home": "Trở lại Trang Chủ",
+  "register_account": "Tạo tài khoản",
+  "name_account": "Tên nguời dùng",
+  "ent_name_account": "Nhập tên người dùng",
+  "email_account": "Email",
+  "ent_email_account": "Nhập email của bạn",
+  "passw_account": "Mật khẩu",
+  "ent_passw_account": "Nhập mật khẩu của bạn",
+  "re_passw_account": "Xác nhận mật khẩu",
+  "ent_re_passw_account": "Nhập lại mật khẩu của bạn",
+  "register": "Đăng ký",
+  "already_have_an_account": "Bạn đã có tài khoản?"
 }
