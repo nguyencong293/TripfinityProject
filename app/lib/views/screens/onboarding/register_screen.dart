@@ -1,7 +1,9 @@
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+import 'package:app/routes/app_router.dart';
 import 'package:app/services/localization_service.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -61,6 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Text('passw_account'.tr, style: context.bodyOneStyle),
                   SizedBox(height: 4),
                   TextField(
+                    obscureText: true,
                     decoration: InputDecoration(
                       hintText: 'ent_passw_account'.tr,
                     ),
@@ -69,6 +72,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Text('re_passw_account'.tr, style: context.bodyOneStyle),
                   SizedBox(height: 4),
                   TextField(
+                    obscureText: true,
                     decoration: InputDecoration(
                       hintText: 'ent_re_passw_account'.tr,
                     ),
@@ -96,7 +100,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     onPressed: () {
-                      // Navigate to login screen
+                      context.go(AppRouter.login);
                     },
                     child: Text('login'.tr),
                   ),

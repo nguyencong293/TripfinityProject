@@ -22,5 +22,8 @@
   "re_passw_account": "Confirm Password",
   "ent_re_passw_account": "Re-enter your password",
   "register": "Register",
-  "already_have_an_account": "Already have an account?"
+  "already_have_an_account": "Already have an account?",
+  "login_account": "Welcome to TripFinity",
+  "forg_account_txt": "Forgot password?",
+  "dont_have_an_account": "Don't have an account?"
 }

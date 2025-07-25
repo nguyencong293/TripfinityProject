@@ -34,8 +34,8 @@ class AppTheme {
 
       // App Bar
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.lightPrimary,
-        foregroundColor: AppColors.lightButtonTextColor,
+        backgroundColor: AppColors.lightBackground,
+        foregroundColor: AppColors.lightBackground,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
@@ -206,8 +206,8 @@ class AppTheme {
 
       // App Bar
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.darkCardBackground,
-        foregroundColor: AppColors.darkTextPrimary,
+        backgroundColor: AppColors.darkBackground,
+        foregroundColor: AppColors.darkBackground,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
