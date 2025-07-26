@@ -16,6 +16,7 @@ dependencies:
   provider: ^6.1.2
   go_router: ^14.6.2
   shared_preferences: ^2.3.2
+  json_annotation: ^4.9.0
 
   flutter_localizations:
     sdk: flutter
@@ -26,6 +27,8 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^5.0.0
+  build_runner: any
+  json_serializable: any
 
 
 # The following section is specific to Flutter packages.
