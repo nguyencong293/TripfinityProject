@@ -1,6 +1,7 @@
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/localization_service.dart';
+import 'package:app/views/screens/onboarding/forget_account_screen.dart';
 import 'package:app/views/screens/onboarding/login_screen.dart';
 import 'package:app/views/screens/onboarding/onboarding_screen.dart';
 import 'package:app/views/screens/onboarding/register_screen.dart';
@@ -18,6 +19,7 @@ class AppRouter {
   static const String home = '/home';
   static const String register = '/register';
   static const String login = '/login';
+  static const String forgetAccount = '/forget-account';
 
   // router configurations
   static late final GoRouter _router;
@@ -76,6 +78,11 @@ class AppRouter {
         path: login,
         name: 'login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: forgetAccount,
+        name: 'forget-account',
+        builder: (context, state) => const ForgetAccountScreen(),
       ),
     ];
   }
