@@ -13,7 +13,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Text('Home Screen Placeholder', style: context.displayHeroStyle),
+        child: Text('Home Screen', style: context.displayHeroStyle),
       ),
     );
   }
