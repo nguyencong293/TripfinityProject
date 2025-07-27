@@ -34,5 +34,11 @@
   "update_password": "Update Password",
   "new_password": "New Password",
   "ent_new_password": "Enter New Password",
-  "update": "Update"
+  "update": "Update",
+  "email_required": "Email is required",
+  "email_invalid": "Invalid email format",
+  "name_required": "Full name is required",
+  "passw_invalid": "Invalid password",
+  "confirm_required": "Password confirmation is required",
+  "password_mismatch": "Passwords do not match"
 }

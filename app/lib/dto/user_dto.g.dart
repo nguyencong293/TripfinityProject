@@ -9,17 +9,17 @@ part of 'user_dto.dart';
 UserDTO _$UserDTOFromJson(Map<String, dynamic> json) => UserDTO(
   userId: (json['userId'] as num?)?.toInt(),
   email: json['email'] as String,
-  passwordHash: json['passwordHash'] as String,
+  passwordHash: json['passwordHash'] as String?,
   confirmPassword: json['confirmPassword'] as String?,
   fullName: json['fullName'] as String,
   phoneNumber: json['phoneNumber'] as String?,
   avatarUrl: json['avatarUrl'] as String?,
   accountRole:
       $enumDecodeNullable(_$AccountRoleEnumMap, json['accountRole']) ??
-      AccountRole.TOURIST,
+      AccountRole.tourist,
   accountStatus:
       $enumDecodeNullable(_$AccountStatusEnumMap, json['accountStatus']) ??
-      AccountStatus.ACTIVE,
+      AccountStatus.active,
   dateOfBirth: json['dateOfBirth'] == null
       ? null
       : DateTime.parse(json['dateOfBirth'] as String),
@@ -55,18 +55,18 @@ Map<String, dynamic> _$UserDTOToJson(UserDTO instance) => <String, dynamic>{
 };
 
 const _$AccountRoleEnumMap = {
-  AccountRole.TOURIST: 'TOURIST',
-  AccountRole.PROVIDER: 'PROVIDER',
-  AccountRole.ADMIN: 'ADMIN',
+  AccountRole.tourist: 'tourist',
+  AccountRole.provider: 'provider',
+  AccountRole.admin: 'admin',
 };
 
 const _$AccountStatusEnumMap = {
-  AccountStatus.ACTIVE: 'ACTIVE',
-  AccountStatus.BANNED: 'BANNED',
+  AccountStatus.active: 'active',
+  AccountStatus.banned: 'banned',
 };
 
 const _$GenderEnumMap = {
-  Gender.MALE: 'MALE',
-  Gender.FEMALE: 'FEMALE',
-  Gender.OTHER: 'OTHER',
+  Gender.male: 'male',
+  Gender.female: 'female',
+  Gender.other: 'other',
 };

@@ -34,5 +34,11 @@
   "update_password": "Cập nhật mật khẩu",
   "new_password": "Mật khẩu mới",
   "ent_new_password": "Nhập mật khẩu mới",
-  "update": "Cập nhật"
+  "update": "Cập nhật",
+  "email_required": "Email là bắt buộc",
+  "email_invalid": "Email không hợp lệ",
+  "name_required": "Tên người dùng là bắt buộc",
+  "passw_invalid": "Mật khẩu không hợp lệ",
+  "confirm_required": "Xác nhận mật khẩu là bắt buộc",
+  "password_mismatch": "Mật khẩu không khớp"
 }

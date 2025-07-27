@@ -34,5 +34,11 @@
   "update_password": "비밀번호 업데이트",
   "new_password": "새 비밀번호",
   "ent_new_password": "새 비밀번호를 입력하세요",
-  "update": "업데이트"
+  "update": "업데이트",
+  "email_required": "이메일은 필수입니다",
+  "email_invalid": "유효하지 않은 이메일 형식입니다",
+  "name_required": "이름은 필수입니다",
+  "passw_invalid": "잘못된 비밀번호입니다",
+  "confirm_required": "비밀번호 확인은 필수입니다",
+  "password_mismatch": "비밀번호가 일치하지 않습니다"
 }

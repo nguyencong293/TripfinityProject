@@ -30,8 +30,8 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @PostMapping(consumes = "multipart/form-data")
-    public ResponseEntity<UserDTO> createUser(@Valid @ModelAttribute UserDTO userDTO) throws IOException {
+    @PostMapping
+    public ResponseEntity<UserDTO> createUser(@Valid @RequestBody UserDTO userDTO) throws IOException {
         log.info("Create /api/users - Creating user {}", userDTO);
         UserDTO createUser = userService.createUser(userDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createUser);
