@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../controllers/user_controller.dart';
+import '../../widgets/circular_progress.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -169,7 +170,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             }
                           },
                     child: userController.isLoading
-                        ? const CircularProgressIndicator()
+                        ? const AppCircularProgress()
                         : Text('register'.tr),
                   ),
                   const SizedBox(height: 20),

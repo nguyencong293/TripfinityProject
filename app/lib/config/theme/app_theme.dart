@@ -176,6 +176,12 @@ class AppTheme {
         ),
         behavior: SnackBarBehavior.floating,
       ),
+
+      // Progress Indicator
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.lightPrimary,
+        strokeWidth: 2.0,
+      ),
     );
   }
 
@@ -345,6 +351,12 @@ class AppTheme {
           borderRadius: BorderRadius.all(Radius.circular(8)),
         ),
         behavior: SnackBarBehavior.floating,
+      ),
+
+      // Progress Indicator
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.darkPrimary,
+        strokeWidth: 2.0,
       ),
     );
   }
