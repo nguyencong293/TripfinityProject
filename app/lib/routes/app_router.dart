@@ -7,8 +7,10 @@ import 'package:app/views/screens/onboarding/onboarding_screen.dart';
 import 'package:app/views/screens/onboarding/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../controllers/auth_controller.dart';
 import '../views/screens/onboarding/home_screen.dart';
 
 class AppRouter {
@@ -29,7 +31,7 @@ class AppRouter {
   /// Initialize the router configuration
   static void initialize() {
     _router = GoRouter(
-      initialLocation: register,
+      initialLocation: home,
       redirect: _handleRedirect,
       routes: _buildRoutes(),
       errorBuilder: _buildErrorPage,
@@ -40,20 +42,32 @@ class AppRouter {
     BuildContext context,
     GoRouterState state,
   ) async {
+    // Kiểm tra trạng thái đăng nhập
+    final authController = context.read<AuthController>();
+    final isLoggedIn = authController.isLoggedIn;
+
     final prefs = await SharedPreferences.getInstance();
     final hasSeenOnboarding = prefs.getBool('onboarding_completed') ?? false;
     final currentPath = state.uri.toString();
+
+    const publicPaths = [login, register, forgetAccount];
 
     // Chưa xem onboarding → redirect to onboarding
     if (!hasSeenOnboarding && currentPath != onboarding) {
       return onboarding;
     }
 
-    // Đã xem onboarding nhưng vẫn ở onboarding → redirect to home
-    if (hasSeenOnboarding && currentPath == onboarding) {
+    // 2. Đã xem onboarding nhưng chưa đăng nhập
+    if (hasSeenOnboarding &&
+        !isLoggedIn &&
+        !publicPaths.contains(currentPath)) {
       return login;
     }
 
+    // 3. Đã đăng nhập nhưng vào trang public → về home
+    if (isLoggedIn && publicPaths.contains(currentPath)) {
+      return home;
+    }
     return null;
   }
 

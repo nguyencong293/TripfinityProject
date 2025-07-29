@@ -1,0 +1,114 @@
+import 'dart:convert';
+
+import 'package:flutter/cupertino.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../dto/auth/login_request.dart';
+import '../dto/auth/login_response.dart';
+import '../dto/user_dto.dart';
+import '../exceptions/api_exceptions.dart';
+import '../services/auth_service.dart';
+
+class AuthController with ChangeNotifier {
+  final AuthService _authService;
+  final SharedPreferences _prefs;
+
+  String? _rawToken;
+  UserDTO? _currentUser;
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  AuthController({
+    required AuthService authService,
+    required SharedPreferences prefs,
+  }) : _authService = authService,
+       _prefs = prefs {
+    _loadFromPrefs();
+  }
+
+  bool get isLoading => _isLoading;
+
+  String? get errorMessage => _errorMessage;
+
+  UserDTO? get currentUser => _currentUser;
+
+  /// Token valid if present and exp > now
+  bool get isTokenValid {
+    if (_rawToken == null) return false;
+    try {
+      final parts = _rawToken!.split('.');
+      final payload = utf8.decode(base64Url.decode(_normalize(parts[1])));
+      final exp = jsonDecode(payload)['exp'] as int;
+      return DateTime.fromMillisecondsSinceEpoch(
+        exp * 1000,
+      ).isAfter(DateTime.now());
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Chỉ đăng nhập khi có token hợp lệ và user đã được xác thực
+  bool get isLoggedIn => _currentUser != null && isTokenValid;
+
+  String _normalize(String str) => str + '=' * ((4 - str.length % 4) % 4);
+
+  Future<bool> login(String email, String password) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final req = LoginRequest(email: email, password: password);
+      final resp = await _authService.login(req);
+      await _saveUserData(resp);
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (_) {
+      _errorMessage = 'Lỗi không xác định';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+    return false;
+  }
+
+  Future<void> _saveUserData(LoginResponse resp) async {
+    _rawToken = resp.token;
+    _currentUser = UserDTO(
+      userId: resp.userId,
+      email: resp.email,
+      fullName: resp.name,
+    );
+    await _prefs.setString('user_token', resp.token);
+    await _prefs.setInt('user_id', resp.userId);
+    await _prefs.setString('user_email', resp.email);
+    await _prefs.setString('user_name', resp.name);
+  }
+
+  Future<void> _loadFromPrefs() async {
+    final token = _prefs.getString('user_token');
+    if (token != null) {
+      _rawToken = token;
+      final id = _prefs.getInt('user_id');
+      final email = _prefs.getString('user_email');
+      final name = _prefs.getString('user_name');
+      if (id != null && email != null && name != null && isTokenValid) {
+        _currentUser = UserDTO(userId: id, email: email, fullName: name);
+      } else {
+        await logout();
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> logout() async {
+    try {
+      await _authService.logout();
+    } finally {
+      _rawToken = null;
+      _currentUser = null;
+      notifyListeners();
+    }
+  }
+}
