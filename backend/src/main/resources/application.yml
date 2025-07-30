@@ -52,6 +52,17 @@ spring:
               - profile
               - email
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+
+          google-mobile:
+            client-id: 173444476399-5l4828tlfd9jq2v3j1gjirl9f3gks5ej.apps.googleusercontent.com
+            authorization-grant-type: authorization_code
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "com.vn.tripfinity.app:/oauth2redirect/google"
+
+
         provider:
           google:
             authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
