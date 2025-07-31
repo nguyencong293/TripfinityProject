@@ -42,6 +42,11 @@ class _ForgetAccountScreenState extends State<ForgetAccountScreen> {
       (_) => TextEditingController(),
     );
     _focusNodes = List.generate(_codeLength, (_) => FocusNode());
+
+    final userController = context.read<UserController>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      userController.clearError();
+    });
   }
 
   @override
@@ -82,37 +87,46 @@ class _ForgetAccountScreenState extends State<ForgetAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(toolbarHeight: 0),
-      body: SingleChildScrollView(
-        child: SafeArea(
-          child: Container(
-            width: double.infinity,
-            color: context.backgroundColor,
-            padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
+    final userController = context.watch<UserController>();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        userController.clearError();
+        context.go(AppRouter.login);
+      },
+      child: Scaffold(
+        appBar: AppBar(toolbarHeight: 0),
+        body: SingleChildScrollView(
+          child: SafeArea(
+            child: Container(
+              width: double.infinity,
+              color: context.backgroundColor,
+              padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Image.asset(
+                        'assets/images/logo_1.png',
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                    child: Image.asset(
-                      'assets/images/logo_1.png',
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  _buildBody(),
-                  const SizedBox(height: 20),
-                  _buildLoginButton(),
-                ],
+                    const SizedBox(height: 30),
+                    _buildBody(),
+                    const SizedBox(height: 20),
+                    _buildLoginButton(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -214,7 +228,7 @@ class _ForgetAccountScreenState extends State<ForgetAccountScreen> {
           alignment: Alignment.center,
           child: _resendCooldown > 0
               ? Text(
-                  'Gửi lại sau $_resendCooldown giây',
+                  'resend_after_seconds'.tr + ' $_resendCooldown s',
                   style: context.buttonStyle.copyWith(
                     color: context.buttonDisabledTextColor,
                   ),
@@ -240,7 +254,7 @@ class _ForgetAccountScreenState extends State<ForgetAccountScreen> {
                           }
                         },
                   child: Text(
-                    "Gửi lại mã",
+                    "resend_code".tr,
                     style: context.buttonStyle.copyWith(
                       color: context.primaryColor,
                     ),

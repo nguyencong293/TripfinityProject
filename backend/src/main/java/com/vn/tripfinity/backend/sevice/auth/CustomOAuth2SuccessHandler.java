@@ -63,7 +63,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         // Sinh token JWT
         String jwt = tokenProvider.generateToken(userDetails);
 
-        // Trả về thông báo đăng nhập thành công
+        // Trả về nếu thành công
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         Map<String, String> result = new HashMap<>();

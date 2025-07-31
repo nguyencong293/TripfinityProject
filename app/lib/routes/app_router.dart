@@ -57,14 +57,14 @@ class AppRouter {
       return onboarding;
     }
 
-    // 2. Đã xem onboarding nhưng chưa đăng nhập
+    // Đã xem onboarding nhưng chưa đăng nhập
     if (hasSeenOnboarding &&
         !isLoggedIn &&
         !publicPaths.contains(currentPath)) {
       return login;
     }
 
-    // 3. Đã đăng nhập nhưng vào trang public → về home
+    // Đã đăng nhập nhưng vào trang public → về home
     if (isLoggedIn && publicPaths.contains(currentPath)) {
       return home;
     }

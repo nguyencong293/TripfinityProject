@@ -28,12 +28,12 @@ public class UserService {
     private final EmailTemplateService emailTemplateService;
 
     public List<UserDTO> getAllUsers() {
-        log.debug("Fetching all users");
+        log.debug("Lấy toàn bộ người dùng");
         return userRepository.findAll().stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     public UserDTO createUser(UserDTO userDTO) throws IOException {
-        log.debug("Creating user {}", userDTO);
+        log.debug("Tạo User {}", userDTO);
 
         if (!userDTO.getPasswordHash().equals(userDTO.getConfirmPassword())) {
             throw new PasswordMismatchException("Mật khẩu nhập lại không khớp");
@@ -45,7 +45,7 @@ public class UserService {
         User user = convertToEntity(userDTO);
         user.setPasswordHash(passwordEncoder.encode(userDTO.getPasswordHash()));
         User savedUser = userRepository.save(user);
-        log.info("User created successfully with ID: {}", savedUser.getUserId());
+        log.info("Tạo User ID: {}", savedUser.getUserId());
 
         sendWelcomeEmail(savedUser);
 
@@ -53,7 +53,6 @@ public class UserService {
     }
 
     public String forgotPassword(String email) {
-        log.debug("Processing forgot password for email: {}", email);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại!"));
 
@@ -63,7 +62,6 @@ public class UserService {
         user.setResetOtp(otp);
         user.setOtpExpiryTime(expiryTime);
         User savedUser = userRepository.save(user);
-        log.info("OTP generated successfully for user ID: {}", savedUser.getUserId());
 
         sendPasswordResetEmail(savedUser, otp);
 

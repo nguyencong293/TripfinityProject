@@ -40,5 +40,9 @@
   "name_required": "Full name is required",
   "passw_invalid": "Invalid password",
   "confirm_required": "Password confirmation is required",
-  "password_mismatch": "Passwords do not match"
+  "password_mismatch": "Passwords do not match",
+  "login_with_google": "Login with Google",
+  "press_back_again_to_exit": "Press back again to exit",
+  "resend_after_seconds": "Resend after",
+  "resend_code": "Resend code"
 }

@@ -40,5 +40,9 @@
   "name_required": "Tên người dùng là bắt buộc",
   "passw_invalid": "Mật khẩu không hợp lệ",
   "confirm_required": "Xác nhận mật khẩu là bắt buộc",
-  "password_mismatch": "Mật khẩu không khớp"
+  "password_mismatch": "Mật khẩu không khớp",
+  "login_with_google": "Đăng nhập bằng Google",
+  "press_back_again_to_exit": "Nhấn back lần nữa để thoát",
+  "resend_after_seconds": "Gửi lại sau",
+  "resend_code" : "Gửi lại mã"
 }

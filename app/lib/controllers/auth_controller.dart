@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../dto/auth/login_request.dart';
@@ -31,6 +33,11 @@ class AuthController with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   UserDTO? get currentUser => _currentUser;
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
 
   /// Token valid if present and exp > now
   bool get isTokenValid {
@@ -110,5 +117,46 @@ class AuthController with ChangeNotifier {
       _currentUser = null;
       notifyListeners();
     }
+  }
+
+  Future<bool> googleLogin() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // Khởi tạo Google Sign-In
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        serverClientId:
+            '173444476399-srrjbrmg2c0rsatfd4498t0499gmn104.apps.googleusercontent.com',
+        scopes: ['email', 'profile'],
+      );
+
+      // Thực hiện đăng nhập
+      final GoogleSignInAccount? account = await googleSignIn.signIn();
+      if (account == null) return false;
+
+      // Lấy ID token
+      final GoogleSignInAuthentication auth = await account.authentication;
+      final String? idToken = auth.idToken;
+
+      if (idToken == null) {
+        throw ApiException('Không nhận ID Google');
+      }
+
+      final resp = await _authService.googleLogin(idToken);
+      await _saveUserData(resp);
+      return true;
+    } on PlatformException catch (e) {
+      _errorMessage = 'Lỗi Google Sign-In: [${e.code}] ${e.message}';
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'Lỗi đăng nhập Google: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+    return false;
   }
 }

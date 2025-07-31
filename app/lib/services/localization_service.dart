@@ -19,11 +19,11 @@ class AppLocalization {
         return MapEntry(key, value.toString());
       });
     } catch (e) {
-      // Fallback to English if loading fails
+      // Fallback to VN if loading fails
       if (langCode != 'en') {
         await load('en');
       } else {
-        // If even English fails, use empty map
+        // If even VN fails, use empty map
         _localizedStrings = {};
       }
     }

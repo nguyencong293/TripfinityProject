@@ -69,6 +69,7 @@ public class SecurityConfig {
 //                        ).permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/account-user/register").permitAll()
+                        .requestMatchers("/api/auth/oauth-login").permitAll()
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         .requestMatchers("/**").permitAll()
                         .anyRequest().authenticated()) // Mọi yêu cầu khác cần xác thực

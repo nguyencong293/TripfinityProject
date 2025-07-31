@@ -5,6 +5,7 @@ import 'package:app/services/user_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,6 +16,13 @@ import 'controllers/user_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  PackageInfo packageInfo = await PackageInfo.fromPlatform();
+  print('Package name: ${packageInfo.packageName}');
+  print('App name: ${packageInfo.appName}');
+  print('Version: ${packageInfo.version}');
+  print('Build number: ${packageInfo.buildNumber}');
+
   final prefs = await SharedPreferences.getInstance();
   AppRouter.initialize();
   final langController = LanguageController();

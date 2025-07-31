@@ -58,6 +58,15 @@ public class AuthController {
         response.sendRedirect("/oauth2/authorization/google");
     }
 
+    @PostMapping("/oauth-login")
+    public ResponseEntity<?> oauthLogin(@RequestBody Map<String, String> body) {
+        String idToken = body.get("id_token");
+        if (idToken == null || idToken.isEmpty()) {
+            return ResponseEntity.badRequest().body("Missing Google ID token");
+        }
+        return authService.handleGoogleLogin(idToken);
+    }
+
     @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> getCurrentUser(
             @AuthenticationPrincipal OAuth2User oauth2User) {
