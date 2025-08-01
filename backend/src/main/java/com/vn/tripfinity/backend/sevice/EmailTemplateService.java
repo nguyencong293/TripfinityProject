@@ -71,11 +71,6 @@ public class EmailTemplateService {
             return this;
         }
 
-        public EmailData customSubject(String customSubject) {
-            this.customSubject = customSubject;
-            return this;
-        }
-
         public EmailData mainTitle(String mainTitle) {
             this.mainTitle = mainTitle;
             return this;
@@ -106,12 +101,6 @@ public class EmailTemplateService {
         public EmailData addFeature(String icon,
                                     String title) {
             this.features.add(new FeatureItem(icon, title));
-            return this;
-        }
-
-        public EmailData addData(String key,
-                                 String value) {
-            this.additionalData.put(key, value);
             return this;
         }
 
