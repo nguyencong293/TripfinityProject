@@ -30,8 +30,14 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    @PostMapping("/provider")
+    public ResponseEntity<UserDTO> creatUserProvider(@Valid @RequestBody UserDTO userDTO) {
+        UserDTO createUserProvider = userService.creatUserProvider(userDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createUserProvider);
+    }
+
     @PostMapping
-    public ResponseEntity<UserDTO> createUser(@Valid @RequestBody UserDTO userDTO) throws IOException {
+    public ResponseEntity<UserDTO> createUser(@Valid @RequestBody UserDTO userDTO) {
         log.info("Create /api/users - Creating user {}", userDTO);
         UserDTO createUser = userService.createUser(userDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createUser);

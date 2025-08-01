@@ -32,7 +32,27 @@ public class UserService {
         return userRepository.findAll().stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
-    public UserDTO createUser(UserDTO userDTO) throws IOException {
+    public UserDTO creatUserProvider(UserDTO userDTO) {
+
+        if (!userDTO.getPasswordHash().equals(userDTO.getConfirmPassword())) {
+            throw new PasswordMismatchException("Mật khẩu nhập lại không khớp");
+        }
+        if (userRepository.existsByEmail(userDTO.getEmail())) {
+            throw new DuplicateResourceException("Email đã tồn tại: " + userDTO.getEmail());
+        }
+
+        User user = convertToEntity(userDTO);
+        user.setPasswordHash(passwordEncoder.encode(userDTO.getPasswordHash()));
+        user.setAccountRole(User.AccountRole.provider);
+        user.setAccountStatus(User.AccountStatus.active);
+        User savedUser = userRepository.save(user);
+
+        sendWelcomeEmail(savedUser);
+
+        return convertToDTO(savedUser);
+    }
+
+    public UserDTO createUser(UserDTO userDTO) {
         log.debug("Tạo User {}", userDTO);
 
         if (!userDTO.getPasswordHash().equals(userDTO.getConfirmPassword())) {
@@ -44,6 +64,8 @@ public class UserService {
 
         User user = convertToEntity(userDTO);
         user.setPasswordHash(passwordEncoder.encode(userDTO.getPasswordHash()));
+        user.setAccountRole(User.AccountRole.tourist);
+        user.setAccountStatus(User.AccountStatus.active);
         User savedUser = userRepository.save(user);
         log.info("Tạo User ID: {}", savedUser.getUserId());
 
