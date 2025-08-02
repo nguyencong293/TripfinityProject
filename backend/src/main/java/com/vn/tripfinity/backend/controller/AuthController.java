@@ -27,6 +27,20 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @PostMapping("/provider/login")
+    public ResponseEntity<?> loginProvider(@RequestBody LoginRequest loginRequest) {
+        return authService.loginProvider(loginRequest);
+    }
+
+    @PostMapping("/provider/oauth-login")
+    public ResponseEntity<?> oauthProviderLogin(@RequestBody Map<String, String> body) {
+        String idToken = body.get("id_token");
+        if (idToken == null || idToken.isEmpty()) {
+            return ResponseEntity.badRequest().body("Missing Google ID token");
+        }
+        return authService.handleGoogleLoginProvider(idToken);
+    }
+
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         return authService.authenticateUser(loginRequest);

@@ -50,6 +50,83 @@ public class AuthService {
         this.userService = userService;
     }
 
+    public ResponseEntity<?> loginProvider(LoginRequest loginRequest) {
+        if (!userRepository.existsByEmail(loginRequest.getEmail())) {
+            return ResponseEntity.badRequest().body("Email không tồn tại!");
+        }
+
+        User user = userRepository.findByEmail(loginRequest.getEmail())
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
+
+        if (!userRepository.isAllowedProvider(user.getEmail())) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("Tài khoản bị khóa hoặc không có quyền đăng nhập!");
+        }
+
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {
+            return ResponseEntity.badRequest().body("Mật khẩu không đúng!");
+        }
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginRequest.getEmail(),
+                        loginRequest.getPassword()
+                )
+        );
+
+        // Set authentication vào SecurityContext
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // Generate JWT token
+        String jwt = tokenProvider.generateToken((UserDetails) authentication.getPrincipal());
+
+        return ResponseEntity.ok(new LoginResponse(jwt, user.getUserId(), user.getFullName(), user.getEmail()));
+    }
+
+    public ResponseEntity<?> handleGoogleLoginProvider(String idTokenString) {
+//        System.out.println("Nhận token Google: " + idTokenString);
+        try {
+            // Xác minh ID token
+            GoogleIdToken idToken = tokenVerifier.verify(idTokenString);
+            if (idToken == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token Google sai");
+            }
+
+            // Trích xuất thông tin
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+            String avatar = (String) payload.get("picture");
+
+            User user = findOrCreateProvider(email, name, avatar);
+
+            Map<String, Object> tokens = generateTokens(user);
+
+            return ResponseEntity.ok(tokens);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Lỗi đăng nhập Google: " + e.getMessage());
+        }
+    }
+
+    private User findOrCreateProvider(String email,
+                                  String name,
+                                  String avatar) {
+        return userRepository.findByEmail(email).orElseGet(() -> {
+            User newUser = new User();
+            newUser.setEmail(email);
+            newUser.setFullName(name);
+            newUser.setAvatarUrl(avatar);
+            newUser.setAccountStatus(User.AccountStatus.active);
+            newUser.setAccountRole(User.AccountRole.provider);
+            newUser.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
+            User savedUser = userRepository.save(newUser);
+            userService.sendWelcomeEmail(savedUser);
+            return savedUser;
+        });
+    }
+
     public ResponseEntity<?> authenticateUser(LoginRequest loginRequest) {
         if (!userRepository.existsByEmail(loginRequest.getEmail())) {
             return ResponseEntity.badRequest().body("Email không tồn tại!");
@@ -57,6 +134,12 @@ public class AuthService {
 
         User user = userRepository.findByEmail(loginRequest.getEmail())
                 .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
+
+        if (!userRepository.isAllowedUser(user.getEmail())) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("Tài khoản bị khóa hoặc không có quyền đăng nhập!");
+        }
 
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {
             return ResponseEntity.badRequest().body("Mật khẩu không đúng!");
