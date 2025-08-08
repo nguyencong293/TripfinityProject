@@ -5,5 +5,7 @@
   "language": "Language",
   "language_name": "English",
   "current_language": "Current Language",
-  "switch_language_instruction": "Use the dropdown menu above to switch between languages."
+  "switch_language_instruction": "Use the dropdown menu above to switch between languages.",
+  "dark_mode": "Dark Mode",
+  "light_mode": "Light Mode"
 }

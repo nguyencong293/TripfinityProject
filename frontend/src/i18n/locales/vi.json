@@ -5,5 +5,7 @@
   "language": "Ngôn ngữ",
   "language_name": "Tiếng Việt",
   "current_language": "Ngôn ngữ hiện tại",
-  "switch_language_instruction": "Sử dụng menu thả xuống ở trên để chuyển đổi giữa các ngôn ngữ."
+  "switch_language_instruction": "Sử dụng menu thả xuống ở trên để chuyển đổi giữa các ngôn ngữ.",
+  "dark_mode": "Chế độ Tối",
+  "light_mode": "Chế độ Sáng"
 }
