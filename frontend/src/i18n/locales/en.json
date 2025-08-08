@@ -1,0 +1,9 @@
+{
+  "app_title": "Language Switcher",
+  "welcome": "Welcome to Language Switcher",
+  "app_description": "This is a simple demonstration of multi-language support in React. You can switch between English, Vietnamese, and Korean using the language selector in the top-right corner.",
+  "language": "Language",
+  "language_name": "English",
+  "current_language": "Current Language",
+  "switch_language_instruction": "Use the dropdown menu above to switch between languages."
+}

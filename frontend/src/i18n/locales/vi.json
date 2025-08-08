@@ -1,0 +1,9 @@
+{
+  "app_title": "Chuyển Đổi Ngôn Ngữ",
+  "welcome": "Chào mừng đến với Chuyển Đổi Ngôn Ngữ",
+  "app_description": "Đây là một minh họa đơn giản về hỗ trợ đa ngôn ngữ trong React. Bạn có thể chuyển đổi giữa tiếng Anh, tiếng Việt và tiếng Hàn bằng cách sử dụng bộ chọn ngôn ngữ ở góc trên bên phải.",
+  "language": "Ngôn ngữ",
+  "language_name": "Tiếng Việt",
+  "current_language": "Ngôn ngữ hiện tại",
+  "switch_language_instruction": "Sử dụng menu thả xuống ở trên để chuyển đổi giữa các ngôn ngữ."
+}
