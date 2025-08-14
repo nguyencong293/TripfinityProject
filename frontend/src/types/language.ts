@@ -12,5 +12,5 @@ export interface Translation {
   language_name: string;
   current_language: string;
   switch_language_instruction: string;
-  [key: string]: string; // Add index signature for dynamic key access
+  [key: string]: string;
 }

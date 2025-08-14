@@ -19,9 +19,9 @@ const translations: Record<string, Translation> = {
 };
 
 export const getTranslation = (langCode: string, key: string): string => {
-  return translations[langCode]?.[key] || translations["en"][key] || key;
+  return translations[langCode]?.[key] || translations["vi"][key] || key;
 };
 
 export const getCurrentLanguage = (langCode: string): Language => {
-  return languages.find((lang) => lang.code === langCode) || languages[0];
+  return languages.find((lang) => lang.code === langCode) || languages[1];
 };
