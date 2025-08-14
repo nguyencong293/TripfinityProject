@@ -5,6 +5,8 @@ import ThemeToggle from "./components/ThemeToggle";
 const App: React.FC = () => {
   const { t } = useLanguage();
 
+  document.title = t("app_title");
+
   return (
     <div className={`min-h-screen transition-colors duration-300`}>
       <div className="max-w-6xl mx-auto p-8 space-y-8">
