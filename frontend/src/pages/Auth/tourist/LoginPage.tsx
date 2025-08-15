@@ -1,4 +1,4 @@
-import { useLanguage } from "../../hooks/useLanguage";
+import { useLanguage } from "../../../hooks/useLanguage";
 import { Link } from "react-router-dom";
 import logo from "../../assets/images/logo.png";
 import { useEffect, useRef, useState } from "react";

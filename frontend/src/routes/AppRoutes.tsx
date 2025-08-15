@@ -1,9 +1,9 @@
 import type React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import App from "../App";
-import LoginPage from "../pages/Auth/LoginPage";
-import RegisterPage from "../pages/Auth/RegisterPage";
-import ForgetAccountPage from "../pages/Auth/ForgetAccountPage";
+import LoginPage from "../pages/Auth/tourist/LoginPage";
+import RegisterPage from "../pages/Auth/tourist/RegisterPage";
+import ForgetAccountPage from "../pages/Auth/tourist/ForgetAccountPage";
 
 const AppRoutes: React.FC = () => {
   return (
