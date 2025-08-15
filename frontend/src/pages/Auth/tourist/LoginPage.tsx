@@ -1,9 +1,9 @@
 import { useLanguage } from "../../../hooks/useLanguage";
 import { Link } from "react-router-dom";
-import logo from "../../assets/images/logo.png";
+import logo from "../../../assets/images/logo.png";
 import { useEffect, useRef, useState } from "react";
 import { Mail, Eye, EyeOff, X } from "lucide-react";
-import googleLogo from "../../assets/images/7123025_logo_google_g_icon.png";
+import googleLogo from "../../../assets/images/7123025_logo_google_g_icon.png";
 
 const LoginPage: React.FC = () => {
   const { t } = useLanguage();

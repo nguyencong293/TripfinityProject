@@ -1,6 +1,6 @@
 import { useLanguage } from "../../../hooks/useLanguage";
 import { Link } from "react-router-dom";
-import logo from "../../assets/images/logo.png";
+import logo from "../../../assets/images/logo.png";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
 
