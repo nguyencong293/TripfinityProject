@@ -4,7 +4,7 @@ import logo from "../../assets/images/logo.png";
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
 
-const RegisterPage: React.FC = () => {
+const ForgetAccountPage: React.FC = () => {
   const { t } = useLanguage();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -188,4 +188,4 @@ const RegisterPage: React.FC = () => {
   );
 };
 
-export default RegisterPage;
+export default ForgetAccountPage;

@@ -157,18 +157,17 @@ const LoginPage: React.FC = () => {
                 </label>
 
                 <div className="flex justify-end">
-                  <button
-                    type="button"
-                    className="text-xs font-medium link-brand"
-                    onClick={() => console.log("Forgot password")}
+                  <Link
+                    to="/forget-account"
+                    className="link-brand text-caption-mobile"
                   >
                     {t("forg_account_txt")}
-                  </button>
+                  </Link>
                 </div>
 
                 <button
                   type="submit"
-                  className="btn-primary w-full h-12 rounded-full font-semibold"
+                  className="btn-primary w-full h-12 rounded-full font-semibold mt-5"
                   disabled={!email || !password}
                 >
                   {t("login")}
