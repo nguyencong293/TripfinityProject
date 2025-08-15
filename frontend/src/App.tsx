@@ -1,9 +1,15 @@
 import { useLanguage } from "./hooks/useLanguage";
 import LanguageSelector from "./components/LanguageSelector";
 import ThemeToggle from "./components/ThemeToggle";
+import { useNavigate } from "react-router-dom";
 
 const App: React.FC = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
+
+  const goToLogin = () => {
+    navigate("/login");
+  };
 
   document.title = t("app_title");
 
@@ -16,6 +22,7 @@ const App: React.FC = () => {
           </h1>
           <ThemeToggle />
           <LanguageSelector />
+          <button onClick={goToLogin}>Đến trang đăng nhập</button>
         </header>
       </div>
     </div>

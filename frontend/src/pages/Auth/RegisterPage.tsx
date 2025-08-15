@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { Mail, X } from "lucide-react";
 import googleLogo from "../../assets/images/7123025_logo_google_g_icon.png";
 
-const LoginPage: React.FC = () => {
+const RegisterPage: React.FC = () => {
   const { t } = useLanguage();
 
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -169,4 +169,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage;
+export default RegisterPage;

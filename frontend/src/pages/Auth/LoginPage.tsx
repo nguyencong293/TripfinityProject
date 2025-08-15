@@ -1,7 +1,8 @@
 import { useLanguage } from "../../hooks/useLanguage";
+import { useNavigate } from "react-router-dom";
 import logo from "../../assets/images/logo.png";
-import { useCallback, useEffect, useRef } from "react";
-import { Mail, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Mail, X, Eye, EyeOff } from "lucide-react";
 import googleLogo from "../../assets/images/7123025_logo_google_g_icon.png";
 
 const LoginPage: React.FC = () => {
@@ -11,13 +12,24 @@ const LoginPage: React.FC = () => {
   const firstActionRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
+  const emailInputRef = useRef<HTMLInputElement | null>(null);
+  const passwordInputRef = useRef<HTMLInputElement | null>(null);
+  const submitBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const navigate = useNavigate();
+
   useEffect(() => {
     document.title = t("login");
   }, [t]);
 
   const close = useCallback(() => {
-    window.history.back();
-  }, []);
+    navigate("/");
+  }, [navigate]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -28,8 +40,12 @@ const LoginPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    (firstActionRef.current || closeBtnRef.current)?.focus();
-  }, []);
+    if (showEmailForm) {
+      emailInputRef.current?.focus();
+    } else {
+      (firstActionRef.current || closeBtnRef.current)?.focus();
+    }
+  }, [showEmailForm]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -64,6 +80,11 @@ const LoginPage: React.FC = () => {
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, []);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Submit email login:", { email, password });
+  };
 
   return (
     <div
@@ -107,7 +128,7 @@ const LoginPage: React.FC = () => {
             />
           </div>
 
-          <div className="text-center space-y-2">
+          <div className="w-full space-y-2 text-center">
             <h1
               id="login-title"
               className="text-h3-mobile sm:text-h3-tablet lg:text-h2-desktop theme-text-primary"
@@ -115,47 +136,137 @@ const LoginPage: React.FC = () => {
               {t("login")}
             </h1>
             <p className="text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
-              {t("login_account")}
+              {showEmailForm ? t("login_account") : t("login_account")}
             </p>
           </div>
 
-          <div className="flex w-full flex-col gap-4">
-            <button
-              ref={firstActionRef}
-              type="button"
-              className="
-                btn-outline btn-text-responsive w-full
-                flex items-center justify-center gap-3
-              "
-              onClick={() => console.log("Google login")}
-            >
-              <img className="h-5 w-5" src={googleLogo} alt="Google" />
-              <span>{t("login_with_google")}</span>
-            </button>
+          {!showEmailForm && (
+            <div className="flex w-full flex-col gap-4">
+              <button
+                ref={firstActionRef}
+                type="button"
+                className="
+                  btn-outline btn-text-responsive w-full
+                  flex items-center justify-center gap-3
+                "
+                onClick={() => console.log("Google login")}
+              >
+                <img className="h-5 w-5" src={googleLogo} alt="Google" />
+                <span>{t("login_with_google")}</span>
+              </button>
 
-            <button
-              type="button"
-              className="
-                btn-outline btn-text-responsive w-full
-                flex items-center justify-center gap-3
-              "
-              onClick={() => console.log("Email flow")}
-            >
-              <Mail
-                className="h-5 w-5 icon-primary"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-              <span>{t("login_with_email")}</span>
-            </button>
-          </div>
+              <button
+                type="button"
+                className="
+                  btn-outline btn-text-responsive w-full
+                  flex items-center justify-center gap-3
+                "
+                onClick={() => setShowEmailForm(true)}
+              >
+                <Mail
+                  className="h-5 w-5 icon-primary"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+                <span>{t("login_with_email")}</span>
+              </button>
+            </div>
+          )}
 
+          {showEmailForm && (
+            <form
+              onSubmit={submit}
+              className="flex w-full flex-col gap-5 animate-in fade-in duration-150"
+              noValidate
+            >
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="email"
+                    className="text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop font-medium theme-text-secondary"
+                  >
+                    {t("email_account")}
+                  </label>
+                  <input
+                    ref={emailInputRef}
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t("ent_email_account")}
+                    className="
+                      w-full rounded-lg border theme-border bg-transparent px-3 py-4
+                      focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus
+                      text-body2-mobile sm:text-body2-tablet lg:text-body2-desktop
+                    "
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="password"
+                    className="text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop font-medium theme-text-secondary"
+                  >
+                    {t("passw_account")}
+                  </label>
+                  <div className="relative">
+                    <input
+                      ref={passwordInputRef}
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={t("ent_passw_account")}
+                      className="
+                        w-full rounded-lg border theme-border bg-transparent px-3 py-4 pr-10
+                        focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus
+                        text-body2-mobile sm:text-body2-tablet lg:text-body2-desktop
+                      "
+                    />
+                    <button
+                      type="button"
+                      aria-label={
+                        showPassword ? t("hide_password") : t("show_password")
+                      }
+                      onClick={() => setShowPassword((s) => !s)}
+                      className="absolute inset-y-0 right-2 inline-flex items-center justify-center rounded-md px-2 theme-text-secondary hover:theme-text-primary focus:outline-none"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                  <div className="mt-1 flex justify-end">
+                    <button
+                      type="button"
+                      className="text-xs font-medium link-brand"
+                      onClick={() => console.log("Forgot password")}
+                    >
+                      {t("forg_account_txt")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                ref={submitBtnRef}
+                type="submit"
+                className="btn-primary w-full h-12 rounded-full font-semibold btn-text-responsive mt-2"
+              >
+                {t("login")}
+              </button>
+            </form>
+          )}
           <p
             className="
-              mt-2 text-center
-              text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop
-              theme-text-secondary leading-4
-            "
+                mt-2 text-center
+                text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop
+                theme-text-secondary leading-4
+              "
           >
             {t("dont_have_an_account")}
             <a href="#" className="link-brand">

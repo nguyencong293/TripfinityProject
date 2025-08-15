@@ -184,7 +184,7 @@
     @apply theme-bg-skeleton animate-pulse rounded;
   }
 
-  /* ===== Overlay (nếu cần riêng) ===== */
+  /* ===== Overlay ===== */
   .overlay {
     @apply fixed inset-0 theme-bg-overlay backdrop-blur-sm;
   }
