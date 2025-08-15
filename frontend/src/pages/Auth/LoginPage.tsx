@@ -1,229 +1,143 @@
 import { useLanguage } from "../../hooks/useLanguage";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import logo from "../../assets/images/logo.png";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Mail, X, Eye, EyeOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Mail, Eye, EyeOff, X } from "lucide-react";
 import googleLogo from "../../assets/images/7123025_logo_google_g_icon.png";
 
 const LoginPage: React.FC = () => {
   const { t } = useLanguage();
-
-  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const firstActionRef = useRef<HTMLButtonElement | null>(null);
-  const dialogRef = useRef<HTMLDivElement | null>(null);
-
-  const emailInputRef = useRef<HTMLInputElement | null>(null);
-  const passwordInputRef = useRef<HTMLInputElement | null>(null);
-  const submitBtnRef = useRef<HTMLButtonElement | null>(null);
+  const emailRef = useRef<HTMLInputElement | null>(null);
 
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const navigate = useNavigate();
-
   useEffect(() => {
     document.title = t("login");
   }, [t]);
 
-  const close = useCallback(() => {
-    navigate("/");
-  }, [navigate]);
-
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (showEmailForm) {
-      emailInputRef.current?.focus();
-    } else {
-      (firstActionRef.current || closeBtnRef.current)?.focus();
-    }
+    if (showEmailForm) emailRef.current?.focus();
+    else firstActionRef.current?.focus();
   }, [showEmailForm]);
-
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      const container = dialogRef.current;
-      if (!container) return;
-      const focusables = Array.from(
-        container.querySelectorAll<HTMLElement>(
-          'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter(
-        (el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden")
-      );
-      if (!focusables.length) {
-        e.preventDefault();
-        return;
-      }
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, []);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Submit email login:", { email, password });
+    console.log("Submit email login:", { email });
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      aria-labelledby="login-title"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="overlay" aria-hidden="true" />
-
+    <main className="relative overflow-hidden min-h-screen w-full flex items-center justify-center px-4 py-10 sm:py-12">
       <div
-        ref={dialogRef}
-        className="
-          relative w-full max-w-md rounded-2xl
-          theme-bg-card theme-border theme-text-primary
-          p-8 shadow-xl animate-in fade-in zoom-in duration-200
-        "
+        className="pointer-events-none absolute inset-0 -z-10"
+        aria-hidden="true"
       >
-        <button
-          ref={closeBtnRef}
-          onClick={close}
-          aria-label={t("close")}
-          className="
-            absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center
-            rounded-full theme-text-secondary hover:theme-text-primary
-            hover:theme-bg-secondary
-            focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus focus:ring-offset-2
-            transition
-          "
-        >
-          <X className="h-4 w-4" strokeWidth={2} />
-        </button>
+        <div className="hidden sm:block absolute -top-40 -left-32 h-[26rem] w-[26rem] rounded-full bg-gradient-to-br from-emerald-400/25 to-teal-500/30 blur-3xl animate-float-slow" />
+        <div className="hidden md:block absolute top-1/2 -translate-y-1/2 -right-40 h-[30rem] w-[30rem] rounded-full bg-gradient-to-tr from-rose-400/20 via-fuchsia-500/25 to-indigo-500/25 blur-3xl animate-float-slower" />
+        <div className="absolute top-24 left-[12%] h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-emerald-400/30 blur-xl animate-pulse-soft" />
+        <div className="absolute bottom-32 right-[18%] h-12 w-12 sm:h-20 sm:w-20 rounded-full bg-indigo-400/25 blur-lg animate-pulse-soft-delayed" />
+        <div className="absolute top-[62%] left-[30%] h-12 w-12 rounded-full bg-pink-400/30 blur-lg animate-pulse-soft" />
+        <div className="sm:hidden absolute top-6 right-2 h-40 w-40 rounded-full bg-gradient-to-tr from-cyan-400/20 to-sky-500/20 blur-2xl animate-float-medium" />
+      </div>
 
-        <div className="flex flex-col items-center gap-6">
-          <div className="p-2 rounded-full border theme-border bg-white">
-            <img
-              src={logo}
-              alt="Tripfinity"
-              className="h-15 w-auto"
-              draggable={false}
-            />
-          </div>
+      <div className="w-full max-w-md sm:max-w-md md:max-w-lg relative">
+        <div className="w-full rounded-2xl theme-bg-card/95 backdrop-blur theme-border theme-text-primary p-6 sm:p-8 shadow-xl ring-1 ring-black/5">
+          <Link
+            to="/"
+            className="theme-dibutton absolute top-4 right-4"
+            aria-label={t("close") || "Close"}
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </Link>
 
-          <div className="w-full space-y-2 text-center">
-            <h1
-              id="login-title"
-              className="text-h3-mobile sm:text-h3-tablet lg:text-h2-desktop theme-text-primary"
-            >
-              {t("login")}
-            </h1>
-            <p className="text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
-              {showEmailForm ? t("login_account") : t("login_account")}
-            </p>
-          </div>
-
-          {!showEmailForm && (
-            <div className="flex w-full flex-col gap-4">
-              <button
-                ref={firstActionRef}
-                type="button"
-                className="
-                  btn-outline btn-text-responsive w-full
-                  flex items-center justify-center gap-3
-                "
-                onClick={() => console.log("Google login")}
-              >
-                <img className="h-5 w-5" src={googleLogo} alt="Google" />
-                <span>{t("login_with_google")}</span>
-              </button>
-
-              <button
-                type="button"
-                className="
-                  btn-outline btn-text-responsive w-full
-                  flex items-center justify-center gap-3
-                "
-                onClick={() => setShowEmailForm(true)}
-              >
-                <Mail
-                  className="h-5 w-5 icon-primary"
-                  strokeWidth={2}
-                  aria-hidden="true"
-                />
-                <span>{t("login_with_email")}</span>
-              </button>
+          <div className="flex justify-center mb-4">
+            <div className="p-2 rounded-full border theme-border bg-white">
+              <img
+                src={logo}
+                alt="Tripfinity"
+                className="h-12 sm:h-14 w-auto"
+                draggable={false}
+              />
             </div>
-          )}
+          </div>
 
-          {showEmailForm && (
-            <form
-              onSubmit={submit}
-              className="flex w-full flex-col gap-5 animate-in fade-in duration-150"
-              noValidate
-            >
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <label
-                    htmlFor="email"
-                    className="text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop font-medium theme-text-secondary"
-                  >
-                    {t("email_account")}
-                  </label>
+          <h1
+            id="login-title"
+            className="text-h4-mobile sm:text-h3-tablet lg:text-h2-desktop text-center font-semibold"
+          >
+            {t("login")}
+          </h1>
+          <p className="mt-2 text-center text-subtitle2-mobile theme-text-secondary">
+            {t("login_account")}
+          </p>
+
+          <div className="mt-6 sm:mt-8 flex flex-col gap-3 sm:gap-4">
+            {!showEmailForm ? (
+              <>
+                <button
+                  ref={firstActionRef}
+                  type="button"
+                  className="btn-outline w-full flex items-center justify-center gap-3 py-3 sm:py-3"
+                  onClick={() => console.log("Google login")}
+                >
+                  <img className="h-5 w-5" src={googleLogo} alt="Google" />
+                  <span className="btn-text-responsive">
+                    {t("login_with_google")}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-outline w-full flex items-center justify-center gap-3 py-3 sm:py-3"
+                  onClick={() => setShowEmailForm(true)}
+                >
+                  <Mail
+                    className="h-5 w-5"
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                  <span className="btn-text-responsive">
+                    {t("login_with_email")}
+                  </span>
+                </button>
+              </>
+            ) : (
+              <form
+                onSubmit={submit}
+                className="flex flex-col gap-3 sm:gap-4"
+                noValidate
+                aria-labelledby="login-title"
+              >
+                <label className="text-body1-mobile font-medium theme-text-secondary">
+                  {t("email_account")}
                   <input
-                    ref={emailInputRef}
+                    ref={emailRef}
                     id="email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={t("ent_email_account")}
-                    className="
-                      w-full rounded-lg border theme-border bg-transparent px-3 py-4
-                      focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus
-                      text-body2-mobile sm:text-body2-tablet lg:text-body2-desktop
-                    "
+                    autoComplete="email"
+                    className="w-full mt-1 rounded-lg border theme-border bg-transparent px-3 py-3"
                   />
-                </div>
+                </label>
 
-                <div className="flex flex-col gap-1">
-                  <label
-                    htmlFor="password"
-                    className="text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop font-medium theme-text-secondary"
-                  >
-                    {t("passw_account")}
-                  </label>
-                  <div className="relative">
+                <label className="text-body1-mobile font-medium theme-text-secondary">
+                  {t("passw_account")}
+                  <div className="relative mt-1">
                     <input
-                      ref={passwordInputRef}
                       id="password"
                       type={showPassword ? "text" : "password"}
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={t("ent_passw_account")}
-                      className="
-                        w-full rounded-lg border theme-border bg-transparent px-3 py-4 pr-10
-                        focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus
-                        text-body2-mobile sm:text-body2-tablet lg:text-body2-desktop
-                      "
+                      autoComplete="current-password"
+                      className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
                     />
                     <button
                       type="button"
@@ -231,7 +145,7 @@ const LoginPage: React.FC = () => {
                         showPassword ? t("hide_password") : t("show_password")
                       }
                       onClick={() => setShowPassword((s) => !s)}
-                      className="absolute inset-y-0 right-2 inline-flex items-center justify-center rounded-md px-2 theme-text-secondary hover:theme-text-primary focus:outline-none"
+                      className="absolute right-2 top-1/2 -translate-y-1/2"
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -240,43 +154,38 @@ const LoginPage: React.FC = () => {
                       )}
                     </button>
                   </div>
-                  <div className="mt-1 flex justify-end">
-                    <button
-                      type="button"
-                      className="text-xs font-medium link-brand"
-                      onClick={() => console.log("Forgot password")}
-                    >
-                      {t("forg_account_txt")}
-                    </button>
-                  </div>
-                </div>
-              </div>
+                </label>
 
-              <button
-                ref={submitBtnRef}
-                type="submit"
-                className="btn-primary w-full h-12 rounded-full font-semibold btn-text-responsive mt-2"
-              >
-                {t("login")}
-              </button>
-            </form>
-          )}
-          <p
-            className="
-                mt-2 text-center
-                text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop
-                theme-text-secondary leading-4
-              "
-          >
-            {t("dont_have_an_account")}
-            <a href="#" className="link-brand">
-              {" "}
-              {t("register_account")}
-            </a>
-          </p>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="text-xs font-medium link-brand"
+                    onClick={() => console.log("Forgot password")}
+                  >
+                    {t("forg_account_txt")}
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn-primary w-full h-12 rounded-full font-semibold"
+                  disabled={!email || !password}
+                >
+                  {t("login")}
+                </button>
+              </form>
+            )}
+
+            <p className="text-center text-caption-mobile mt-2 theme-text-secondary">
+              {t("dont_have_an_account")}{" "}
+              <Link to="/register" className="link-brand">
+                {t("register_account")}
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 
