@@ -1,30 +1,179 @@
 import { useLanguage } from "../../hooks/useLanguage";
 import { Link } from "react-router-dom";
 import logo from "../../assets/images/logo.png";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
+
+const OTP_LENGTH = 6;
 
 const ForgetAccountPage: React.FC = () => {
   const { t } = useLanguage();
 
+  const [step, setStep] = useState<number>(0);
+
+  const [email, setEmail] = useState("");
+  const [otpValues, setOtpValues] = useState<string[]>(
+    Array.from({ length: OTP_LENGTH }).map(() => "")
+  );
+  const otpInputsRef = useRef<Array<HTMLInputElement | null>>(
+    Array.from({ length: OTP_LENGTH }).map(() => null)
+  );
+
+  const [newPassword, setNewPassword] = useState("");
+  const [rePassword, setRePassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showRePassword, setShowRePassword] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rePassword, setRePassword] = useState("");
+
+  const [resendCooldown, setResendCooldown] = useState<number>(0);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    document.title = t("register_account");
+    document.title = t("forgot_account");
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+        cooldownTimerRef.current = null;
+      }
+    };
   }, [t]);
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Submit register:", { name, email, password, rePassword });
-    // TODO: call register API
+  const startResendCooldown = useCallback((seconds = 120) => {
+    setResendCooldown(seconds);
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+    }
+    cooldownTimerRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          if (cooldownTimerRef.current) {
+            clearInterval(cooldownTimerRef.current);
+            cooldownTimerRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const setOtpRef = useCallback(
+    (index: number) => (el: HTMLInputElement | null) => {
+      otpInputsRef.current[index] = el;
+    },
+    []
+  );
+
+  const focusInput = (index: number) => {
+    otpInputsRef.current[index]?.focus();
   };
 
-  const passwordsMatch = password && rePassword && password === rePassword;
+  const handleEmailSubmit = useCallback(
+    (e?: React.FormEvent) => {
+      e?.preventDefault?.();
+      if (!email) return;
+      startResendCooldown(120);
+      setOtpValues(Array.from({ length: OTP_LENGTH }).map(() => ""));
+      setTimeout(() => focusInput(0), 100);
+      setStep(1);
+    },
+    [email, startResendCooldown]
+  );
+
+  const handleOtpChange = useCallback((index: number, value: string) => {
+    const onlyDigit = value.replace(/\D/g, "").slice(0, 1);
+    setOtpValues((prev) => {
+      const next = [...prev];
+      next[index] = onlyDigit;
+      return next;
+    });
+    if (onlyDigit && index + 1 < OTP_LENGTH) {
+      focusInput(index + 1);
+    }
+  }, []);
+
+  const handleOtpKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>, i: number) => {
+      const key = e.key;
+      if (key === "Backspace") {
+        if (otpValues[i]) {
+          setOtpValues((prev) => {
+            const next = [...prev];
+            next[i] = "";
+            return next;
+          });
+        } else if (i > 0) {
+          focusInput(i - 1);
+          setOtpValues((prev) => {
+            const next = [...prev];
+            next[i - 1] = "";
+            return next;
+          });
+        }
+      } else if (key === "ArrowLeft" && i > 0) {
+        focusInput(i - 1);
+      } else if (key === "ArrowRight" && i + 1 < OTP_LENGTH) {
+        focusInput(i + 1);
+      }
+    },
+    [otpValues]
+  );
+
+  const handleOtpPaste = useCallback(
+    (e: React.ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const pasted = e.clipboardData
+        .getData("text")
+        .replace(/\D/g, "")
+        .slice(0, OTP_LENGTH);
+      if (!pasted) return;
+      const chars = pasted.split("");
+      setOtpValues((prev) => {
+        const next = [...prev];
+        for (let i = 0; i < chars.length; i++) {
+          next[i] = chars[i];
+        }
+        return next;
+      });
+      const nextFocusIndex = Math.min(chars.length, OTP_LENGTH - 1);
+      setTimeout(() => focusInput(nextFocusIndex), 0);
+    },
+    []
+  );
+
+  const handleResend = useCallback(() => {
+    if (resendCooldown > 0) return;
+    setOtpValues(Array.from({ length: OTP_LENGTH }).map(() => ""));
+    startResendCooldown(120);
+    setTimeout(() => focusInput(0), 100);
+  }, [resendCooldown, startResendCooldown]);
+
+  const handleVerifyOtp = useCallback(
+    (e?: React.FormEvent) => {
+      e?.preventDefault?.();
+      const otp = otpValues.join("");
+      if (otp.length !== OTP_LENGTH) return;
+      setStep(2);
+    },
+    [otpValues]
+  );
+
+  const handleUpdatePassword = useCallback(
+    (e?: React.FormEvent) => {
+      e?.preventDefault?.();
+      if (!newPassword || newPassword.length < 6) return;
+      if (newPassword !== rePassword) return;
+      alert(`${t("update_password")} ${t("success")}`);
+      setEmail("");
+      setOtpValues(Array.from({ length: OTP_LENGTH }).map(() => ""));
+      setNewPassword("");
+      setRePassword("");
+      setStep(0);
+    },
+    [newPassword, rePassword, t]
+  );
+
+  const passwordsMatch =
+    newPassword && rePassword && newPassword === rePassword;
 
   return (
     <main className="relative overflow-hidden min-h-screen w-full flex items-center justify-center px-4 py-10 sm:py-12">
@@ -62,125 +211,216 @@ const ForgetAccountPage: React.FC = () => {
           </div>
 
           <h1
-            id="login-title"
+            id="forget-title"
             className="text-h4-mobile sm:text-h3-tablet lg:text-h2-desktop text-center font-semibold"
           >
-            {t("register_account")}
+            {t("forgot_account")}
           </h1>
-          <p className="mt-2 text-center text-subtitle2-mobile theme-text-secondary">
-            {t("login_account")}
-          </p>
 
           <div className="mt-6 sm:mt-8 flex flex-col gap-3 sm:gap-4">
-            <form
-              onSubmit={submit}
-              className="flex flex-col gap-3 sm:gap-4"
-              noValidate
-              aria-labelledby="login-title"
-            >
-              <label className="text-body1-mobile font-medium theme-text-secondary">
-                {t("name_account")}
-                <input
-                  id="name_account"
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t("ent_name_account")}
-                  autoComplete="name"
-                  className="w-full mt-1 rounded-lg border theme-border bg-transparent px-3 py-3"
-                />
-              </label>
-
-              <label className="text-body1-mobile font-medium theme-text-secondary">
-                {t("email_account")}
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={t("ent_email_account")}
-                  autoComplete="email"
-                  className="w-full mt-1 rounded-lg border theme-border bg-transparent px-3 py-3"
-                />
-              </label>
-
-              <label className="text-body1-mobile font-medium theme-text-secondary">
-                {t("passw_account")}
-                <div className="relative mt-1">
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t("ent_passw_account")}
-                    autoComplete="new-password"
-                    className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
-                  />
-                  <button
-                    type="button"
-                    aria-label={
-                      showPassword ? t("hide_password") : t("show_password")
-                    }
-                    onClick={() => setShowPassword((s) => !s)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </label>
-
-              <label className="text-body1-mobile font-medium theme-text-secondary">
-                {t("re_passw_account")}
-                <div className="relative mt-1">
-                  <input
-                    id="re_password"
-                    type={showRePassword ? "text" : "password"}
-                    required
-                    value={rePassword}
-                    onChange={(e) => setRePassword(e.target.value)}
-                    placeholder={t("ent_re_passw_account")}
-                    autoComplete="new-password"
-                    className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
-                  />
-                  <button
-                    type="button"
-                    aria-label={
-                      showRePassword ? t("hide_password") : t("show_password")
-                    }
-                    onClick={() => setShowRePassword((s) => !s)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                  >
-                    {showRePassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </label>
-
-              <button
-                type="submit"
-                className="btn-primary w-full h-12 rounded-full font-semibold mt-5"
-                disabled={!name || !email || !passwordsMatch}
+            {step === 0 && (
+              <form
+                onSubmit={handleEmailSubmit}
+                noValidate
+                aria-labelledby="forget-title"
+                className="flex flex-col gap-3 sm:gap-4"
               >
-                {t("register")}
-              </button>
-            </form>
+                <label className="text-body1-mobile font-medium theme-text-secondary">
+                  {t("email_account")}
+                  <input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t("ent_email_account")}
+                    autoComplete="email"
+                    className="w-full mt-1 rounded-lg border theme-border bg-transparent px-3 py-3"
+                  />
+                </label>
 
-            <p className="text-center text-caption-mobile mt-2 theme-text-secondary">
-              {t("already_have_an_account")}{" "}
-              <Link to="/login" className="link-brand">
-                {t("login")}
-              </Link>
-            </p>
+                <button
+                  type="button"
+                  onClick={() => handleEmailSubmit()}
+                  className="btn-primary w-full h-12 rounded-full font-semibold mt-2"
+                  disabled={!email}
+                >
+                  {t("send_link")}
+                </button>
+
+                <p className="text-center text-caption-mobile mt-2 theme-text-secondary">
+                  {t("already_have_an_account")}{" "}
+                  <Link to="/login" className="link-brand">
+                    {t("login")}
+                  </Link>
+                </p>
+              </form>
+            )}
+
+            {step === 1 && (
+              <div className="flex flex-col gap-3">
+                <p className="text-center text-body1-mobile">
+                  {t("check_number_code")}
+                </p>
+
+                <form
+                  onSubmit={handleVerifyOtp}
+                  className="flex flex-col items-center gap-4"
+                >
+                  <div className="flex gap-2 justify-center">
+                    {Array.from({ length: OTP_LENGTH }).map((_, i) => (
+                      <input
+                        key={i}
+                        ref={setOtpRef(i)}
+                        inputMode="numeric"
+                        pattern="\d*"
+                        value={otpValues[i]}
+                        onChange={(e) => handleOtpChange(i, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(e, i)}
+                        onPaste={handleOtpPaste}
+                        className="w-12 h-12 text-center rounded-lg border theme-border bg-transparent px-2 py-2 text-h5-mobile"
+                        maxLength={1}
+                        aria-label={`OTP ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="text-center">
+                    {resendCooldown > 0 ? (
+                      <div className="text-sm theme-text-secondary">
+                        {t("resend_after_seconds")} {resendCooldown}s
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResend}
+                        className="text-sm link-brand"
+                      >
+                        {t("resend_code")}
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleVerifyOtp()}
+                    className="btn-primary w-full h-12 rounded-full font-semibold mt-2"
+                    disabled={otpValues.join("").length !== OTP_LENGTH}
+                  >
+                    {t("authed")}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="text-sm mt-1 theme-text-secondary underline"
+                    onClick={() => {
+                      setStep(0);
+                      if (cooldownTimerRef.current) {
+                        clearInterval(cooldownTimerRef.current);
+                        cooldownTimerRef.current = null;
+                        setResendCooldown(0);
+                      }
+                    }}
+                  >
+                    {t("previous")}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {step === 2 && (
+              <form
+                onSubmit={handleUpdatePassword}
+                noValidate
+                className="flex flex-col gap-3"
+              >
+                <label className="text-body1-mobile font-medium theme-text-secondary">
+                  {t("new_password")}
+                  <div className="relative mt-1">
+                    <input
+                      id="new_password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder={t("ent_new_password")}
+                      autoComplete="new-password"
+                      className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
+                    />
+                    <button
+                      type="button"
+                      aria-label={
+                        showPassword ? t("hide_password") : t("show_password")
+                      }
+                      onClick={() => setShowPassword((s) => !s)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </label>
+
+                <label className="text-body1-mobile font-medium theme-text-secondary">
+                  {t("re_passw_account")}
+                  <div className="relative mt-1">
+                    <input
+                      id="re_password"
+                      type={showRePassword ? "text" : "password"}
+                      required
+                      value={rePassword}
+                      onChange={(e) => setRePassword(e.target.value)}
+                      placeholder={t("ent_re_passw_account")}
+                      autoComplete="new-password"
+                      className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
+                    />
+                    <button
+                      type="button"
+                      aria-label={
+                        showRePassword ? t("hide_password") : t("show_password")
+                      }
+                      onClick={() => setShowRePassword((s) => !s)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2"
+                    >
+                      {showRePassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </label>
+
+                {!passwordsMatch && rePassword.length > 0 && (
+                  <div className="text-sm theme-text-secondary">
+                    {t("password_mismatch")}
+                  </div>
+                )}
+
+                <div className="flex gap-3 mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="w-full h-12 rounded-full border"
+                  >
+                    {t("previous")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePassword()}
+                    className="btn-primary w-full h-12 rounded-full font-semibold"
+                    disabled={
+                      !newPassword || !passwordsMatch || newPassword.length < 6
+                    }
+                  >
+                    {t("update")}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </div>
