@@ -4,6 +4,7 @@ import App from "../App";
 import SupplierLoginPage from "../pages/Auth/SupplierLoginPage";
 import SupplierRegisterPage from "../pages/Auth/SupplierRegisterPage";
 import SupplierForgetAccountPage from "../pages/Auth/SupplierForgetAccountPage";
+import SupplierHomePage from "../pages/Home/SupplierHomePage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -11,7 +12,7 @@ const AppRoutes: React.FC = () => {
       <Routes>
         {/* supplier routes */}
         <Route path="/supplier" element={<App />}>
-          <Route index element={<App />} />
+          <Route index element={<SupplierHomePage />} />
         </Route>
         <Route path="/supplier/login" element={<SupplierLoginPage />} />
         <Route path="/supplier/register" element={<SupplierRegisterPage />} />
