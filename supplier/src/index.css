@@ -1,68 +1,191 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@font-face {
+  font-family: "FZ Poppins";
+  src: url("/fonts/FZ-Poppins-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer base {
+  * {
+    @apply border-light-border dark:border-dark-border;
   }
-  a:hover {
-    color: #747bff;
+
+  body {
+    @apply bg-light-background dark:bg-dark-background;
+    @apply text-light-textPrimary dark:text-dark-textPrimary;
+    @apply transition-colors duration-300;
+    font-family: "FZ Poppins", "Inter", system-ui, sans-serif;
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@layer components {
+  /* ===== Backgrounds ===== */
+  .theme-bg-background {
+    @apply bg-light-background dark:bg-dark-background;
+  }
+  .theme-bg-card {
+    @apply bg-light-card dark:bg-dark-card;
+  }
+  .theme-bg-primary {
+    @apply bg-light-primary dark:bg-dark-primary;
+  }
+  .theme-bg-primary-hover {
+    @apply bg-light-primaryHover dark:bg-dark-primaryHover;
+  }
+  .theme-bg-secondary {
+    @apply bg-light-secondary dark:bg-dark-secondary;
+  }
+  .theme-bg-error {
+    @apply bg-light-errorBg dark:bg-dark-errorBg;
+  }
+  .theme-bg-warning {
+    @apply bg-orange-50 dark:bg-orange-900/20;
+  }
+  .theme-bg-success {
+    @apply bg-green-50 dark:bg-green-900/20;
+  }
+  .theme-bg-info {
+    @apply bg-blue-50 dark:bg-blue-900/20;
+  }
+  .theme-bg-overlay {
+    @apply bg-light-overlay dark:bg-dark-overlay;
+  }
+  .theme-bg-skeleton {
+    @apply bg-light-skeleton dark:bg-dark-skeleton;
+  }
+
+  /* ===== Text colors ===== */
+  .theme-text-primary {
+    @apply text-light-textPrimary dark:text-dark-textPrimary;
+  }
+  .theme-text-secondary {
+    @apply text-light-textSecondary dark:text-dark-textSecondary;
+  }
+  .theme-text-disabled {
+    @apply text-light-textDisabled dark:text-dark-textDisabled;
+  }
+  .theme-text-error {
+    @apply text-light-error dark:text-dark-error;
+  }
+  .theme-text-warning {
+    @apply text-light-warning dark:text-dark-warning;
+  }
+  .theme-text-success {
+    @apply text-light-success dark:text-dark-success;
+  }
+  .theme-text-info {
+    @apply text-light-info dark:text-dark-info;
+  }
+  .theme-text-button {
+    @apply text-light-buttonText dark:text-dark-buttonText;
+  }
+  .theme-text-button-disabled {
+    @apply text-light-buttonDisabledText dark:text-dark-buttonDisabledText;
+  }
+
+  /* ===== Icons ===== */
+  .icon-primary {
+    @apply text-light-icon dark:text-dark-icon;
+  }
+  .icon-disabled {
+    @apply text-light-iconDisabled dark:text-dark-iconDisabled;
+  }
+
+  /* ===== Borders / Dividers ===== */
+  .theme-border {
+    @apply border-light-border dark:border-dark-border;
+  }
+  .theme-divider {
+    @apply border-light-divider dark:border-dark-divider;
+  }
+  .border-error {
+    @apply border-light-error dark:border-dark-error;
+  }
+  .border-warning {
+    @apply border-light-warning dark:border-dark-warning;
+  }
+  .border-success {
+    @apply border-light-success dark:border-dark-success;
+  }
+  .border-info {
+    @apply border-light-info dark:border-dark-info;
+  }
+
+  /* ===== Brand (primary color) text & icon ===== */
+  .theme-text-brand {
+    @apply text-light-primary dark:text-dark-primary;
+  }
+  .theme-text-brand-hover:hover {
+    @apply text-light-primaryHover dark:text-dark-primaryHover;
+  }
+  .theme-text-brand-muted {
+    @apply text-light-primary/70 dark:text-dark-primary/70;
+  }
+  .icon-brand {
+    @apply text-light-primary dark:text-dark-primary;
+  }
+  .link-brand {
+    @apply theme-text-brand transition-colors hover:text-light-primaryHover dark:hover:text-dark-primaryHover;
+  }
+
+  /* ===== Buttons (bổ sung) ===== */
+  .btn-outline {
+    @apply border theme-border bg-transparent
+           text-light-textPrimary dark:text-dark-textPrimary
+           rounded-full px-6 py-3 font-semibold
+           transition-colors duration-200
+           hover:bg-light-secondary dark:hover:bg-dark-secondary
+           focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus;
+  }
+
+  .btn-primary {
+    /* đã có – mở rộng thêm ring/focus và shape đồng bộ */
+    @apply bg-light-primary dark:bg-dark-primary
+           hover:bg-light-primaryHover dark:hover:bg-dark-primaryHover
+           text-light-buttonText dark:text-dark-buttonText
+           font-semibold px-6 py-3 rounded-full
+           transition-colors duration-200
+           focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus;
+  }
+
+  .btn-secondary {
+    /* đã có – chuẩn hoá rounded-full */
+    @apply bg-light-secondary dark:bg-dark-secondary
+           text-light-textPrimary dark:text-dark-textPrimary
+           font-semibold px-6 py-3 rounded-full
+           transition-colors duration-200
+           hover:opacity-80
+           focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus;
+  }
+
+  .btn-disabled {
+    @apply bg-light-buttonDisabledBg dark:bg-dark-buttonDisabledBg
+           text-light-buttonDisabledText dark:text-dark-buttonDisabledText
+           cursor-not-allowed opacity-70;
+  }
+
+  /* Utility để áp nhanh text responsive cho button */
+  .btn-text-responsive {
+    @apply text-button-mobile sm:text-button-tablet lg:text-button-desktop;
+  }
+
+  /* ===== Focus / State helpers ===== */
+  .focus-ring-primary:focus {
+    @apply outline-none ring-2 ring-light-focus dark:ring-dark-focus;
+  }
+
+  /* ===== Skeleton placeholder ===== */
+  .skeleton {
+    @apply theme-bg-skeleton animate-pulse rounded;
+  }
+
+  /* ===== Overlay ===== */
+  .overlay {
+    @apply fixed inset-0 theme-bg-overlay backdrop-blur-sm;
   }
 }
