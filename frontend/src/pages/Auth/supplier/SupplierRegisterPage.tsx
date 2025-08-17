@@ -1,30 +1,108 @@
+import React, { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, X, Loader2 } from "lucide-react";
+
 import { useLanguage } from "../../../hooks/useLanguage";
-import { Link } from "react-router-dom";
+import { useRegister } from "../../../hooks/useRegister";
 import logo from "../../../assets/images/logo.png";
-import { useEffect, useState } from "react";
-import { Eye, EyeOff, X } from "lucide-react";
+import type { UserDTO } from "../../../types/index";
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const SupplierRegisterPage: React.FC = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showRePassword, setShowRePassword] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rePassword, setRePassword] = useState("");
+
+  const [toastVisible, setToastVisible] = useState(false);
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    rePassword: "",
+  });
+
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const { isLoading, error, success, handleRegister } = useRegister();
 
   useEffect(() => {
     document.title = t("register_account");
   }, [t]);
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Submit register:", { name, email, password, rePassword });
-    // TODO: call register API
-  };
+  useEffect(() => {
+    let timeoutId: number | undefined;
+    if (success) {
+      setToastVisible(true);
+      timeoutId = window.setTimeout(() => {
+        navigate("/supplier/login", { replace: true });
+      }, 1400);
+    }
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [success, navigate]);
 
-  const passwordsMatch = password && rePassword && password === rePassword;
+  const setField = useCallback(
+    (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((s) => ({ ...s, [key]: e.target.value })),
+    []
+  );
+
+  const validateInputs = useCallback((): string | null => {
+    if (
+      !form.name.trim() ||
+      !form.email.trim() ||
+      !form.password ||
+      !form.rePassword
+    ) {
+      return t("please_fill_all_fields");
+    }
+
+    if (!emailRegex.test(form.email)) {
+      return t("email_invalid");
+    }
+
+    if (form.password !== form.rePassword) {
+      return t("password_mismatch");
+    }
+
+    if (form.password.length < 6) {
+      return t("passw_invalid");
+    }
+
+    return null;
+  }, [form, t]);
+
+  const submit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setFormError(null);
+
+      const validationError = validateInputs();
+      if (validationError) {
+        setFormError(validationError);
+        return;
+      }
+
+      const userData: UserDTO = {
+        email: form.email.trim(),
+        passwordHash: form.password,
+        fullName: form.name.trim(),
+        confirmPassword: form.rePassword,
+      };
+
+      try {
+        await handleRegister(userData);
+      } catch (err) {
+        console.error("Registration failed (submit):", err);
+      }
+    },
+    [form, validateInputs, handleRegister]
+  );
 
   return (
     <main className="relative overflow-hidden min-h-screen w-full flex items-center justify-center px-4 py-10 sm:py-12">
@@ -49,7 +127,6 @@ const SupplierRegisterPage: React.FC = () => {
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </Link>
-
           <div className="flex justify-center mb-4">
             <div className="p-2 rounded-full border theme-border bg-white">
               <img
@@ -62,7 +139,7 @@ const SupplierRegisterPage: React.FC = () => {
           </div>
 
           <h1
-            id="login-title"
+            id="register-title"
             className="text-h4-mobile sm:text-h3-tablet lg:text-h2-desktop text-center font-semibold"
           >
             {t("register_account")}
@@ -76,19 +153,21 @@ const SupplierRegisterPage: React.FC = () => {
               onSubmit={submit}
               className="flex flex-col gap-3 sm:gap-4"
               noValidate
-              aria-labelledby="login-title"
+              aria-labelledby="register-title"
             >
               <label className="text-body1-mobile font-medium theme-text-secondary">
                 {t("name_account")}
                 <input
                   id="name_account"
+                  name="name"
                   type="text"
                   required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={form.name}
+                  onChange={setField("name")}
                   placeholder={t("ent_name_account")}
                   autoComplete="name"
                   className="w-full mt-1 rounded-lg border theme-border bg-transparent px-3 py-3"
+                  aria-invalid={!!formError && !form.name.trim()}
                 />
               </label>
 
@@ -96,13 +175,15 @@ const SupplierRegisterPage: React.FC = () => {
                 {t("email_account")}
                 <input
                   id="email"
+                  name="email"
                   type="email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={form.email}
+                  onChange={setField("email")}
                   placeholder={t("ent_email_account")}
                   autoComplete="email"
                   className="w-full mt-1 rounded-lg border theme-border bg-transparent px-3 py-3"
+                  aria-invalid={!!formError && !emailRegex.test(form.email)}
                 />
               </label>
 
@@ -111,19 +192,18 @@ const SupplierRegisterPage: React.FC = () => {
                 <div className="relative mt-1">
                   <input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={form.password}
+                    onChange={setField("password")}
                     placeholder={t("ent_passw_account")}
                     autoComplete="new-password"
                     className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
+                    aria-invalid={!!formError && form.password.length < 6}
                   />
                   <button
                     type="button"
-                    aria-label={
-                      showPassword ? t("hide_password") : t("show_password")
-                    }
                     onClick={() => setShowPassword((s) => !s)}
                     className="absolute right-2 top-1/2 -translate-y-1/2"
                   >
@@ -141,19 +221,20 @@ const SupplierRegisterPage: React.FC = () => {
                 <div className="relative mt-1">
                   <input
                     id="re_password"
+                    name="re_password"
                     type={showRePassword ? "text" : "password"}
                     required
-                    value={rePassword}
-                    onChange={(e) => setRePassword(e.target.value)}
+                    value={form.rePassword}
+                    onChange={setField("rePassword")}
                     placeholder={t("ent_re_passw_account")}
                     autoComplete="new-password"
                     className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
+                    aria-invalid={
+                      !!formError && form.password !== form.rePassword
+                    }
                   />
                   <button
                     type="button"
-                    aria-label={
-                      showRePassword ? t("hide_password") : t("show_password")
-                    }
                     onClick={() => setShowRePassword((s) => !s)}
                     className="absolute right-2 top-1/2 -translate-y-1/2"
                   >
@@ -166,12 +247,61 @@ const SupplierRegisterPage: React.FC = () => {
                 </div>
               </label>
 
+              {formError && (
+                <div
+                  className="text-red-500 text-center text-sm py-2"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  {formError}
+                </div>
+              )}
+
+              {error && (
+                <div
+                  className="text-red-500 text-center text-sm py-2"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  {error}
+                </div>
+              )}
+
+              <div
+                aria-live="polite"
+                className="fixed inset-x-0 top-4 flex justify-center z-50 pointer-events-none"
+              >
+                <div
+                  className={`pointer-events-auto max-w-md w-full mx-4 transition-transform duration-300 ease-out transform ${
+                    toastVisible
+                      ? "translate-y-0 opacity-100"
+                      : "-translate-y-6 opacity-0"
+                  }`}
+                  role="status"
+                  aria-hidden={!toastVisible}
+                >
+                  <div className="border-2 border-success theme-bg-success theme-text-primary rounded-lg shadow-lg px-4 py-3">
+                    {t("registration_success_redirect")}
+                  </div>
+                </div>
+              </div>
+
               <button
                 type="submit"
-                className="btn-primary w-full h-12 rounded-full font-semibold mt-5"
-                disabled={!name || !email || !passwordsMatch}
+                className={`btn-primary w-full h-12 rounded-full font-semibold mt-5 flex items-center justify-center ${
+                  isLoading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                disabled={isLoading}
+                aria-disabled={isLoading}
               >
-                {t("register")}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                    {t("register")}
+                  </>
+                ) : (
+                  t("register")
+                )}
               </button>
             </form>
 

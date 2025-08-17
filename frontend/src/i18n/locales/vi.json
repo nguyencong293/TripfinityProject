@@ -46,5 +46,7 @@
   "resend_after_seconds": "Gửi lại sau",
   "resend_code": "Gửi lại mã",
   "close": "Đóng",
-  "login_with_email": "Đăng nhập bằng Email"
+  "login_with_email": "Đăng nhập bằng Email",
+  "please_fill_all_fields": "Vui lòng điền tất cả các trường",
+  "registration_success_redirect": "Đăng ký thành công, đang chuyển hướng..."
 }

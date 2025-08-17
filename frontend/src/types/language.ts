@@ -53,5 +53,8 @@ export interface Translation {
   resend_code: string;
   close: string;
   login_with_email: string;
+  please_fill_all_fields: string;
+  registration_success_redirect: string;
+
   [key: string]: string;
 }
