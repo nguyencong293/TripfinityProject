@@ -1,35 +1,32 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useLanguage } from "./hooks/useLanguage";
+import LanguageSelector from "./components/LanguageSelector";
+import ThemeToggle from "./components/ThemeToggle";
+import { useNavigate } from "react-router-dom";
 
-function App() {
-  const [count, setCount] = useState(0)
+const App: React.FC = () => {
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+
+  const goToLogin = () => {
+    navigate("/login");
+  };
+
+  document.title = t("app_title");
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className={`min-h-screen transition-colors duration-300`}>
+      <div className="max-w-6xl mx-auto p-8 space-y-8">
+        <header className="flex justify-between items-center">
+          <h1 className="text-display-hero-mobile md:text-display-hero-tablet lg:text-display-hero-desktop font-bold theme-text-primary">
+            {t("app_title")}
+          </h1>
+          <ThemeToggle />
+          <LanguageSelector />
+          <button onClick={goToLogin}>Đến trang đăng nhập</button>
+        </header>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    </div>
+  );
+};
 
-export default App
+export default App;
