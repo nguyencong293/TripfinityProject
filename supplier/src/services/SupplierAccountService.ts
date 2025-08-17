@@ -1,5 +1,5 @@
-import api from "../api";
-import type { UserDTO, ApiResponse } from "../../types/index";
+import api from "./api";
+import type { UserDTO, ApiResponse } from "../types/index";
 import axios from "axios";
 
 export const registerSupplier = async (

@@ -8,7 +8,7 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   const goToLogin = () => {
-    navigate("/login");
+    navigate("/supplier/login");
   };
 
   document.title = t("app_title");

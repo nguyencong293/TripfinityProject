@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { UserDTO } from "../types";
-import { registerSupplier } from "../services/supplier/SupplierAccountService";
+import { registerSupplier } from "../services/SupplierAccountService";
 import { useLanguage } from "../hooks/useLanguage";
 
 export const useSupplierRegister = () => {
