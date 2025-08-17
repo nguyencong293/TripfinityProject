@@ -11,10 +11,10 @@ const ThemeToggle: React.FC = () => {
     <button
       onClick={toggleTheme}
       className="btn-primary text-button-mobile md:text-button-tablet lg:text-button-desktop"
-      aria-label={dark ? t("light_mode") : t("dark_mode")}
+      aria-label={dark ? t("light") : t("dark")}
       type="button"
     >
-      {dark ? t("light_mode") : t("dark_mode")}
+      {dark ? t("light") : t("dark")}
     </button>
   );
 };
