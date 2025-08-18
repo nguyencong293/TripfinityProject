@@ -34,7 +34,6 @@ const SupplierHomePage: React.FC = () => {
             </button>
             <button
               onClick={async () => {
-                // Call both client and server logout
                 logout();
                 await logoutSupplier();
                 navigate("/supplier/login", { replace: true });
