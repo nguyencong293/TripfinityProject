@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, X, Loader2 } from "lucide-react";
 
 import { useLanguage } from "../../hooks/useLanguage";
-import { useSupplierRegister } from "../../hooks/useRegister";
+import { useSupplierRegister } from "../../hooks/useSupplierRegister";
 import logo from "../../assets/images/logo.png";
 import type { UserDTO } from "../../types/index";
 

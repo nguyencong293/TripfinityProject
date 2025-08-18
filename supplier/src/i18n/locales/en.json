@@ -48,5 +48,7 @@
   "close": "Close",
   "login_with_email": "Login with Email",
   "please_fill_all_fields": "Please fill in all fields",
-  "registration_success_redirect": "Registration successful, redirecting..."
+  "registration_success_redirect": "Registration successful, redirecting...",
+  "login_failed": "Login failed",
+  "unknown_error": "Unknown error"
 }

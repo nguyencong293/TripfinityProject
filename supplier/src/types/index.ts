@@ -1,3 +1,9 @@
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
 export interface UserDTO {
   userId?: number;
   email: string;
@@ -7,9 +13,27 @@ export interface UserDTO {
   phoneNumber?: string;
   avatarUrl?: string;
 }
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
+export interface LoginResponse {
+  token: string;
+  type?: string;
+  userId: number;
+  name: string;
+  email: string;
+}
+
+export interface RawLoginResponse {
+  token?: string;
+  jwt?: string;
+  type?: string;
+  userId: number;
+  name?: string;
+  fullName?: string;
+  email: string;
   message?: string;
+  [key: string]: unknown;
 }

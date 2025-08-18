@@ -48,5 +48,7 @@
   "close": "Đóng",
   "login_with_email": "Đăng nhập bằng Email",
   "please_fill_all_fields": "Vui lòng điền tất cả các trường",
-  "registration_success_redirect": "Đăng ký thành công, đang chuyển hướng..."
+  "registration_success_redirect": "Đăng ký thành công, đang chuyển hướng...",
+  "login_failed": "Đăng nhập thất bại",
+  "unknown_error": "Lỗi không xác định"
 }

@@ -1,19 +1,29 @@
 import { useLanguage } from "../../hooks/useLanguage";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import logo from "../../assets/images/logo.png";
-import { useEffect, useRef, useState } from "react";
-import { Mail, Eye, EyeOff, X } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Mail, Eye, EyeOff, X, Loader2 } from "lucide-react";
 import googleLogo from "../../assets/images/7123025_logo_google_g_icon.png";
+import { useSupplierLogin } from "../../hooks/useLogin";
+import type { LoginRequest } from "../../types";
 
 const SupplierLoginPage: React.FC = () => {
   const { t } = useLanguage();
   const firstActionRef = useRef<HTMLButtonElement | null>(null);
   const emailRef = useRef<HTMLInputElement | null>(null);
+  const navigate = useNavigate();
 
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { isLoading, error, data, handleLogin } = useSupplierLogin();
+
+  useEffect(() => {
+    if (data?.token) {
+      navigate("/supplier", { replace: true });
+    }
+  }, [data, navigate]);
 
   useEffect(() => {
     document.title = t("login");
@@ -24,10 +34,14 @@ const SupplierLoginPage: React.FC = () => {
     else firstActionRef.current?.focus();
   }, [showEmailForm]);
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Submit email login:", { email });
-  };
+  const submit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const credentials: LoginRequest = { email: email.trim(), password };
+      await handleLogin(credentials);
+    },
+    [email, password, handleLogin]
+  );
 
   return (
     <main className="relative overflow-hidden min-h-screen w-full flex items-center justify-center px-4 py-10 sm:py-12">
@@ -162,12 +176,30 @@ const SupplierLoginPage: React.FC = () => {
                   </Link>
                 </div>
 
+                {error && (
+                  <div
+                    className="text-red-500 text-center text-sm py-2"
+                    role="alert"
+                    aria-live="assertive"
+                  >
+                    {error}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="btn-primary w-full h-12 rounded-full font-semibold mt-5"
-                  disabled={!email || !password}
+                  className="btn-primary w-full h-12 rounded-full font-semibold mt-5 flex items-center justify-center disabled:opacity-50"
+                  disabled={!email || !password || isLoading}
+                  aria-disabled={!email || !password || isLoading}
                 >
-                  {t("login")}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                      {t("login")}
+                    </>
+                  ) : (
+                    t("login")
+                  )}
                 </button>
               </form>
             )}

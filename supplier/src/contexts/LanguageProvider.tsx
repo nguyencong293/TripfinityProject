@@ -1,9 +1,6 @@
 import React, { useState, useCallback } from "react";
 import type { ReactNode } from "react";
-import {
-  LanguageContext,
-  type LanguageContextType,
-} from "../contexts/LanguageContext";
+import { LanguageContext, type LanguageContextType } from "./LanguageContext";
 import { languages, getTranslation } from "../i18n/config";
 
 interface LanguageProviderProps {

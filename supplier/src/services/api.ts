@@ -9,10 +9,8 @@ const api = axios.create({
   },
 });
 
-// Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Add auth token if needed
     const token = localStorage.getItem("token");
     if (token) {
       config.headers = config.headers || {};
@@ -25,17 +23,14 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    // Handle common errors
     if (error.response?.status === 401) {
-      // Handle unauthorized
       localStorage.removeItem("token");
-      window.location.href = "/login";
+      window.location.href = "/supplier/login";
     }
     return Promise.reject(error);
   }
