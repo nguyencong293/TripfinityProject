@@ -96,3 +96,65 @@ export const logoutSupplier = async (): Promise<void> => {
     });
   }
 };
+
+// ================= Password Recovery Flow =================
+
+const extractErrorMessage = (error: unknown, fallback: string) => {
+  let errorMessage = fallback;
+  if (axios.isAxiosError(error)) {
+    if (error.response) {
+      const respData = error.response.data as { message?: string } | string;
+      if (typeof respData === "string") errorMessage = respData;
+      else errorMessage = respData.message || fallback;
+    } else if (error.request) {
+      errorMessage = "Không kết nối được với máy chủ";
+    }
+  } else if (error instanceof Error) {
+    errorMessage = error.message;
+  }
+  return errorMessage;
+};
+
+export const forgotPassword = async (email: string): Promise<string> => {
+  try {
+    const resp = await api.post("/users/forgot-password", { email });
+    return (resp.data as { message?: string } | string)?.valueOf() as string;
+  } catch (error) {
+    throw new Error(
+      extractErrorMessage(error, "Gửi yêu cầu đặt lại mật khẩu thất bại")
+    );
+  }
+};
+
+export const verifyOtp = async (
+  email: string,
+  otp: string
+): Promise<string> => {
+  try {
+    const resp = await api.post("/users/verify-otp", { email, otp });
+    return (resp.data as { message?: string } | string)?.valueOf() as string;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error, "Xác minh OTP thất bại"));
+  }
+};
+
+export const resetPassword = async (
+  email: string,
+  otp: string,
+  newPassword: string,
+  newConfirmPassword: string
+): Promise<string> => {
+  try {
+    const resp = await api.post("/users/reset-password", {
+      email,
+      otp,
+      newPassword,
+      newConfirmPassword,
+    });
+    return (resp.data as { message?: string } | string)?.valueOf() as string;
+  } catch (error) {
+    throw new Error(
+      extractErrorMessage(error, "Cập nhật mật khẩu thất bại, vui lòng thử lại")
+    );
+  }
+};

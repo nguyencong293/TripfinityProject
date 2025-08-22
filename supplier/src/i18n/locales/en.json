@@ -50,5 +50,6 @@
   "please_fill_all_fields": "Please fill in all fields",
   "registration_success_redirect": "Registration successful, redirecting...",
   "login_failed": "Login failed",
-  "unknown_error": "Unknown error"
+  "unknown_error": "Unknown error",
+  "loading": "Loading..."
 }

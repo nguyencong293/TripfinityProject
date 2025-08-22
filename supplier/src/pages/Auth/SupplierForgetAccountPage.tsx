@@ -1,15 +1,28 @@
 import { useLanguage } from "../../hooks/useLanguage";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import logo from "../../assets/images/logo.png";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
+import { useForgotPassword } from "../../hooks/useForgotPassword";
 
 const OTP_LENGTH = 6;
 
 const SupplierForgetAccountPage: React.FC = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
-  const [step, setStep] = useState<number>(0);
+  const {
+    step,
+    setStep,
+    requestOtp,
+    submitOtp,
+    updatePassword,
+    isLoading,
+    error,
+    message,
+    clearStatus,
+  } = useForgotPassword();
+  // Note: bring clearStatus from hook after updating hook export
 
   const [email, setEmail] = useState("");
   const [otpValues, setOtpValues] = useState<string[]>(
@@ -21,6 +34,7 @@ const SupplierForgetAccountPage: React.FC = () => {
 
   const [newPassword, setNewPassword] = useState("");
   const [rePassword, setRePassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showRePassword, setShowRePassword] = useState(false);
 
@@ -68,15 +82,15 @@ const SupplierForgetAccountPage: React.FC = () => {
   };
 
   const handleEmailSubmit = useCallback(
-    (e?: React.FormEvent) => {
+    async (e?: React.FormEvent) => {
       e?.preventDefault?.();
       if (!email) return;
+      await requestOtp(email);
       startResendCooldown(120);
       setOtpValues(Array.from({ length: OTP_LENGTH }).map(() => ""));
       setTimeout(() => focusInput(0), 100);
-      setStep(1);
     },
-    [email, startResendCooldown]
+    [email, requestOtp, startResendCooldown]
   );
 
   const handleOtpChange = useCallback((index: number, value: string) => {
@@ -142,38 +156,44 @@ const SupplierForgetAccountPage: React.FC = () => {
 
   const handleResend = useCallback(() => {
     if (resendCooldown > 0) return;
+    clearStatus();
     setOtpValues(Array.from({ length: OTP_LENGTH }).map(() => ""));
     startResendCooldown(120);
     setTimeout(() => focusInput(0), 100);
-  }, [resendCooldown, startResendCooldown]);
+  }, [resendCooldown, startResendCooldown, clearStatus]);
 
   const handleVerifyOtp = useCallback(
-    (e?: React.FormEvent) => {
+    async (e?: React.FormEvent) => {
       e?.preventDefault?.();
       const otp = otpValues.join("");
       if (otp.length !== OTP_LENGTH) return;
-      setStep(2);
+      await submitOtp(otp);
     },
-    [otpValues]
+    [otpValues, submitOtp]
   );
 
   const handleUpdatePassword = useCallback(
-    (e?: React.FormEvent) => {
+    async (e?: React.FormEvent) => {
       e?.preventDefault?.();
-      if (!newPassword || newPassword.length < 6) return;
-      if (newPassword !== rePassword) return;
-      alert(`${t("update_password")} ${t("success")}`);
-      setEmail("");
-      setOtpValues(Array.from({ length: OTP_LENGTH }).map(() => ""));
-      setNewPassword("");
-      setRePassword("");
-      setStep(0);
+      setFormError(null);
+      if (!newPassword || newPassword.length < 6) {
+        setFormError(t("passw_invalid"));
+        return;
+      }
+      if (newPassword !== rePassword) {
+        setFormError(t("password_mismatch"));
+        return;
+      }
+      const ok = await updatePassword(newPassword, rePassword);
+      if (ok) {
+        setOtpValues(Array.from({ length: OTP_LENGTH }).map(() => ""));
+        setNewPassword("");
+        setRePassword("");
+        navigate("/supplier/login");
+      }
     },
-    [newPassword, rePassword, t]
+    [newPassword, rePassword, updatePassword, t, navigate]
   );
-
-  const passwordsMatch =
-    newPassword && rePassword && newPassword === rePassword;
 
   return (
     <main className="relative overflow-hidden min-h-screen w-full flex items-center justify-center px-4 py-10 sm:py-12">
@@ -242,10 +262,10 @@ const SupplierForgetAccountPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleEmailSubmit()}
-                  className="btn-primary w-full h-12 rounded-full font-semibold mt-2"
-                  disabled={!email}
+                  className="btn-primary w-full h-12 rounded-full font-semibold mt-2 disabled:opacity-60"
+                  disabled={!email || isLoading}
                 >
-                  {t("send_link")}
+                  {isLoading ? t("loading") || "..." : t("send_link")}
                 </button>
 
                 <p className="text-center text-caption-mobile mt-2 theme-text-secondary">
@@ -304,10 +324,12 @@ const SupplierForgetAccountPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleVerifyOtp()}
-                    className="btn-primary w-full h-12 rounded-full font-semibold mt-2"
-                    disabled={otpValues.join("").length !== OTP_LENGTH}
+                    className="btn-primary w-full h-12 rounded-full font-semibold mt-2 disabled:opacity-60"
+                    disabled={
+                      otpValues.join("").length !== OTP_LENGTH || isLoading
+                    }
                   >
-                    {t("authed")}
+                    {isLoading ? t("loading") || "..." : t("authed")}
                   </button>
 
                   <button
@@ -315,6 +337,7 @@ const SupplierForgetAccountPage: React.FC = () => {
                     className="text-sm mt-1 theme-text-secondary underline"
                     onClick={() => {
                       setStep(0);
+                      clearStatus();
                       if (cooldownTimerRef.current) {
                         clearInterval(cooldownTimerRef.current);
                         cooldownTimerRef.current = null;
@@ -342,7 +365,10 @@ const SupplierForgetAccountPage: React.FC = () => {
                       type={showPassword ? "text" : "password"}
                       required
                       value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setFormError(null);
+                      }}
                       placeholder={t("ent_new_password")}
                       autoComplete="new-password"
                       className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
@@ -369,7 +395,10 @@ const SupplierForgetAccountPage: React.FC = () => {
                       type={showRePassword ? "text" : "password"}
                       required
                       value={rePassword}
-                      onChange={(e) => setRePassword(e.target.value)}
+                      onChange={(e) => {
+                        setRePassword(e.target.value);
+                        setFormError(null);
+                      }}
                       placeholder={t("ent_re_passw_account")}
                       autoComplete="new-password"
                       className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
@@ -391,16 +420,13 @@ const SupplierForgetAccountPage: React.FC = () => {
                   </div>
                 </label>
 
-                {!passwordsMatch && rePassword.length > 0 && (
-                  <div className="text-sm theme-text-secondary">
-                    {t("password_mismatch")}
-                  </div>
-                )}
-
                 <div className="flex gap-3 mt-5">
                   <button
                     type="button"
-                    onClick={() => setStep(1)}
+                    onClick={() => {
+                      setStep(1);
+                      clearStatus();
+                    }}
                     className="w-full h-12 rounded-full border"
                   >
                     {t("previous")}
@@ -408,15 +434,22 @@ const SupplierForgetAccountPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleUpdatePassword()}
-                    className="btn-primary w-full h-12 rounded-full font-semibold"
-                    disabled={
-                      !newPassword || !passwordsMatch || newPassword.length < 6
-                    }
+                    className="btn-primary w-full h-12 rounded-full font-semibold disabled:opacity-60"
+                    disabled={isLoading}
                   >
-                    {t("update")}
+                    {isLoading ? t("loading") || "..." : t("update")}
                   </button>
                 </div>
               </form>
+            )}
+            {(formError || error || message) && (
+              <div
+                className={`mt-2 text-sm text-center ${
+                  formError || error ? "text-red-500" : "text-green-500"
+                }`}
+              >
+                {formError || error || message}
+              </div>
             )}
           </div>
         </div>
