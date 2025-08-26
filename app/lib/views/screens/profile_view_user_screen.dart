@@ -116,46 +116,50 @@ class ProfileViewUserScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 50),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: context.errorColor),
-                        foregroundColor: context.errorColor,
-                      ),
-                      onPressed: () async {
-                        // Capture messenger before the async gap to avoid using context after await
-                        final messenger = ScaffoldMessenger.of(context);
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) {
-                            return AlertDialog(
-                              title: Text('confirm_delete_title'.tr),
-                              content: Text('confirm_delete_desc'.tr),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: Text('cancel'.tr),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: Text(
-                                    'delete'.tr,
-                                    style: TextStyle(color: context.errorColor),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: SizedBox(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: context.errorColor),
+                          foregroundColor: context.errorColor,
+                        ),
+                        onPressed: () async {
+                          // Capture messenger before the async gap to avoid using context after await
+                          final messenger = ScaffoldMessenger.of(context);
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) {
+                              return AlertDialog(
+                                title: Text('confirm_delete_title'.tr),
+                                content: Text('confirm_delete_desc'.tr),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: Text('cancel'.tr),
                                   ),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                        if (!context.mounted) return;
-                        if (confirm == true) {
-                          messenger.showSnackBar(
-                            SnackBar(content: Text('feature_coming_soon'.tr)),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: Text(
+                                      'delete'.tr,
+                                      style: TextStyle(
+                                        color: context.errorColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           );
-                        }
-                      },
-                      child: Text('profile_delete_account'.tr),
+                          if (!context.mounted) return;
+                          if (confirm == true) {
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('feature_coming_soon'.tr)),
+                            );
+                          }
+                        },
+                        child: Text('profile_delete_account'.tr),
+                      ),
                     ),
                   ),
                 ],
