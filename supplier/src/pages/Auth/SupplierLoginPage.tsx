@@ -6,6 +6,7 @@ import { Mail, Eye, EyeOff, X, Loader2 } from "lucide-react";
 import googleLogo from "../../assets/images/7123025_logo_google_g_icon.png";
 import { useSupplierLogin } from "../../hooks/useLogin";
 import type { LoginRequest } from "../../types";
+import { useGoogleLogin } from "../../hooks/useGoogleLogin";
 
 const SupplierLoginPage: React.FC = () => {
   const { t } = useLanguage();
@@ -18,12 +19,38 @@ const SupplierLoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { isLoading, error, data, handleLogin } = useSupplierLogin();
+  const {
+    isReady,
+    isLoading: isGoogleLoading,
+    error: googleError,
+    data: googleData,
+    renderButton,
+    promptOneTap,
+  } = useGoogleLogin();
+  const googleBtnRef = useRef<HTMLDivElement | null>(null);
+  const setGoogleBtnRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      googleBtnRef.current = node;
+      if (node && isReady) {
+        // Ensure clean container to avoid duplicate buttons
+        node.innerHTML = "";
+        renderButton(node);
+      }
+    },
+    [isReady, renderButton]
+  );
 
   useEffect(() => {
     if (data?.token) {
       navigate("/supplier", { replace: true });
     }
   }, [data, navigate]);
+
+  useEffect(() => {
+    if (googleData?.token) {
+      navigate("/supplier", { replace: true });
+    }
+  }, [googleData, navigate]);
 
   useEffect(() => {
     document.title = t("login");
@@ -33,6 +60,19 @@ const SupplierLoginPage: React.FC = () => {
     if (showEmailForm) emailRef.current?.focus();
     else firstActionRef.current?.focus();
   }, [showEmailForm]);
+
+  useEffect(() => {
+    const node = googleBtnRef.current;
+    if (isReady && node) {
+      // If ref was set before GIS readiness, render now
+      if (node.childElementCount === 0) {
+        node.innerHTML = "";
+        renderButton(node);
+      }
+      // Optionally show One Tap
+      // promptOneTap();
+    }
+  }, [isReady, renderButton, promptOneTap]);
 
   const submit = useCallback(
     async (e: React.FormEvent) => {
@@ -91,17 +131,25 @@ const SupplierLoginPage: React.FC = () => {
           <div className="mt-6 sm:mt-8 flex flex-col gap-3 sm:gap-4">
             {!showEmailForm ? (
               <>
-                <button
-                  ref={firstActionRef}
-                  type="button"
-                  className="btn-outline w-full flex items-center justify-center gap-3 py-3 sm:py-3"
-                  onClick={() => console.log("Google login")}
-                >
-                  <img className="h-5 w-5" src={googleLogo} alt="Google" />
-                  <span className="btn-text-responsive">
-                    {t("login_with_google")}
-                  </span>
-                </button>
+                <div className="w-full">
+                  <div
+                    ref={setGoogleBtnRef}
+                    className="w-full flex justify-center"
+                  />
+                  {!isReady && (
+                    <button
+                      ref={firstActionRef}
+                      type="button"
+                      className="btn-outline w-full flex items-center justify-center gap-3 py-3 sm:py-3"
+                      disabled
+                    >
+                      <img className="h-5 w-5" src={googleLogo} alt="Google" />
+                      <span className="btn-text-responsive">
+                        {t("login_with_google")}
+                      </span>
+                    </button>
+                  )}
+                </div>
 
                 <button
                   type="button"
@@ -176,13 +224,13 @@ const SupplierLoginPage: React.FC = () => {
                   </Link>
                 </div>
 
-                {error && (
+                {(error || googleError) && (
                   <div
                     className="text-red-500 text-center text-sm py-2"
                     role="alert"
                     aria-live="assertive"
                   >
-                    {error}
+                    {error || googleError}
                   </div>
                 )}
 
@@ -192,7 +240,7 @@ const SupplierLoginPage: React.FC = () => {
                   disabled={!email || !password || isLoading}
                   aria-disabled={!email || !password || isLoading}
                 >
-                  {isLoading ? (
+                  {isLoading || isGoogleLoading ? (
                     <>
                       <Loader2 className="animate-spin h-5 w-5 mr-2" />
                       {t("login")}

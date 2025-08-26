@@ -81,6 +81,69 @@ export const loginSupplier = async (
   }
 };
 
+export const loginSupplierWithGoogle = async (
+  idToken: string
+): Promise<ApiResponse<LoginResponse>> => {
+  try {
+    const resp = await api.post("/auth/provider/oauth-login", {
+      id_token: idToken,
+    });
+    type GoogleLoginResponse = Partial<RawLoginResponse> & {
+      access_token?: string;
+      accessToken?: string;
+      refresh_token?: string;
+      refreshToken?: string;
+      user?: {
+        id?: number;
+        userId?: number;
+        name?: string;
+        fullName?: string;
+        email?: string;
+      };
+    };
+
+    const data = resp.data as GoogleLoginResponse;
+
+    // Normalize possible shapes
+    const tokenValue = data.token ?? data.jwt ?? data.access_token ?? data.accessToken;
+
+    const userId = data.userId ?? data.user?.id ?? data.user?.userId;
+    const name = data.name ?? data.fullName ?? data.user?.name ?? data.user?.fullName ?? "";
+    const email = data.email ?? data.user?.email ?? "";
+
+    if (!tokenValue || !userId || !email) {
+      throw new Error("Phản hồi đăng nhập Google không hợp lệ");
+    }
+
+    const loginData: LoginResponse = {
+      token: tokenValue,
+      type: data.type || "Bearer",
+      userId: userId as number,
+      name,
+      email,
+    };
+
+    localStorage.setItem("token", loginData.token);
+    localStorage.setItem("user", JSON.stringify(loginData));
+
+    return { success: true, data: loginData } as ApiResponse<LoginResponse>;
+  } catch (error) {
+    let errorMessage = "Đăng nhập Google thất bại";
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        const data = error.response.data as { message?: string } | string;
+        if (typeof data === "string") errorMessage = data;
+        else errorMessage = data.message || errorMessage;
+      } else if (error.request) {
+        errorMessage = "Không kết nối được với máy chủ";
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    throw new Error(errorMessage);
+  }
+};
+
 export const logoutSupplier = async (): Promise<void> => {
   try {
     await api.post("/auth/logout");
@@ -96,8 +159,6 @@ export const logoutSupplier = async (): Promise<void> => {
     });
   }
 };
-
-// ================= Password Recovery Flow =================
 
 const extractErrorMessage = (error: unknown, fallback: string) => {
   let errorMessage = fallback;
