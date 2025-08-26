@@ -68,7 +68,7 @@ class DashboardUserScreen extends StatelessWidget {
                 _ActionTile(
                   icon: LucideIcons.settings2,
                   title: 'account_settings'.tr,
-                  onTap: () {},
+                  onTap: () => context.push(AppRouter.profileUser),
                 ),
 
                 const SizedBox(height: 20),
@@ -141,7 +141,9 @@ class _Header extends StatelessWidget {
         IconButton(
           icon: const Icon(LucideIcons.settings),
           color: context.iconColor,
-          onPressed: () {},
+          onPressed: () {
+            context.push(AppRouter.profileUser);
+          },
           tooltip: 'account_settings'.tr,
         ),
       ],

@@ -57,5 +57,22 @@
   "account_notifications": "Notifications",
   "account_booking_history": "Booking history",
   "account_support": "Chat / Support",
-  "account_settings": "Settings"
+  "account_settings": "Settings",
+  "account_info": "Account information",
+  "profile_edit_photo": "Edit photo",
+  "profile_full_name": "Full name",
+  "profile_email": "Email",
+  "profile_phone": "Phone",
+  "profile_dob": "Date of birth",
+  "profile_gender": "Gender",
+  "profile_edit_account": "Edit account",
+  "profile_delete_account": "Delete account",
+  "gender_male": "Male",
+  "gender_female": "Female",
+  "gender_other": "Other",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "confirm_delete_title": "Delete account?",
+  "confirm_delete_desc": "This action cannot be undone.",
+  "feature_coming_soon": "Feature coming soon"
 }

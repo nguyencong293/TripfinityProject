@@ -57,5 +57,22 @@
   "account_notifications": "Thông báo",
   "account_booking_history": "Lịch sử đã đặt",
   "account_support": "Trò chuyện/ Hỗ trợ",
-  "account_settings": "Tùy chọn"
+  "account_settings": "Tùy chọn",
+  "account_info": "Thông tin tài khoản",
+  "profile_edit_photo": "Sửa ảnh",
+  "profile_full_name": "Họ và Tên",
+  "profile_email": "Email",
+  "profile_phone": "Số điện thoại",
+  "profile_dob": "Ngày sinh",
+  "profile_gender": "Giới tính",
+  "profile_edit_account": "Chỉnh sửa tài khoản",
+  "profile_delete_account": "Xóa tài khoản",
+  "gender_male": "Nam",
+  "gender_female": "Nữ",
+  "gender_other": "Khác",
+  "cancel": "Hủy",
+  "delete": "Xóa",
+  "confirm_delete_title": "Xóa tài khoản?",
+  "confirm_delete_desc": "Hành động này không thể hoàn tác.",
+  "feature_coming_soon": "Tính năng sẽ sớm có"
 }
