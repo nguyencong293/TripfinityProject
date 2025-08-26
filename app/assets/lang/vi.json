@@ -44,5 +44,18 @@
   "login_with_google": "Đăng nhập bằng Google",
   "press_back_again_to_exit": "Nhấn back lần nữa để thoát",
   "resend_after_seconds": "Gửi lại sau",
-  "resend_code" : "Gửi lại mã"
+  "resend_code": "Gửi lại mã",
+  "nav_home": "Trang chủ",
+  "nav_search": "Tìm kiếm",
+  "nav_trips": "Chuyến đi",
+  "nav_reviews": "Đánh giá",
+  "nav_account": "Tài khoản",
+  "logout": "Đăng xuất",
+  "account_booked": "Đã đặt chỗ",
+  "account_processing": "Đang xử lý",
+  "account_badges_points": "Badges & Điểm",
+  "account_notifications": "Thông báo",
+  "account_booking_history": "Lịch sử đã đặt",
+  "account_support": "Trò chuyện/ Hỗ trợ",
+  "account_settings": "Tùy chọn"
 }

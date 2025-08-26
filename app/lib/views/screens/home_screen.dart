@@ -1,4 +1,5 @@
 import 'package:app/views/widgets/bottom_nav.dart';
+import 'package:app/views/widgets/language_switcher.dart';
 import 'package:app/views/widgets/theme_switcher.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../routes/app_router.dart';
+import 'dashboard_user_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,24 +30,11 @@ class _HomeScreenState extends State<HomeScreen> {
       const Center(child: Text('Tìm kiếm')),
       const Center(child: Text('Chuyến đi')),
       const Center(child: Text('Đánh giá')),
-      const Center(child: Text('Tài khoản')),
+      const DashboardUserScreen(),
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Trang chủ'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            color: Colors.black,
-            onPressed: () async {
-              await authController.logout();
-              if (!mounted) return;
-              context.go(AppRouter.login);
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(toolbarHeight: 0),
       body: pages[_tabIndex],
       bottomNavigationBar: BottomNav(
         currentIndex: _tabIndex,
@@ -79,6 +68,7 @@ class _HomeContent extends StatelessWidget {
             child: const Text('Quay lại đăng nhập'),
           ),
           ThemeModeDropdown(),
+          LanguageDropdownCard(),
         ],
       ),
     );

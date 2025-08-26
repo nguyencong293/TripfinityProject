@@ -44,5 +44,18 @@
   "login_with_google": "Login with Google",
   "press_back_again_to_exit": "Press back again to exit",
   "resend_after_seconds": "Resend after",
-  "resend_code": "Resend code"
+  "resend_code": "Resend code",
+  "nav_home": "Home",
+  "nav_search": "Search",
+  "nav_trips": "Trips",
+  "nav_reviews": "Reviews",
+  "nav_account": "Account",
+  "logout": "Logout",
+  "account_booked": "Booked",
+  "account_processing": "Processing",
+  "account_badges_points": "Badges & Points",
+  "account_notifications": "Notifications",
+  "account_booking_history": "Booking history",
+  "account_support": "Chat / Support",
+  "account_settings": "Settings"
 }

@@ -44,5 +44,18 @@
   "login_with_google": "Google로 로그인",
   "press_back_again_to_exit": "한 번 더 뒤로가기를 누르면 종료됩니다",
   "resend_after_seconds": "후에 다시 보내기",
-  "resend_code": "코드 다시 보내기"
+  "resend_code": "코드 다시 보내기",
+  "nav_home": "홈",
+  "nav_search": "검색",
+  "nav_trips": "여행",
+  "nav_reviews": "리뷰",
+  "nav_account": "계정",
+  "logout": "로그아웃",
+  "account_booked": "예약 완료",
+  "account_processing": "처리 중",
+  "account_badges_points": "배지 & 포인트",
+  "account_notifications": "알림",
+  "account_booking_history": "예약 내역",
+  "account_support": "채팅 / 지원",
+  "account_settings": "설정"
 }
