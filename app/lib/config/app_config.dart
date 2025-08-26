@@ -3,7 +3,7 @@ class AppConfig {
   static const String appVersion = '1.0.0';
 
   // API Configuration
-  static const String baseUrl = 'http://192.168.1.11:8080/api';
+  static const String baseUrl = 'http://192.168.1.13:8080/api';
   static const Duration apiTimeout = Duration(seconds: 30);
 
   // Authentication

@@ -8,9 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../controllers/user_controller.dart';
-import '../../../routes/app_router.dart';
-import '../../widgets/circular_progress.dart';
+import '../../controllers/user_controller.dart';
+import '../../routes/app_router.dart';
+import '../widgets/circular_progress.dart';
 
 class ForgetAccountScreen extends StatefulWidget {
   const ForgetAccountScreen({super.key});
@@ -228,7 +228,7 @@ class _ForgetAccountScreenState extends State<ForgetAccountScreen> {
           alignment: Alignment.center,
           child: _resendCooldown > 0
               ? Text(
-                  'resend_after_seconds'.tr + ' $_resendCooldown s',
+                  '${'resend_after_seconds'.tr} $_resendCooldown s',
                   style: context.buttonStyle.copyWith(
                     color: context.buttonDisabledTextColor,
                   ),

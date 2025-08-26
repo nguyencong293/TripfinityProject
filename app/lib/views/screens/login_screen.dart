@@ -7,9 +7,9 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../controllers/auth_controller.dart';
-import '../../../routes/app_router.dart';
-import '../../widgets/circular_progress.dart';
+import '../../controllers/auth_controller.dart';
+import '../../routes/app_router.dart';
+import '../widgets/circular_progress.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

@@ -21,10 +21,10 @@ dependencies:
   google_sign_in: ^6.1.6
   package_info_plus: ^8.3.0
   fluttertoast: ^8.2.4
+  lucide_icons: ^0.257.0
 
   flutter_localizations:
     sdk: flutter
-
 
 dev_dependencies:
   flutter_test:
@@ -33,7 +33,6 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   build_runner: any
   json_serializable: any
-
 
 # The following section is specific to Flutter packages.
 flutter:
@@ -51,4 +50,3 @@ flutter:
         - asset: assets/fonts/FZPoppins-Bold.ttf
         - asset: assets/fonts/FZPoppins-SemiBold.ttf
         - asset: assets/fonts/FZPoppins-Medium.ttf
-

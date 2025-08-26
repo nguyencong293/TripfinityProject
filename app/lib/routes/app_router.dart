@@ -1,17 +1,17 @@
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/localization_service.dart';
-import 'package:app/views/screens/onboarding/forget_account_screen.dart';
-import 'package:app/views/screens/onboarding/login_screen.dart';
-import 'package:app/views/screens/onboarding/onboarding_screen.dart';
-import 'package:app/views/screens/onboarding/register_screen.dart';
+import 'package:app/views/screens/forget_account_screen.dart';
+import 'package:app/views/screens/login_screen.dart';
+import 'package:app/views/screens/onboarding_screen.dart';
+import 'package:app/views/screens/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/auth_controller.dart';
-import '../views/screens/onboarding/home_screen.dart';
+import '../views/screens/home_screen.dart';
 
 class AppRouter {
   // private constructor
