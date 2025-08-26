@@ -78,5 +78,11 @@
   "delete": "Xóa",
   "confirm_delete_title": "Xóa tài khoản?",
   "confirm_delete_desc": "Hành động này không thể hoàn tác.",
-  "feature_coming_soon": "Tính năng sẽ sớm có"
+  "feature_coming_soon": "Tính năng sẽ sớm có",
+  "notifications_title": "Thông báo",
+  "notif_tab_all": "Tất cả",
+  "notif_tab_latest": "Mới nhất",
+  "notif_tab_unread": "Chưa đọc",
+  "notif_booking_success_title": "Đặt tour thành công!",
+  "notif_booking_success_message": "Thông tin chi tiết về chuyến đi đã được gửi đến email/SDT của bạn."
 }

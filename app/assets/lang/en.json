@@ -78,5 +78,11 @@
   "delete": "Delete",
   "confirm_delete_title": "Delete account?",
   "confirm_delete_desc": "This action cannot be undone.",
-  "feature_coming_soon": "Feature coming soon"
+  "feature_coming_soon": "Feature coming soon",
+  "notifications_title": "Notifications",
+  "notif_tab_all": "All",
+  "notif_tab_latest": "Latest",
+  "notif_tab_unread": "Unread",
+  "notif_booking_success_title": "Booking successful!",
+  "notif_booking_success_message": "Detailed trip information has been sent to your email/phone."
 }

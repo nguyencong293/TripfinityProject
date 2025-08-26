@@ -6,6 +6,7 @@ import 'package:app/views/screens/login_screen.dart';
 import 'package:app/views/screens/onboarding_screen.dart';
 import 'package:app/views/screens/register_screen.dart';
 import 'package:app/views/screens/profile_view_user_screen.dart';
+import 'package:app/views/screens/notification_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +27,7 @@ class AppRouter {
   static const String forgetAccount = '/forget-account';
   static const String profileUser = '/profile-user';
   static const String optionSetting = '/option-setting';
+  static const String notifications = '/notifications';
 
   // router configurations
   static late final GoRouter _router;
@@ -111,6 +113,11 @@ class AppRouter {
         path: optionSetting,
         name: 'option-setting',
         builder: (context, state) => const OptionSettingScreen(),
+      ),
+      GoRoute(
+        path: notifications,
+        name: 'notifications',
+        builder: (context, state) => const NotificationScreen(),
       ),
     ];
   }

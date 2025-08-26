@@ -202,6 +202,7 @@ class _StatsGrid extends StatelessWidget {
             value: notifications,
             label: 'account_notifications'.tr,
             icon: LucideIcons.bell,
+            onTap: () => context.push(AppRouter.notifications),
           ),
         ],
       ),
@@ -213,57 +214,65 @@ class _StatCard extends StatelessWidget {
   final String value;
   final String label;
   final IconData icon;
+  final VoidCallback? onTap;
   const _StatCard({
     required this.value,
     required this.label,
     required this.icon,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.light
-            ? Colors.white
-            : context.cardBackgroundColor,
+    return Material(
+      color: Theme.of(context).brightness == Brightness.light
+          ? Colors.white
+          : context.cardBackgroundColor,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: context.secondaryColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: context.primaryColor, size: 22),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  value,
-                  style: context.h4Style.copyWith(color: context.primaryColor),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: context.secondaryColor,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: context.bodyTwoStyle.copyWith(
-                    color: context.textSecondaryColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Icon(icon, color: context.primaryColor, size: 22),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      value,
+                      style: context.h4Style.copyWith(
+                        color: context.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      label,
+                      style: context.bodyTwoStyle.copyWith(
+                        color: context.textSecondaryColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -279,9 +288,7 @@ class _ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.light
-            ? Colors.white
-            : context.cardBackgroundColor,
+        color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(12),
       ),
       margin: const EdgeInsets.symmetric(vertical: 6),
