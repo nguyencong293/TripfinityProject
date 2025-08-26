@@ -44,7 +44,6 @@ class ProfileViewUserScreen extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            toolbarHeight: 56,
             backgroundColor: context.backgroundColor,
             elevation: 0,
             iconTheme: IconThemeData(color: context.textPrimaryColor),

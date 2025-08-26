@@ -1,6 +1,4 @@
 import 'package:app/views/widgets/bottom_nav.dart';
-import 'package:app/views/widgets/language_switcher.dart';
-import 'package:app/views/widgets/theme_switcher.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -67,8 +65,6 @@ class _HomeContent extends StatelessWidget {
             onPressed: () => context.go(AppRouter.login),
             child: const Text('Quay lại đăng nhập'),
           ),
-          ThemeModeDropdown(),
-          LanguageDropdownCard(),
         ],
       ),
     );

@@ -3,65 +3,40 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/localization_service.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
-
-/// Dropdown chọn theme mode
-class ThemeModeDropdown extends StatelessWidget {
-  final double? width;
-  final bool showIcon;
-
-  const ThemeModeDropdown({super.key, this.width, this.showIcon = true});
+class ThemeModeTile extends StatelessWidget {
+  const ThemeModeTile({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
-        return Container(
-          width: width,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: context.cardBackgroundColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: context.borderLineColor),
+      builder: (context, themeProvider, _) {
+        return ListTile(
+          leading: Icon(
+            _iconFor(themeProvider.themeMode),
+            color: context.iconColor,
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<AppThemeMode>(
-              value: themeProvider.themeMode,
-              onChanged: (AppThemeMode? value) {
-                if (value != null) {
-                  themeProvider.setThemeMode(value);
-                }
-              },
-              items: AppThemeMode.values.map((AppThemeMode mode) {
-                return DropdownMenuItem<AppThemeMode>(
-                  value: mode,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (showIcon) ...[
-                        Icon(
-                          _getIconForMode(mode),
-                          size: 20,
-                          color: context.iconColor,
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Text(
-                        _getStringForMode(mode),
-                        style: context.bodyOneStyle,
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
+          title: Text(
+            'settings_system_interface'.tr,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          trailing: Icon(
+            LucideIcons.chevronRight,
+            color: context.iconDisabledColor,
+          ),
+          onTap: () => _showThemeSheet(context, themeProvider),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 2,
           ),
         );
       },
     );
   }
 
-  IconData _getIconForMode(AppThemeMode mode) {
+  IconData _iconFor(AppThemeMode mode) {
     switch (mode) {
       case AppThemeMode.light:
         return Icons.light_mode;
@@ -72,14 +47,55 @@ class ThemeModeDropdown extends StatelessWidget {
     }
   }
 
-  String _getStringForMode(AppThemeMode mode) {
+  void _showThemeSheet(BuildContext context, ThemeProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _themeOption(context, provider, AppThemeMode.system),
+              _themeOption(context, provider, AppThemeMode.light),
+              _themeOption(context, provider, AppThemeMode.dark),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _themeOption(
+    BuildContext context,
+    ThemeProvider provider,
+    AppThemeMode mode,
+  ) {
+    final isSelected = provider.themeMode == mode;
+    return ListTile(
+      leading: Icon(_iconFor(mode), color: context.iconColor),
+      title: Text(_label(mode).tr, style: context.bodyOneStyle),
+      trailing: isSelected
+          ? Icon(Icons.check, color: context.primaryColor)
+          : null,
+      onTap: () async {
+        await provider.setThemeMode(mode);
+        if (context.mounted) Navigator.pop(context);
+      },
+    );
+  }
+
+  String _label(AppThemeMode mode) {
     switch (mode) {
       case AppThemeMode.light:
-        return 'Light';
+        return 'light';
       case AppThemeMode.dark:
-        return 'Dark';
+        return 'dark';
       case AppThemeMode.system:
-        return 'System';
+        return 'system';
     }
   }
 }

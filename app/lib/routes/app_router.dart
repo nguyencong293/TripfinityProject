@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/auth_controller.dart';
 import '../views/screens/home_screen.dart';
+import '../views/screens/option_setting_screen.dart';
 
 class AppRouter {
   // private constructor
@@ -24,6 +25,7 @@ class AppRouter {
   static const String login = '/login';
   static const String forgetAccount = '/forget-account';
   static const String profileUser = '/profile-user';
+  static const String optionSetting = '/option-setting';
 
   // router configurations
   static late final GoRouter _router;
@@ -104,6 +106,11 @@ class AppRouter {
         path: profileUser,
         name: 'profile-user',
         builder: (context, state) => const ProfileViewUserScreen(),
+      ),
+      GoRoute(
+        path: optionSetting,
+        name: 'option-setting',
+        builder: (context, state) => const OptionSettingScreen(),
       ),
     ];
   }
