@@ -131,10 +131,14 @@ class _HomeContent extends StatelessWidget {
               ),
               const SizedBox(height: 12),
             ],
-            // Categories grid
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            // Categories grid (square cells, 4 per row)
+            GridView.count(
+              crossAxisCount: 4,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.0, // square tiles: width == height
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               children: categories.map((c) {
                 return _CategoryItem(
                   icon: c.icon,
@@ -170,12 +174,15 @@ class _CategoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labelStyle = context.captionStyle.copyWith(
+      color: onSurface,
+      height: 1.15,
+    );
+
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
-      child: Container(
-        width: (MediaQuery.of(context).size.width - 16 * 2 - 12 * 3) / 4,
-        padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Ink(
         decoration: BoxDecoration(
           color: surface,
           borderRadius: BorderRadius.circular(14),
@@ -183,22 +190,27 @@ class _CategoryItem extends StatelessWidget {
             color: context.dividerColor.withValues(alpha: 0.2),
           ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 22, color: context.textPrimaryColor),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: context.captionStyle.copyWith(
-                color: onSurface,
-                height: 1.15,
+        child: Padding(
+          // slightly tighter padding to avoid rounding overflows
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22, color: context.textPrimaryColor),
+              const SizedBox(height: 6),
+              // Flexible text area prevents RenderFlex overflow in square tiles
+              Flexible(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: labelStyle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: true,
+                ),
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
