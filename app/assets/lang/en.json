@@ -96,5 +96,19 @@
   "badges_tier_bronze_desc": "Reach X points. Basic benefits.",
   "badges_tier_silver_title": "Silver",
   "badges_tier_silver_desc": "Reach Y points. Enhanced benefits.",
-  "badges_hist_login_7days": "Logged in 7 days in a row"
+  "badges_hist_login_7days": "Logged in 7 days in a row",
+  "search_hint": "Attractions, activities ...",
+  "hello": "Hello",
+  "cat_hotels": "Hotels",
+  "cat_food": "Food",
+  "cat_tickets": "Tickets",
+  "cat_entertainment": "Entertainment",
+  "cat_itinerary": "Itinerary",
+  "cat_deals": "Deals",
+  "drawer_home": "Home",
+  "drawer_services": "Services",
+  "drawer_contact": "Contact",
+  "drawer_posts": "Posts",
+  "drawer_about": "About",
+  "drawer_terms_policies": "Terms & Policies"
 }

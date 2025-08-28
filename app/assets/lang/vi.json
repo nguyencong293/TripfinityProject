@@ -96,5 +96,19 @@
   "badges_tier_bronze_desc": "Đạt X điểm. Quyền lợi cơ bản.",
   "badges_tier_silver_title": "Bạc",
   "badges_tier_silver_desc": "Đạt Y điểm. Quyền lợi nâng cao.",
-  "badges_hist_login_7days": "Đăng nhập đủ 7 ngày liên tiếp"
+  "badges_hist_login_7days": "Đăng nhập đủ 7 ngày liên tiếp",
+  "search_hint": "Địa điểm tham quan, hoạt động giải trí ...",
+  "hello": "Xin chào",
+  "cat_hotels": "Khách sạn",
+  "cat_food": "Ẩm thực",
+  "cat_tickets": "Vé tham quan",
+  "cat_entertainment": "Giải trí",
+  "cat_itinerary": "Lịch trình",
+  "cat_deals": "Ưu đãi",
+  "drawer_home": "Trang chủ",
+  "drawer_services": "Dịch vụ",
+  "drawer_contact": "Liên hệ",
+  "drawer_posts": "Bài viết",
+  "drawer_about": "Giới thiệu",
+  "drawer_terms_policies": "Điều khoản & Chính sách"
 }

@@ -96,5 +96,19 @@
   "badges_tier_bronze_desc": "X 포인트 달성. 기본 혜택.",
   "badges_tier_silver_title": "실버",
   "badges_tier_silver_desc": "Y 포인트 달성. 향상된 혜택.",
-  "badges_hist_login_7days": "7일 연속 로그인"
+  "badges_hist_login_7days": "7일 연속 로그인",
+  "search_hint": "관광지, 액티비티 ...",
+  "hello": "안녕하세요",
+  "cat_hotels": "호텔",
+  "cat_food": "음식",
+  "cat_tickets": "입장권",
+  "cat_entertainment": "엔터테인먼트",
+  "cat_itinerary": "일정",
+  "cat_deals": "특가",
+  "drawer_home": "홈",
+  "drawer_services": "서비스",
+  "drawer_contact": "문의",
+  "drawer_posts": "게시글",
+  "drawer_about": "소개",
+  "drawer_terms_policies": "약관 및 정책"
 }
