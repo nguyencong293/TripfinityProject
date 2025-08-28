@@ -84,5 +84,17 @@
   "notif_tab_latest": "최신",
   "notif_tab_unread": "읽지 않음",
   "notif_booking_success_title": "투어 예약이 완료되었습니다!",
-  "notif_booking_success_message": "여행 세부 정보가 이메일/전화번호로 전송되었습니다."
+  "notif_booking_success_message": "여행 세부 정보가 이메일/전화번호로 전송되었습니다.",
+  "badges_member_levels": "회원 등급",
+  "badges_points_history": "포인트 내역",
+  "badges_total_points": "총 포인트",
+  "badges_current_tier": "현재 등급",
+  "badges_tier_potential": "잠재",
+  "badges_tier_potential_title": "잠재",
+  "badges_tier_potential_desc": "신규 사용자, 포인트 적립을 시작하세요.",
+  "badges_tier_bronze_title": "브론즈",
+  "badges_tier_bronze_desc": "X 포인트 달성. 기본 혜택.",
+  "badges_tier_silver_title": "실버",
+  "badges_tier_silver_desc": "Y 포인트 달성. 향상된 혜택.",
+  "badges_hist_login_7days": "7일 연속 로그인"
 }

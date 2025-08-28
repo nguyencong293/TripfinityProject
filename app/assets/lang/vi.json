@@ -84,5 +84,17 @@
   "notif_tab_latest": "Mới nhất",
   "notif_tab_unread": "Chưa đọc",
   "notif_booking_success_title": "Đặt tour thành công!",
-  "notif_booking_success_message": "Thông tin chi tiết về chuyến đi đã được gửi đến email/SDT của bạn."
+  "notif_booking_success_message": "Thông tin chi tiết về chuyến đi đã được gửi đến email/SDT của bạn.",
+  "badges_member_levels": "Cấp thành viên",
+  "badges_points_history": "Lịch sử điểm",
+  "badges_total_points": "Tổng điểm",
+  "badges_current_tier": "Cấp hiện tại",
+  "badges_tier_potential": "Tiềm năng",
+  "badges_tier_potential_title": "Tiềm năng",
+  "badges_tier_potential_desc": "Người dùng mới, bắt đầu thu thập điểm.",
+  "badges_tier_bronze_title": "Đồng",
+  "badges_tier_bronze_desc": "Đạt X điểm. Quyền lợi cơ bản.",
+  "badges_tier_silver_title": "Bạc",
+  "badges_tier_silver_desc": "Đạt Y điểm. Quyền lợi nâng cao.",
+  "badges_hist_login_7days": "Đăng nhập đủ 7 ngày liên tiếp"
 }

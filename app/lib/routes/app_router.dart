@@ -1,6 +1,7 @@
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/localization_service.dart';
+import 'package:app/views/screens/badges_and_points_user_screen.dart';
 import 'package:app/views/screens/forget_account_screen.dart';
 import 'package:app/views/screens/login_screen.dart';
 import 'package:app/views/screens/onboarding_screen.dart';
@@ -28,6 +29,7 @@ class AppRouter {
   static const String profileUser = '/profile-user';
   static const String optionSetting = '/option-setting';
   static const String notifications = '/notifications';
+  static const String badgesPoints = '/badges-and-points';
 
   // router configurations
   static late final GoRouter _router;
@@ -118,6 +120,11 @@ class AppRouter {
         path: notifications,
         name: 'notifications',
         builder: (context, state) => const NotificationScreen(),
+      ),
+      GoRoute(
+        path: badgesPoints, // <-- add
+        name: 'badges-and-points',
+        builder: (context, state) => const BadgesAndPointsUserScreen(),
       ),
     ];
   }

@@ -197,6 +197,7 @@ class _StatsGrid extends StatelessWidget {
             value: '$points',
             label: 'account_badges_points'.tr,
             icon: LucideIcons.medal,
+            onTap: () => context.push(AppRouter.badgesPoints),
           ),
           _StatCard(
             value: notifications,

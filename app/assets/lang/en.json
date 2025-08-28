@@ -84,5 +84,17 @@
   "notif_tab_latest": "Latest",
   "notif_tab_unread": "Unread",
   "notif_booking_success_title": "Booking successful!",
-  "notif_booking_success_message": "Detailed trip information has been sent to your email/phone."
+  "notif_booking_success_message": "Detailed trip information has been sent to your email/phone.",
+  "badges_member_levels": "Member levels",
+  "badges_points_history": "Points history",
+  "badges_total_points": "Total points",
+  "badges_current_tier": "Current tier",
+  "badges_tier_potential": "Potential",
+  "badges_tier_potential_title": "Potential",
+  "badges_tier_potential_desc": "New user, start collecting points.",
+  "badges_tier_bronze_title": "Bronze",
+  "badges_tier_bronze_desc": "Reach X points. Basic benefits.",
+  "badges_tier_silver_title": "Silver",
+  "badges_tier_silver_desc": "Reach Y points. Enhanced benefits.",
+  "badges_hist_login_7days": "Logged in 7 days in a row"
 }
