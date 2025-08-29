@@ -173,7 +173,7 @@ class _PillTabBar extends StatelessWidget {
       ),
       child: TabBar(
         indicator: BoxDecoration(
-          color: context.secondaryColor,
+          color: context.primaryColor,
           borderRadius: BorderRadius.circular(22),
         ),
         indicatorSize: TabBarIndicatorSize.tab, // fill the tab width
