@@ -53,7 +53,11 @@ flutter:
         - asset: assets/fonts/FZPoppins-Medium.ttf
 
 flutter_launcher_icons:
-  android: true
+  android: "launcher_icon"
   ios: true
-  adaptive_icon_foreground: "assets/images/logo.jpg"
-  image_path: "assets/images/logo.jpg"
+  image_path: "assets/images/app_logo.png"
+
+  adaptive_icon_foreground: null
+  adaptive_icon_background: "#FFFFFF"
+
+  remove_alpha_ios: false
