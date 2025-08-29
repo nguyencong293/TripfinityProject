@@ -18,10 +18,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   PackageInfo packageInfo = await PackageInfo.fromPlatform();
-  print('Package name: ${packageInfo.packageName}');
-  print('App name: ${packageInfo.appName}');
-  print('Version: ${packageInfo.version}');
-  print('Build number: ${packageInfo.buildNumber}');
+  debugPrint('Package name: ${packageInfo.packageName}');
+  debugPrint('App name: ${packageInfo.appName}');
+  debugPrint('Version: ${packageInfo.version}');
+  debugPrint('Build number: ${packageInfo.buildNumber}');
 
   final prefs = await SharedPreferences.getInstance();
   AppRouter.initialize();
