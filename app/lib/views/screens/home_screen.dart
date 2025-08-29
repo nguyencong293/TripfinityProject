@@ -1,5 +1,10 @@
 import 'package:app/routes/app_router.dart';
+import 'package:app/views/widgets/article_banner_card.dart';
 import 'package:app/views/widgets/bottom_nav.dart';
+import 'package:app/views/widgets/experience_card.dart';
+import 'package:app/views/widgets/recent_item_tile.dart';
+import 'package:app/views/widgets/section_header.dart';
+import 'package:app/views/widgets/weekend_city_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -149,7 +154,117 @@ class _HomeContent extends StatelessWidget {
                 );
               }).toList(),
             ),
-            // ...add more sections (banners, lists) here if needed...
+            const SizedBox(height: 30),
+
+            // Recently viewed
+            SectionHeader(title: 'recently_viewed'.tr),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: RecentItemTile.kHeight,
+              child: ListView.separated(
+                key: const PageStorageKey('recently_viewed'),
+                primary: false,
+                physics: const BouncingScrollPhysics(),
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.zero,
+                itemBuilder: (_, i) => RecentItemTile(
+                  leftImageAsset: i.isEven
+                      ? 'assets/images/onboarding1.png'
+                      : 'assets/images/onboarding2.png',
+                  title: 'Cầu vàng',
+                  subtitle: 'Chuyến tham quan ngắm cảnh...',
+                  rating: 4.0,
+                ),
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemCount: 10,
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Fun experiences in city
+            SectionHeader(
+              title: 'fun_experiences_city'.tr,
+              actionLabel: 'see_more'.tr,
+              onAction: () {},
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: ExperienceCard.listHeight(context),
+              child: ListView.separated(
+                key: const PageStorageKey('experiences'),
+                primary: false,
+                physics: const BouncingScrollPhysics(),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                itemBuilder: (_, i) => const ExperienceCard(
+                  imageAsset: 'assets/images/onboarding1.png',
+                  title: 'Sun World Bà Nà Hills',
+                  rating: 4,
+                ),
+                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                itemCount: 8,
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Weekend cities
+            SectionHeader(title: 'weekend_ideas'.tr),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: WeekendCityCard.kHeight,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemBuilder: (_, i) => WeekendCityCard(
+                  imageAsset: i.isEven
+                      ? 'assets/images/onboarding2.png'
+                      : 'assets/images/onboarding3.png',
+                  city: i.isEven ? 'Nha Trang' : 'Huế',
+                  country: 'Việt Nam',
+                ),
+                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                itemCount: 5,
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Interesting articles banner
+            SectionHeader(title: 'discover_interesting_posts'.tr),
+            const SizedBox(height: 8),
+            ArticleBannerCard(
+              imageAsset: 'assets/images/onboarding4.png',
+              title: 'Top 8 cây cầu Đà Nẵng',
+              ctaLabel: 'explore_now'.tr,
+            ),
+
+            const SizedBox(height: 24),
+
+            // Nearby restaurants (reuse ExperienceCard)
+            SectionHeader(
+              title: 'nearby_restaurants'.tr,
+              actionLabel: 'see_more'.tr,
+              onAction: () {},
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: ExperienceCard.listHeight(context),
+              child: ListView.separated(
+                key: const PageStorageKey('restaurants'),
+                primary: false,
+                physics: const BouncingScrollPhysics(),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                itemBuilder: (_, i) => const ExperienceCard(
+                  imageAsset: 'assets/images/onboarding3.png',
+                  title: 'Bếp Cuốn Đà Nẵng',
+                  rating: 4,
+                ),
+                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                itemCount: 10,
+              ),
+            ),
           ],
         ),
       ),
