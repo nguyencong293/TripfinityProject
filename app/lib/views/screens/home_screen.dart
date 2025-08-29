@@ -1,4 +1,5 @@
 import 'package:app/routes/app_router.dart';
+import 'package:app/views/screens/general_search_screen.dart';
 import 'package:app/views/widgets/article_banner_card.dart';
 import 'package:app/views/widgets/bottom_nav.dart';
 import 'package:app/views/widgets/experience_card.dart';
@@ -36,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Simple placeholder pages per tab (localized)
     final pages = [
       _HomeContent(user: user),
-      Center(child: Text('nav_search'.tr, style: context.bodyOneStyle)),
+      const GeneralSearchScreen(),
       Center(child: Text('nav_trips'.tr, style: context.bodyOneStyle)),
       Center(child: Text('nav_reviews'.tr, style: context.bodyOneStyle)),
       const DashboardUserScreen(),

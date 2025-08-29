@@ -25,7 +25,7 @@ class RatingStars extends StatelessWidget {
         isFilled ? Icons.star_rounded : Icons.star_border_rounded,
         size: size,
         color: isFilled
-            ? (filledColor ?? context.successColor)
+            ? (filledColor ?? context.primaryColor)
             : (emptyColor ?? context.textSecondaryColor.withValues(alpha: .6)),
       );
     });

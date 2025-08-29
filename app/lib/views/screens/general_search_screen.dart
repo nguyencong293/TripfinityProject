@@ -1,0 +1,711 @@
+import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+
+// Theme & i18n
+import 'package:app/config/theme/app_colors.dart';
+import 'package:app/config/theme/app_text_styles.dart';
+import 'package:app/services/localization_service.dart';
+
+class GeneralSearchScreen extends StatefulWidget {
+  const GeneralSearchScreen({super.key});
+
+  @override
+  State<GeneralSearchScreen> createState() => _GeneralSearchScreenState();
+}
+
+class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.text = "Nha Trang";
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(toolbarHeight: 0),
+      body: _buildBody(context),
+    );
+  }
+
+  // Tạo nội dung chính của màn hình
+  Widget _buildBody(BuildContext context) {
+    return Column(
+      children: [
+        // Phần search bar ở phía trên
+        _buildSearchBar(context),
+
+        // Phần nội dung có thể cuộn
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Phần bộ lọc nhanh
+                _buildQuickFilters(context),
+
+                const SizedBox(height: 20),
+
+                // Phần kết quả tìm kiếm
+                _buildSearchResults(context),
+
+                const SizedBox(height: 32),
+
+                // Phần "Có thể bạn quan tâm"
+                _buildSuggestedPlaces(context),
+
+                const SizedBox(height: 32),
+
+                // Phần tìm kiếm gần đây
+                _buildNearbySection(context),
+
+                const SizedBox(height: 32),
+
+                // Phần đã xem gần đây
+                _buildRecentSection(context),
+
+                // Thêm padding ở cuối để scroll thấy hết nội dung
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Tạo ô tìm kiếm
+  Widget _buildSearchBar(BuildContext context) {
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.only(left: 16, top: 30, right: 16, bottom: 20),
+      child: TextField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        decoration: InputDecoration(
+          hintText: 'search_hint'.tr,
+          hintStyle: context.bodyOneStyle.copyWith(
+            color: context.textSecondaryColor,
+          ),
+          prefixIcon: Icon(
+            LucideIcons.search,
+            color: context.textSecondaryColor,
+            size: 20,
+          ),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(
+                    LucideIcons.x,
+                    color: context.textSecondaryColor,
+                    size: 18,
+                  ),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {});
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: context.cardBackgroundColor.withValues(alpha: 0.6),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(22)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(22),
+            borderSide: BorderSide(
+              color: context.textDisabledColor,
+              width: 1.5,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(22),
+            borderSide: BorderSide(color: context.primaryColor, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+        style: context.bodyOneStyle,
+        onChanged: (value) => setState(() {}),
+        textInputAction: TextInputAction.search,
+        onSubmitted: (value) {
+          _performSearch(value);
+        },
+      ),
+    );
+  }
+
+  // Tạo các nút bộ lọc nhanh
+  Widget _buildQuickFilters(BuildContext context) {
+    final filters = [
+      {'label': 'Tất cả', 'icon': LucideIcons.layoutPanelTop, 'selected': true},
+      {'label': 'Nhà hàng', 'icon': LucideIcons.utensils, 'selected': false},
+      {'label': 'Khách sạn', 'icon': LucideIcons.hotel, 'selected': false},
+      {'label': 'Tour du lịch', 'icon': LucideIcons.bus, 'selected': false},
+      {
+        'label': 'Điểm tham quan',
+        'icon': LucideIcons.ticket,
+        'selected': false,
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Bộ lọc',
+          style: context.subTitleOneStyle.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: filters
+              .map((filter) => _buildFilterChip(context, filter))
+              .toList(),
+        ),
+      ],
+    );
+  }
+
+  // Tạo từng chip bộ lọc
+  Widget _buildFilterChip(BuildContext context, Map<String, dynamic> filter) {
+    final isSelected = filter['selected'] as bool;
+    return FilterChip(
+      selected: isSelected,
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            filter['icon'] as IconData,
+            size: 16,
+            color: isSelected
+                ? context.buttonTextColor
+                : context.textSecondaryColor,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            filter['label'] as String,
+            style: context.bodyTwoStyle.copyWith(
+              color: isSelected
+                  ? context.buttonTextColor
+                  : context.textSecondaryColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: context.cardBackgroundColor,
+      selectedColor: context.primaryColor,
+      side: BorderSide(
+        color: isSelected ? context.primaryColor : context.dividerColor,
+      ),
+      onSelected: (selected) {
+        // Xử lý khi chọn bộ lọc
+      },
+    );
+  }
+
+  // Phần kết quả tìm kiếm
+  Widget _buildSearchResults(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Danh sách kết quả
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 4,
+          itemBuilder: (context, index) {
+            final items = [
+              {
+                'name': 'Nha Trang',
+                'location': 'Việt Nam, Châu Á',
+                'rating': '4.1',
+              },
+              {
+                'name': 'Nha Trang Xưa',
+                'location': 'Nha Trang, Việt Nam',
+                'rating': '4.2',
+              },
+              {
+                'name': 'White Rose Restaurant',
+                'location': 'Nha Trang, Việt Nam',
+                'rating': '4.3',
+              },
+              {
+                'name': 'Vinpearl - Resort Nha Trang',
+                'location': 'Nha Trang, Việt Nam',
+                'rating': '4.2',
+              },
+            ];
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: InkWell(
+                onTap: () {},
+                child: Row(
+                  children: [
+                    // Hình ảnh
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/onboarding${(index % 4) + 1}.png',
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 60,
+                            height: 60,
+                            color: context.primaryColor.withValues(alpha: 0.1),
+                            child: Icon(
+                              LucideIcons.image,
+                              color: context.primaryColor,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // Thông tin
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            items[index]['name']!,
+                            style: context.bodyOneStyle.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            items[index]['location']!,
+                            style: context.captionStyle.copyWith(
+                              color: context.textSecondaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.star_rounded,
+                                color: context.primaryColor,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                items[index]['rating']!,
+                                style: context.captionStyle.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Mũi tên phải
+                    Icon(
+                      LucideIcons.chevronRight,
+                      color: context.textSecondaryColor,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+
+        // Nút xem thêm
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () {},
+            child: Text(
+              'Xem thêm',
+              style: context.captionStyle.copyWith(
+                color: context.primaryColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // PHẦN MỚI: "Có thể bạn quan tâm"
+  Widget _buildSuggestedPlaces(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Có thể bạn quan tâm',
+              style: context.subTitleOneStyle.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            TextButton(
+              onPressed: () {},
+              child: Text(
+                'Xem thêm',
+                style: context.captionStyle.copyWith(
+                  color: context.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Danh sách địa điểm gợi ý
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 3,
+          itemBuilder: (context, index) {
+            final suggestions = [
+              {
+                'name': 'Bãi biển Đồ Sơn',
+                'location': 'Hải Phòng, Việt Nam',
+                'rating': '4.5',
+              },
+              {
+                'name': 'Thủy cung Times City',
+                'location': 'Hà Nội, Việt Nam',
+                'rating': '4.7',
+              },
+              {
+                'name': 'Vịnh Hạ Long',
+                'location': 'Quảng Ninh, Việt Nam',
+                'rating': '4.9',
+              },
+            ];
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: InkWell(
+                onTap: () {},
+                child: Row(
+                  children: [
+                    // Hình ảnh
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/onboarding${(index % 3) + 2}.png',
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 60,
+                            height: 60,
+                            color: context.primaryColor.withValues(alpha: 0.1),
+                            child: Icon(
+                              LucideIcons.image,
+                              color: context.primaryColor,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // Thông tin
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            suggestions[index]['name']!,
+                            style: context.bodyOneStyle.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            suggestions[index]['location']!,
+                            style: context.captionStyle.copyWith(
+                              color: context.textSecondaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.star_rounded,
+                                color: context.primaryColor,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                suggestions[index]['rating']!,
+                                style: context.captionStyle.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Mũi tên phải
+                    Icon(
+                      LucideIcons.chevronRight,
+                      color: context.textSecondaryColor,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // Tạo phần tìm kiếm gần đây
+  Widget _buildNearbySection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(LucideIcons.navigation, color: context.primaryColor, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Gần đây',
+              style: context.subTitleOneStyle.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: context.cardBackgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: context.dividerColor.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(LucideIcons.mapPin, color: context.primaryColor, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tìm kiếm xung quanh',
+                      style: context.bodyOneStyle.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Khám phá địa điểm gần vị trí của bạn',
+                      style: context.captionStyle.copyWith(
+                        color: context.textSecondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                LucideIcons.chevronRight,
+                color: context.textSecondaryColor,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Tạo phần đã xem gần đây
+  Widget _buildRecentSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Đã xem gần đây',
+              style: context.subTitleOneStyle.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                // Xử lý khi nhấn "Xem thêm"
+              },
+              child: Text(
+                'Xem thêm',
+                style: context.captionStyle.copyWith(
+                  color: context.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 3, // Giảm số lượng để không quá dài
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            return _buildRecentItemTile(context, index);
+          },
+        ),
+      ],
+    );
+  }
+
+  // Tạo từng item trong danh sách đã xem
+  Widget _buildRecentItemTile(BuildContext context, int index) {
+    final items = [
+      {
+        'name': 'White Rose Restaurant',
+        'location': 'Nha Trang, Việt Nam',
+        'rating': '4.1',
+      },
+      {
+        'name': 'Vinpearl - Resort Nha Trang',
+        'location': 'Nha Trang, Việt Nam',
+        'rating': '4.2',
+      },
+      {
+        'name': 'White Rose Restaurant',
+        'location': 'Nha Trang, Việt Nam',
+        'rating': '4.3',
+      },
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.cardBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.dividerColor.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/images/onboarding${(index % 4) + 1}.png',
+              width: 60,
+              height: 60,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 60,
+                  height: 60,
+                  color: context.primaryColor.withValues(alpha: 0.1),
+                  child: Icon(
+                    LucideIcons.image,
+                    color: context.primaryColor,
+                    size: 24,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  items[index]['name']!,
+                  style: context.bodyOneStyle.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  items[index]['location']!,
+                  style: context.captionStyle.copyWith(
+                    color: context.textSecondaryColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.star_rounded,
+                      color: context.primaryColor,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      items[index]['rating']!,
+                      style: context.captionStyle.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            LucideIcons.chevronRight,
+            color: context.textSecondaryColor,
+            size: 20,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Hàm xử lý tìm kiếm
+  void _performSearch(String query) {
+    if (query.trim().isEmpty) return;
+
+    debugPrint('Đang tìm kiếm: $query');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Đang tìm kiếm: $query'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+}

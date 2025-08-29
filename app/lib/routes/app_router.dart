@@ -122,7 +122,7 @@ class AppRouter {
         builder: (context, state) => const NotificationScreen(),
       ),
       GoRoute(
-        path: badgesPoints, // <-- add
+        path: badgesPoints,
         name: 'badges-and-points',
         builder: (context, state) => const BadgesAndPointsUserScreen(),
       ),
