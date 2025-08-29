@@ -33,6 +33,7 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   build_runner: any
   json_serializable: any
+  flutter_launcher_icons: ^0.13.1
 
 # The following section is specific to Flutter packages.
 flutter:
@@ -50,3 +51,9 @@ flutter:
         - asset: assets/fonts/FZPoppins-Bold.ttf
         - asset: assets/fonts/FZPoppins-SemiBold.ttf
         - asset: assets/fonts/FZPoppins-Medium.ttf
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  adaptive_icon_foreground: "assets/images/logo.jpg"
+  image_path: "assets/images/logo.jpg"
