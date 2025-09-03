@@ -175,5 +175,21 @@
   "contact_message_hint": "Enter your message",
   "enter_message_required": "Please enter a message",
   "contact_send": "Send",
-  "contact_sent_success": "Contact sent successfully"
+  "contact_sent_success": "Contact sent successfully",
+  "share": "Share",
+  "share_article": "Share article",
+  "related_posts": "Related Posts",
+  "back_to_posts": "Back to list",
+  "by_author": "By",
+  "views": "views",
+  "read_more": "Read more",
+  "post_date": "Posted on",
+  "filter": "Filter",
+  "apply": "Apply",
+  "clear_filters": "Clear filters",
+  "posts_search_hint": "Search posts...",
+  "top_latest_posts": "Latest Posts",
+  "no_posts_found": "No posts found",
+  "articles": "articles",
+  "posts_title": "Posts"
 }

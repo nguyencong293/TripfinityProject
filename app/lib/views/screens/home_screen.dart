@@ -401,7 +401,10 @@ class _AppDrawer extends StatelessWidget {
             _DrawerTile(
               title: 'drawer_posts'.tr,
               icon: LucideIcons.newspaper,
-              onTap: () => Navigator.pop(context),
+              onTap: () => {
+                Navigator.pop(context),
+                context.push(AppRouter.postsList),
+              },
             ),
             _DrawerTile(
               title: 'drawer_about'.tr,

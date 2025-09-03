@@ -175,5 +175,21 @@
   "contact_message_hint": "Nhập nội dung",
   "enter_message_required": "Vui lòng nhập nội dung",
   "contact_send": "Gửi",
-  "contact_sent_success": "Đã gửi liên hệ thành công"
+  "contact_sent_success": "Đã gửi liên hệ thành công",
+  "share": "Chia sẻ",
+  "share_article": "Chia sẻ bài viết",
+  "related_posts": "Bài viết liên quan",
+  "back_to_posts": "Quay lại danh sách",
+  "by_author": "Bởi",
+  "views": "lượt xem",
+  "read_more": "Đọc tiếp",
+  "post_date": "Ngày đăng",
+  "filter": "Bộ lọc",
+  "apply": "Áp dụng",
+  "clear_filters": "Xóa bộ lọc",
+  "posts_search_hint": "Tìm kiếm bài viết...",
+  "top_latest_posts": "Nổi bật",
+  "no_posts_found": "Không tìm thấy bài viết",
+  "articles": "bài viết",
+  "posts_title": "Bài viết"
 }

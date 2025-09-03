@@ -6,6 +6,8 @@ import 'package:app/views/screens/contact_user_screen.dart';
 import 'package:app/views/screens/forget_account_screen.dart';
 import 'package:app/views/screens/login_screen.dart';
 import 'package:app/views/screens/onboarding_screen.dart';
+import 'package:app/views/screens/post_detail_screen.dart';
+import 'package:app/views/screens/post_user_screen.dart';
 import 'package:app/views/screens/register_screen.dart';
 import 'package:app/views/screens/profile_view_user_screen.dart';
 import 'package:app/views/screens/notification_screen.dart';
@@ -32,6 +34,8 @@ class AppRouter {
   static const String notifications = '/notifications';
   static const String badgesPoints = '/badges-and-points';
   static const String contactUser = '/contact-user';
+  static const String postsList = '/posts';
+  static const String postDetail = '/post-detail';
 
   // router configurations
   static late final GoRouter _router;
@@ -132,6 +136,19 @@ class AppRouter {
         path: contactUser,
         name: 'contact-user',
         builder: (context, state) => const ContactUserScreen(),
+      ),
+      GoRoute(
+        path: postsList,
+        name: 'posts',
+        builder: (context, state) => const PostUserScreen(),
+      ),
+
+      // NEW: Post detail. We pass article data via `extra` (Map).
+      GoRoute(
+        path: postDetail,
+        name: 'post-detail',
+        builder: (context, state) =>
+            PostDetailScreen(postData: state.extra as Map<String, dynamic>),
       ),
     ];
   }

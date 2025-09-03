@@ -175,5 +175,6 @@
   "contact_message_hint": "내용을 입력하세요",
   "enter_message_required": "내용을 입력해 주세요",
   "contact_send": "보내기",
-  "contact_sent_success": "문의가 성공적으로 전송되었습니다"
+  "contact_sent_success": "문의가 성공적으로 전송되었습니다",
+  "posts_title": "게시물"
 }
