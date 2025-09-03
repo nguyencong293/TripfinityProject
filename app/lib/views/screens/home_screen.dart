@@ -409,12 +409,18 @@ class _AppDrawer extends StatelessWidget {
             _DrawerTile(
               title: 'drawer_about'.tr,
               icon: LucideIcons.info,
-              onTap: () => Navigator.pop(context),
+              onTap: () => {
+                Navigator.pop(context),
+                context.push(AppRouter.aboutTripfinity),
+              },
             ),
             _DrawerTile(
               title: 'drawer_terms_policies'.tr,
               icon: LucideIcons.shield,
-              onTap: () => Navigator.pop(context),
+              onTap: () => {
+                Navigator.pop(context),
+                context.push(AppRouter.termsPolicies),
+              },
             ),
             const Spacer(),
           ],

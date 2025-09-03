@@ -4,6 +4,7 @@ import 'package:app/services/localization_service.dart';
 import 'package:app/views/screens/badges_and_points_user_screen.dart';
 import 'package:app/views/screens/contact_user_screen.dart';
 import 'package:app/views/screens/forget_account_screen.dart';
+import 'package:app/views/screens/introduction_trip_screen.dart';
 import 'package:app/views/screens/login_screen.dart';
 import 'package:app/views/screens/onboarding_screen.dart';
 import 'package:app/views/screens/post_detail_screen.dart';
@@ -11,6 +12,7 @@ import 'package:app/views/screens/post_user_screen.dart';
 import 'package:app/views/screens/register_screen.dart';
 import 'package:app/views/screens/profile_view_user_screen.dart';
 import 'package:app/views/screens/notification_screen.dart';
+import 'package:app/views/screens/terms_policie_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +38,8 @@ class AppRouter {
   static const String contactUser = '/contact-user';
   static const String postsList = '/posts';
   static const String postDetail = '/post-detail';
+  static const String aboutTripfinity = '/about-tripfinity';
+  static const String termsPolicies = '/terms-policies';
 
   // router configurations
   static late final GoRouter _router;
@@ -149,6 +153,16 @@ class AppRouter {
         name: 'post-detail',
         builder: (context, state) =>
             PostDetailScreen(postData: state.extra as Map<String, dynamic>),
+      ),
+      GoRoute(
+        path: aboutTripfinity,
+        name: 'about-tripfinity',
+        builder: (context, state) => const AboutTripfinityScreen(),
+      ),
+      GoRoute(
+        path: termsPolicies,
+        name: 'terms-policies',
+        builder: (context, state) => const TermsPolicieScreen(),
       ),
     ];
   }
