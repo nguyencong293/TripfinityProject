@@ -1,6 +1,7 @@
 import 'package:app/routes/app_router.dart';
 import 'package:app/views/screens/general_search_screen.dart';
 import 'package:app/views/screens/trip__user_screen.dart';
+import 'package:app/views/screens/trip_review_user_screen.dart';
 import 'package:app/views/widgets/article_banner_card.dart';
 import 'package:app/views/widgets/bottom_nav.dart';
 import 'package:app/views/widgets/experience_card.dart';
@@ -8,6 +9,8 @@ import 'package:app/views/widgets/recent_item_tile.dart';
 import 'package:app/views/widgets/section_header.dart';
 import 'package:app/views/widgets/weekend_city_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -34,23 +37,38 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
     final user = authController.currentUser;
+    DateTime? lastBackPressed;
 
     // Simple placeholder pages per tab (localized)
     final pages = [
       _HomeContent(user: user),
       const GeneralSearchScreen(),
       const TripUserScreen(),
-      Center(child: Text('nav_reviews'.tr, style: context.bodyOneStyle)),
+      const TripReviewUserScreen(),
       const DashboardUserScreen(),
     ];
 
-    return Scaffold(
-      appBar: AppBar(toolbarHeight: 0),
-      drawer: const _AppDrawer(),
-      body: pages[_tabIndex],
-      bottomNavigationBar: BottomNav(
-        currentIndex: _tabIndex,
-        onTap: (i) => setState(() => _tabIndex = i),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final now = DateTime.now();
+        if (lastBackPressed == null ||
+            now.difference(lastBackPressed!) > Duration(seconds: 2)) {
+          lastBackPressed = now;
+          Fluttertoast.showToast(msg: "press_back_again_to_exit".tr);
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(toolbarHeight: 0),
+        drawer: const _AppDrawer(),
+        body: pages[_tabIndex],
+        bottomNavigationBar: BottomNav(
+          currentIndex: _tabIndex,
+          onTap: (i) => setState(() => _tabIndex = i),
+        ),
       ),
     );
   }
