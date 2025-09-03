@@ -388,12 +388,15 @@ class _AppDrawer extends StatelessWidget {
             _DrawerTile(
               title: 'drawer_services'.tr,
               icon: LucideIcons.briefcase,
-              onTap: () => Navigator.pop(context),
+              onTap: () => {Navigator.pop(context)},
             ),
             _DrawerTile(
               title: 'drawer_contact'.tr,
               icon: LucideIcons.phone,
-              onTap: () => Navigator.pop(context),
+              onTap: () => {
+                Navigator.pop(context),
+                context.push(AppRouter.contactUser),
+              },
             ),
             _DrawerTile(
               title: 'drawer_posts'.tr,
