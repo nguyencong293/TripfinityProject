@@ -117,5 +117,20 @@
   "weekend_ideas": "주말에 가기 좋은 곳",
   "discover_interesting_posts": "흥미로운 글을 탐색해 보세요",
   "explore_now": "지금 탐색",
-  "nearby_restaurants": "주변의 맛집"
+  "nearby_restaurants": "주변의 맛집",
+  "trip_badge": "여행",
+  "saved_items": "저장된 항목",
+  "itinerary": "여행 일정",
+  "hotels": "호텔",
+  "restaurants": "레스토랑",
+  "see_all": "모두 보기",
+  "da_nang_trip": "다낭 여행",
+  "trips_title": "여행",
+  "completed_trips": "완료된 여행",
+  "completed_trips_hint": "완료된 여행이 여기에 표시됩니다",
+  "edit_trip": "여행 편집",
+  "edit_time": "시간 편집",
+  "cancel_trip": "여행 취소",
+  "saved_count_suffix": "개 저장됨",
+  "edit": "편집"
 }

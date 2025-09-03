@@ -1,5 +1,6 @@
 import 'package:app/routes/app_router.dart';
 import 'package:app/views/screens/general_search_screen.dart';
+import 'package:app/views/screens/trip__user_screen.dart';
 import 'package:app/views/widgets/article_banner_card.dart';
 import 'package:app/views/widgets/bottom_nav.dart';
 import 'package:app/views/widgets/experience_card.dart';
@@ -38,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final pages = [
       _HomeContent(user: user),
       const GeneralSearchScreen(),
-      Center(child: Text('nav_trips'.tr, style: context.bodyOneStyle)),
+      const TripUserScreen(),
       Center(child: Text('nav_reviews'.tr, style: context.bodyOneStyle)),
       const DashboardUserScreen(),
     ];

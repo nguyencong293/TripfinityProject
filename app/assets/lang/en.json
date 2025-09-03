@@ -117,5 +117,20 @@
   "weekend_ideas": "Ideal places for the weekend",
   "discover_interesting_posts": "Discover interesting posts",
   "explore_now": "Explore now",
-  "nearby_restaurants": "Good nearby restaurants"
+  "nearby_restaurants": "Good nearby restaurants",
+  "trip_badge": "Trip",
+  "saved_items": "Saved Items",
+  "itinerary": "Itinerary",
+  "hotels": "Hotels",
+  "restaurants": "Restaurants",
+  "see_all": "See All",
+  "da_nang_trip": "Da Nang Trip",
+  "trips_title": "Trips",
+  "completed_trips": "Completed Trips",
+  "completed_trips_hint": "Your completed trips will appear here",
+  "edit_trip": "Edit Trip",
+  "edit_time": "Edit Time",
+  "cancel_trip": "Cancel Trip",
+  "saved_count_suffix": "saved",
+  "edit": "Edit"
 }

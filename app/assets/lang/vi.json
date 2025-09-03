@@ -117,5 +117,20 @@
   "weekend_ideas": "Nơi lý tưởng vào cuối tuần",
   "discover_interesting_posts": "Khám phá các bài viết thú vị",
   "explore_now": "Khám phá ngay",
-  "nearby_restaurants": "Các nhà hàng tốt lân cận"
+  "nearby_restaurants": "Các nhà hàng tốt lân cận",
+  "trip_badge": "Chuyến đi",
+  "saved_items": "Mục đã lưu",
+  "itinerary": "Hành trình",
+  "hotels": "Khách sạn",
+  "restaurants": "Nhà hàng",
+  "see_all": "Xem tất cả",
+  "da_nang_trip": "Du lịch Đà Nẵng",
+  "trips_title": "Chuyến đi",
+  "completed_trips": "Chuyến đi đã hoàn thành",
+  "completed_trips_hint": "Các chuyến đi đã hoàn thành của bạn sẽ xuất hiện ở đây",
+  "edit_trip": "Chỉnh sửa chuyến đi",
+  "edit_time": "Chỉnh sửa thời gian",
+  "cancel_trip": "Hủy chuyến đi",
+  "saved_count_suffix": "lượt lưu",
+  "edit": "Chỉnh sửa"
 }
