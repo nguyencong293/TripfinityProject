@@ -132,5 +132,10 @@
   "edit_time": "시간 편집",
   "cancel_trip": "여행 취소",
   "saved_count_suffix": "개 저장됨",
-  "edit": "편집"
+  "edit": "편집",
+  "create_new_trip": "여행 만들기",
+  "trip_name_label": "여행 이름",
+  "trip_name_hint": "여행 이름을 입력하세요...",
+  "create_trip_button": "여행 만들기",
+  "trip_created": "여행이 생성되었습니다"
 }

@@ -132,5 +132,10 @@
   "edit_time": "Chỉnh sửa thời gian",
   "cancel_trip": "Hủy chuyến đi",
   "saved_count_suffix": "lượt lưu",
-  "edit": "Chỉnh sửa"
+  "edit": "Chỉnh sửa",
+  "create_new_trip": "Tạo một chuyến đi",
+  "trip_name_label": "Tên chuyến đi",
+  "trip_name_hint": "Nhập tên chuyến đi...",
+  "create_trip_button": "Tạo chuyến đi",
+  "trip_created": "Đã tạo chuyến đi"
 }

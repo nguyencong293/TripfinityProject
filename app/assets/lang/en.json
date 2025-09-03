@@ -132,5 +132,10 @@
   "edit_time": "Edit Time",
   "cancel_trip": "Cancel Trip",
   "saved_count_suffix": "saved",
-  "edit": "Edit"
+  "edit": "Edit",
+  "create_new_trip": "Create a trip",
+  "trip_name_label": "Trip name",
+  "trip_name_hint": "Enter trip name...",
+  "create_trip_button": "Create trip",
+  "trip_created": "Trip created"
 }
