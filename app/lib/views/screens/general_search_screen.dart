@@ -6,8 +6,12 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/localization_service.dart';
 
-// Import SearchOverviewScreen
+// Screens
 import 'search_overview_screen.dart';
+import 'package:app/views/screens/hotel_overview_search_screen.dart';
+
+// Quick filter categories
+enum _QuickFilter { all, restaurant, hotel, tour, attraction }
 
 class GeneralSearchScreen extends StatefulWidget {
   const GeneralSearchScreen({super.key});
@@ -20,10 +24,12 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
+  _QuickFilter _selected = _QuickFilter.all;
+
   @override
   void initState() {
     super.initState();
-    _searchController.text = "Nha Trang";
+    _searchController.text = 'Nha Trang';
   }
 
   @override
@@ -37,48 +43,30 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(toolbarHeight: 0),
+      backgroundColor: context.backgroundColor,
       body: _buildBody(context),
     );
   }
 
-  // Tạo nội dung chính của màn hình
   Widget _buildBody(BuildContext context) {
     return Column(
       children: [
-        // Phần search bar ở phía trên
         _buildSearchBar(context),
-
-        // Phần nội dung có thể cuộn
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Phần bộ lọc nhanh
                 _buildQuickFilters(context),
-
                 const SizedBox(height: 20),
-
-                // Phần kết quả tìm kiếm
                 _buildSearchResults(context),
-
                 const SizedBox(height: 32),
-
-                // Phần "Có thể bạn quan tâm"
                 _buildSuggestedPlaces(context),
-
                 const SizedBox(height: 32),
-
-                // Phần tìm kiếm gần đây
                 _buildNearbySection(context),
-
                 const SizedBox(height: 32),
-
-                // Phần đã xem gần đây
                 _buildRecentSection(context),
-
-                // Thêm padding ở cuối để scroll thấy hết nội dung
                 const SizedBox(height: 24),
               ],
             ),
@@ -88,7 +76,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  // Tạo ô tìm kiếm
+  // Search bar
   Widget _buildSearchBar(BuildContext context) {
     return Container(
       height: 50,
@@ -148,18 +136,14 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  // Tạo các nút bộ lọc nhanh
+  // Quick filters
   Widget _buildQuickFilters(BuildContext context) {
-    final filters = [
-      {'label': 'Tất cả', 'icon': LucideIcons.layoutPanelTop, 'selected': true},
-      {'label': 'Nhà hàng', 'icon': LucideIcons.utensils, 'selected': false},
-      {'label': 'Khách sạn', 'icon': LucideIcons.hotel, 'selected': false},
-      {'label': 'Tour du lịch', 'icon': LucideIcons.bus, 'selected': false},
-      {
-        'label': 'Điểm tham quan',
-        'icon': LucideIcons.ticket,
-        'selected': false,
-      },
+    final items = [
+      ('Tất cả', LucideIcons.layoutPanelTop, _QuickFilter.all),
+      ('Nhà hàng', LucideIcons.utensils, _QuickFilter.restaurant),
+      ('Khách sạn', LucideIcons.hotel, _QuickFilter.hotel),
+      ('Tour du lịch', LucideIcons.bus, _QuickFilter.tour),
+      ('Điểm tham quan', LucideIcons.ticket, _QuickFilter.attraction),
     ];
 
     return Column(
@@ -173,58 +157,51 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: filters
-              .map((filter) => _buildFilterChip(context, filter))
-              .toList(),
+          children: items.map((e) {
+            final sel = _selected == e.$3;
+            return FilterChip(
+              selected: sel,
+              showCheckmark: false,
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    e.$2,
+                    size: 16,
+                    color: sel
+                        ? context.buttonTextColor
+                        : context.textSecondaryColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    e.$1,
+                    style: context.bodyTwoStyle.copyWith(
+                      color: sel
+                          ? context.buttonTextColor
+                          : context.textSecondaryColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: context.cardBackgroundColor,
+              selectedColor: context.primaryColor,
+              side: BorderSide(
+                color: sel ? context.primaryColor : context.dividerColor,
+              ),
+              onSelected: (_) => setState(() => _selected = e.$3),
+            );
+          }).toList(),
         ),
       ],
     );
   }
 
-  // Tạo từng chip bộ lọc
-  Widget _buildFilterChip(BuildContext context, Map<String, dynamic> filter) {
-    final isSelected = filter['selected'] as bool;
-    return FilterChip(
-      selected: isSelected,
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            filter['icon'] as IconData,
-            size: 16,
-            color: isSelected
-                ? context.buttonTextColor
-                : context.textSecondaryColor,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            filter['label'] as String,
-            style: context.bodyTwoStyle.copyWith(
-              color: isSelected
-                  ? context.buttonTextColor
-                  : context.textSecondaryColor,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-      backgroundColor: context.cardBackgroundColor,
-      selectedColor: context.primaryColor,
-      side: BorderSide(
-        color: isSelected ? context.primaryColor : context.dividerColor,
-      ),
-      onSelected: (selected) {
-        // Xử lý khi chọn bộ lọc
-      },
-    );
-  }
-
-  // Phần kết quả tìm kiếm
+  // Results section (always same layout; "Xem thêm" decides where to go)
   Widget _buildSearchResults(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Danh sách kết quả
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -235,25 +212,25 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 'name': 'Nha Trang',
                 'location': 'Việt Nam, Châu Á',
                 'rating': '4.1',
-                'type': 'destination', // Địa điểm chung
+                'type': 'destination',
               },
               {
                 'name': 'Nha Trang Xưa',
                 'location': 'Nha Trang, Việt Nam',
                 'rating': '4.2',
-                'type': 'restaurant', // Nhà hàng cụ thể
+                'type': 'restaurant',
               },
               {
                 'name': 'White Rose Restaurant',
                 'location': 'Nha Trang, Việt Nam',
                 'rating': '4.3',
-                'type': 'restaurant', // Nhà hàng cụ thể
+                'type': 'restaurant',
               },
               {
                 'name': 'Vinpearl - Resort Nha Trang',
                 'location': 'Nha Trang, Việt Nam',
                 'rating': '4.2',
-                'type': 'hotel', // Khách sạn cụ thể
+                'type': 'hotel',
               },
             ];
 
@@ -263,21 +240,27 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 onTap: () {
                   final item = items[index];
                   if (item['type'] == 'destination') {
-                    // Địa điểm chung → Trang tổng quan
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) =>
                             SearchOverviewScreen(searchQuery: item['name']!),
                       ),
                     );
+                  } else if (item['type'] == 'hotel') {
+                    // Detail stub
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Đi tới chi tiết khách sạn: ${item['name']}',
+                        ),
+                      ),
+                    );
                   } else {
-                    // Item cụ thể → Trang category hoặc detail
                     _navigateToSpecificPage(item['name']!, item['type']!);
                   }
                 },
                 child: Row(
                   children: [
-                    // Hình ảnh
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.asset(
@@ -285,23 +268,18 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 60,
-                            height: 60,
-                            color: context.primaryColor.withValues(alpha: 0.1),
-                            child: Icon(
-                              LucideIcons.image,
-                              color: context.primaryColor,
-                            ),
-                          );
-                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 60,
+                          height: 60,
+                          color: context.primaryColor.withValues(alpha: 0.1),
+                          child: Icon(
+                            LucideIcons.image,
+                            color: context.primaryColor,
+                          ),
+                        ),
                       ),
                     ),
-
                     const SizedBox(width: 12),
-
-                    // Thông tin
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,8 +317,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                         ],
                       ),
                     ),
-
-                    // Mũi tên phải
                     Icon(
                       LucideIcons.chevronRight,
                       color: context.textSecondaryColor,
@@ -353,28 +329,46 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
           },
         ),
 
-        // Nút xem thêm
+        // "Xem thêm" decides target:
+        // - If quick filter == Khách sạn -> go to Hotel Overview.
+        // - Else: general query -> SearchOverview; specific "hotel" query -> Hotel Overview;
+        //   other specific -> route to that category.
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () {
-              // Logic thông minh cho "Xem thêm"
-              if (_isGeneralSearch(_searchController.text.trim())) {
+              final query = _searchController.text.trim();
+
+              if (_selected == _QuickFilter.hotel) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => SearchOverviewScreen(
-                      searchQuery: _searchController.text.trim(),
+                    builder: (_) => HotelOverviewSearchScreen(
+                      searchQuery: query.isEmpty ? 'Khách sạn' : query,
                     ),
                   ),
                 );
+                return;
+              }
+
+              if (query.isEmpty || _isGeneralSearch(query)) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        SearchOverviewScreen(searchQuery: query),
+                  ),
+                );
               } else {
-                final category = _getSearchCategory(
-                  _searchController.text.trim(),
-                );
-                _navigateToSpecificPage(
-                  _searchController.text.trim(),
-                  category,
-                );
+                final category = _getSearchCategory(query);
+                if (category == 'hotel') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          HotelOverviewSearchScreen(searchQuery: query),
+                    ),
+                  );
+                } else {
+                  _navigateToSpecificPage(query, category);
+                }
               }
             },
             child: Text(
@@ -390,8 +384,26 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  // PHẦN MỚI: "Có thể bạn quan tâm"
+  // Suggested places
   Widget _buildSuggestedPlaces(BuildContext context) {
+    final suggestions = [
+      {
+        'name': 'Bãi biển Đồ Sơn',
+        'location': 'Hải Phòng, Việt Nam',
+        'rating': '4.5',
+      },
+      {
+        'name': 'Thủy cung Times City',
+        'location': 'Hà Nội, Việt Nam',
+        'rating': '4.7',
+      },
+      {
+        'name': 'Vịnh Hạ Long',
+        'location': 'Quảng Ninh, Việt Nam',
+        'rating': '4.9',
+      },
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -417,47 +429,25 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
           ],
         ),
         const SizedBox(height: 12),
-
-        // Danh sách địa điểm gợi ý
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: 3,
+          itemCount: suggestions.length,
           itemBuilder: (context, index) {
-            final suggestions = [
-              {
-                'name': 'Bãi biển Đồ Sơn',
-                'location': 'Hải Phòng, Việt Nam',
-                'rating': '4.5',
-              },
-              {
-                'name': 'Thủy cung Times City',
-                'location': 'Hà Nội, Việt Nam',
-                'rating': '4.7',
-              },
-              {
-                'name': 'Vịnh Hạ Long',
-                'location': 'Quảng Ninh, Việt Nam',
-                'rating': '4.9',
-              },
-            ];
-
+            final s = suggestions[index];
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: InkWell(
                 onTap: () {
-                  // Điều hướng đến trang tổng quan với địa điểm gợi ý
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => SearchOverviewScreen(
-                        searchQuery: suggestions[index]['name']!,
-                      ),
+                      builder: (context) =>
+                          SearchOverviewScreen(searchQuery: s['name']!),
                     ),
                   );
                 },
                 child: Row(
                   children: [
-                    // Hình ảnh
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.asset(
@@ -465,36 +455,31 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 60,
-                            height: 60,
-                            color: context.primaryColor.withValues(alpha: 0.1),
-                            child: Icon(
-                              LucideIcons.image,
-                              color: context.primaryColor,
-                            ),
-                          );
-                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 60,
+                          height: 60,
+                          color: context.primaryColor.withValues(alpha: 0.1),
+                          child: Icon(
+                            LucideIcons.image,
+                            color: context.primaryColor,
+                          ),
+                        ),
                       ),
                     ),
-
                     const SizedBox(width: 12),
-
-                    // Thông tin
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            suggestions[index]['name']!,
+                            s['name']!,
                             style: context.bodyOneStyle.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            suggestions[index]['location']!,
+                            s['location']!,
                             style: context.captionStyle.copyWith(
                               color: context.textSecondaryColor,
                             ),
@@ -509,7 +494,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                suggestions[index]['rating']!,
+                                s['rating']!,
                                 style: context.captionStyle.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -519,8 +504,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                         ],
                       ),
                     ),
-
-                    // Mũi tên phải
                     Icon(
                       LucideIcons.chevronRight,
                       color: context.textSecondaryColor,
@@ -536,7 +519,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  // Tạo phần tìm kiếm gần đây
+  // Nearby section
   Widget _buildNearbySection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,9 +548,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
             ),
           ),
           child: InkWell(
-            onTap: () {
-              // Có thể thêm chức năng tìm kiếm theo vị trí
-            },
+            onTap: () {},
             child: Row(
               children: [
                 Icon(LucideIcons.mapPin, color: context.primaryColor, size: 24),
@@ -605,7 +586,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  // Tạo phần đã xem gần đây
+  // Recent section
   Widget _buildRecentSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,9 +601,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                // Xử lý khi nhấn "Xem thêm"
-              },
+              onPressed: () {},
               child: Text(
                 'Xem thêm',
                 style: context.captionStyle.copyWith(
@@ -637,17 +616,14 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: 3, // Giảm số lượng để không quá dài
+          itemCount: 3,
           separatorBuilder: (context, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            return _buildRecentItemTile(context, index);
-          },
+          itemBuilder: (context, index) => _buildRecentItemTile(context, index),
         ),
       ],
     );
   }
 
-  // Tạo từng item trong danh sách đã xem
   Widget _buildRecentItemTile(BuildContext context, int index) {
     final items = [
       {
@@ -680,8 +656,15 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       child: InkWell(
         onTap: () {
           final item = items[index];
-          // Điều hướng thông minh dựa trên type
-          _navigateToSpecificPage(item['name']!, item['type']!);
+          if (item['type'] == 'hotel') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Đi tới chi tiết khách sạn: ${item['name']}'),
+              ),
+            );
+          } else {
+            _navigateToSpecificPage(item['name']!, item['type']!);
+          }
         },
         child: Row(
           children: [
@@ -692,18 +675,16 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 width: 60,
                 height: 60,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 60,
-                    height: 60,
-                    color: context.primaryColor.withValues(alpha: 0.1),
-                    child: Icon(
-                      LucideIcons.image,
-                      color: context.primaryColor,
-                      size: 24,
-                    ),
-                  );
-                },
+                errorBuilder: (_, __, ___) => Container(
+                  width: 60,
+                  height: 60,
+                  color: context.primaryColor.withValues(alpha: 0.1),
+                  child: Icon(
+                    LucideIcons.image,
+                    color: context.primaryColor,
+                    size: 24,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -759,7 +740,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  // Hàm kiểm tra loại tìm kiếm
+  // Helpers: search routing
   bool _isGeneralSearch(String query) {
     final generalKeywords = [
       'nha trang',
@@ -828,31 +809,26 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   void _navigateToSpecificPage(String query, String category) {
     switch (category) {
       case 'hotel':
-        // Navigator đến trang khách sạn (tạo sau)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Chuyển đến trang khách sạn: $query')),
+          SnackBar(content: Text('Đi tới chi tiết khách sạn: $query')),
         );
         break;
       case 'restaurant':
-        // Navigator đến trang nhà hàng (tạo sau)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Chuyển đến trang nhà hàng: $query')),
         );
         break;
       case 'tour':
-        // Navigator đến trang tour (tạo sau)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Chuyển đến trang tour: $query')),
         );
         break;
       case 'activity':
-        // Navigator đến trang hoạt động (tạo sau)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Chuyển đến trang hoạt động: $query')),
         );
         break;
       default:
-        // Fallback to overview
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => SearchOverviewScreen(searchQuery: query),
@@ -861,21 +837,23 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     }
   }
 
-  // Hàm xử lý tìm kiếm
   void _performSearch(String query) {
     if (query.trim().isEmpty) return;
 
     if (_isGeneralSearch(query)) {
-      // Tìm kiếm chung chung → Trang tổng quan
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => SearchOverviewScreen(searchQuery: query.trim()),
         ),
       );
     } else {
-      // Tìm kiếm cụ thể → Trang category hoặc detail
       final category = _getSearchCategory(query);
-      _navigateToSpecificPage(query.trim(), category);
+      if (category == 'hotel') {
+        // Keep UI; users can hit "Xem thêm" to open overview
+        setState(() => _selected = _QuickFilter.hotel);
+      } else {
+        _navigateToSpecificPage(query.trim(), category);
+      }
     }
   }
 }
