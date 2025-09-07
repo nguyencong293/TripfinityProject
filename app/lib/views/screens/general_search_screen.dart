@@ -1,4 +1,5 @@
 import 'package:app/views/screens/tour_service_overview_search_screen.dart';
+import 'package:app/views/screens/restaurant_overview_search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -130,9 +131,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         style: context.bodyOneStyle,
         onChanged: (value) => setState(() {}),
         textInputAction: TextInputAction.search,
-        onSubmitted: (value) {
-          _performSearch(value);
-        },
+        onSubmitted: (value) => _performSearch(value),
       ),
     );
   }
@@ -200,50 +199,50 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
 
   // Results section (always same layout; "Xem thêm" decides where to go)
   Widget _buildSearchResults(BuildContext context) {
+    final items = [
+      {
+        'name': 'Nha Trang',
+        'location': 'Việt Nam, Châu Á',
+        'rating': '4.1',
+        'type': 'destination',
+      },
+      {
+        'name': 'Nha Trang Xưa',
+        'location': 'Nha Trang, Việt Nam',
+        'rating': '4.2',
+        'type': 'restaurant',
+      },
+      {
+        'name': 'White Rose Restaurant',
+        'location': 'Nha Trang, Việt Nam',
+        'rating': '4.3',
+        'type': 'restaurant',
+      },
+      {
+        'name': 'Vinpearl - Resort Nha Trang',
+        'location': 'Nha Trang, Việt Nam',
+        'rating': '4.2',
+        'type': 'hotel',
+      },
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: 4,
+          itemCount: items.length,
           itemBuilder: (context, index) {
-            final items = [
-              {
-                'name': 'Nha Trang',
-                'location': 'Việt Nam, Châu Á',
-                'rating': '4.1',
-                'type': 'destination',
-              },
-              {
-                'name': 'Nha Trang Xưa',
-                'location': 'Nha Trang, Việt Nam',
-                'rating': '4.2',
-                'type': 'restaurant',
-              },
-              {
-                'name': 'White Rose Restaurant',
-                'location': 'Nha Trang, Việt Nam',
-                'rating': '4.3',
-                'type': 'restaurant',
-              },
-              {
-                'name': 'Vinpearl - Resort Nha Trang',
-                'location': 'Nha Trang, Việt Nam',
-                'rating': '4.2',
-                'type': 'hotel',
-              },
-            ];
-
+            final item = items[index];
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: InkWell(
                 onTap: () {
-                  final item = items[index];
                   if (item['type'] == 'destination') {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) =>
+                        builder: (_) =>
                             SearchOverviewScreen(searchQuery: item['name']!),
                       ),
                     );
@@ -285,14 +284,14 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            items[index]['name']!,
+                            item['name']!,
                             style: context.bodyOneStyle.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            items[index]['location']!,
+                            item['location']!,
                             style: context.captionStyle.copyWith(
                               color: context.textSecondaryColor,
                             ),
@@ -307,7 +306,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                items[index]['rating']!,
+                                item['rating']!,
                                 style: context.captionStyle.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -355,13 +354,22 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 );
                 return;
               }
+              if (_selected == _QuickFilter.restaurant) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RestaurantOverviewSearchScreen(
+                      searchQuery: query.isEmpty ? 'Nhà hàng' : query,
+                    ),
+                  ),
+                );
+                return;
+              }
 
               // General / specific query routing
               if (query.isEmpty || _isGeneralSearch(query)) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) =>
-                        SearchOverviewScreen(searchQuery: query),
+                    builder: (_) => SearchOverviewScreen(searchQuery: query),
                   ),
                 );
               } else {
@@ -378,6 +386,13 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                     MaterialPageRoute(
                       builder: (_) =>
                           TourServiceOverviewScreen(searchQuery: query),
+                    ),
+                  );
+                } else if (category == 'restaurant') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          RestaurantOverviewSearchScreen(searchQuery: query),
                     ),
                   );
                 } else {
@@ -455,7 +470,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) =>
+                      builder: (_) =>
                           SearchOverviewScreen(searchQuery: s['name']!),
                     ),
                   );
@@ -631,7 +646,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: 3,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) => _buildRecentItemTile(context, index),
         ),
       ],
@@ -660,6 +675,8 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       },
     ];
 
+    final item = items[index];
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -669,7 +686,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       ),
       child: InkWell(
         onTap: () {
-          final item = items[index];
           if (item['type'] == 'hotel') {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -707,7 +723,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    items[index]['name']!,
+                    item['name']!,
                     style: context.bodyOneStyle.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -716,7 +732,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    items[index]['location']!,
+                    item['location']!,
                     style: context.captionStyle.copyWith(
                       color: context.textSecondaryColor,
                     ),
@@ -733,7 +749,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        items[index]['rating']!,
+                        item['rating']!,
                         style: context.captionStyle.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -847,29 +863,32 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       default:
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => SearchOverviewScreen(searchQuery: query),
+            builder: (_) => SearchOverviewScreen(searchQuery: query),
           ),
         );
     }
   }
 
   void _performSearch(String query) {
-    if (query.trim().isEmpty) return;
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
 
-    if (_isGeneralSearch(query)) {
+    if (_isGeneralSearch(trimmed)) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => SearchOverviewScreen(searchQuery: query.trim()),
+          builder: (_) => SearchOverviewScreen(searchQuery: trimmed),
         ),
       );
     } else {
-      final category = _getSearchCategory(query);
+      final category = _getSearchCategory(trimmed);
       if (category == 'hotel') {
         setState(() => _selected = _QuickFilter.hotel);
       } else if (category == 'tour') {
         setState(() => _selected = _QuickFilter.tour);
+      } else if (category == 'restaurant') {
+        setState(() => _selected = _QuickFilter.restaurant);
       } else {
-        _navigateToSpecificPage(query.trim(), category);
+        _navigateToSpecificPage(trimmed, category);
       }
     }
   }
