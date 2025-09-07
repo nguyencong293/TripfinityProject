@@ -1,3 +1,4 @@
+import 'package:app/views/screens/attractions_overview_search_screen.dart';
 import 'package:app/views/screens/tour_service_overview_search_screen.dart';
 import 'package:app/views/screens/restaurant_overview_search_screen.dart';
 import 'package:flutter/material.dart';
@@ -197,7 +198,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  // Results section (always same layout; "Xem thêm" decides where to go)
+  // Results section
   Widget _buildSearchResults(BuildContext context) {
     final items = [
       {
@@ -364,8 +365,18 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 );
                 return;
               }
+              if (_selected == _QuickFilter.attraction) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AttractionOverviewSearchScreen(
+                      searchQuery: query.isEmpty ? 'Điểm tham quan' : query,
+                    ),
+                  ),
+                );
+                return;
+              }
 
-              // General / specific query routing
+              // General / specific routing
               if (query.isEmpty || _isGeneralSearch(query)) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -393,6 +404,13 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                     MaterialPageRoute(
                       builder: (_) =>
                           RestaurantOverviewSearchScreen(searchQuery: query),
+                    ),
+                  );
+                } else if (category == 'activity') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          AttractionOverviewSearchScreen(searchQuery: query),
                     ),
                   );
                 } else {
@@ -692,6 +710,13 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 content: Text('Đi tới chi tiết khách sạn: ${item['name']}'),
               ),
             );
+          } else if (item['type'] == 'activity') {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    AttractionOverviewSearchScreen(searchQuery: item['name']!),
+              ),
+            );
           } else {
             _navigateToSpecificPage(item['name']!, item['type']!);
           }
@@ -770,7 +795,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  // Helpers: search routing
+  // Helpers
   bool _isGeneralSearch(String query) {
     final generalKeywords = [
       'nha trang',
@@ -784,9 +809,8 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       'huế',
       'vũng tàu',
     ];
-
     return generalKeywords.any(
-          (keyword) => query.toLowerCase().contains(keyword.toLowerCase()),
+          (k) => query.toLowerCase().contains(k.toLowerCase()),
         ) &&
         !_isSpecificSearch(query);
   }
@@ -807,30 +831,31 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       'thấp chăm',
       'po nagar',
     ];
-
     return specificKeywords.any(
-      (keyword) => query.toLowerCase().contains(keyword.toLowerCase()),
+      (k) => query.toLowerCase().contains(k.toLowerCase()),
     );
   }
 
   String _getSearchCategory(String query) {
-    final lowerQuery = query.toLowerCase();
-
-    if (lowerQuery.contains('resort') ||
-        lowerQuery.contains('khách sạn') ||
-        lowerQuery.contains('hotel') ||
-        lowerQuery.contains('vinpearl')) {
+    final q = query.toLowerCase();
+    if (q.contains('resort') ||
+        q.contains('khách sạn') ||
+        q.contains('hotel') ||
+        q.contains('vinpearl')) {
       return 'hotel';
-    } else if (lowerQuery.contains('nhà hàng') ||
-        lowerQuery.contains('restaurant') ||
-        lowerQuery.contains('white rose')) {
+    }
+    if (q.contains('nhà hàng') ||
+        q.contains('restaurant') ||
+        q.contains('white rose')) {
       return 'restaurant';
-    } else if (lowerQuery.contains('tour')) {
+    }
+    if (q.contains('tour')) {
       return 'tour';
-    } else if (lowerQuery.contains('spa') ||
-        lowerQuery.contains('massage') ||
-        lowerQuery.contains('thấp chăm') ||
-        lowerQuery.contains('po nagar')) {
+    }
+    if (q.contains('spa') ||
+        q.contains('massage') ||
+        q.contains('thấp chăm') ||
+        q.contains('po nagar')) {
       return 'activity';
     }
     return 'general';
@@ -856,8 +881,10 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         );
         break;
       case 'activity':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Chuyển đến trang hoạt động: $query')),
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AttractionOverviewSearchScreen(searchQuery: query),
+          ),
         );
         break;
       default:
@@ -887,6 +914,8 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         setState(() => _selected = _QuickFilter.tour);
       } else if (category == 'restaurant') {
         setState(() => _selected = _QuickFilter.restaurant);
+      } else if (category == 'activity') {
+        setState(() => _selected = _QuickFilter.attraction);
       } else {
         _navigateToSpecificPage(trimmed, category);
       }

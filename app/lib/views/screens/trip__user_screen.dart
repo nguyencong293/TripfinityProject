@@ -160,7 +160,7 @@ class TripUserScreen extends StatelessWidget {
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  // TODO: open your edit-time flow
+                  // open your edit-time flow
                 },
               ),
               ListTile(
@@ -190,7 +190,7 @@ class TripUserScreen extends StatelessWidget {
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  // TODO: confirm & cancel the trip
+                  // confirm & cancel the trip
                 },
               ),
               const SizedBox(height: 8),
@@ -341,7 +341,7 @@ class _CreateTripBottomSheetState extends State<_CreateTripBottomSheet> {
                             ? null
                             : () {
                                 Navigator.pop(context);
-                                // TODO: Tạo chuyến đi mới với tên đã nhập
+                                // Tạo chuyến đi mới với tên đã nhập
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
