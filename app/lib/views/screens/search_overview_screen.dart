@@ -1,6 +1,10 @@
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+import 'package:app/views/screens/attractions_overview_search_screen.dart';
+import 'package:app/views/screens/hotel_overview_search_screen.dart';
+import 'package:app/views/screens/restaurant_overview_search_screen.dart';
 import 'package:app/views/screens/search_map_screen.dart';
+import 'package:app/views/screens/tour_service_overview_search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -205,7 +209,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             title: 'Tour dịch vụ',
             icon: LucideIcons.bus,
             items: _getTourServices(),
-            showMoreAction: () => _tabController.animateTo(1),
+            showMoreAction: () => _openTourOverview(context),
           ),
           const SizedBox(height: 24),
           _buildSectionWithResults(
@@ -213,15 +217,16 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             title: 'Khách sạn',
             icon: LucideIcons.building,
             items: _getHotels(),
-            showMoreAction: () => _tabController.animateTo(2),
+            showMoreAction: () => _openHotelOverview(context),
           ),
           const SizedBox(height: 24),
+          // Dùng AttractionOverview cho "Hoạt động giải trí"
           _buildSectionWithResults(
             context,
             title: 'Hoạt động giải trí',
             icon: LucideIcons.ticket,
             items: _getActivities(),
-            showMoreAction: () => _tabController.animateTo(3),
+            showMoreAction: () => _openAttractionOverview(context),
           ),
           const SizedBox(height: 24),
           _buildSectionWithResults(
@@ -229,9 +234,45 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             title: 'Nhà hàng',
             icon: LucideIcons.utensils,
             items: _getRestaurants(),
-            showMoreAction: () => _tabController.animateTo(4),
+            showMoreAction: () => _openRestaurantOverview(context),
           ),
         ],
+      ),
+    );
+  }
+
+  void _openTourOverview(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            TourServiceOverviewScreen(searchQuery: widget.searchQuery),
+      ),
+    );
+  }
+
+  void _openHotelOverview(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            HotelOverviewSearchScreen(searchQuery: widget.searchQuery),
+      ),
+    );
+  }
+
+  void _openAttractionOverview(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            AttractionOverviewSearchScreen(searchQuery: widget.searchQuery),
+      ),
+    );
+  }
+
+  void _openRestaurantOverview(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            RestaurantOverviewSearchScreen(searchQuery: widget.searchQuery),
       ),
     );
   }
