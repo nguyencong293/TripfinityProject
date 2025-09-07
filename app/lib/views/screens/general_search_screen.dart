@@ -1,3 +1,4 @@
+import 'package:app/views/screens/tour_service_overview_search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -247,7 +248,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                       ),
                     );
                   } else if (item['type'] == 'hotel') {
-                    // Detail stub
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -328,17 +328,13 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
             );
           },
         ),
-
-        // "Xem thêm" decides target:
-        // - If quick filter == Khách sạn -> go to Hotel Overview.
-        // - Else: general query -> SearchOverview; specific "hotel" query -> Hotel Overview;
-        //   other specific -> route to that category.
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () {
               final query = _searchController.text.trim();
 
+              // Quick filter direct routes
               if (_selected == _QuickFilter.hotel) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -349,7 +345,18 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 );
                 return;
               }
+              if (_selected == _QuickFilter.tour) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => TourServiceOverviewScreen(
+                      searchQuery: query.isEmpty ? 'Tour' : query,
+                    ),
+                  ),
+                );
+                return;
+              }
 
+              // General / specific query routing
               if (query.isEmpty || _isGeneralSearch(query)) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -364,6 +371,13 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                     MaterialPageRoute(
                       builder: (_) =>
                           HotelOverviewSearchScreen(searchQuery: query),
+                    ),
+                  );
+                } else if (category == 'tour') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          TourServiceOverviewScreen(searchQuery: query),
                     ),
                   );
                 } else {
@@ -819,8 +833,10 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         );
         break;
       case 'tour':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Chuyển đến trang tour: $query')),
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TourServiceOverviewScreen(searchQuery: query),
+          ),
         );
         break;
       case 'activity':
@@ -849,8 +865,9 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     } else {
       final category = _getSearchCategory(query);
       if (category == 'hotel') {
-        // Keep UI; users can hit "Xem thêm" to open overview
         setState(() => _selected = _QuickFilter.hotel);
+      } else if (category == 'tour') {
+        setState(() => _selected = _QuickFilter.tour);
       } else {
         _navigateToSpecificPage(query.trim(), category);
       }
