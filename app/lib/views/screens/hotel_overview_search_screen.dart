@@ -1,3 +1,4 @@
+import 'package:app/views/screens/hotel_detail_overview_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -94,20 +95,20 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
                   rating: h['rating']!,
                   reviews: h['reviews']!,
                   price: h['price']!,
-                  onViewPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Đi tới chi tiết khách sạn: ${h['name']}',
-                        ),
-                      ),
-                    );
-                  },
+                  onViewPressed: () => _openHotelDetail(h),
                 );
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _openHotelDetail(Map<String, String> hotel) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HotelDetailOverviewScreen(hotel: hotel),
       ),
     );
   }

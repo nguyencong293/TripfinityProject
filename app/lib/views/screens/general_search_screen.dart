@@ -1,6 +1,8 @@
 import 'package:app/views/screens/attractions_overview_search_screen.dart';
 import 'package:app/views/screens/tour_service_overview_search_screen.dart';
 import 'package:app/views/screens/restaurant_overview_search_screen.dart';
+import 'package:app/views/screens/hotel_overview_search_screen.dart';
+import 'package:app/views/screens/hotel_detail_overview_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -11,7 +13,6 @@ import 'package:app/services/localization_service.dart';
 
 // Screens
 import 'search_overview_screen.dart';
-import 'package:app/views/screens/hotel_overview_search_screen.dart';
 
 // Quick filter categories
 enum _QuickFilter { all, restaurant, hotel, tour, attraction }
@@ -28,6 +29,95 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   final FocusNode _searchFocusNode = FocusNode();
 
   _QuickFilter _selected = _QuickFilter.all;
+
+  // ===== Mock data cho từng loại =====
+  final List<Map<String, String>> _hotelItems = [
+    {
+      'name': 'Vinpearl - Resort Nha Trang',
+      'location': 'Nha Trang, Việt Nam',
+      'rating': '4.7',
+      'type': 'hotel',
+      'price': '3.200.000đ/đêm',
+      'image': 'assets/images/onboarding1.png',
+    },
+    {
+      'name': 'InterContinental Nha Trang',
+      'location': 'Nha Trang, Việt Nam',
+      'rating': '4.6',
+      'type': 'hotel',
+      'price': '4.050.000đ/đêm',
+      'image': 'assets/images/onboarding2.png',
+    },
+    {
+      'name': 'Mường Thanh Luxury',
+      'location': 'Nha Trang, Việt Nam',
+      'rating': '4.4',
+      'type': 'hotel',
+      'price': '2.250.000đ/đêm',
+      'image': 'assets/images/onboarding3.png',
+    },
+  ];
+
+  final List<Map<String, String>> _restaurantItems = [
+    {
+      'name': 'White Rose Restaurant',
+      'location': 'Nha Trang, Việt Nam',
+      'rating': '4.3',
+      'type': 'restaurant',
+      'image': 'assets/images/onboarding4.png',
+    },
+    {
+      'name': 'Nha Trang Xưa',
+      'location': 'Nha Trang, Việt Nam',
+      'rating': '4.5',
+      'type': 'restaurant',
+      'image': 'assets/images/onboarding3.png',
+    },
+  ];
+
+  final List<Map<String, String>> _tourItems = [
+    {
+      'name': 'Tour 4 đảo Hòn Mun',
+      'location': 'Nha Trang, Việt Nam',
+      'rating': '4.8',
+      'type': 'tour',
+      'image': 'assets/images/onboarding2.png',
+    },
+    {
+      'name': 'Tour Bình Ba 1 ngày',
+      'location': 'Khánh Hòa, Việt Nam',
+      'rating': '4.6',
+      'type': 'tour',
+      'image': 'assets/images/onboarding1.png',
+    },
+  ];
+
+  final List<Map<String, String>> _attractionItems = [
+    {
+      'name': 'Tháp Chăm Po Nagar',
+      'location': 'Nha Trang, Việt Nam',
+      'rating': '4.7',
+      'type': 'attraction',
+      'image': 'assets/images/onboarding4.png',
+    },
+    {
+      'name': 'Chợ Đầm',
+      'location': 'Nha Trang, Việt Nam',
+      'rating': '4.1',
+      'type': 'attraction',
+      'image': 'assets/images/onboarding2.png',
+    },
+  ];
+
+  final List<Map<String, String>> _destinationItems = [
+    {
+      'name': 'Nha Trang',
+      'location': 'Việt Nam, Châu Á',
+      'rating': '4.1',
+      'type': 'destination',
+      'image': 'assets/images/onboarding1.png',
+    },
+  ];
 
   @override
   void initState() {
@@ -198,34 +288,31 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  // Results section
+  // Results section (dynamic theo filter)
   Widget _buildSearchResults(BuildContext context) {
-    final items = [
-      {
-        'name': 'Nha Trang',
-        'location': 'Việt Nam, Châu Á',
-        'rating': '4.1',
-        'type': 'destination',
-      },
-      {
-        'name': 'Nha Trang Xưa',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': '4.2',
-        'type': 'restaurant',
-      },
-      {
-        'name': 'White Rose Restaurant',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': '4.3',
-        'type': 'restaurant',
-      },
-      {
-        'name': 'Vinpearl - Resort Nha Trang',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': '4.2',
-        'type': 'hotel',
-      },
-    ];
+    List<Map<String, String>> items;
+    switch (_selected) {
+      case _QuickFilter.hotel:
+        items = _hotelItems;
+        break;
+      case _QuickFilter.restaurant:
+        items = _restaurantItems;
+        break;
+      case _QuickFilter.tour:
+        items = _tourItems;
+        break;
+      case _QuickFilter.attraction:
+        items = _attractionItems;
+        break;
+      case _QuickFilter.all:
+        items = [
+          ..._destinationItems,
+          ..._hotelItems.take(1),
+          ..._restaurantItems.take(1),
+          ..._tourItems.take(1),
+          ..._attractionItems.take(1),
+        ];
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,19 +327,13 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
               margin: const EdgeInsets.only(bottom: 12),
               child: InkWell(
                 onTap: () {
-                  if (item['type'] == 'destination') {
+                  if (item['type'] == 'hotel') {
+                    _openHotelDetail(item);
+                  } else if (item['type'] == 'destination') {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) =>
                             SearchOverviewScreen(searchQuery: item['name']!),
-                      ),
-                    );
-                  } else if (item['type'] == 'hotel') {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Đi tới chi tiết khách sạn: ${item['name']}',
-                        ),
                       ),
                     );
                   } else {
@@ -264,7 +345,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.asset(
-                        'assets/images/onboarding${(index % 4) + 1}.png',
+                        item['image'] ?? 'assets/images/onboarding1.png',
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,
@@ -275,6 +356,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                           child: Icon(
                             LucideIcons.image,
                             color: context.primaryColor,
+                            size: 20,
                           ),
                         ),
                       ),
@@ -285,19 +367,23 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item['name']!,
+                            item['name'] ?? '',
                             style: context.bodyOneStyle.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            item['location']!,
+                            item['location'] ?? '',
                             style: context.captionStyle.copyWith(
                               color: context.textSecondaryColor,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
                               Icon(
@@ -307,11 +393,22 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                item['rating']!,
+                                item['rating'] ?? '',
                                 style: context.captionStyle.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              if (item['type'] == 'hotel' &&
+                                  (item['price'] ?? '').isNotEmpty) ...[
+                                const SizedBox(width: 10),
+                                Text(
+                                  item['price']!,
+                                  style: context.captionStyle.copyWith(
+                                    color: context.primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ],
@@ -705,11 +802,14 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       child: InkWell(
         onTap: () {
           if (item['type'] == 'hotel') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Đi tới chi tiết khách sạn: ${item['name']}'),
-              ),
-            );
+            _openHotelDetail({
+              'name': item['name']!,
+              'location': item['location']!,
+              'rating': item['rating']!,
+              'type': 'hotel',
+              'price': '3.200.000đ/đêm',
+              'image': 'assets/images/onboarding1.png',
+            });
           } else if (item['type'] == 'activity') {
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -796,6 +896,21 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   }
 
   // Helpers
+  void _openHotelDetail(Map<String, String> hotel) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HotelDetailOverviewScreen(
+          hotel: {
+            'name': hotel['name'] ?? '',
+            'image': hotel['image'] ?? 'assets/images/onboarding1.png',
+            'price': hotel['price'] ?? '—',
+          },
+          activeAmenities: {'Wifi miễn phí', 'Bể bơi'},
+        ),
+      ),
+    );
+  }
+
   bool _isGeneralSearch(String query) {
     final generalKeywords = [
       'nha trang',
