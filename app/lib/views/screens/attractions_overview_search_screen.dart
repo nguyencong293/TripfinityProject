@@ -1,3 +1,4 @@
+import 'package:app/views/screens/attractions_overview_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -131,6 +132,21 @@ class _AttractionOverviewSearchScreenState
       }
       return true;
     }).toList();
+  }
+
+  // Navigation to attraction detail
+  void _openAttractionDetail(Map<String, dynamic> attraction) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AttractionsOverviewDetailScreen(
+          attraction: attraction,
+          activeTypes: _selectedTypes,
+          activeServices: _selectedServices,
+          activeTimes: _selectedTimes,
+          activeSuitability: _selectedSuitability,
+        ),
+      ),
+    );
   }
 
   void _openFilterSheet() {
@@ -597,14 +613,7 @@ class _AttractionOverviewSearchScreenState
                   price: a['price'],
                   types: (a['types'] as List).cast<String>(),
                   imageIndex: a['img'],
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Đi tới chi tiết điểm: ${a['name']}'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
+                  onTap: () => _openAttractionDetail(a),
                 );
               },
             ),
