@@ -366,7 +366,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.45),
+                color: Colors.black.withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Row(
