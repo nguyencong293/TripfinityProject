@@ -1,3 +1,4 @@
+import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -14,24 +15,22 @@ class TourServiceOverviewScreen extends StatefulWidget {
 }
 
 class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
-  // Top chip simple toggles
+  // Quick chips
   bool _hasDate = true;
   bool _hasGuests = true;
 
-  // Price (per person)
-  RangeValues _priceRange = const RangeValues(500000, 3500000);
+  // Filters
   static const double _minPrice = 0;
-  static const double _maxPrice = 10000000;
+  static const double _maxPrice = 10_000_000;
+  RangeValues _priceRange = const RangeValues(500000, 3_500_000);
 
-  // Duration in days
-  RangeValues _durationRange = const RangeValues(1, 5);
   static const double _minDays = 1;
   static const double _maxDays = 10;
+  RangeValues _durationRange = const RangeValues(1, 5);
 
-  // Selections
   final Set<String> _selectedTourTypes = {};
   final Set<String> _selectedServices = {};
-  String? _difficulty; // Dễ / Vừa / Khó
+  String? _difficulty;
   bool _freeCancellation = false;
   bool _instantConfirmation = false;
   bool _hotelPickup = false;
@@ -53,7 +52,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
 
   final List<_TagOption> _services = const [
     _TagOption('Đón khách sạn', LucideIcons.mapPin),
-    _TagOption('Nhóm nhỏ', LucideIcons.mapPin),
+    _TagOption('Nhóm nhỏ', LucideIcons.users),
     _TagOption('Riêng tư', LucideIcons.lock),
     _TagOption('Hướng dẫn EN', LucideIcons.messageSquare),
     _TagOption('Hướng dẫn VI', LucideIcons.messageSquare),
@@ -64,7 +63,8 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
     _TagOption('Xe lăn', LucideIcons.accessibility),
   ];
 
-  final List<Map<String, String>> _tours = List.generate(8, (i) {
+  // Mock data
+  final List<Map<String, dynamic>> _tours = List.generate(8, (i) {
     final names = [
       'City tour Nha Trang cổ',
       'Khám phá đảo Bình Ba',
@@ -85,12 +85,17 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
       'Wellness',
       'Nightlife',
     ];
+    final difficulties = ['Dễ', 'Dễ', 'Dễ', 'Vừa', 'Vừa', 'Khó', 'Dễ', 'Vừa'];
+    final base = 750000 + i * 150000;
     return {
       'name': names[i],
       'type': types[i],
+      'difficulty': difficulties[i],
       'rating': (4.1 + (i * 0.1)).toStringAsFixed(1),
-      'reviews': '(${(1200 + i * 57)})',
-      'price': '${(750000 + i * 150000).toString()} đ',
+      'reviews': '(${1200 + i * 57})',
+      'price': '$base đ',
+      'basePrice': base,
+      'durationDays': (i % 5) + 1,
       'duration': '${(i % 5) + 1} ngày',
       'image': 'assets/images/onboarding${(i % 4) + 1}.png',
     };
@@ -110,8 +115,25 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
         _inStockOnly;
   }
 
+  List<Map<String, dynamic>> get _filteredTours {
+    return _tours.where((t) {
+      final price = (t['basePrice'] as int).toDouble();
+      if (price < _priceRange.start || price > _priceRange.end) return false;
+      final d = (t['durationDays'] as int).toDouble();
+      if (d < _durationRange.start || d > _durationRange.end) return false;
+      if (_selectedTourTypes.isNotEmpty &&
+          !_selectedTourTypes.contains(t['type']))
+        return false;
+      if (_difficulty != null && t['difficulty'] != _difficulty) return false;
+      if (_inStockOnly && d == 5) return false; // ví dụ chặn
+      // _selectedServices không gắn thực vào mock -> bỏ qua
+      return true;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tours = _filteredTours;
     return Scaffold(
       backgroundColor: context.backgroundColor,
       appBar: AppBar(
@@ -119,7 +141,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
         backgroundColor: context.backgroundColor,
         leading: IconButton(
           icon: Icon(LucideIcons.chevronLeft, color: context.textPrimaryColor),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
         title: Text(
@@ -129,39 +151,71 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
       ),
       body: Column(
         children: [
-          _buildTopChips(context),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              itemCount: _tours.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                final t = _tours[index];
-                return _TourCard(
-                  imagePath: t['image']!,
-                  name: t['name']!,
-                  type: t['type']!,
-                  rating: t['rating']!,
-                  reviews: t['reviews']!,
-                  price: t['price']!,
-                  duration: t['duration']!,
-                  onViewPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Đi tới chi tiết tour: ${t['name']}'),
-                      ),
-                    );
-                  },
-                );
-              },
+          _topChips(context),
+          if (_hasAnyFilterApplied)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: context.primaryColor.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Đang lọc: ${tours.length} kết quả',
+                style: context.captionStyle.copyWith(
+                  color: context.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
+          Expanded(
+            child: tours.isEmpty
+                ? _emptyState(context)
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    itemCount: tours.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (context, i) {
+                      final t = tours[i];
+                      return InkWell(
+                        onTap: () => _openTourDetail(t),
+                        borderRadius: BorderRadius.circular(16),
+                        child: _TourCard(
+                          imagePath: t['image']!,
+                          name: t['name']!,
+                          type: t['type']!,
+                          rating: t['rating']!,
+                          reviews: t['reviews']!,
+                          price: t['price']!,
+                          duration: t['duration']!,
+                          onViewPressed: () => _openTourDetail(t),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTopChips(BuildContext context) {
+  // Navigation to tour detail
+  void _openTourDetail(Map<String, dynamic> tour) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TourServiceDetailScreen(
+          tour: tour,
+          activeTourTypes: _selectedTourTypes,
+          activeServices: _selectedServices,
+          activeDifficulty: _difficulty,
+        ),
+      ),
+    );
+  }
+
+  // UI parts
+  Widget _topChips(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -172,7 +226,6 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
             icon: LucideIcons.mapPin,
             label: 'Tour',
             selected: true,
-            onTap: () {},
           ),
           const SizedBox(width: 8),
           _pill(
@@ -201,11 +254,69 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
     );
   }
 
+  Widget _emptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              LucideIcons.searchX,
+              size: 54,
+              color: context.textSecondaryColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Không tìm thấy tour phù hợp',
+              style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Hãy thử nới lỏng tiêu chí lọc hoặc đặt lại bộ lọc.',
+              textAlign: TextAlign.center,
+              style: context.captionStyle.copyWith(
+                color: context.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: () {
+                setState(() {
+                  _priceRange = const RangeValues(_minPrice, _maxPrice);
+                  _durationRange = const RangeValues(_minDays, _maxDays);
+                  _selectedTourTypes.clear();
+                  _selectedServices.clear();
+                  _difficulty = null;
+                  _freeCancellation = false;
+                  _instantConfirmation = false;
+                  _hotelPickup = false;
+                  _inStockOnly = false;
+                });
+              },
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: context.primaryColor),
+              ),
+              child: Text(
+                'Đặt lại bộ lọc',
+                style: context.bodyTwoStyle.copyWith(
+                  color: context.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Bottom sheet
   Future<void> _openFilterSheet(BuildContext context) async {
     RangeValues price = _priceRange;
     RangeValues duration = _durationRange;
-    final tourTypes = Set<String>.from(_selectedTourTypes);
-    final services = Set<String>.from(_selectedServices);
+    final tourTypes = {..._selectedTourTypes};
+    final services = {..._selectedServices};
     String? difficulty = _difficulty;
     bool freeCancel = _freeCancellation;
     bool instantConfirm = _instantConfirmation;
@@ -348,11 +459,11 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                         ctx,
                         options: _tourTypes,
                         selected: tourTypes,
-                        onToggle: (name) {
+                        onToggle: (n) {
                           setSheetState(() {
-                            tourTypes.contains(name)
-                                ? tourTypes.remove(name)
-                                : tourTypes.add(name);
+                            tourTypes.contains(n)
+                                ? tourTypes.remove(n)
+                                : tourTypes.add(n);
                           });
                         },
                       ),
@@ -365,11 +476,11 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                         options: _services,
                         selected: services,
                         maxLabelWidth: 170,
-                        onToggle: (name) {
+                        onToggle: (n) {
                           setSheetState(() {
-                            services.contains(name)
-                                ? services.remove(name)
-                                : services.add(name);
+                            services.contains(n)
+                                ? services.remove(n)
+                                : services.add(n);
                           });
                         },
                       ),
@@ -387,8 +498,6 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                             showCheckmark: false,
                             label: Text(
                               d,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: context.bodyTwoStyle.copyWith(
                                 color: sel
                                     ? context.buttonTextColor
@@ -403,15 +512,9 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                                   ? context.primaryColor
                                   : context.dividerColor,
                             ),
-                            onSelected: (_) {
-                              setSheetState(() {
-                                if (sel) {
-                                  difficulty = null;
-                                } else {
-                                  difficulty = d;
-                                }
-                              });
-                            },
+                            onSelected: (_) => setSheetState(() {
+                              difficulty = sel ? null : d;
+                            }),
                           );
                         }).toList(),
                       ),
@@ -455,33 +558,20 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                         children: [
                           Expanded(
                             child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: context.textPrimaryColor,
                                 side: BorderSide(color: context.dividerColor),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 12,
                                 ),
                               ),
-                              onPressed: () => Navigator.of(ctx).pop(),
                               child: const Text('Hủy'),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: context.primaryColor,
-                                foregroundColor: context.buttonTextColor,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
                               onPressed: () {
                                 setState(() {
                                   _priceRange = price;
@@ -498,7 +588,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                                   _hotelPickup = pickup;
                                   _inStockOnly = inStock;
                                 });
-                                Navigator.of(ctx).pop();
+                                Navigator.pop(ctx);
                                 final count =
                                     (_priceRange.start > _minPrice ||
                                             _priceRange.end < _maxPrice
@@ -523,6 +613,13 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                                   ),
                                 );
                               },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: context.primaryColor,
+                                foregroundColor: context.buttonTextColor,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
                               child: const Text('Áp dụng'),
                             ),
                           ),
@@ -539,7 +636,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
     );
   }
 
-  // Helpers
+  // Shared helpers
   Widget _sectionTitle(BuildContext ctx, IconData icon, String title) {
     return Row(
       children: [
@@ -635,27 +732,26 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
   RangeValues _normalizeDayRange(RangeValues v) {
     final s = v.start.round().toDouble();
     final e = v.end.round().toDouble();
-    if (e - s < 0.5) {
+    if (e - s < .5) {
       final mid = (s + e) / 2;
       return RangeValues(
-        (mid - 0.5).clamp(_minDays, _maxDays),
-        (mid + 0.5).clamp(_minDays, _maxDays),
+        (mid - .5).clamp(_minDays, _maxDays),
+        (mid + .5).clamp(_minDays, _maxDays),
       );
     }
     return RangeValues(s, e);
   }
 
-  String _formatCurrency(double value) {
-    final intVal = value.round();
+  String _formatCurrency(double v) {
+    final intVal = v.round();
     final s = intVal.toString();
     final buf = StringBuffer();
     for (int i = 0; i < s.length; i++) {
-      final idx = s.length - i - 1;
+      final idx = s.length - 1 - i;
       buf.write(s[idx]);
       if ((i + 1) % 3 == 0 && idx != 0) buf.write('.');
     }
-    final rev = buf.toString().split('').reversed.join();
-    return '$rev đ';
+    return '${buf.toString().split('').reversed.join()} đ';
   }
 
   Widget _toggleChip(
@@ -669,8 +765,6 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
       showCheckmark: false,
       label: Text(
         label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
         style: context.bodyTwoStyle.copyWith(
           color: selected
               ? context.buttonTextColor
@@ -734,7 +828,6 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
   }
 }
 
-// Data holder for tag options
 class _TagOption {
   final String label;
   final IconData icon;
@@ -750,7 +843,6 @@ class _TourCard extends StatelessWidget {
   final String price;
   final String duration;
   final VoidCallback onViewPressed;
-
   const _TourCard({
     required this.imagePath,
     required this.name,
@@ -762,18 +854,20 @@ class _TourCard extends StatelessWidget {
     required this.onViewPressed,
   });
 
+  double _ratingValue(String r) => double.tryParse(r) ?? 0;
+
   @override
   Widget build(BuildContext context) {
+    final rVal = _ratingValue(rating);
     return Container(
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.dividerColor.withValues(alpha: 0.25)),
+        border: Border.all(color: context.dividerColor.withValues(alpha: .25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image + favorite
           Stack(
             children: [
               ClipRRect(
@@ -787,9 +881,13 @@ class _TourCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     height: 180,
-                    color: context.primaryColor.withValues(alpha: 0.08),
+                    color: context.primaryColor.withValues(alpha: .08),
                     alignment: Alignment.center,
-                    child: Icon(LucideIcons.image, color: context.primaryColor),
+                    child: Icon(
+                      LucideIcons.image,
+                      color: context.primaryColor,
+                      size: 34,
+                    ),
                   ),
                 ),
               ),
@@ -800,7 +898,7 @@ class _TourCard extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: context.cardBackgroundColor.withValues(alpha: 0.9),
+                    color: context.cardBackgroundColor.withValues(alpha: .9),
                     shape: BoxShape.circle,
                     border: Border.all(color: context.dividerColor),
                   ),
@@ -836,18 +934,17 @@ class _TourCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(
-                    5,
-                    (i) => Icon(
-                      i < 4 ? Icons.star_rounded : Icons.star_border_rounded,
+                  children: List.generate(5, (i) {
+                    final filled = rVal >= (i + 1) - 0.25;
+                    return Icon(
+                      filled ? Icons.star_rounded : Icons.star_border_rounded,
                       color: context.primaryColor,
                       size: 14,
-                    ),
-                  ),
+                    );
+                  }),
                 ),
                 const SizedBox(width: 6),
-                Flexible(
+                Expanded(
                   child: Text(
                     reviews,
                     maxLines: 1,
@@ -918,7 +1015,7 @@ class _TourCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: context.primaryColor.withValues(alpha: 0.08),
+        color: context.primaryColor.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
