@@ -3,6 +3,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 
 class RestaurantOverviewSearchScreen extends StatefulWidget {
   final String searchQuery;
@@ -115,6 +116,23 @@ class _RestaurantOverviewSearchScreenState
         _inStockOnly;
   }
 
+  void _navigateToRestaurantDetail(Map<String, String> restaurant) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => RestaurantDetailScreen(
+          restaurant: restaurant,
+          activeCuisines: _cuisines,
+          activeServices: _services,
+          activeDietaries: _dietaries,
+          activeStars: _selectedStars,
+          activeOpenNow: _openNow,
+          activeReservation: _reservation,
+          activeTakeAway: _takeAway,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,11 +168,8 @@ class _RestaurantOverviewSearchScreenState
                   rating: r['rating']!,
                   reviews: r['reviews']!,
                   tag: r['tag']!,
-                  onViewPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Đi tới chi tiết: ${r['name']}')),
-                    );
-                  },
+                  onCardTap: () => _navigateToRestaurantDetail(r),
+                  onViewPressed: () => _navigateToRestaurantDetail(r),
                 );
               },
             ),
@@ -708,6 +723,7 @@ class _RestaurantCard extends StatelessWidget {
   final String rating;
   final String reviews;
   final String tag;
+  final VoidCallback onCardTap;
   final VoidCallback onViewPressed;
 
   const _RestaurantCard({
@@ -718,156 +734,171 @@ class _RestaurantCard extends StatelessWidget {
     required this.rating,
     required this.reviews,
     required this.tag,
+    required this.onCardTap,
     required this.onViewPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.cardBackgroundColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.dividerColor.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                child: Image.asset(
-                  imagePath,
-                  height: 170,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 170,
-                    color: context.primaryColor.withValues(alpha: 0.08),
-                    alignment: Alignment.center,
-                    child: Icon(LucideIcons.image, color: context.primaryColor),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: context.cardBackgroundColor.withValues(alpha: 0.9),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: context.dividerColor),
-                  ),
-                  child: Icon(
-                    LucideIcons.heart,
-                    size: 18,
-                    color: context.textSecondaryColor,
-                  ),
-                ),
-              ),
-            ],
+    return GestureDetector(
+      onTap: onCardTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.cardBackgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: context.dividerColor.withValues(alpha: 0.25),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-            child: Text(
-              name,
-              style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
               children: [
-                Icon(Icons.star_rounded, color: context.primaryColor, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  rating,
-                  style: context.captionStyle.copyWith(
-                    fontWeight: FontWeight.w700,
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(
-                    5,
-                    (i) => Icon(
-                      i < 4 ? Icons.star_rounded : Icons.star_border_rounded,
-                      color: context.primaryColor,
-                      size: 14,
+                  child: Image.asset(
+                    imagePath,
+                    height: 170,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 170,
+                      color: context.primaryColor.withValues(alpha: 0.08),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        LucideIcons.image,
+                        color: context.primaryColor,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    reviews,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.captionStyle.copyWith(
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: context.cardBackgroundColor.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: context.dividerColor),
+                    ),
+                    child: Icon(
+                      LucideIcons.heart,
+                      size: 18,
                       color: context.textSecondaryColor,
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [_miniTag(context, cuisine), _miniTag(context, tag)],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                Text(
-                  'Giá từ:',
-                  style: context.captionStyle.copyWith(
-                    color: context.textSecondaryColor,
-                  ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+              child: Text(
+                name,
+                style: context.bodyOneStyle.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  price,
-                  style: context.bodyOneStyle.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: SizedBox(
-              height: 44,
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: context.primaryColor,
-                  foregroundColor: context.buttonTextColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                onPressed: onViewPressed,
-                child: Text('Xem nhà hàng', style: context.buttonStyle),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.star_rounded,
+                    color: context.primaryColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    rating,
+                    style: context.captionStyle.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(
+                      5,
+                      (i) => Icon(
+                        i < 4 ? Icons.star_rounded : Icons.star_border_rounded,
+                        color: context.primaryColor,
+                        size: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      reviews,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.captionStyle.copyWith(
+                        color: context.textSecondaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [_miniTag(context, cuisine), _miniTag(context, tag)],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Text(
+                    'Giá từ:',
+                    style: context.captionStyle.copyWith(
+                      color: context.textSecondaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    price,
+                    style: context.bodyOneStyle.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: SizedBox(
+                height: 44,
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.primaryColor,
+                    foregroundColor: context.buttonTextColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  onPressed: onViewPressed,
+                  child: Text('Xem nhà hàng', style: context.buttonStyle),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
