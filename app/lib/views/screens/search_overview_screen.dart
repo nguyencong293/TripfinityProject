@@ -1,10 +1,14 @@
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/views/screens/attractions_overview_search_screen.dart';
+import 'package:app/views/screens/attractions_overview_detail_screen.dart';
 import 'package:app/views/screens/hotel_overview_search_screen.dart';
+import 'package:app/views/screens/hotel_detail_overview_screen.dart';
 import 'package:app/views/screens/restaurant_overview_search_screen.dart';
+import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 import 'package:app/views/screens/search_map_screen.dart';
 import 'package:app/views/screens/tour_service_overview_search_screen.dart';
+import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -210,6 +214,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             icon: LucideIcons.bus,
             items: _getTourServices(),
             showMoreAction: () => _openTourOverview(context),
+            itemType: 'tour',
           ),
           const SizedBox(height: 24),
           _buildSectionWithResults(
@@ -218,6 +223,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             icon: LucideIcons.building,
             items: _getHotels(),
             showMoreAction: () => _openHotelOverview(context),
+            itemType: 'hotel',
           ),
           const SizedBox(height: 24),
           // Dùng AttractionOverview cho "Hoạt động giải trí"
@@ -227,6 +233,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             icon: LucideIcons.ticket,
             items: _getActivities(),
             showMoreAction: () => _openAttractionOverview(context),
+            itemType: 'attraction',
           ),
           const SizedBox(height: 24),
           _buildSectionWithResults(
@@ -235,6 +242,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             icon: LucideIcons.utensils,
             items: _getRestaurants(),
             showMoreAction: () => _openRestaurantOverview(context),
+            itemType: 'restaurant',
           ),
         ],
       ),
@@ -275,6 +283,117 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             RestaurantOverviewSearchScreen(searchQuery: widget.searchQuery),
       ),
     );
+  }
+
+  // ===== NAVIGATION TO DETAIL SCREENS =====
+  void _openHotelDetail(Map<String, dynamic> hotel) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HotelDetailOverviewScreen(
+          hotel: {
+            'name': hotel['name']?.toString() ?? '',
+            'image':
+                hotel['image']?.toString() ?? 'assets/images/onboarding1.png',
+            'price': hotel['price']?.toString() ?? '—',
+          },
+          activeAmenities: {'Wifi miễn phí', 'Bể bơi'},
+        ),
+      ),
+    );
+  }
+
+  void _openRestaurantDetail(Map<String, dynamic> restaurant) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RestaurantDetailScreen(
+          restaurant: {
+            'name': restaurant['name']?.toString() ?? '',
+            'location': restaurant['location']?.toString() ?? '',
+            'rating': restaurant['rating']?.toString() ?? '4.0',
+            'type': 'restaurant',
+            'cuisine': 'Âu', // Default cuisine
+            'price': restaurant['price']?.toString() ?? '100000 đ',
+            'reviews': '(320)', // Default reviews
+            'tag': 'Bar', // Default tag
+            'image':
+                restaurant['image']?.toString() ??
+                'assets/images/onboarding4.png',
+          },
+          activeCuisines: const {'Âu'},
+          activeServices: const {'Bar'},
+          activeDietaries: const {},
+          activeStars: const {},
+          activeOpenNow: false,
+          activeReservation: false,
+          activeTakeAway: false,
+        ),
+      ),
+    );
+  }
+
+  void _openTourDetail(Map<String, dynamic> tour) {
+    // Convert and ensure proper data types for TourServiceDetailScreen
+    final tourData = {
+      'name': tour['name']?.toString() ?? '',
+      'location': tour['location']?.toString() ?? '',
+      'rating': tour['rating']?.toString() ?? '4.0',
+      'price': tour['price']?.toString() ?? '0đ',
+      'image': tour['image']?.toString() ?? 'assets/images/onboarding1.png',
+      'duration': tour['duration']?.toString() ?? '1 ngày',
+      'description': tour['description']?.toString() ?? '',
+    };
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TourServiceDetailScreen(
+          tour: tourData,
+          activeTourTypes: const {'City tour'},
+          activeServices: const {},
+          activeDifficulty: null,
+        ),
+      ),
+    );
+  }
+
+  void _openAttractionDetail(Map<String, dynamic> attraction) {
+    // Convert to proper format for AttractionsOverviewDetailScreen
+    final attractionData = {
+      'name': attraction['name']?.toString() ?? '',
+      'location': attraction['location']?.toString() ?? '',
+      'rating': attraction['rating'] is num
+          ? attraction['rating']
+          : double.tryParse(attraction['rating']?.toString() ?? '4.0') ?? 4.0,
+      'price': attraction['price'] != null
+          ? _extractPrice(attraction['price'].toString())
+          : 0,
+      'description':
+          'Điểm tham quan tuyệt vời tại ${attraction['location']?.toString() ?? 'Nha Trang'}',
+      'image':
+          attraction['image']?.toString() ?? 'assets/images/onboarding3.png',
+      'types': ['Tham quan', 'Giải trí'],
+      'services': ['Chụp ảnh'],
+      'times': ['Sáng', 'Chiều'],
+      'suit': ['Solo', 'Cặp đôi'],
+    };
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AttractionsOverviewDetailScreen(
+          attraction: attractionData,
+          activeTypes: const {},
+          activeServices: const {},
+          activeTimes: const {},
+          activeSuitability: const {},
+        ),
+      ),
+    );
+  }
+
+  // Helper method to extract price from string
+  int _extractPrice(String priceString) {
+    // Remove all non-digit characters and convert to int
+    final numbers = priceString.replaceAll(RegExp(r'[^\d]'), '');
+    return int.tryParse(numbers) ?? 0;
   }
 
   // Card địa điểm chính
@@ -389,6 +508,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
     required IconData icon,
     required List<Map<String, dynamic>> items,
     required VoidCallback showMoreAction,
+    required String itemType, // Add itemType parameter
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,15 +543,23 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             .map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: _buildResultCard(context, item),
+                child: _buildResultCard(
+                  context,
+                  item,
+                  itemType,
+                ), // Pass itemType
               ),
             ),
       ],
     );
   }
 
-  // Card kết quả tìm kiếm
-  Widget _buildResultCard(BuildContext context, Map<String, dynamic> item) {
+  // Card kết quả tìm kiếm - UPDATED WITH NAVIGATION
+  Widget _buildResultCard(
+    BuildContext context,
+    Map<String, dynamic> item,
+    String itemType,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
@@ -440,7 +568,23 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
       ),
       child: InkWell(
         onTap: () {
-          // Xử lý khi tap vào card
+          // Navigate to appropriate detail screen based on itemType
+          switch (itemType) {
+            case 'hotel':
+              _openHotelDetail(item);
+              break;
+            case 'restaurant':
+              _openRestaurantDetail(item);
+              break;
+            case 'tour':
+              _openTourDetail(item);
+              break;
+            case 'attraction':
+              _openAttractionDetail(item);
+              break;
+            default:
+              break;
+          }
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -535,32 +679,36 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
 
   // Tab Tour dịch vụ
   Widget _buildTourServicesTab(BuildContext context) {
-    return _buildListTab(context, _getTourServices());
+    return _buildListTab(context, _getTourServices(), 'tour');
   }
 
   // Tab Khách sạn
   Widget _buildHotelsTab(BuildContext context) {
-    return _buildListTab(context, _getHotels());
+    return _buildListTab(context, _getHotels(), 'hotel');
   }
 
   // Tab Hoạt động giải trí
   Widget _buildActivitiesTab(BuildContext context) {
-    return _buildListTab(context, _getActivities());
+    return _buildListTab(context, _getActivities(), 'attraction');
   }
 
   // Tab Nhà hàng
   Widget _buildRestaurantsTab(BuildContext context) {
-    return _buildListTab(context, _getRestaurants());
+    return _buildListTab(context, _getRestaurants(), 'restaurant');
   }
 
-  // Template cho tab hiển thị danh sách
-  Widget _buildListTab(BuildContext context, List<Map<String, dynamic>> items) {
+  // Template cho tab hiển thị danh sách - UPDATED WITH NAVIGATION
+  Widget _buildListTab(
+    BuildContext context,
+    List<Map<String, dynamic>> items,
+    String itemType,
+  ) {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: items.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        return _buildResultCard(context, items[index]);
+        return _buildResultCard(context, items[index], itemType);
       },
     );
   }
@@ -583,6 +731,8 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
         'rating': 4.5,
         'price': '850.000đ',
         'image': 'assets/images/onboarding1.png',
+        'duration': '1 ngày',
+        'description': 'Tour tham quan Nha Trang trong 1 ngày',
       },
       {
         'name': 'Du thuyền Nha Trang',
@@ -590,6 +740,8 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
         'rating': 4.7,
         'price': '1.200.000đ',
         'image': 'assets/images/onboarding2.png',
+        'duration': '4 giờ',
+        'description': 'Trải nghiệm du thuyền sang trọng',
       },
       {
         'name': 'Tour tham quan 4 đảo',
@@ -597,6 +749,8 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
         'rating': 4.3,
         'price': '650.000đ',
         'image': 'assets/images/onboarding3.png',
+        'duration': '1 ngày',
+        'description': 'Khám phá 4 đảo đẹp nhất Nha Trang',
       },
       {
         'name': 'Tour Vinpearl Land',
@@ -604,6 +758,8 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
         'rating': 4.4,
         'price': '1.500.000đ',
         'image': 'assets/images/onboarding4.png',
+        'duration': '1 ngày',
+        'description': 'Vui chơi tại công viên giải trí hàng đầu',
       },
     ];
   }
@@ -649,6 +805,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
         'name': 'Tháp Bà Ponagar',
         'location': 'Nha Trang, Việt Nam',
         'rating': 4.0,
+        'price': '30.000đ',
         'image': 'assets/images/onboarding3.png',
       },
       {
@@ -662,12 +819,14 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
         'name': 'Bãi biển Nha Trang',
         'location': 'Nha Trang, Việt Nam',
         'rating': 4.3,
+        'price': 'Miễn phí',
         'image': 'assets/images/onboarding1.png',
       },
       {
         'name': 'Long Sơn Pagoda',
         'location': 'Nha Trang, Việt Nam',
         'rating': 4.1,
+        'price': 'Miễn phí',
         'image': 'assets/images/onboarding2.png',
       },
     ];
@@ -680,24 +839,28 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
         'name': 'Banh Can 51 To Hien Thanh',
         'location': 'Nha Trang, Việt Nam',
         'rating': 4.0,
+        'price': '50.000đ',
         'image': 'assets/images/onboarding3.png',
       },
       {
         'name': 'White Rose Restaurant',
         'location': 'Nha Trang, Việt Nam',
         'rating': 4.3,
+        'price': '200.000đ',
         'image': 'assets/images/onboarding2.png',
       },
       {
         'name': 'Livin- Nha Trang',
         'location': 'Nha Trang, Việt Nam',
         'rating': 4.0,
+        'price': '150.000đ',
         'image': 'assets/images/onboarding4.png',
       },
       {
         'name': 'Nha Trang Xưa',
         'location': 'Nha Trang, Việt Nam',
         'rating': 4.2,
+        'price': '180.000đ',
         'image': 'assets/images/onboarding1.png',
       },
     ];
