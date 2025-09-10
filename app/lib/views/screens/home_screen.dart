@@ -63,7 +63,13 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: Scaffold(
         appBar: AppBar(toolbarHeight: 0),
-        drawer: const _AppDrawer(),
+        drawer: _AppDrawer(
+          onNavigateToServices: () {
+            setState(() {
+              _tabIndex = 1; // Chuyển về tab Search
+            });
+          },
+        ),
         body: pages[_tabIndex],
         bottomNavigationBar: BottomNav(
           currentIndex: _tabIndex,
@@ -354,7 +360,8 @@ class _CategoryItem extends StatelessWidget {
 
 // Left drawer menu
 class _AppDrawer extends StatelessWidget {
-  const _AppDrawer();
+  final VoidCallback onNavigateToServices;
+  const _AppDrawer({required this.onNavigateToServices});
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +395,10 @@ class _AppDrawer extends StatelessWidget {
             _DrawerTile(
               title: 'drawer_services'.tr,
               icon: LucideIcons.briefcase,
-              onTap: () => {Navigator.pop(context)},
+              onTap: () {
+                Navigator.pop(context); // Đóng drawer
+                onNavigateToServices(); // Gọi callback để chuyển tab
+              },
             ),
             _DrawerTile(
               title: 'drawer_contact'.tr,
