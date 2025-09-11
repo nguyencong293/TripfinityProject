@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -62,7 +61,8 @@ public class UserController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
-        String responseMessage = userService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword(), request.getNewConfirmPassword());
+        String responseMessage = userService.resetPassword(request.getEmail(), request.getOtp(),
+                request.getNewPassword(), request.getNewConfirmPassword());
 
         if (responseMessage.equals("Mật khẩu đã được cập nhật thành công.")) {
             return ResponseEntity.ok(responseMessage);

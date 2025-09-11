@@ -29,11 +29,10 @@ public class SecurityConfig {
     private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
     private final PasswordEncoder passwordEncoder;
 
-
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
-                          CustomUserDetailsService customUserDetailsService,
-                          CustomOAuth2SuccessHandler customOAuth2SuccessHandler,
-                          PasswordEncoder passwordEncoder) {
+            CustomUserDetailsService customUserDetailsService,
+            CustomOAuth2SuccessHandler customOAuth2SuccessHandler,
+            PasswordEncoder passwordEncoder) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.customUserDetailsService = customUserDetailsService;
         this.customOAuth2SuccessHandler = customOAuth2SuccessHandler;
@@ -42,8 +41,7 @@ public class SecurityConfig {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(customUserDetailsService);
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(customUserDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
@@ -61,12 +59,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers(
-//                                "/v3/api-docs/**",
-//                                "/swagger-ui/**",
-//                                "/swagger-ui.html",
-//                                "/swagger-resources/**"
-//                        ).permitAll()
+                        // .requestMatchers(
+                        // "/v3/api-docs/**",
+                        // "/swagger-ui/**",
+                        // "/swagger-ui.html",
+                        // "/swagger-resources/**"
+                        // ).permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/account-user/register").permitAll()
                         .requestMatchers("/api/auth/oauth-login").permitAll()
@@ -74,8 +72,7 @@ public class SecurityConfig {
                         .requestMatchers("/**").permitAll()
                         .anyRequest().authenticated()) // Mọi yêu cầu khác cần xác thực
                 .oauth2Login(oauth2 -> oauth2
-                        .successHandler(customOAuth2SuccessHandler)
-                )
+                        .successHandler(customOAuth2SuccessHandler))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
