@@ -2,43 +2,43 @@ package com.vn.tripfinity.backend.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "services")
-public class ServiceTrip {
+@Table(name = "hotels")
+public class Hotel {
 
-    public enum ServiceType {
-        service, tour, attraction, restaurant, hotel, other
+    public enum HotelStatus {
+        published, archived, disabled
     }
 
-    public enum ServiceStatus {
-        published, archived, disabled
+    public enum PropertyType {
+        hotel, resort, apartment, villa, hostel, guesthouse, homestay
     }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "service_id")
-    private Integer serviceId;
+    @Column(name = "hotel_id")
+    private Integer hotelId;
 
-    // Liên kết tới bảng providers
+    // FK -> providers.provider_id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "provider_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Provider provider;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "service_type", nullable = false, length = 32)
-    private ServiceType serviceType;
-
+    // Chung
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
@@ -82,28 +82,50 @@ public class ServiceTrip {
     private String badges;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "service_status", length = 32)
-    private ServiceStatus serviceStatus;
+    @Column(name = "hotel_status", nullable = false, length = 32)
+    private HotelStatus hotelStatus;
 
-    @Column(name = "created_at")
+    // Chi tiết hotel
+    @Column(name = "star_rating")
+    private Integer starRating; // 1..5
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "property_type", length = 32)
+    private PropertyType propertyType;
+
+    @Column(name = "address", length = 255)
+    private String address;
+
+    @Column(name = "checkin_time")
+    private LocalTime checkinTime;
+
+    @Column(name = "checkout_time")
+    private LocalTime checkoutTime;
+
+    @Column(name = "highlights_json", columnDefinition = "JSON")
+    private String highlightsJson;
+
+    @Column(name = "amenities_json", columnDefinition = "JSON")
+    private String amenitiesJson;
+
+    @Column(name = "policies_text", columnDefinition = "TEXT")
+    private String policiesText;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
     @PrePersist
     public void prePersist() {
-        LocalDateTime now = LocalDateTime.now();
-        if (createdAt == null)
-            createdAt = now;
-        if (updatedAt == null)
-            updatedAt = now;
         if (ratingAverage == null)
-            ratingAverage = BigDecimal.ZERO;
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        updatedAt = LocalDateTime.now();
+            ratingAverage = new BigDecimal("0.00");
+        if (hotelStatus == null)
+            hotelStatus = HotelStatus.published;
+        if (propertyType == null)
+            propertyType = PropertyType.hotel;
     }
 }
