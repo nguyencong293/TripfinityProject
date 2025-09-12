@@ -53,12 +53,12 @@ CREATE TABLE providers (
     CONSTRAINT fk_providers_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 3) tours (gộp trường chung + chi tiết tour)
+-- 3) tours
 CREATE TABLE tours (
     tour_id INT AUTO_INCREMENT PRIMARY KEY,
     provider_id INT NOT NULL,
 
-    -- Trường chung (từ services)
+    -- Trường chung
     title VARCHAR(255) NOT NULL,
     service_description TEXT DEFAULT NULL,
     location VARCHAR(255) DEFAULT NULL,
@@ -406,7 +406,7 @@ CREATE TABLE tour_bookings (
     CONSTRAINT fk_tour_booking_group FOREIGN KEY (group_id) REFERENCES tour_group_bookings(group_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 11) payments per type (tránh CHECK + đa FK)
+-- 11) payments per type
 CREATE TABLE hotel_payments (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     booking_id INT NOT NULL,
@@ -520,7 +520,7 @@ CREATE TABLE tour_e_tickets (
     CONSTRAINT fk_tour_ticket_booking FOREIGN KEY (booking_id) REFERENCES tour_bookings(booking_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 13) chat_messages (optional liên kết booking theo loại, KHÔNG dùng CHECK)
+-- 13) chat_messages
 CREATE TABLE chat_messages (
     message_id INT AUTO_INCREMENT PRIMARY KEY,
     sender_id INT NOT NULL,
@@ -552,6 +552,7 @@ CREATE TABLE hotel_reviews (
     content TEXT NOT NULL,
     image_urls TEXT DEFAULT NULL,
     likes_count INT NOT NULL DEFAULT 0,
+    reply_count INT NOT NULL DEFAULT 0,
     review_status ENUM('approved','rejected') NOT NULL DEFAULT 'approved',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -568,6 +569,7 @@ CREATE TABLE restaurant_reviews (
     content TEXT NOT NULL,
     image_urls TEXT DEFAULT NULL,
     likes_count INT NOT NULL DEFAULT 0,
+    reply_count INT NOT NULL DEFAULT 0,
     review_status ENUM('approved','rejected') NOT NULL DEFAULT 'approved',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -584,6 +586,7 @@ CREATE TABLE tour_reviews (
     content TEXT NOT NULL,
     image_urls TEXT DEFAULT NULL,
     likes_count INT NOT NULL DEFAULT 0,
+    reply_count INT NOT NULL DEFAULT 0,
     review_status ENUM('approved','rejected') NOT NULL DEFAULT 'approved',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -600,6 +603,7 @@ CREATE TABLE attraction_reviews (
     content TEXT NOT NULL,
     image_urls TEXT DEFAULT NULL,
     likes_count INT NOT NULL DEFAULT 0,
+    reply_count INT NOT NULL DEFAULT 0,
     review_status ENUM('approved','rejected') NOT NULL DEFAULT 'approved',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -607,7 +611,25 @@ CREATE TABLE attraction_reviews (
     CONSTRAINT fk_attr_review_attr FOREIGN KEY (attraction_id) REFERENCES attractions(attraction_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 15) review aspects per loại (CASCADE)
+-- 15) provider reviews
+CREATE TABLE provider_reviews (
+    review_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    provider_id INT NOT NULL,
+    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    title VARCHAR(255) DEFAULT NULL,
+    content TEXT NOT NULL,
+    image_urls TEXT DEFAULT NULL,
+    likes_count INT NOT NULL DEFAULT 0,
+    reply_count INT NOT NULL DEFAULT 0,
+    review_status ENUM('approved','rejected') NOT NULL DEFAULT 'approved',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_provider_review_user FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT fk_provider_review_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 16) review aspects per loại
 CREATE TABLE hotel_review_aspects (
     review_id INT PRIMARY KEY,
     cleanliness TINYINT NOT NULL CHECK (cleanliness BETWEEN 1 AND 5),
@@ -648,36 +670,50 @@ CREATE TABLE attraction_review_aspects (
     CONSTRAINT fk_attr_aspects_review FOREIGN KEY (review_id) REFERENCES attraction_reviews(review_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 16) provider reviews (bổ sung từ schema cũ có provider_id)
-CREATE TABLE provider_reviews (
-    review_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    provider_id INT NOT NULL,
-    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-    title VARCHAR(255) DEFAULT NULL,
+-- 17) review replies - BẢNG MỚI
+CREATE TABLE review_replies (
+    reply_id INT AUTO_INCREMENT PRIMARY KEY,
+    review_type ENUM('hotel','restaurant','tour','attraction','provider') NOT NULL,
+    review_id INT NOT NULL,
+    replier_id INT NOT NULL,
     content TEXT NOT NULL,
-    image_urls TEXT DEFAULT NULL,
-    likes_count INT NOT NULL DEFAULT 0,
-    review_status ENUM('approved','rejected') NOT NULL DEFAULT 'approved',
+    is_public BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_provider_review_user FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT fk_provider_review_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
+    CONSTRAINT fk_reply_replier FOREIGN KEY (replier_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE provider_rating_summaries (
-    provider_id INT PRIMARY KEY,
-    avg_rating DECIMAL(3,2) NOT NULL DEFAULT 0.00,
-    total_reviews INT NOT NULL DEFAULT 0,
-    count_1 INT NOT NULL DEFAULT 0,
-    count_2 INT NOT NULL DEFAULT 0,
-    count_3 INT NOT NULL DEFAULT 0,
-    count_4 INT NOT NULL DEFAULT 0,
-    count_5 INT NOT NULL DEFAULT 0,
-    CONSTRAINT fk_provider_rating FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE
+-- 18) review likes - BẢNG MỚI
+CREATE TABLE review_likes (
+    like_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    review_type ENUM('hotel','restaurant','tour','attraction','provider') NOT NULL,
+    review_id INT NOT NULL,
+    reply_id INT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_review_like (user_id, review_type, review_id, reply_id),
+    CONSTRAINT fk_review_like_user FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT fk_review_like_reply FOREIGN KEY (reply_id) REFERENCES review_replies(reply_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 17) rating summaries per loại
+-- 19) review reports - BẢNG MỚI
+CREATE TABLE review_reports (
+    report_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    review_type ENUM('hotel','restaurant','tour','attraction','provider') NOT NULL,
+    review_id INT NOT NULL,
+    reply_id INT DEFAULT NULL,
+    report_reason ENUM('spam','inappropriate','false_information','harassment','other') NOT NULL,
+    report_description TEXT,
+    report_status ENUM('pending','reviewed','resolved','dismissed') NOT NULL DEFAULT 'pending',
+    admin_notes TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_review_report_user FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT fk_review_report_reply FOREIGN KEY (reply_id) REFERENCES review_replies(reply_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 20) rating summaries per loại
 CREATE TABLE restaurant_rating_summaries (
     restaurant_id INT PRIMARY KEY,
     avg_rating DECIMAL(3,2) NOT NULL DEFAULT 0.00,
