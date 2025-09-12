@@ -12,8 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +26,7 @@ public class HotelService {
 
     private final HotelRepository hotelRepository;
     private final ProviderRepository providerRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<HotelDTO> getAllHotels() {
         return hotelRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
@@ -58,9 +62,9 @@ public class HotelService {
                 .minParticipants(dto.getMinParticipants())
                 .maxParticipants(dto.getMaxParticipants())
                 .thumbnailUrl(dto.getThumbnailUrl())
-                .imageUrls(dto.getImageUrls())
+                .imageUrls(joinList(dto.getImageUrls()))
                 .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
-                .badges(dto.getBadges())
+                .badges(joinList(dto.getBadges()))
                 .hotelStatus(dto.getHotelStatus() != null ? Hotel.HotelStatus.valueOf(dto.getHotelStatus())
                         : Hotel.HotelStatus.published)
                 .starRating(dto.getStarRating())
@@ -69,8 +73,8 @@ public class HotelService {
                 .address(dto.getAddress())
                 .checkinTime(dto.getCheckinTime())
                 .checkoutTime(dto.getCheckoutTime())
-                .highlightsJson(dto.getHighlightsJson())
-                .amenitiesJson(dto.getAmenitiesJson())
+                .highlightsJson(writeJson(dto.getHighlightsJson()))
+                .amenitiesJson(writeJson(dto.getAmenitiesJson()))
                 .policiesText(dto.getPoliciesText())
                 .build();
 
@@ -115,11 +119,11 @@ public class HotelService {
         if (dto.getThumbnailUrl() != null)
             existing.setThumbnailUrl(dto.getThumbnailUrl());
         if (dto.getImageUrls() != null)
-            existing.setImageUrls(dto.getImageUrls());
+            existing.setImageUrls(joinList(dto.getImageUrls()));
         if (dto.getRatingAverage() != null)
             existing.setRatingAverage(dto.getRatingAverage());
         if (dto.getBadges() != null)
-            existing.setBadges(dto.getBadges());
+            existing.setBadges(joinList(dto.getBadges()));
         if (dto.getHotelStatus() != null)
             existing.setHotelStatus(Hotel.HotelStatus.valueOf(dto.getHotelStatus()));
         if (dto.getStarRating() != null)
@@ -133,9 +137,9 @@ public class HotelService {
         if (dto.getCheckoutTime() != null)
             existing.setCheckoutTime(dto.getCheckoutTime());
         if (dto.getHighlightsJson() != null)
-            existing.setHighlightsJson(dto.getHighlightsJson());
+            existing.setHighlightsJson(writeJson(dto.getHighlightsJson()));
         if (dto.getAmenitiesJson() != null)
-            existing.setAmenitiesJson(dto.getAmenitiesJson());
+            existing.setAmenitiesJson(writeJson(dto.getAmenitiesJson()));
         if (dto.getPoliciesText() != null)
             existing.setPoliciesText(dto.getPoliciesText());
 
@@ -165,20 +169,61 @@ public class HotelService {
                 .minParticipants(h.getMinParticipants())
                 .maxParticipants(h.getMaxParticipants())
                 .thumbnailUrl(h.getThumbnailUrl())
-                .imageUrls(h.getImageUrls())
+                .imageUrls(splitList(h.getImageUrls()))
                 .ratingAverage(h.getRatingAverage())
-                .badges(h.getBadges())
+                .badges(splitList(h.getBadges()))
                 .hotelStatus(h.getHotelStatus() != null ? h.getHotelStatus().name() : null)
                 .starRating(h.getStarRating())
                 .propertyType(h.getPropertyType() != null ? h.getPropertyType().name() : null)
                 .address(h.getAddress())
                 .checkinTime(h.getCheckinTime())
                 .checkoutTime(h.getCheckoutTime())
-                .highlightsJson(h.getHighlightsJson())
-                .amenitiesJson(h.getAmenitiesJson())
+                .highlightsJson(readJsonList(h.getHighlightsJson()))
+                .amenitiesJson(readJsonList(h.getAmenitiesJson()))
                 .policiesText(h.getPoliciesText())
                 .createdAt(h.getCreatedAt())
                 .updatedAt(h.getUpdatedAt())
                 .build();
+    }
+
+    private String joinList(List<String> list) {
+        if (list == null || list.isEmpty())
+            return null;
+        return String.join(",", list);
+    }
+
+    private List<String> splitList(String csv) {
+        if (csv == null || csv.trim().isEmpty())
+            return null;
+        String[] arr = csv.split(",");
+        List<String> out = new ArrayList<>();
+        for (String s : arr) {
+            String v = s.trim();
+            if (!v.isEmpty())
+                out.add(v);
+        }
+        return out;
+    }
+
+    private String writeJson(Object obj) {
+        if (obj == null)
+            return null;
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Không thể chuyển dữ liệu sang JSON", e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> readJsonList(String json) {
+        if (json == null || json.isEmpty())
+            return null;
+        try {
+            return objectMapper.readValue(json, List.class);
+        } catch (Exception e) {
+            log.warn("Không thể parse JSON list: {}", json, e);
+            return null;
+        }
     }
 }

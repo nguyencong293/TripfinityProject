@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -46,14 +47,13 @@ public class HotelDTO {
     @Size(max = 512)
     private String thumbnailUrl;
 
-    private String imageUrls;
+    private List<@Size(max = 1024) String> imageUrls;
 
     @DecimalMin(value = "0.00", inclusive = true, message = "ratingAverage phải >= 0.00")
     @DecimalMax(value = "5.00", inclusive = true, message = "ratingAverage phải <= 5.00")
     private BigDecimal ratingAverage;
 
-    @Size(max = 255)
-    private String badges;
+    private List<@Size(max = 100) String> badges;
 
     // published/archived/disabled
     @Size(max = 32)
@@ -73,8 +73,9 @@ public class HotelDTO {
     private LocalTime checkinTime;
     private LocalTime checkoutTime;
 
-    private String highlightsJson;
-    private String amenitiesJson;
+    // Store as JSON array in DB, accept array from client
+    private List<@Size(max = 200) String> highlightsJson;
+    private List<@Size(max = 200) String> amenitiesJson;
     private String policiesText;
 
     private LocalDateTime createdAt;
