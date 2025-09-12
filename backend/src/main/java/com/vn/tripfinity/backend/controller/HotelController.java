@@ -1,6 +1,7 @@
 package com.vn.tripfinity.backend.controller;
 
 import com.vn.tripfinity.backend.dto.HotelDTO;
+import com.vn.tripfinity.backend.dto.HotelReviewDTO;
 import com.vn.tripfinity.backend.sevice.HotelService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -69,5 +70,31 @@ public class HotelController {
         requireBearer(authorization);
         hotelService.deleteHotel(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ===== Reviews =====
+    @PostMapping("/{id}/reviews")
+    public ResponseEntity<HotelReviewDTO> createHotelReview(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable("id") Integer hotelId,
+            @Valid @RequestBody HotelReviewDTO dto) {
+        requireBearer(authorization);
+        // ensure path id matches body or set it
+        if (dto.getHotelId() == null)
+            dto.setHotelId(hotelId);
+        if (!hotelId.equals(dto.getHotelId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "hotelId path/body không khớp");
+        }
+        HotelReviewDTO created = hotelService.createHotelReview(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<List<HotelReviewDTO>> getHotelReviews(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable("id") Integer hotelId,
+            @RequestParam(value = "status", required = false) String status) {
+        requireBearer(authorization);
+        return ResponseEntity.ok(hotelService.getHotelReviews(hotelId, status));
     }
 }

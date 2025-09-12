@@ -1,11 +1,18 @@
 package com.vn.tripfinity.backend.sevice;
 
 import com.vn.tripfinity.backend.dto.HotelDTO;
+import com.vn.tripfinity.backend.dto.HotelReviewDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Hotel;
+import com.vn.tripfinity.backend.model.HotelReview;
+import com.vn.tripfinity.backend.model.HotelReviewAspects;
 import com.vn.tripfinity.backend.model.Provider;
+import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.HotelRepository;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
+import com.vn.tripfinity.backend.repository.HotelReviewRepository;
+import com.vn.tripfinity.backend.repository.HotelReviewAspectsRepository;
+import com.vn.tripfinity.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +33,9 @@ public class HotelService {
 
     private final HotelRepository hotelRepository;
     private final ProviderRepository providerRepository;
+    private final HotelReviewRepository hotelReviewRepository;
+    private final HotelReviewAspectsRepository hotelReviewAspectsRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<HotelDTO> getAllHotels() {
@@ -154,6 +164,89 @@ public class HotelService {
         log.info("Đã xóa Hotel id: {}", hotelId);
     }
 
+    // ============ Reviews ============
+    public HotelReviewDTO createHotelReview(HotelReviewDTO dto) {
+        Hotel hotel = hotelRepository.findById(dto.getHotelId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + dto.getHotelId()));
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getUserId()));
+
+        HotelReview review = HotelReview.builder()
+                .reviewId(null)
+                .hotel(hotel)
+                .user(user)
+                .rating(dto.getRating())
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .imageUrls(joinList(dto.getImageUrls()))
+                .likesCount(dto.getLikesCount() != null ? dto.getLikesCount() : 0)
+                .replyCount(dto.getReplyCount() != null ? dto.getReplyCount() : 0)
+                .reviewStatus(dto.getReviewStatus() != null ? HotelReview.ReviewStatus.valueOf(dto.getReviewStatus())
+                        : HotelReview.ReviewStatus.approved)
+                .build();
+
+        HotelReview saved = hotelReviewRepository.save(review);
+
+        if (dto.getAspects() != null) {
+            HotelReviewAspects aspects = HotelReviewAspects.builder()
+                    .review(saved)
+                    .cleanliness(dto.getAspects().getCleanliness())
+                    .service(dto.getAspects().getService())
+                    .valueForMoney(dto.getAspects().getValueForMoney())
+                    .location(dto.getAspects().getLocation())
+                    .facilities(dto.getAspects().getFacilities())
+                    .build();
+            hotelReviewAspectsRepository.save(aspects);
+        }
+
+        return toReviewDTO(saved, true);
+    }
+
+    public List<HotelReviewDTO> getHotelReviews(Integer hotelId, String status) {
+        // if status provided, filter; otherwise list all
+        List<HotelReview> list;
+        if (status != null && !status.isBlank()) {
+            HotelReview.ReviewStatus st = HotelReview.ReviewStatus.valueOf(status);
+            list = hotelReviewRepository.findByHotelAndStatus(hotelId, st);
+        } else {
+            list = hotelReviewRepository.findByHotel_HotelId(hotelId);
+        }
+        return list.stream().map(r -> toReviewDTO(r, true)).collect(Collectors.toList());
+    }
+
+    private HotelReviewDTO toReviewDTO(HotelReview r, boolean fetchAspects) {
+        HotelReviewDTO.HotelReviewAspectsDTO aspectsDTO = null;
+        if (fetchAspects && r.getReviewId() != null) {
+            var opt = hotelReviewAspectsRepository.findById(r.getReviewId());
+            if (opt.isPresent()) {
+                var a = opt.get();
+                aspectsDTO = HotelReviewDTO.HotelReviewAspectsDTO.builder()
+                        .cleanliness(a.getCleanliness())
+                        .service(a.getService())
+                        .valueForMoney(a.getValueForMoney())
+                        .location(a.getLocation())
+                        .facilities(a.getFacilities())
+                        .build();
+            }
+        }
+
+        return HotelReviewDTO.builder()
+                .reviewId(r.getReviewId())
+                .hotelId(r.getHotel() != null ? r.getHotel().getHotelId() : null)
+                .userId(r.getUser() != null ? r.getUser().getUserId() : null)
+                .rating(r.getRating())
+                .title(r.getTitle())
+                .content(r.getContent())
+                .imageUrls(splitList(r.getImageUrls()))
+                .likesCount(r.getLikesCount())
+                .replyCount(r.getReplyCount())
+                .reviewStatus(r.getReviewStatus() != null ? r.getReviewStatus().name() : null)
+                .aspects(aspectsDTO)
+                .createdAt(r.getCreatedAt())
+                .updatedAt(r.getUpdatedAt())
+                .build();
+    }
+
     private HotelDTO toDTO(Hotel h) {
         return HotelDTO.builder()
                 .hotelId(h.getHotelId())
@@ -194,7 +287,7 @@ public class HotelService {
 
     private List<String> splitList(String csv) {
         if (csv == null || csv.trim().isEmpty())
-            return null;
+            return new ArrayList<>();
         String[] arr = csv.split(",");
         List<String> out = new ArrayList<>();
         for (String s : arr) {
