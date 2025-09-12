@@ -8,11 +8,13 @@ import com.vn.tripfinity.backend.model.HotelReview;
 import com.vn.tripfinity.backend.model.HotelReviewAspects;
 import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.model.User;
+import com.vn.tripfinity.backend.model.ReviewReply;
 import com.vn.tripfinity.backend.repository.HotelRepository;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.HotelReviewRepository;
 import com.vn.tripfinity.backend.repository.HotelReviewAspectsRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
+import com.vn.tripfinity.backend.repository.ReviewReplyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ public class HotelService {
     private final HotelReviewRepository hotelReviewRepository;
     private final HotelReviewAspectsRepository hotelReviewAspectsRepository;
     private final UserRepository userRepository;
+    private final ReviewReplyRepository reviewReplyRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<HotelDTO> getAllHotels() {
@@ -212,6 +215,55 @@ public class HotelService {
             list = hotelReviewRepository.findByHotel_HotelId(hotelId);
         }
         return list.stream().map(r -> toReviewDTO(r, true)).collect(Collectors.toList());
+    }
+
+    // ===== Review Replies (Hotel) =====
+    public com.vn.tripfinity.backend.dto.HotelReviewReplyDTO createHotelReviewReply(Integer reviewId,
+            com.vn.tripfinity.backend.dto.HotelReviewReplyDTO dto) {
+        // ensure review exists and belongs to a hotel
+        HotelReview review = hotelReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy HotelReview id: " + reviewId));
+
+        User replier = userRepository.findById(dto.getReplierId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getReplierId()));
+
+        ReviewReply reply = ReviewReply.builder()
+                .replyId(null)
+                .reviewType(ReviewReply.ReviewType.hotel)
+                .reviewId(review.getReviewId())
+                .replier(replier)
+                .content(dto.getContent())
+                .isPublic(dto.getIsPublic() != null ? dto.getIsPublic() : Boolean.TRUE)
+                .build();
+
+        ReviewReply saved = reviewReplyRepository.save(reply);
+
+        // increment reply count on parent review
+        review.setReplyCount(review.getReplyCount() == null ? 1 : review.getReplyCount() + 1);
+        hotelReviewRepository.save(review);
+
+        return toHotelReviewReplyDTO(saved);
+    }
+
+    public java.util.List<com.vn.tripfinity.backend.dto.HotelReviewReplyDTO> getHotelReviewReplies(Integer reviewId) {
+        // verify review exists
+        HotelReview review = hotelReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy HotelReview id: " + reviewId));
+        List<ReviewReply> replies = reviewReplyRepository
+                .findByReviewTypeAndReviewIdOrderByCreatedAtAsc(ReviewReply.ReviewType.hotel, review.getReviewId());
+        return replies.stream().map(this::toHotelReviewReplyDTO).collect(java.util.stream.Collectors.toList());
+    }
+
+    private com.vn.tripfinity.backend.dto.HotelReviewReplyDTO toHotelReviewReplyDTO(ReviewReply r) {
+        return com.vn.tripfinity.backend.dto.HotelReviewReplyDTO.builder()
+                .replyId(r.getReplyId())
+                .reviewId(r.getReviewId())
+                .replierId(r.getReplier() != null ? r.getReplier().getUserId() : null)
+                .content(r.getContent())
+                .isPublic(r.getIsPublic())
+                .createdAt(r.getCreatedAt())
+                .updatedAt(r.getUpdatedAt())
+                .build();
     }
 
     private HotelReviewDTO toReviewDTO(HotelReview r, boolean fetchAspects) {

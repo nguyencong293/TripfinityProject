@@ -2,6 +2,7 @@ package com.vn.tripfinity.backend.controller;
 
 import com.vn.tripfinity.backend.dto.HotelDTO;
 import com.vn.tripfinity.backend.dto.HotelReviewDTO;
+import com.vn.tripfinity.backend.dto.HotelReviewReplyDTO;
 import com.vn.tripfinity.backend.sevice.HotelService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -96,5 +97,24 @@ public class HotelController {
             @RequestParam(value = "status", required = false) String status) {
         requireBearer(authorization);
         return ResponseEntity.ok(hotelService.getHotelReviews(hotelId, status));
+    }
+
+    // ===== Review Replies =====
+    @PostMapping("/reviews/{reviewId}/replies")
+    public ResponseEntity<HotelReviewReplyDTO> createHotelReviewReply(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Integer reviewId,
+            @Valid @RequestBody HotelReviewReplyDTO dto) {
+        requireBearer(authorization);
+        HotelReviewReplyDTO created = hotelService.createHotelReviewReply(reviewId, dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/reviews/{reviewId}/replies")
+    public ResponseEntity<List<HotelReviewReplyDTO>> getHotelReviewReplies(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Integer reviewId) {
+        requireBearer(authorization);
+        return ResponseEntity.ok(hotelService.getHotelReviewReplies(reviewId));
     }
 }
