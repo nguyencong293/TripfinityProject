@@ -15,5 +15,5 @@ public interface TourReviewRepository extends JpaRepository<TourReview, Integer>
 
     @Query("SELECT r FROM TourReview r WHERE r.tour.tourId = :tourId AND r.reviewStatus = :status ORDER BY r.createdAt DESC")
     List<TourReview> findByTourAndStatus(@Param("tourId") Integer tourId,
-                                          @Param("status") TourReview.ReviewStatus status);
+            @Param("status") TourReview.ReviewStatus status);
 }

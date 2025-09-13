@@ -19,11 +19,11 @@ public class TourReviewDTO {
     private Integer reviewId;
 
     // Optional in body; will be set from path in controller
-    @JsonAlias({"tour_id"})
+    @JsonAlias({ "tour_id" })
     private Integer tourId;
 
     @NotNull(message = "userId không được để trống")
-    @JsonAlias({"user_id"})
+    @JsonAlias({ "user_id" })
     private Integer userId;
 
     @NotNull
@@ -37,14 +37,14 @@ public class TourReviewDTO {
     @NotBlank
     private String content;
 
-    @JsonAlias({"image_urls"})
+    @JsonAlias({ "image_urls" })
     private List<@Size(max = 1024) String> imageUrls;
 
     private Integer likesCount;
     private Integer replyCount;
 
     // approved | rejected
-    @JsonAlias({"review_status"})
+    @JsonAlias({ "review_status" })
     private String reviewStatus;
 
     @Valid
@@ -58,24 +58,34 @@ public class TourReviewDTO {
     @AllArgsConstructor
     @Builder
     public static class TourReviewAspectsDTO {
-        @JsonAlias({"guide_quality"})
-        @NotNull @Min(1) @Max(5)
+        @JsonAlias({ "guide_quality" })
+        @NotNull
+        @Min(1)
+        @Max(5)
         private Integer guideQuality;
 
-        @JsonAlias({"itinerary_quality"})
-        @NotNull @Min(1) @Max(5)
+        @JsonAlias({ "itinerary_quality" })
+        @NotNull
+        @Min(1)
+        @Max(5)
         private Integer itineraryQuality;
 
-        @JsonAlias({"value_for_money"})
-        @NotNull @Min(1) @Max(5)
+        @JsonAlias({ "value_for_money" })
+        @NotNull
+        @Min(1)
+        @Max(5)
         private Integer valueForMoney;
 
-        @JsonAlias({"organization"})
-        @NotNull @Min(1) @Max(5)
+        @JsonAlias({ "organization" })
+        @NotNull
+        @Min(1)
+        @Max(5)
         private Integer organization;
 
-        @JsonAlias({"safety"})
-        @NotNull @Min(1) @Max(5)
+        @JsonAlias({ "safety" })
+        @NotNull
+        @Min(1)
+        @Max(5)
         private Integer safety;
     }
 }

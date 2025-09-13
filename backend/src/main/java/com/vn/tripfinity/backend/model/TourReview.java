@@ -68,8 +68,11 @@ public class TourReview {
 
     @PrePersist
     public void prePersist() {
-        if (likesCount == null) likesCount = 0;
-        if (replyCount == null) replyCount = 0;
-        if (reviewStatus == null) reviewStatus = ReviewStatus.approved;
+        if (likesCount == null)
+            likesCount = 0;
+        if (replyCount == null)
+            replyCount = 0;
+        if (reviewStatus == null)
+            reviewStatus = ReviewStatus.approved;
     }
 }
