@@ -4,17 +4,20 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vn.tripfinity.backend.dto.TourDTO;
 import com.vn.tripfinity.backend.dto.TourReviewDTO;
+import com.vn.tripfinity.backend.dto.TourReviewReplyDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.model.Tour;
 import com.vn.tripfinity.backend.model.TourReview;
 import com.vn.tripfinity.backend.model.TourReviewAspects;
 import com.vn.tripfinity.backend.model.User;
+import com.vn.tripfinity.backend.model.ReviewReply;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.TourRepository;
 import com.vn.tripfinity.backend.repository.TourReviewRepository;
 import com.vn.tripfinity.backend.repository.TourReviewAspectsRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
+import com.vn.tripfinity.backend.repository.ReviewReplyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,6 +38,7 @@ public class TourService {
     private final TourReviewRepository tourReviewRepository;
     private final TourReviewAspectsRepository tourReviewAspectsRepository;
     private final UserRepository userRepository;
+    private final ReviewReplyRepository reviewReplyRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<TourDTO> getAllTours() {
@@ -220,6 +224,51 @@ public class TourService {
             list = tourReviewRepository.findByTour_TourId(tourId);
         }
         return list.stream().map(r -> toReviewDTO(r, true)).collect(Collectors.toList());
+    }
+
+    // ===== Review Replies (Tour) =====
+    public TourReviewReplyDTO createTourReviewReply(Integer reviewId, TourReviewReplyDTO dto) {
+        TourReview review = tourReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy TourReview id: " + reviewId));
+
+        User replier = userRepository.findById(dto.getReplierId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getReplierId()));
+
+        ReviewReply reply = ReviewReply.builder()
+                .replyId(null)
+                .reviewType(ReviewReply.ReviewType.tour)
+                .reviewId(review.getReviewId())
+                .replier(replier)
+                .content(dto.getContent())
+                .isPublic(dto.getIsPublic() != null ? dto.getIsPublic() : Boolean.TRUE)
+                .build();
+
+        ReviewReply saved = reviewReplyRepository.save(reply);
+
+        review.setReplyCount(review.getReplyCount() == null ? 1 : review.getReplyCount() + 1);
+        tourReviewRepository.save(review);
+
+        return toTourReviewReplyDTO(saved);
+    }
+
+    public List<TourReviewReplyDTO> getTourReviewReplies(Integer reviewId) {
+        TourReview review = tourReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy TourReview id: " + reviewId));
+        List<ReviewReply> replies = reviewReplyRepository
+                .findByReviewTypeAndReviewIdOrderByCreatedAtAsc(ReviewReply.ReviewType.tour, review.getReviewId());
+        return replies.stream().map(this::toTourReviewReplyDTO).collect(Collectors.toList());
+    }
+
+    private TourReviewReplyDTO toTourReviewReplyDTO(ReviewReply r) {
+        return TourReviewReplyDTO.builder()
+                .replyId(r.getReplyId())
+                .reviewId(r.getReviewId())
+                .replierId(r.getReplier() != null ? r.getReplier().getUserId() : null)
+                .content(r.getContent())
+                .isPublic(r.getIsPublic())
+                .createdAt(r.getCreatedAt())
+                .updatedAt(r.getUpdatedAt())
+                .build();
     }
 
     private TourReviewDTO toReviewDTO(TourReview r, boolean fetchAspects) {
