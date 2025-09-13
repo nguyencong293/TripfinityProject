@@ -70,4 +70,17 @@ public class AreaController {
         areaService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/recalc")
+    public ResponseEntity<AreaDTO> recalc(@RequestHeader("Authorization") String authorization,
+            @PathVariable Integer id) {
+        requireBearer(authorization);
+        return ResponseEntity.ok(areaService.recalc(id));
+    }
+
+    @PostMapping("/recalc-all")
+    public ResponseEntity<Integer> recalcAll(@RequestHeader("Authorization") String authorization) {
+        requireBearer(authorization);
+        return ResponseEntity.ok(areaService.recalcAll());
+    }
 }

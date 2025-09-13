@@ -12,6 +12,11 @@ import java.util.List;
 public interface HotelRepository extends JpaRepository<Hotel, Integer> {
     List<Hotel> findByProvider_ProviderId(Integer providerId);
 
+    long countByArea_AreaId(Integer areaId);
+
+    @Query("SELECT COALESCE(SUM(h.ratingAverage), 0) FROM Hotel h WHERE h.area.areaId = :areaId")
+    Double sumRatingAverageByArea(@Param("areaId") Integer areaId);
+
     @Query("SELECT h FROM Hotel h WHERE (:q IS NULL OR :q = '' OR LOWER(h.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(h.location) LIKE LOWER(CONCAT('%', :q, '%'))) AND (:status IS NULL OR h.hotelStatus = :status) ORDER BY h.createdAt DESC")
     List<Hotel> searchByTitleOrLocation(@Param("q") String q, @Param("status") Hotel.HotelStatus status);
 }
