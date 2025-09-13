@@ -32,6 +32,12 @@ public class Attraction {
     @EqualsAndHashCode.Exclude
     private Provider provider;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "area_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Area area;
+
     // Common fields
     @Column(name = "title", nullable = false, length = 255)
     private String title;

@@ -6,8 +6,10 @@ import com.vn.tripfinity.backend.dto.AttractionDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Attraction;
 import com.vn.tripfinity.backend.model.Provider;
+import com.vn.tripfinity.backend.model.Area;
 import com.vn.tripfinity.backend.repository.AttractionRepository;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
+import com.vn.tripfinity.backend.repository.AreaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class AttractionService {
 
     private final AttractionRepository attractionRepository;
     private final ProviderRepository providerRepository;
+    private final AreaRepository areaRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<AttractionDTO> getAll() {
@@ -47,10 +50,13 @@ public class AttractionService {
     public AttractionDTO create(AttractionDTO dto) {
         Provider provider = providerRepository.findById(dto.getProviderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + dto.getProviderId()));
+        Area area = areaRepository.findById(dto.getAreaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
 
         Attraction entity = Attraction.builder()
                 .attractionId(null)
                 .provider(provider)
+                .area(area)
                 .title(dto.getTitle())
                 .serviceDescription(dto.getServiceDescription())
                 .location(dto.getLocation())
@@ -99,6 +105,12 @@ public class AttractionService {
 
         if (dto.getTitle() != null)
             existing.setTitle(dto.getTitle());
+        if (dto.getAreaId() != null
+                && (existing.getArea() == null || !existing.getArea().getAreaId().equals(dto.getAreaId()))) {
+            Area area = areaRepository.findById(dto.getAreaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
+            existing.setArea(area);
+        }
         if (dto.getServiceDescription() != null)
             existing.setServiceDescription(dto.getServiceDescription());
         if (dto.getLocation() != null)
@@ -163,6 +175,7 @@ public class AttractionService {
         return AttractionDTO.builder()
                 .attractionId(a.getAttractionId())
                 .providerId(a.getProvider() != null ? a.getProvider().getProviderId() : null)
+                .areaId(a.getArea() != null ? a.getArea().getAreaId() : null)
                 .title(a.getTitle())
                 .serviceDescription(a.getServiceDescription())
                 .location(a.getLocation())

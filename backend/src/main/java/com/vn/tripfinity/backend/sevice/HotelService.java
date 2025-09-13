@@ -6,6 +6,7 @@ import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Hotel;
 import com.vn.tripfinity.backend.model.HotelReview;
 import com.vn.tripfinity.backend.model.HotelReviewAspects;
+import com.vn.tripfinity.backend.model.Area;
 import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.model.ReviewReply;
@@ -15,6 +16,7 @@ import com.vn.tripfinity.backend.repository.HotelReviewRepository;
 import com.vn.tripfinity.backend.repository.HotelReviewAspectsRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
 import com.vn.tripfinity.backend.repository.ReviewReplyRepository;
+import com.vn.tripfinity.backend.repository.AreaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class HotelService {
     private final HotelReviewAspectsRepository hotelReviewAspectsRepository;
     private final UserRepository userRepository;
     private final ReviewReplyRepository reviewReplyRepository;
+    private final AreaRepository areaRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<HotelDTO> getAllHotels() {
@@ -60,10 +63,13 @@ public class HotelService {
     public HotelDTO createHotel(HotelDTO dto) {
         Provider provider = providerRepository.findById(dto.getProviderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + dto.getProviderId()));
+        Area area = areaRepository.findById(dto.getAreaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
 
         Hotel entity = Hotel.builder()
                 .hotelId(null)
                 .provider(provider)
+                .area(area)
                 .title(dto.getTitle())
                 .serviceDescription(dto.getServiceDescription())
                 .location(dto.getLocation())
@@ -111,6 +117,12 @@ public class HotelService {
 
         if (dto.getTitle() != null)
             existing.setTitle(dto.getTitle());
+        if (dto.getAreaId() != null
+                && (existing.getArea() == null || !existing.getArea().getAreaId().equals(dto.getAreaId()))) {
+            Area area = areaRepository.findById(dto.getAreaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
+            existing.setArea(area);
+        }
         if (dto.getServiceDescription() != null)
             existing.setServiceDescription(dto.getServiceDescription());
         if (dto.getLocation() != null)
@@ -303,6 +315,7 @@ public class HotelService {
         return HotelDTO.builder()
                 .hotelId(h.getHotelId())
                 .providerId(h.getProvider() != null ? h.getProvider().getProviderId() : null)
+                .areaId(h.getArea() != null ? h.getArea().getAreaId() : null)
                 .title(h.getTitle())
                 .serviceDescription(h.getServiceDescription())
                 .location(h.getLocation())

@@ -19,6 +19,9 @@ public class TourDTO {
     @NotNull(message = "providerId không được để trống")
     private Integer providerId;
 
+    @NotNull(message = "areaId không được để trống")
+    private Integer areaId;
+
     @NotBlank(message = "title không được để trống")
     @Size(max = 255)
     private String title;

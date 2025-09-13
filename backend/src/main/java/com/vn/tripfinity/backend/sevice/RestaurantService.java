@@ -9,12 +9,14 @@ import com.vn.tripfinity.backend.model.RestaurantReview;
 import com.vn.tripfinity.backend.model.RestaurantReviewAspects;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.model.ReviewReply;
+import com.vn.tripfinity.backend.model.Area;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.RestaurantRepository;
 import com.vn.tripfinity.backend.repository.RestaurantReviewRepository;
 import com.vn.tripfinity.backend.repository.RestaurantReviewAspectsRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
 import com.vn.tripfinity.backend.repository.ReviewReplyRepository;
+import com.vn.tripfinity.backend.repository.AreaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class RestaurantService {
     private final RestaurantReviewAspectsRepository restaurantReviewAspectsRepository;
     private final UserRepository userRepository;
     private final ReviewReplyRepository reviewReplyRepository;
+    private final AreaRepository areaRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<RestaurantDTO> getAllRestaurants() {
@@ -60,10 +63,13 @@ public class RestaurantService {
     public RestaurantDTO createRestaurant(RestaurantDTO dto) {
         Provider provider = providerRepository.findById(dto.getProviderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + dto.getProviderId()));
+        Area area = areaRepository.findById(dto.getAreaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
 
         Restaurant entity = Restaurant.builder()
                 .restaurantId(null)
                 .provider(provider)
+                .area(area)
                 .title(dto.getTitle())
                 .serviceDescription(dto.getServiceDescription())
                 .location(dto.getLocation())
@@ -111,6 +117,12 @@ public class RestaurantService {
 
         if (dto.getTitle() != null)
             existing.setTitle(dto.getTitle());
+        if (dto.getAreaId() != null
+                && (existing.getArea() == null || !existing.getArea().getAreaId().equals(dto.getAreaId()))) {
+            Area area = areaRepository.findById(dto.getAreaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
+            existing.setArea(area);
+        }
         if (dto.getServiceDescription() != null)
             existing.setServiceDescription(dto.getServiceDescription());
         if (dto.getLocation() != null)
@@ -303,6 +315,7 @@ public class RestaurantService {
         return RestaurantDTO.builder()
                 .restaurantId(r.getRestaurantId())
                 .providerId(r.getProvider() != null ? r.getProvider().getProviderId() : null)
+                .areaId(r.getArea() != null ? r.getArea().getAreaId() : null)
                 .title(r.getTitle())
                 .serviceDescription(r.getServiceDescription())
                 .location(r.getLocation())
