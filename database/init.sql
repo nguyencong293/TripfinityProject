@@ -33,7 +33,21 @@ CREATE TABLE users (
     reset_otp VARCHAR(6) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2) providers
+-- 2) areas
+CREATE TABLE areas (
+    area_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,           
+    slug VARCHAR(255) NOT NULL UNIQUE,       
+    area_type ENUM('province','city','district') NOT NULL DEFAULT 'province',
+    short_description VARCHAR(255) DEFAULT NULL,
+    cover_image_url VARCHAR(512) DEFAULT NULL,
+    avg_rating DECIMAL(3,2) NOT NULL DEFAULT 0.00,
+    ratings_count INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 3) providers
 CREATE TABLE providers (
     provider_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -53,10 +67,11 @@ CREATE TABLE providers (
     CONSTRAINT fk_providers_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 3) tours
+-- 4) tours
 CREATE TABLE tours (
     tour_id INT AUTO_INCREMENT PRIMARY KEY,
     provider_id INT NOT NULL,
+    area_id INT NOT NULL,
 
     -- Trường chung
     title VARCHAR(255) NOT NULL,
@@ -91,13 +106,15 @@ CREATE TABLE tours (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_tours_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
+    CONSTRAINT fk_tours_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id),
+    CONSTRAINT fk_tours_area FOREIGN KEY (area_id) REFERENCES areas(area_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 4) hotels
+-- 5) hotels
 CREATE TABLE hotels (
     hotel_id INT AUTO_INCREMENT PRIMARY KEY,
     provider_id INT NOT NULL,
+    area_id INT NOT NULL,
 
     -- Chung
     title VARCHAR(255) NOT NULL,
@@ -129,13 +146,15 @@ CREATE TABLE hotels (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_hotels_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
+    CONSTRAINT fk_hotels_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id),
+    CONSTRAINT fk_hotels_area FOREIGN KEY (area_id) REFERENCES areas(area_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 5) restaurants
+-- 6) restaurants
 CREATE TABLE restaurants (
     restaurant_id INT AUTO_INCREMENT PRIMARY KEY,
     provider_id INT NOT NULL,
+    area_id INT NOT NULL,
 
     -- Chung
     title VARCHAR(255) NOT NULL,
@@ -167,13 +186,15 @@ CREATE TABLE restaurants (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_restaurants_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
+    CONSTRAINT fk_restaurants_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id),
+    CONSTRAINT fk_restaurants_area FOREIGN KEY (area_id) REFERENCES areas(area_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 6) attractions
+-- 7) attractions
 CREATE TABLE attractions (
     attraction_id INT AUTO_INCREMENT PRIMARY KEY,
     provider_id INT NOT NULL,
+    area_id INT NOT NULL,
 
     -- Chung
     title VARCHAR(255) NOT NULL,
@@ -207,10 +228,11 @@ CREATE TABLE attractions (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_attractions_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
+    CONSTRAINT fk_attractions_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id),
+    CONSTRAINT fk_attractions_area FOREIGN KEY (area_id) REFERENCES areas(area_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 7) price options per type
+-- 8) price options per type
 CREATE TABLE tour_price_options (
     option_id INT AUTO_INCREMENT PRIMARY KEY,
     tour_id INT NOT NULL,
@@ -279,7 +301,7 @@ CREATE TABLE attraction_price_options (
     CONSTRAINT fk_attraction_option_attr FOREIGN KEY (attraction_id) REFERENCES attractions(attraction_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 8) itineraries (tour only)
+-- 9) itineraries (tour only)
 CREATE TABLE itineraries (
     itinerary_id INT AUTO_INCREMENT PRIMARY KEY,
     tour_id INT NOT NULL,
@@ -296,7 +318,7 @@ CREATE TABLE itineraries (
     CONSTRAINT fk_itin_guide FOREIGN KEY (guide_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 9) group bookings (tour only) + members
+-- 10) group bookings (tour only) + members
 CREATE TABLE tour_group_bookings (
     group_id INT AUTO_INCREMENT PRIMARY KEY,
     leader_id INT NOT NULL,
@@ -323,7 +345,7 @@ CREATE TABLE group_members (
     CONSTRAINT fk_group_member_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 10) bookings per type
+-- 11) bookings per type
 CREATE TABLE hotel_bookings (
     booking_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -406,7 +428,7 @@ CREATE TABLE tour_bookings (
     CONSTRAINT fk_tour_booking_group FOREIGN KEY (group_id) REFERENCES tour_group_bookings(group_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 11) payments per type
+-- 12) payments per type
 CREATE TABLE hotel_payments (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     booking_id INT NOT NULL,
@@ -471,7 +493,7 @@ CREATE TABLE tour_payments (
     CONSTRAINT fk_tour_pay_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 12) e_tickets per type
+-- 13) e_tickets per type
 CREATE TABLE hotel_e_tickets (
     e_ticket_id INT AUTO_INCREMENT PRIMARY KEY,
     booking_id INT NOT NULL,
@@ -520,7 +542,7 @@ CREATE TABLE tour_e_tickets (
     CONSTRAINT fk_tour_ticket_booking FOREIGN KEY (booking_id) REFERENCES tour_bookings(booking_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 13) chat_messages
+-- 14) chat_messages
 CREATE TABLE chat_messages (
     message_id INT AUTO_INCREMENT PRIMARY KEY,
     sender_id INT NOT NULL,
@@ -542,7 +564,7 @@ CREATE TABLE chat_messages (
     CONSTRAINT fk_chat_tour_booking  FOREIGN KEY (tour_booking_id) REFERENCES tour_bookings(booking_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 14) reviews tách theo loại
+-- 15) reviews tách theo loại
 CREATE TABLE hotel_reviews (
     review_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -611,7 +633,7 @@ CREATE TABLE attraction_reviews (
     CONSTRAINT fk_attr_review_attr FOREIGN KEY (attraction_id) REFERENCES attractions(attraction_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 15) provider reviews
+-- 16) provider reviews
 CREATE TABLE provider_reviews (
     review_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -629,7 +651,7 @@ CREATE TABLE provider_reviews (
     CONSTRAINT fk_provider_review_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 16) review aspects per loại
+-- 17) review aspects per loại
 CREATE TABLE hotel_review_aspects (
     review_id INT PRIMARY KEY,
     cleanliness TINYINT NOT NULL CHECK (cleanliness BETWEEN 1 AND 5),
@@ -670,7 +692,7 @@ CREATE TABLE attraction_review_aspects (
     CONSTRAINT fk_attr_aspects_review FOREIGN KEY (review_id) REFERENCES attraction_reviews(review_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 17) review replies - BẢNG MỚI
+-- 18) review replies
 CREATE TABLE review_replies (
     reply_id INT AUTO_INCREMENT PRIMARY KEY,
     review_type ENUM('hotel','restaurant','tour','attraction','provider') NOT NULL,
@@ -683,7 +705,7 @@ CREATE TABLE review_replies (
     CONSTRAINT fk_reply_replier FOREIGN KEY (replier_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 18) review likes - BẢNG MỚI
+-- 19) review likes
 CREATE TABLE review_likes (
     like_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -696,7 +718,7 @@ CREATE TABLE review_likes (
     CONSTRAINT fk_review_like_reply FOREIGN KEY (reply_id) REFERENCES review_replies(reply_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 19) review reports - BẢNG MỚI
+-- 20) review reports
 CREATE TABLE review_reports (
     report_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -713,7 +735,7 @@ CREATE TABLE review_reports (
     CONSTRAINT fk_review_report_reply FOREIGN KEY (reply_id) REFERENCES review_replies(reply_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 20) rating summaries per loại
+-- 21) rating summaries per loại
 CREATE TABLE restaurant_rating_summaries (
     restaurant_id INT PRIMARY KEY,
     avg_rating DECIMAL(3,2) NOT NULL DEFAULT 0.00,
@@ -782,7 +804,7 @@ CREATE TABLE attraction_rating_summaries (
     CONSTRAINT fk_attr_rating FOREIGN KEY (attraction_id) REFERENCES attractions(attraction_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 18) virtual tours per type
+-- 22) virtual tours per type
 CREATE TABLE hotel_virtual_tours (
     virtual_tour_id INT AUTO_INCREMENT PRIMARY KEY,
     hotel_id INT NOT NULL,
@@ -831,7 +853,7 @@ CREATE TABLE tour_virtual_tours (
     CONSTRAINT fk_tour_virtual FOREIGN KEY (tour_id) REFERENCES tours(tour_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 19) price predictions per type
+-- 23) price predictions per type
 CREATE TABLE hotel_price_predictions (
     prediction_id INT AUTO_INCREMENT PRIMARY KEY,
     hotel_id INT NOT NULL,
@@ -876,7 +898,7 @@ CREATE TABLE tour_price_predictions (
     CONSTRAINT fk_tour_pred FOREIGN KEY (tour_id) REFERENCES tours(tour_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 20) price alerts per type
+-- 24) price alerts per type
 CREATE TABLE hotel_price_alerts (
     alert_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -933,7 +955,7 @@ CREATE TABLE tour_price_alerts (
     CONSTRAINT fk_tour_alert_tour FOREIGN KEY (tour_id) REFERENCES tours(tour_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 21) blogs
+-- 25) blogs
 CREATE TABLE blogs (
     blog_id INT AUTO_INCREMENT PRIMARY KEY,
     blogger_id INT NOT NULL,
@@ -951,7 +973,7 @@ CREATE TABLE blogs (
     CONSTRAINT fk_blog_blogger FOREIGN KEY (blogger_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 22) follow
+-- 26) follow
 CREATE TABLE follow (
     follow_id INT AUTO_INCREMENT PRIMARY KEY,
     follower_id INT NOT NULL,
@@ -961,7 +983,7 @@ CREATE TABLE follow (
     CONSTRAINT fk_follow_followed FOREIGN KEY (followed_blogger_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 23) itineraries_downloads
+-- 27) itineraries_downloads
 CREATE TABLE itineraries_downloads (
     itinerary_build_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -975,7 +997,7 @@ CREATE TABLE itineraries_downloads (
     CONSTRAINT fk_itin_download_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 24) chatbot_logs
+-- 28) chatbot_logs
 CREATE TABLE chatbot_logs (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT DEFAULT NULL,
@@ -988,7 +1010,7 @@ CREATE TABLE chatbot_logs (
     CONSTRAINT fk_chatbot_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 25) currencies
+-- 29) currencies
 CREATE TABLE currencies (
     currency_code CHAR(3) PRIMARY KEY,
     currency_name VARCHAR(100) NOT NULL,
@@ -996,7 +1018,7 @@ CREATE TABLE currencies (
     last_updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 26) image_search_logs
+-- 30) image_search_logs
 CREATE TABLE image_search_logs (
     image_search_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT DEFAULT NULL,
@@ -1007,7 +1029,7 @@ CREATE TABLE image_search_logs (
     CONSTRAINT fk_image_search_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 27) badges, user_badges
+-- 31) badges, user_badges
 CREATE TABLE badges (
     badge_id INT AUTO_INCREMENT PRIMARY KEY,
     badge_name VARCHAR(255) NOT NULL,
@@ -1028,7 +1050,7 @@ CREATE TABLE user_badges (
     CONSTRAINT fk_user_badge_badge FOREIGN KEY (badge_id) REFERENCES badges(badge_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 28) points
+-- 32) points
 CREATE TABLE points (
     point_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -1039,7 +1061,7 @@ CREATE TABLE points (
     CONSTRAINT fk_points_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 29) notifications
+-- 33) notifications
 CREATE TABLE notifications (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -1055,7 +1077,7 @@ CREATE TABLE notifications (
     CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 30) admin_actions (target_type cập nhật)
+-- 34) admin_actions (target_type cập nhật)
 CREATE TABLE admin_actions (
     action_id INT AUTO_INCREMENT PRIMARY KEY,
     admin_id INT NOT NULL,
