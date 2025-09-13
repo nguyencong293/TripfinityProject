@@ -8,11 +8,13 @@ import com.vn.tripfinity.backend.model.Restaurant;
 import com.vn.tripfinity.backend.model.RestaurantReview;
 import com.vn.tripfinity.backend.model.RestaurantReviewAspects;
 import com.vn.tripfinity.backend.model.User;
+import com.vn.tripfinity.backend.model.ReviewReply;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.RestaurantRepository;
 import com.vn.tripfinity.backend.repository.RestaurantReviewRepository;
 import com.vn.tripfinity.backend.repository.RestaurantReviewAspectsRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
+import com.vn.tripfinity.backend.repository.ReviewReplyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ public class RestaurantService {
     private final RestaurantReviewRepository restaurantReviewRepository;
     private final RestaurantReviewAspectsRepository restaurantReviewAspectsRepository;
     private final UserRepository userRepository;
+    private final ReviewReplyRepository reviewReplyRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<RestaurantDTO> getAllRestaurants() {
@@ -213,6 +216,54 @@ public class RestaurantService {
             list = restaurantReviewRepository.findByRestaurant_RestaurantId(restaurantId);
         }
         return list.stream().map(r -> toReviewDTO(r, true)).collect(Collectors.toList());
+    }
+
+    // ===== Review Replies (Restaurant) =====
+    public com.vn.tripfinity.backend.dto.RestaurantReviewReplyDTO createRestaurantReviewReply(Integer reviewId,
+            com.vn.tripfinity.backend.dto.RestaurantReviewReplyDTO dto) {
+        RestaurantReview review = restaurantReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy RestaurantReview id: " + reviewId));
+
+        User replier = userRepository.findById(dto.getReplierId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getReplierId()));
+
+        ReviewReply reply = ReviewReply.builder()
+                .replyId(null)
+                .reviewType(ReviewReply.ReviewType.restaurant)
+                .reviewId(review.getReviewId())
+                .replier(replier)
+                .content(dto.getContent())
+                .isPublic(dto.getIsPublic() != null ? dto.getIsPublic() : Boolean.TRUE)
+                .build();
+
+        ReviewReply saved = reviewReplyRepository.save(reply);
+
+        review.setReplyCount(review.getReplyCount() == null ? 1 : review.getReplyCount() + 1);
+        restaurantReviewRepository.save(review);
+
+        return toRestaurantReviewReplyDTO(saved);
+    }
+
+    public java.util.List<com.vn.tripfinity.backend.dto.RestaurantReviewReplyDTO> getRestaurantReviewReplies(
+            Integer reviewId) {
+        RestaurantReview review = restaurantReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy RestaurantReview id: " + reviewId));
+        List<ReviewReply> replies = reviewReplyRepository.findByReviewTypeAndReviewIdOrderByCreatedAtAsc(
+                ReviewReply.ReviewType.restaurant, review.getReviewId());
+        return replies.stream().map(this::toRestaurantReviewReplyDTO)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private com.vn.tripfinity.backend.dto.RestaurantReviewReplyDTO toRestaurantReviewReplyDTO(ReviewReply r) {
+        return com.vn.tripfinity.backend.dto.RestaurantReviewReplyDTO.builder()
+                .replyId(r.getReplyId())
+                .reviewId(r.getReviewId())
+                .replierId(r.getReplier() != null ? r.getReplier().getUserId() : null)
+                .content(r.getContent())
+                .isPublic(r.getIsPublic())
+                .createdAt(r.getCreatedAt())
+                .updatedAt(r.getUpdatedAt())
+                .build();
     }
 
     private RestaurantReviewDTO toReviewDTO(RestaurantReview r, boolean fetchAspects) {
