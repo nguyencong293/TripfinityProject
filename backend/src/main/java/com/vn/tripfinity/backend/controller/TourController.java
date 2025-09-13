@@ -1,6 +1,7 @@
 package com.vn.tripfinity.backend.controller;
 
 import com.vn.tripfinity.backend.dto.TourDTO;
+import com.vn.tripfinity.backend.dto.TourReviewDTO;
 import com.vn.tripfinity.backend.sevice.TourService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -69,5 +70,26 @@ public class TourController {
         requireBearer(authorization);
         tourService.deleteTour(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ========= Reviews =========
+    @PostMapping("/{id}/reviews")
+    public ResponseEntity<TourReviewDTO> createTourReview(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable("id") Integer id,
+            @Valid @RequestBody TourReviewDTO dto) {
+        requireBearer(authorization);
+        dto.setTourId(id);
+        TourReviewDTO created = tourService.createTourReview(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<List<TourReviewDTO>> getTourReviews(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable("id") Integer id,
+            @RequestParam(value = "status", required = false) String status) {
+        requireBearer(authorization);
+        return ResponseEntity.ok(tourService.getTourReviews(id, status));
     }
 }

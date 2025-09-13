@@ -3,11 +3,18 @@ package com.vn.tripfinity.backend.sevice;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vn.tripfinity.backend.dto.TourDTO;
+import com.vn.tripfinity.backend.dto.TourReviewDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.model.Tour;
+import com.vn.tripfinity.backend.model.TourReview;
+import com.vn.tripfinity.backend.model.TourReviewAspects;
+import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.TourRepository;
+import com.vn.tripfinity.backend.repository.TourReviewRepository;
+import com.vn.tripfinity.backend.repository.TourReviewAspectsRepository;
+import com.vn.tripfinity.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +32,9 @@ public class TourService {
 
     private final TourRepository tourRepository;
     private final ProviderRepository providerRepository;
+    private final TourReviewRepository tourReviewRepository;
+    private final TourReviewAspectsRepository tourReviewAspectsRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<TourDTO> getAllTours() {
@@ -161,6 +171,88 @@ public class TourService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Tour id: " + tourId));
         tourRepository.delete(existing);
         log.info("Đã xóa Tour id: {}", tourId);
+    }
+
+    // ============ Reviews ============
+    public TourReviewDTO createTourReview(TourReviewDTO dto) {
+        Tour tour = tourRepository.findById(dto.getTourId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Tour id: " + dto.getTourId()));
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getUserId()));
+
+        TourReview review = TourReview.builder()
+                .reviewId(null)
+                .tour(tour)
+                .user(user)
+                .rating(dto.getRating())
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .imageUrls(joinList(dto.getImageUrls()))
+                .likesCount(dto.getLikesCount() != null ? dto.getLikesCount() : 0)
+                .replyCount(dto.getReplyCount() != null ? dto.getReplyCount() : 0)
+                .reviewStatus(dto.getReviewStatus() != null ? TourReview.ReviewStatus.valueOf(dto.getReviewStatus())
+                        : TourReview.ReviewStatus.approved)
+                .build();
+
+        TourReview saved = tourReviewRepository.save(review);
+
+        if (dto.getAspects() != null) {
+            TourReviewAspects aspects = TourReviewAspects.builder()
+                    .review(saved)
+                    .guideQuality(dto.getAspects().getGuideQuality())
+                    .itineraryQuality(dto.getAspects().getItineraryQuality())
+                    .valueForMoney(dto.getAspects().getValueForMoney())
+                    .organization(dto.getAspects().getOrganization())
+                    .safety(dto.getAspects().getSafety())
+                    .build();
+            tourReviewAspectsRepository.save(aspects);
+        }
+
+        return toReviewDTO(saved, true);
+    }
+
+    public List<TourReviewDTO> getTourReviews(Integer tourId, String status) {
+        List<TourReview> list;
+        if (status != null && !status.isBlank()) {
+            TourReview.ReviewStatus st = TourReview.ReviewStatus.valueOf(status);
+            list = tourReviewRepository.findByTourAndStatus(tourId, st);
+        } else {
+            list = tourReviewRepository.findByTour_TourId(tourId);
+        }
+        return list.stream().map(r -> toReviewDTO(r, true)).collect(Collectors.toList());
+    }
+
+    private TourReviewDTO toReviewDTO(TourReview r, boolean fetchAspects) {
+        TourReviewDTO.TourReviewAspectsDTO aspectsDTO = null;
+        if (fetchAspects && r.getReviewId() != null) {
+            var opt = tourReviewAspectsRepository.findById(r.getReviewId());
+            if (opt.isPresent()) {
+                var a = opt.get();
+                aspectsDTO = TourReviewDTO.TourReviewAspectsDTO.builder()
+                        .guideQuality(a.getGuideQuality())
+                        .itineraryQuality(a.getItineraryQuality())
+                        .valueForMoney(a.getValueForMoney())
+                        .organization(a.getOrganization())
+                        .safety(a.getSafety())
+                        .build();
+            }
+        }
+
+        return TourReviewDTO.builder()
+                .reviewId(r.getReviewId())
+                .tourId(r.getTour() != null ? r.getTour().getTourId() : null)
+                .userId(r.getUser() != null ? r.getUser().getUserId() : null)
+                .rating(r.getRating())
+                .title(r.getTitle())
+                .content(r.getContent())
+                .imageUrls(splitList(r.getImageUrls()))
+                .likesCount(r.getLikesCount())
+                .replyCount(r.getReplyCount())
+                .reviewStatus(r.getReviewStatus() != null ? r.getReviewStatus().name() : null)
+                .aspects(aspectsDTO)
+                .createdAt(r.getCreatedAt())
+                .updatedAt(r.getUpdatedAt())
+                .build();
     }
 
     private TourDTO toDTO(Tour t) {
