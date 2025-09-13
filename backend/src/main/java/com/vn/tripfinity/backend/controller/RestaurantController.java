@@ -1,6 +1,7 @@
 package com.vn.tripfinity.backend.controller;
 
 import com.vn.tripfinity.backend.dto.RestaurantDTO;
+import com.vn.tripfinity.backend.dto.RestaurantReviewDTO;
 import com.vn.tripfinity.backend.sevice.RestaurantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -70,5 +71,26 @@ public class RestaurantController {
         requireBearer(authorization);
         restaurantService.deleteRestaurant(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ========= Reviews =========
+    @PostMapping("/{id}/reviews")
+    public ResponseEntity<RestaurantReviewDTO> createRestaurantReview(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable("id") Integer id,
+            @Valid @RequestBody RestaurantReviewDTO dto) {
+        requireBearer(authorization);
+        dto.setRestaurantId(id);
+        RestaurantReviewDTO created = restaurantService.createRestaurantReview(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<List<RestaurantReviewDTO>> getRestaurantReviews(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable("id") Integer id,
+            @RequestParam(value = "status", required = false) String status) {
+        requireBearer(authorization);
+        return ResponseEntity.ok(restaurantService.getRestaurantReviews(id, status));
     }
 }

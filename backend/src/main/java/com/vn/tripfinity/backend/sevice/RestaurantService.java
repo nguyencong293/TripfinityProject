@@ -1,11 +1,18 @@
 package com.vn.tripfinity.backend.sevice;
 
 import com.vn.tripfinity.backend.dto.RestaurantDTO;
+import com.vn.tripfinity.backend.dto.RestaurantReviewDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.model.Restaurant;
+import com.vn.tripfinity.backend.model.RestaurantReview;
+import com.vn.tripfinity.backend.model.RestaurantReviewAspects;
+import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.RestaurantRepository;
+import com.vn.tripfinity.backend.repository.RestaurantReviewRepository;
+import com.vn.tripfinity.backend.repository.RestaurantReviewAspectsRepository;
+import com.vn.tripfinity.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +33,9 @@ public class RestaurantService {
 
     private final RestaurantRepository restaurantRepository;
     private final ProviderRepository providerRepository;
+    private final RestaurantReviewRepository restaurantReviewRepository;
+    private final RestaurantReviewAspectsRepository restaurantReviewAspectsRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<RestaurantDTO> getAllRestaurants() {
@@ -152,6 +162,90 @@ public class RestaurantService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Restaurant id: " + restaurantId));
         restaurantRepository.delete(existing);
         log.info("Đã xóa Restaurant id: {}", restaurantId);
+    }
+
+    // ============ Reviews ============
+    public RestaurantReviewDTO createRestaurantReview(RestaurantReviewDTO dto) {
+        Restaurant restaurant = restaurantRepository.findById(dto.getRestaurantId())
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Không tìm thấy Restaurant id: " + dto.getRestaurantId()));
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getUserId()));
+
+        RestaurantReview review = RestaurantReview.builder()
+                .reviewId(null)
+                .restaurant(restaurant)
+                .user(user)
+                .rating(dto.getRating())
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .imageUrls(joinList(dto.getImageUrls()))
+                .likesCount(dto.getLikesCount() != null ? dto.getLikesCount() : 0)
+                .replyCount(dto.getReplyCount() != null ? dto.getReplyCount() : 0)
+                .reviewStatus(
+                        dto.getReviewStatus() != null ? RestaurantReview.ReviewStatus.valueOf(dto.getReviewStatus())
+                                : RestaurantReview.ReviewStatus.approved)
+                .build();
+
+        RestaurantReview saved = restaurantReviewRepository.save(review);
+
+        if (dto.getAspects() != null) {
+            RestaurantReviewAspects aspects = RestaurantReviewAspects.builder()
+                    .review(saved)
+                    .quality(dto.getAspects().getQuality())
+                    .service(dto.getAspects().getService())
+                    .price(dto.getAspects().getPrice())
+                    .location(dto.getAspects().getLocation())
+                    .ambience(dto.getAspects().getAmbience())
+                    .build();
+            restaurantReviewAspectsRepository.save(aspects);
+        }
+
+        return toReviewDTO(saved, true);
+    }
+
+    public List<RestaurantReviewDTO> getRestaurantReviews(Integer restaurantId, String status) {
+        List<RestaurantReview> list;
+        if (status != null && !status.isBlank()) {
+            RestaurantReview.ReviewStatus st = RestaurantReview.ReviewStatus.valueOf(status);
+            list = restaurantReviewRepository.findByRestaurantAndStatus(restaurantId, st);
+        } else {
+            list = restaurantReviewRepository.findByRestaurant_RestaurantId(restaurantId);
+        }
+        return list.stream().map(r -> toReviewDTO(r, true)).collect(Collectors.toList());
+    }
+
+    private RestaurantReviewDTO toReviewDTO(RestaurantReview r, boolean fetchAspects) {
+        RestaurantReviewDTO.RestaurantReviewAspectsDTO aspectsDTO = null;
+        if (fetchAspects && r.getReviewId() != null) {
+            var opt = restaurantReviewAspectsRepository.findById(r.getReviewId());
+            if (opt.isPresent()) {
+                var a = opt.get();
+                aspectsDTO = RestaurantReviewDTO.RestaurantReviewAspectsDTO.builder()
+                        .quality(a.getQuality())
+                        .service(a.getService())
+                        .price(a.getPrice())
+                        .location(a.getLocation())
+                        .ambience(a.getAmbience())
+                        .build();
+            }
+        }
+
+        return RestaurantReviewDTO.builder()
+                .reviewId(r.getReviewId())
+                .restaurantId(r.getRestaurant() != null ? r.getRestaurant().getRestaurantId() : null)
+                .userId(r.getUser() != null ? r.getUser().getUserId() : null)
+                .rating(r.getRating())
+                .title(r.getTitle())
+                .content(r.getContent())
+                .imageUrls(splitList(r.getImageUrls()))
+                .likesCount(r.getLikesCount())
+                .replyCount(r.getReplyCount())
+                .reviewStatus(r.getReviewStatus() != null ? r.getReviewStatus().name() : null)
+                .aspects(aspectsDTO)
+                .createdAt(r.getCreatedAt())
+                .updatedAt(r.getUpdatedAt())
+                .build();
     }
 
     private RestaurantDTO toDTO(Restaurant r) {
