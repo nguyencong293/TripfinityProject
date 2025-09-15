@@ -17,6 +17,13 @@ import 'package:app/services/localization_service.dart';
 // Screens
 import 'search_overview_screen.dart';
 
+// Networking
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Use centralized API service and config
+import 'package:app/services/search_api_service.dart';
+
 // Quick filter categories
 enum _QuickFilter { all, restaurant, hotel, tour, attraction }
 
@@ -33,126 +40,23 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
 
   _QuickFilter _selected = _QuickFilter.all;
 
-  // ===== Mock data cho từng loại =====
-  final List<Map<String, dynamic>> _hotelItems = [
-    {
-      'name': 'Vinpearl - Resort Nha Trang',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': '4.7',
-      'type': 'hotel',
-      'price': '3.200.000đ/đêm',
-      'image': 'assets/images/onboarding1.png',
-    },
-    {
-      'name': 'InterContinental Nha Trang',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': '4.6',
-      'type': 'hotel',
-      'price': '4.050.000đ/đêm',
-      'image': 'assets/images/onboarding2.png',
-    },
-    {
-      'name': 'Mường Thanh Luxury',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': '4.4',
-      'type': 'hotel',
-      'price': '2.250.000đ/đêm',
-      'image': 'assets/images/onboarding3.png',
-    },
-  ];
+  // ====== Dynamic data ======
+  bool _loading = false;
+  String? _error;
+  bool _hasSearched = false; // Chỉ hiển thị kết quả sau khi user tìm
 
-  final List<Map<String, dynamic>> _restaurantItems = [
-    {
-      'name': 'White Rose Restaurant',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': '4.3',
-      'type': 'restaurant',
-      'cuisine': 'Âu',
-      'price': '120000 đ',
-      'reviews': '(320)',
-      'tag': 'Bar',
-      'image': 'assets/images/onboarding4.png',
-    },
-    {
-      'name': 'Nha Trang Xưa',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': '4.5',
-      'type': 'restaurant',
-      'cuisine': 'Việt',
-      'price': '150000 đ',
-      'reviews': '(367)',
-      'tag': 'Sân vườn',
-      'image': 'assets/images/onboarding3.png',
-    },
-  ];
-
-  final List<Map<String, dynamic>> _tourItems = [
-    {
-      'name': 'Tour 4 đảo Hòn Mun',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': '4.8',
-      'type': 'tour',
-      'duration': '1 ngày',
-      'price': '750000 đ',
-      'description':
-          'Khám phá 4 đảo nổi tiếng tại Nha Trang với hoạt động lặn ngắm san hô',
-      'image': 'assets/images/onboarding2.png',
-    },
-    {
-      'name': 'Tour Bình Ba 1 ngày',
-      'location': 'Khánh Hòa, Việt Nam',
-      'rating': '4.6',
-      'type': 'tour',
-      'duration': '1 ngày',
-      'price': '680000 đ',
-      'description': 'Tham quan đảo Bình Ba - hòn đảo Tôm Hùm nổi tiếng',
-      'image': 'assets/images/onboarding1.png',
-    },
-  ];
-
-  final List<Map<String, dynamic>> _attractionItems = [
-    {
-      'name': 'Tháp Chăm Po Nagar',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': 4.7, // Numeric value
-      'type': 'attraction',
-      'price': 25000, // Numeric value
-      'description': 'Tháp cổ Chăm Po Nagar được xây dựng từ thế kỷ 8-12',
-      'image': 'assets/images/onboarding4.png',
-      'types': ['Tôn giáo', 'Kiến trúc'],
-      'services': ['Chụp ảnh'],
-      'times': ['Sáng', 'Chiều'],
-      'suit': ['Solo', 'Cặp đôi'],
-    },
-    {
-      'name': 'Chợ Đầm',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': 4.1, // Numeric value
-      'type': 'attraction',
-      'price': 0, // Numeric value for free entry
-      'description': 'Chợ truyền thống lớn nhất Nha Trang với đủ loại hàng hóa',
-      'image': 'assets/images/onboarding2.png',
-      'types': ['Mua sắm', 'Văn hóa'],
-      'services': ['Ẩm thực'],
-      'times': ['Sáng', 'Chiều'],
-      'suit': ['Gia đình', 'Nhóm'],
-    },
-  ];
-
-  final List<Map<String, dynamic>> _destinationItems = [
-    {
-      'name': 'Nha Trang',
-      'location': 'Việt Nam, Châu Á',
-      'rating': '4.1',
-      'type': 'destination',
-      'image': 'assets/images/onboarding1.png',
-    },
-  ];
+  // Top results
+  List<Map<String, dynamic>> _hotelItems = [];
+  List<Map<String, dynamic>> _restaurantItems = [];
+  List<Map<String, dynamic>> _tourItems = [];
+  List<Map<String, dynamic>> _attractionItems = [];
+  List<Map<String, dynamic>> _destinationItems = []; // từ "area" trong response
 
   @override
   void initState() {
     super.initState();
-    _searchController.text = 'Nha Trang';
+    // Không đặt mặc định "Nha Trang", không tự fetch ban đầu
+    _searchController.text = '';
   }
 
   @override
@@ -226,7 +130,17 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                   ),
                   onPressed: () {
                     _searchController.clear();
-                    setState(() {});
+                    setState(() {
+                      // Xoá kết quả và ẩn khu vực kết quả
+                      _hotelItems = [];
+                      _restaurantItems = [];
+                      _tourItems = [];
+                      _attractionItems = [];
+                      _destinationItems = [];
+                      _error = null;
+                      _loading = false;
+                      _hasSearched = false;
+                    });
                   },
                 )
               : null,
@@ -320,242 +234,223 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
 
   // Results section (dynamic theo filter)
   Widget _buildSearchResults(BuildContext context) {
+    // Trước khi user tìm kiếm: ẩn hoàn toàn khu vực kết quả (không spinner, không lỗi)
+    if (!_hasSearched) return const SizedBox.shrink();
+
+    if (_loading) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: SizedBox(
+            height: 26,
+            width: 26,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: context.primaryColor,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      // Sau khi tìm nếu lỗi mới hiển thị lỗi
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          _error!,
+          style: context.captionStyle.copyWith(color: Colors.red),
+        ),
+      );
+    }
+
     List<Map<String, dynamic>> items;
     switch (_selected) {
       case _QuickFilter.hotel:
-        items = _hotelItems;
+        items = _hotelItems.take(5).toList();
         break;
       case _QuickFilter.restaurant:
-        items = _restaurantItems;
+        items = _restaurantItems.take(5).toList();
         break;
       case _QuickFilter.tour:
-        items = _tourItems;
+        items = _tourItems.take(5).toList();
         break;
       case _QuickFilter.attraction:
-        items = _attractionItems;
+        items = _attractionItems.take(5).toList();
         break;
       case _QuickFilter.all:
-        items = [
-          ..._destinationItems,
-          ..._hotelItems.take(1),
-          ..._restaurantItems.take(1),
-          ..._tourItems.take(1),
-          ..._attractionItems.take(1),
-        ];
+        items = _composeAllItemsMax5();
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                onTap: () {
-                  if (item['type'] == 'hotel') {
-                    _openHotelDetail(_convertToStringMap(item));
-                  } else if (item['type'] == 'restaurant') {
-                    _openRestaurantDetail(_convertToStringMap(item));
-                  } else if (item['type'] == 'tour') {
-                    _openTourDetail(item);
-                  } else if (item['type'] == 'attraction') {
-                    _openAttractionDetail(item);
-                  } else if (item['type'] == 'destination') {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SearchOverviewScreen(
-                          searchQuery: item['name'].toString(),
-                        ),
-                      ),
-                    );
-                  } else {
-                    _navigateToSpecificPage(
-                      item['name'].toString(),
-                      item['type'].toString(),
-                    );
-                  }
-                },
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        item['image']?.toString() ??
-                            'assets/images/onboarding1.png',
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 60,
-                          height: 60,
-                          color: context.primaryColor.withValues(alpha: 0.1),
-                          child: Icon(
-                            LucideIcons.image,
-                            color: context.primaryColor,
-                            size: 20,
+        if (items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'Không có kết quả',
+              style: context.captionStyle.copyWith(
+                color: context.textSecondaryColor,
+              ),
+            ),
+          ),
+        if (items.isNotEmpty)
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final imageUrl = (item['imageUrl'] ?? '').toString();
+              final hasNetwork = imageUrl.startsWith('http');
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: InkWell(
+                  onTap: () {
+                    if (item['type'] == 'hotel') {
+                      _openHotelDetail(_convertToStringMap(item));
+                    } else if (item['type'] == 'restaurant') {
+                      _openRestaurantDetail(_convertToStringMap(item));
+                    } else if (item['type'] == 'tour') {
+                      _openTourDetail(item);
+                    } else if (item['type'] == 'attraction') {
+                      _openAttractionDetail(item);
+                    } else if (item['type'] == 'destination') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SearchOverviewScreen(
+                            searchQuery: item['name'].toString(),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item['name']?.toString() ?? '',
-                            style: context.bodyOneStyle.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            item['location']?.toString() ?? '',
-                            style: context.captionStyle.copyWith(
-                              color: context.textSecondaryColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.star_rounded,
-                                color: context.primaryColor,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _getRatingString(item['rating']),
-                                style: context.captionStyle.copyWith(
-                                  fontWeight: FontWeight.w600,
+                      );
+                    } else {
+                      _navigateToSpecificPage(
+                        item['name'].toString(),
+                        item['type'].toString(),
+                      );
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: hasNetwork
+                            ? Image.network(
+                                imageUrl,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 60,
+                                  height: 60,
+                                  color: context.primaryColor.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  child: Icon(
+                                    LucideIcons.image,
+                                    color: context.primaryColor,
+                                    size: 20,
+                                  ),
+                                ),
+                              )
+                            : Image.asset(
+                                item['image']?.toString() ??
+                                    'assets/images/onboarding1.png',
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 60,
+                                  height: 60,
+                                  color: context.primaryColor.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  child: Icon(
+                                    LucideIcons.image,
+                                    color: context.primaryColor,
+                                    size: 20,
+                                  ),
                                 ),
                               ),
-                              if (item['type'] == 'hotel' &&
-                                  (item['price']?.toString() ?? '')
-                                      .isNotEmpty) ...[
-                                const SizedBox(width: 10),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['name']?.toString() ?? '',
+                              style: context.bodyOneStyle.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              item['location']?.toString() ?? '',
+                              style: context.captionStyle.copyWith(
+                                color: context.textSecondaryColor,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.star_rounded,
+                                  color: context.primaryColor,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
                                 Text(
-                                  item['price'].toString(),
+                                  _getRatingString(item['rating']),
                                   style: context.captionStyle.copyWith(
-                                    color: context.primaryColor,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                                if (item['type'] == 'hotel' &&
+                                    (item['price']?.toString() ?? '')
+                                        .isNotEmpty) ...[
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    item['price'].toString(),
+                                    style: context.captionStyle.copyWith(
+                                      color: context.primaryColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ],
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Icon(
-                      LucideIcons.chevronRight,
-                      color: context.textSecondaryColor,
-                      size: 20,
-                    ),
-                  ],
+                      Icon(
+                        LucideIcons.chevronRight,
+                        color: context.textSecondaryColor,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
-        ),
+              );
+            },
+          ),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () {
               final query = _searchController.text.trim();
-
-              // Quick filter direct routes
-              if (_selected == _QuickFilter.hotel) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => HotelOverviewSearchScreen(
-                      searchQuery: query.isEmpty ? 'Khách sạn' : query,
-                    ),
-                  ),
-                );
-                return;
-              }
-              if (_selected == _QuickFilter.tour) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => TourServiceOverviewScreen(
-                      searchQuery: query.isEmpty ? 'Tour' : query,
-                    ),
-                  ),
-                );
-                return;
-              }
-              if (_selected == _QuickFilter.restaurant) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => RestaurantOverviewSearchScreen(
-                      searchQuery: query.isEmpty ? 'Nhà hàng' : query,
-                    ),
-                  ),
-                );
-                return;
-              }
-              if (_selected == _QuickFilter.attraction) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => AttractionOverviewSearchScreen(
-                      searchQuery: query.isEmpty ? 'Điểm tham quan' : query,
-                    ),
-                  ),
-                );
-                return;
-              }
-
-              // General / specific routing
-              if (query.isEmpty || _isGeneralSearch(query)) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SearchOverviewScreen(searchQuery: query),
-                  ),
-                );
-              } else {
-                final category = _getSearchCategory(query);
-                if (category == 'hotel') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          HotelOverviewSearchScreen(searchQuery: query),
-                    ),
-                  );
-                } else if (category == 'tour') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          TourServiceOverviewScreen(searchQuery: query),
-                    ),
-                  );
-                } else if (category == 'restaurant') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          RestaurantOverviewSearchScreen(searchQuery: query),
-                    ),
-                  );
-                } else if (category == 'activity') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          AttractionOverviewSearchScreen(searchQuery: query),
-                    ),
-                  );
-                } else {
-                  _navigateToSpecificPage(query, category);
-                }
-              }
+              // Luôn điều hướng sang trang tổng quan tìm kiếm
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SearchOverviewScreen(searchQuery: query),
+                ),
+              );
             },
             child: Text(
               'Xem thêm',
@@ -948,7 +843,10 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         builder: (_) => HotelDetailOverviewScreen(
           hotel: {
             'name': hotel['name'] ?? '',
-            'image': hotel['image'] ?? 'assets/images/onboarding1.png',
+            'image':
+                hotel['image'] ??
+                hotel['imageUrl'] ??
+                'assets/images/onboarding1.png',
             'price': hotel['price'] ?? '—',
           },
           activeAmenities: {'Wifi miễn phí', 'Bể bơi'},
@@ -1004,54 +902,47 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   }
 
   // ===== HELPER METHODS =====
+  // Gom danh sách "Tất cả" tối đa 5, ưu tiên area trước, sau đó round-robin các loại
+  List<Map<String, dynamic>> _composeAllItemsMax5() {
+    final List<Map<String, dynamic>> result = [];
+    if (_destinationItems.isNotEmpty) {
+      result.add(_destinationItems.first); // area lên đầu nếu có
+    }
+    final lists = [
+      _hotelItems.iterator,
+      _restaurantItems.iterator,
+      _tourItems.iterator,
+      _attractionItems.iterator,
+    ];
+
+    // Round-robin cho đến khi đủ 5 hoặc hết dữ liệu
+    while (result.length < 5) {
+      bool progressed = false;
+      for (final it in lists) {
+        if (result.length >= 5) break;
+        if (it.moveNext()) {
+          result.add(it.current);
+          progressed = true;
+          if (result.length >= 5) break;
+        }
+      }
+      if (!progressed) break; // không còn phần tử nào
+    }
+    return result;
+    // Lưu ý: nếu muốn ưu tiên thứ tự khác, có thể đổi thứ tự lists
+  }
+
   String _getRatingString(dynamic rating) {
+    if (rating == null) return '0.0';
     if (rating is String) return rating;
-    if (rating is num) return rating.toString();
+    if (rating is num) {
+      return rating.toString();
+    }
     return '0.0';
   }
 
   Map<String, String> _convertToStringMap(Map<String, dynamic> map) {
     return map.map((key, value) => MapEntry(key, value?.toString() ?? ''));
-  }
-
-  bool _isGeneralSearch(String query) {
-    final generalKeywords = [
-      'nha trang',
-      'đà nẵng',
-      'hồ chí minh',
-      'hà nội',
-      'hạ long',
-      'phú quốc',
-      'sapa',
-      'hội an',
-      'huế',
-      'vũng tàu',
-    ];
-    return generalKeywords.any(
-          (k) => query.toLowerCase().contains(k.toLowerCase()),
-        ) &&
-        !_isSpecificSearch(query);
-  }
-
-  bool _isSpecificSearch(String query) {
-    final specificKeywords = [
-      'resort',
-      'hotel',
-      'khách sạn',
-      'nhà hàng',
-      'restaurant',
-      'tour',
-      'spa',
-      'vinpearl',
-      'diamond',
-      'intercontinental',
-      'white rose',
-      'tháp chăm',
-      'po nagar',
-    ];
-    return specificKeywords.any(
-      (k) => query.toLowerCase().contains(k.toLowerCase()),
-    );
   }
 
   String _getSearchCategory(String query) {
@@ -1118,29 +1009,178 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     }
   }
 
+  // Submit search: ở màn hình này chỉ tải và hiển thị top 5, KHÔNG điều hướng
   void _performSearch(String query) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
 
-    if (_isGeneralSearch(trimmed)) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => SearchOverviewScreen(searchQuery: trimmed),
-        ),
-      );
+    setState(() {
+      _hasSearched = true;
+    });
+
+    // Điều chỉnh filter nếu query mang ý nghĩa cụ thể
+    final category = _getSearchCategory(trimmed);
+    if (category == 'hotel') {
+      _selected = _QuickFilter.hotel;
+    } else if (category == 'tour') {
+      _selected = _QuickFilter.tour;
+    } else if (category == 'restaurant') {
+      _selected = _QuickFilter.restaurant;
+    } else if (category == 'activity') {
+      _selected = _QuickFilter.attraction;
     } else {
-      final category = _getSearchCategory(trimmed);
-      if (category == 'hotel') {
-        setState(() => _selected = _QuickFilter.hotel);
-      } else if (category == 'tour') {
-        setState(() => _selected = _QuickFilter.tour);
-      } else if (category == 'restaurant') {
-        setState(() => _selected = _QuickFilter.restaurant);
-      } else if (category == 'activity') {
-        setState(() => _selected = _QuickFilter.attraction);
-      } else {
-        _navigateToSpecificPage(trimmed, category);
-      }
+      _selected = _QuickFilter.all; // chung chung => all, ưu tiên area lên đầu
     }
+
+    _fetchSearch(trimmed);
+  }
+
+  // ===== API =====
+  Future<void> _fetchSearch(String query) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final api = SearchApiService(dio: Dio(), prefs: prefs);
+
+      final data = await api.search(q: query);
+
+      // Map "area" -> destination item (hiện đầu tiên nếu có)
+      final List<Map<String, dynamic>> dst = [];
+      if (data['area'] is Map) {
+        final area = Map<String, dynamic>.from(data['area'] as Map);
+        dst.add({
+          'name': area['name']?.toString() ?? 'Khu vực',
+          'location': area['slug']?.toString() ?? '',
+          'rating': '0.0', // backend không trả rating cho area -> set mặc định
+          'type': 'destination',
+          'image': 'assets/images/onboarding1.png',
+          'imageUrl': null, // không có thumbnailUrl cho area
+        });
+      }
+
+      List<Map<String, dynamic>> hotels = [];
+      List<Map<String, dynamic>> restaurants = [];
+      List<Map<String, dynamic>> tours = [];
+      List<Map<String, dynamic>> attractions = [];
+
+      if (data['hotels'] is List) {
+        hotels = List.from(data['hotels']).map<Map<String, dynamic>>((e) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          return {
+            'name': m['title']?.toString() ?? '',
+            'location': m['location']?.toString() ?? '',
+            'rating': m['ratingAverage'],
+            'type': 'hotel',
+            'price': _formatPrice(price, currency),
+            'imageUrl': m['thumbnailUrl'],
+            'image': 'assets/images/onboarding2.png',
+          };
+        }).toList();
+      }
+
+      if (data['restaurants'] is List) {
+        restaurants = List.from(data['restaurants']).map<Map<String, dynamic>>((
+          e,
+        ) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          return {
+            'name': m['title']?.toString() ?? '',
+            'location': m['location']?.toString() ?? '',
+            'rating': m['ratingAverage'],
+            'type': 'restaurant',
+            'cuisine': m['cuisineType']?.toString(), // nếu có
+            'price': _formatPrice(price, currency),
+            'tag': (m['badges'] is List && (m['badges'] as List).isNotEmpty)
+                ? (m['badges'] as List).first.toString()
+                : null,
+            'imageUrl': m['thumbnailUrl'],
+            'image': 'assets/images/onboarding3.png',
+          };
+        }).toList();
+      }
+
+      if (data['tours'] is List) {
+        tours = List.from(data['tours']).map<Map<String, dynamic>>((e) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          return {
+            'name': m['title']?.toString() ?? '',
+            'location': m['location']?.toString() ?? '',
+            'rating': m['ratingAverage'],
+            'type': 'tour',
+            'duration': (m['durationDays']?.toString() ?? ''),
+            'price': _formatPrice(price, currency),
+            'description': m['itineraryOverview']?.toString() ?? '',
+            'imageUrl': m['thumbnailUrl'],
+            'image': 'assets/images/onboarding1.png',
+          };
+        }).toList();
+      }
+
+      if (data['attractions'] is List) {
+        attractions = List.from(data['attractions']).map<Map<String, dynamic>>((
+          e,
+        ) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          return {
+            'name': m['title']?.toString() ?? '',
+            'location': m['location']?.toString() ?? '',
+            'rating': m['ratingAverage'],
+            'type': 'attraction',
+            'price': _formatPrice(price, currency),
+            'description': m['serviceDescription']?.toString() ?? '',
+            'imageUrl': m['thumbnailUrl'],
+            'image': 'assets/images/onboarding4.png',
+            'types': m['types'] is List ? List.from(m['types']) : [],
+            'services': m['services'] is List ? List.from(m['services']) : [],
+            'times': m['times'] is List ? List.from(m['times']) : [],
+            'suit': m['suit'] is List ? List.from(m['suit']) : [],
+          };
+        }).toList();
+      }
+
+      setState(() {
+        _destinationItems = dst;
+        _hotelItems = hotels;
+        _restaurantItems = restaurants;
+        _tourItems = tours;
+        _attractionItems = attractions;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        // backend yêu cầu Authorization bắt buộc -> 401 nếu thiếu token
+        _error = 'Không thể tải dữ liệu. Vui lòng thử lại hoặc đăng nhập.';
+      });
+    }
+  }
+
+  String _formatPrice(dynamic price, String? currency) {
+    if (price == null) return '';
+    num? n;
+    if (price is num) {
+      n = price;
+    } else {
+      n = num.tryParse(price.toString());
+    }
+    if (n == null) return price.toString();
+    final c = (currency ?? '').toUpperCase();
+    if (c == 'VND' || c == 'VNĐ') {
+      return '${n.toStringAsFixed(0)} đ';
+    }
+    if (c.isEmpty) return n.toString();
+    return '$n $c';
   }
 }
