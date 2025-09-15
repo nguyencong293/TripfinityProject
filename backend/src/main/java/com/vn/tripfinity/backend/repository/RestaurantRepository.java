@@ -20,4 +20,9 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Integer>
     @Query("SELECT r FROM Restaurant r WHERE (:q IS NULL OR :q = '' OR LOWER(r.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(r.location) LIKE LOWER(CONCAT('%', :q, '%'))) AND (:status IS NULL OR r.restaurantStatus = :status) ORDER BY r.createdAt DESC")
     List<Restaurant> searchByTitleOrLocation(@Param("q") String q,
             @Param("status") Restaurant.RestaurantStatus status);
+
+    @Query("SELECT r FROM Restaurant r WHERE r.area.areaId = :areaId AND (:status IS NULL OR r.restaurantStatus = :status) ORDER BY r.createdAt DESC")
+    List<Restaurant> findByAreaWithStatus(@Param("areaId") Integer areaId,
+            @Param("status") Restaurant.RestaurantStatus status);
+
 }

@@ -19,4 +19,8 @@ public interface HotelRepository extends JpaRepository<Hotel, Integer> {
 
     @Query("SELECT h FROM Hotel h WHERE (:q IS NULL OR :q = '' OR LOWER(h.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(h.location) LIKE LOWER(CONCAT('%', :q, '%'))) AND (:status IS NULL OR h.hotelStatus = :status) ORDER BY h.createdAt DESC")
     List<Hotel> searchByTitleOrLocation(@Param("q") String q, @Param("status") Hotel.HotelStatus status);
+
+    @Query("SELECT h FROM Hotel h WHERE h.area.areaId = :areaId AND (:status IS NULL OR h.hotelStatus = :status) ORDER BY h.createdAt DESC")
+    List<Hotel> findByAreaWithStatus(@Param("areaId") Integer areaId, @Param("status") Hotel.HotelStatus status);
+
 }
