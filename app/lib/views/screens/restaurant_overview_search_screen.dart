@@ -5,6 +5,11 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 
+// Dynamic data: dùng service tập trung như các màn khác
+import 'package:app/services/search_api_service.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class RestaurantOverviewSearchScreen extends StatefulWidget {
   final String searchQuery;
   const RestaurantOverviewSearchScreen({super.key, required this.searchQuery});
@@ -19,7 +24,7 @@ class _RestaurantOverviewSearchScreenState
   bool _hasDate = true;
   bool _hasGuests = true;
 
-  // Price per person
+  // Price per person (UI filter only; không tác động đến fetch server-side)
   RangeValues _priceRange = const RangeValues(50000, 450000);
   static const double _minPrice = 0;
   static const double _maxPrice = 1000000;
@@ -37,7 +42,7 @@ class _RestaurantOverviewSearchScreenState
     _TagOption('Việt', LucideIcons.wine),
     _TagOption('Hải sản', LucideIcons.fish),
     _TagOption('Âu', LucideIcons.wine),
-    _TagOption('Hàn', LucideIcons.wine), // fallback icon alias
+    _TagOption('Hàn', LucideIcons.wine),
     _TagOption('Nhật', LucideIcons.wine),
     _TagOption('Thái', LucideIcons.eggFried),
     _TagOption('Trung', LucideIcons.wine),
@@ -63,45 +68,12 @@ class _RestaurantOverviewSearchScreenState
     _TagOption('Không sữa', LucideIcons.milkOff),
   ];
 
-  final List<Map<String, String>> _restaurants = List.generate(8, (i) {
-    final names = [
-      'White Rose Restaurant',
-      'Sea Breeze Grill',
-      'Hải Sản Tươi Sống 68',
-      'Urban Coffee & Bistro',
-      'Green Vegan Garden',
-      'Golden Dragon Dim Sum',
-      'Nori Sushi & Sake',
-      'Spicy Thai Corner',
-    ];
-    return {
-      'name': names[i],
-      'cuisine': [
-        'Âu',
-        'Hải sản',
-        'Việt',
-        'Cà phê',
-        'Chay',
-        'Trung',
-        'Nhật',
-        'Thái',
-      ][i],
-      'price': '${(120000 + i * 30000)} đ',
-      'rating': (4.0 + (i * 0.1)).toStringAsFixed(1),
-      'reviews': '(${(320 + i * 47)})',
-      'image': 'assets/images/onboarding${(i % 4) + 1}.png',
-      'tag': [
-        'Bar',
-        'Sân vườn',
-        'Phòng riêng',
-        'Giao hàng',
-        'Vegan',
-        'Ăn tại chỗ',
-        'Mang đi',
-        'Halal',
-      ][i],
-    };
-  });
+  // Thay dữ liệu tĩnh bằng dữ liệu động
+  List<Map<String, String>> _restaurants = [];
+
+  // Loading/Error state gọn trong vùng list
+  bool _loading = false;
+  String? _error;
 
   bool get _hasAnyFilterApplied {
     return _priceRange.start > _minPrice ||
@@ -134,6 +106,12 @@ class _RestaurantOverviewSearchScreenState
   }
 
   @override
+  void initState() {
+    super.initState();
+    _fetchRestaurants(widget.searchQuery);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.backgroundColor,
@@ -154,25 +132,63 @@ class _RestaurantOverviewSearchScreenState
         children: [
           _buildTopChips(context),
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              itemCount: _restaurants.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                final r = _restaurants[index];
-                return _RestaurantCard(
-                  imagePath: r['image']!,
-                  name: r['name']!,
-                  cuisine: r['cuisine']!,
-                  price: r['price']!,
-                  rating: r['rating']!,
-                  reviews: r['reviews']!,
-                  tag: r['tag']!,
-                  onCardTap: () => _navigateToRestaurantDetail(r),
-                  onViewPressed: () => _navigateToRestaurantDetail(r),
-                );
-              },
-            ),
+            child: _loading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: context.primaryColor,
+                    ),
+                  )
+                : (_error != null)
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            LucideIcons.alertCircle,
+                            color: Colors.redAccent,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: context.bodyOneStyle.copyWith(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: () =>
+                                _fetchRestaurants(widget.searchQuery),
+                            icon: const Icon(LucideIcons.refreshCw, size: 16),
+                            label: Text('Thử lại', style: context.buttonStyle),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    itemCount: _restaurants.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final r = _restaurants[index];
+                      return _RestaurantCard(
+                        imagePath: r['image']!, // có thể là URL hoặc asset
+                        name: r['name']!,
+                        cuisine: r['cuisine']!,
+                        price: r['price']!,
+                        rating: r['rating']!,
+                        reviews: r['reviews']!,
+                        tag: r['tag']!,
+                        onCardTap: () => _navigateToRestaurantDetail(r),
+                        onViewPressed: () => _navigateToRestaurantDetail(r),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -268,14 +284,14 @@ class _RestaurantOverviewSearchScreenState
                             child: Text(
                               'Bộ lọc nhà hàng',
                               style: context.subTitleOneStyle.copyWith(
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                           TextButton(
                             onPressed: () {
                               setSheet(() {
-                                price = const RangeValues(_minPrice, _maxPrice);
+                                price = const RangeValues(50000, 450000);
                                 cuisines.clear();
                                 services.clear();
                                 dietaries.clear();
@@ -298,11 +314,8 @@ class _RestaurantOverviewSearchScreenState
                       ),
                       const SizedBox(height: 8),
 
-                      _sectionTitle(
-                        ctx,
-                        LucideIcons.badgeDollarSign,
-                        'Giá mỗi người',
-                      ),
+                      // Giá
+                      _sectionTitle(ctx, LucideIcons.wallet, 'Giá mỗi người'),
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -313,20 +326,57 @@ class _RestaurantOverviewSearchScreenState
                       ),
                       RangeSlider(
                         values: price,
+                        onChanged: (v) =>
+                            setSheet(() => price = _normalizeRange(v)),
                         min: _minPrice,
                         max: _maxPrice,
-                        divisions: 20,
+                        divisions: 100,
                         activeColor: context.primaryColor,
                         labels: RangeLabels(
                           _formatCurrency(price.start),
                           _formatCurrency(price.end),
                         ),
-                        onChanged: (v) =>
-                            setSheet(() => price = _normalizeRange(v)),
                       ),
 
                       const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.star, 'Đánh giá'),
+                      _sectionTitle(
+                        ctx,
+                        LucideIcons.utensilsCrossed,
+                        'Ẩm thực',
+                      ),
+                      const SizedBox(height: 8),
+                      _wrapOptions(
+                        ctx,
+                        _cuisineCatalog,
+                        cuisines,
+                        setSheet,
+                        maxWidth: 140,
+                      ),
+
+                      const SizedBox(height: 16),
+                      _sectionTitle(ctx, LucideIcons.briefcase, 'Dịch vụ'),
+                      const SizedBox(height: 8),
+                      _wrapOptions(
+                        ctx,
+                        _serviceCatalog,
+                        services,
+                        setSheet,
+                        maxWidth: 170,
+                      ),
+
+                      const SizedBox(height: 16),
+                      _sectionTitle(ctx, LucideIcons.leaf, 'Chế độ ăn'),
+                      const SizedBox(height: 8),
+                      _wrapOptions(
+                        ctx,
+                        _dietaryCatalog,
+                        dietaries,
+                        setSheet,
+                        maxWidth: 170,
+                      ),
+
+                      const SizedBox(height: 16),
+                      _sectionTitle(ctx, LucideIcons.star, 'Đánh giá sao'),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -337,32 +387,14 @@ class _RestaurantOverviewSearchScreenState
                           return FilterChip(
                             selected: sel,
                             showCheckmark: false,
-                            label: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ...List.generate(
-                                  star,
-                                  (j) => Padding(
-                                    padding: const EdgeInsets.only(right: 2),
-                                    child: Icon(
-                                      Icons.star_rounded,
-                                      size: 14,
-                                      color: sel
-                                          ? context.buttonTextColor
-                                          : context.primaryColor,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '$star sao',
-                                  style: context.bodyTwoStyle.copyWith(
-                                    color: sel
-                                        ? context.buttonTextColor
-                                        : context.textSecondaryColor,
-                                  ),
-                                ),
-                              ],
+                            label: Text(
+                              '$star★',
+                              style: context.bodyTwoStyle.copyWith(
+                                color: sel
+                                    ? context.buttonTextColor
+                                    : context.textSecondaryColor,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                             backgroundColor: context.cardBackgroundColor,
                             selectedColor: context.primaryColor,
@@ -371,38 +403,19 @@ class _RestaurantOverviewSearchScreenState
                                   ? context.primaryColor
                                   : context.dividerColor,
                             ),
-                            onSelected: (_) {
-                              setSheet(() {
-                                sel ? stars.remove(star) : stars.add(star);
-                              });
-                            },
+                            onSelected: (_) => setSheet(() {
+                              sel ? stars.remove(star) : stars.add(star);
+                            }),
                           );
                         }),
                       ),
 
                       const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.briefcase, 'Ẩm thực'),
-                      const SizedBox(height: 8),
-                      _wrapOptions(ctx, _cuisineCatalog, cuisines, setSheet),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.briefcase, 'Dịch vụ'),
-                      const SizedBox(height: 8),
-                      _wrapOptions(ctx, _serviceCatalog, services, setSheet),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.heartPulse, 'Chế độ ăn'),
-                      const SizedBox(height: 8),
-                      _wrapOptions(
+                      _sectionTitle(
                         ctx,
-                        _dietaryCatalog,
-                        dietaries,
-                        setSheet,
-                        maxWidth: 160,
+                        LucideIcons.settings2,
+                        'Tùy chọn khác',
                       ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.checkCircle2, 'Tùy chọn'),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -416,7 +429,7 @@ class _RestaurantOverviewSearchScreenState
                           ),
                           _toggleChip(
                             ctx,
-                            'Đặt bàn',
+                            'Có đặt bàn',
                             reservation,
                             (v) => setSheet(() => reservation = v),
                           ),
@@ -428,7 +441,7 @@ class _RestaurantOverviewSearchScreenState
                           ),
                           _toggleChip(
                             ctx,
-                            'Chỉ còn bàn',
+                            'Còn chỗ',
                             stock,
                             (v) => setSheet(() => stock = v),
                           ),
@@ -440,33 +453,20 @@ class _RestaurantOverviewSearchScreenState
                         children: [
                           Expanded(
                             child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: context.textPrimaryColor,
                                 side: BorderSide(color: context.dividerColor),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 12,
                                 ),
                               ),
-                              onPressed: () => Navigator.of(ctx).pop(),
                               child: const Text('Hủy'),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: context.primaryColor,
-                                foregroundColor: context.buttonTextColor,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
                               onPressed: () {
                                 setState(() {
                                   _priceRange = price;
@@ -487,28 +487,15 @@ class _RestaurantOverviewSearchScreenState
                                   _takeAway = takeAway;
                                   _inStockOnly = stock;
                                 });
-                                Navigator.of(ctx).pop();
-                                final count =
-                                    (_priceRange.start > _minPrice ||
-                                            _priceRange.end < _maxPrice
-                                        ? 1
-                                        : 0) +
-                                    _cuisines.length +
-                                    _services.length +
-                                    _dietaries.length +
-                                    _selectedStars.length +
-                                    (_openNow ? 1 : 0) +
-                                    (_reservation ? 1 : 0) +
-                                    (_takeAway ? 1 : 0) +
-                                    (_inStockOnly ? 1 : 0);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Đã áp dụng $count tiêu chí lọc (demo)',
-                                    ),
-                                  ),
-                                );
+                                Navigator.pop(ctx);
                               },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: context.primaryColor,
+                                foregroundColor: context.buttonTextColor,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
                               child: const Text('Áp dụng'),
                             ),
                           ),
@@ -707,6 +694,112 @@ class _RestaurantOverviewSearchScreenState
       ),
     );
   }
+
+  // ===== Dynamic fetch + mapping (giữ nguyên cấu trúc frontend) =====
+  Future<void> _fetchRestaurants(String query) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+      _restaurants = [];
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final api = SearchApiService(dio: Dio(), prefs: prefs);
+      final data = await api.search(q: query);
+
+      List<Map<String, String>> items = [];
+      if (data['restaurants'] is List) {
+        items = List.from(data['restaurants']).map<Map<String, String>>((e) {
+          final m = Map<String, dynamic>.from(e);
+
+          // Rating + reviews: hỗ trợ các biến thể field từ backend
+          final rating = _getRatingString(
+            m['rating'] ??
+                m['rating_average'] ??
+                m['ratingAverage'] ??
+                m['ratingAvg'] ??
+                m['avg_rating'],
+          );
+          final reviewsRaw =
+              m['reviews'] ??
+              m['reviewCount'] ??
+              m['reviews_count'] ??
+              m['totalReviews'] ??
+              m['rating_count'] ??
+              m['total_ratings'] ??
+              0;
+
+          // Giá
+          final priceStr = _formatPrice(m['price'], m['currencyCode']);
+
+          // Ảnh: nếu có URL -> dùng URL, ngược lại fallback asset
+          final imageUrl =
+              m['imageUrl']?.toString() ??
+              m['thumbnailUrl']?.toString() ??
+              m['image']?.toString() ??
+              '';
+          final image = imageUrl.isNotEmpty
+              ? imageUrl
+              : 'assets/images/onboarding1.png';
+
+          // Cuisine/Tag best-effort
+          final cuisine =
+              m['cuisine']?.toString() ?? m['category']?.toString() ?? 'Âu';
+          final tag =
+              m['tag']?.toString() ??
+              (m['services'] is List && (m['services'] as List).isNotEmpty
+                  ? (m['services'] as List).first.toString()
+                  : 'Ăn tại chỗ');
+
+          return {
+            'name': m['title']?.toString() ?? '',
+            'cuisine': cuisine,
+            'price': priceStr,
+            'rating': rating,
+            'reviews': '(${reviewsRaw.toString()})',
+            'image': image, // có thể là URL hoặc asset
+            'tag': tag,
+          };
+        }).toList();
+      }
+
+      setState(() {
+        _restaurants = items;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = 'Không thể tải dữ liệu. Vui lòng thử lại hoặc đăng nhập.';
+      });
+    }
+  }
+
+  // Fallback helpers (đồng bộ với các màn khác)
+  String _getRatingString(dynamic rating) {
+    if (rating == null) return '0.0';
+    if (rating is String) return rating;
+    if (rating is num) return rating.toString();
+    return '0.0';
+  }
+
+  String _formatPrice(dynamic price, dynamic currencyCode) {
+    if (price == null) return '';
+    num? n;
+    if (price is num) {
+      n = price;
+    } else {
+      n = num.tryParse(price.toString());
+    }
+    if (n == null) return price.toString();
+    final c = (currencyCode?.toString() ?? '').toUpperCase();
+    if (c == 'VND' || c == 'VNĐ') {
+      return '${n.toStringAsFixed(0)} đ';
+    }
+    if (c.isEmpty) return n.toString();
+    return '$n $c';
+  }
 }
 
 class _TagOption {
@@ -740,6 +833,8 @@ class _RestaurantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isNetwork = imagePath.startsWith('http');
+
     return GestureDetector(
       onTap: onCardTap,
       child: Container(
@@ -759,20 +854,20 @@ class _RestaurantCard extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(16),
                   ),
-                  child: Image.asset(
-                    imagePath,
+                  child: SizedBox(
                     height: 170,
                     width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 170,
-                      color: context.primaryColor.withValues(alpha: 0.08),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        LucideIcons.image,
-                        color: context.primaryColor,
-                      ),
-                    ),
+                    child: isNetwork
+                        ? Image.network(
+                            imagePath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _imgFallback(context),
+                          )
+                        : Image.asset(
+                            imagePath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _imgFallback(context),
+                          ),
                   ),
                 ),
                 Positioned(
@@ -824,15 +919,15 @@ class _RestaurantCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(
-                      5,
-                      (i) => Icon(
-                        i < 4 ? Icons.star_rounded : Icons.star_border_rounded,
+                    children: List.generate(5, (i) {
+                      final rv = double.tryParse(rating) ?? 0.0;
+                      final filled = rv >= (i + 1) - 0.25;
+                      return Icon(
+                        filled ? Icons.star_rounded : Icons.star_border_rounded,
                         color: context.primaryColor,
                         size: 14,
-                      ),
-                    ),
+                      );
+                    }),
                   ),
                   const SizedBox(width: 6),
                   Flexible(
@@ -917,6 +1012,14 @@ class _RestaurantCard extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+
+  Widget _imgFallback(BuildContext context) {
+    return Container(
+      color: context.primaryColor.withValues(alpha: 0.08),
+      alignment: Alignment.center,
+      child: Icon(LucideIcons.image, color: context.primaryColor, size: 34),
     );
   }
 }
