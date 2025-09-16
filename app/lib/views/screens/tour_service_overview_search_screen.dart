@@ -102,8 +102,9 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
       if (_difficulty != null && t['difficulty'] != _difficulty) return false;
       if (_inStockOnly && t['inStock'] == false) return false;
       if (_freeCancellation && t['freeCancellation'] == false) return false;
-      if (_instantConfirmation && t['instantConfirmation'] == false)
+      if (_instantConfirmation && t['instantConfirmation'] == false) {
         return false;
+      }
       if (_hotelPickup && t['hotelPickup'] == false) return false;
       // _selectedServices left as visual chips; backend mapping can be added later if available
       return true;
@@ -137,23 +138,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
       body: Column(
         children: [
           _topChips(context),
-          if (_hasAnyFilterApplied)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: context.primaryColor.withValues(alpha: .08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Đang lọc: ${tours.length} kết quả',
-                style: context.captionStyle.copyWith(
-                  color: context.primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+
           Expanded(
             child: _loading
                 ? Center(
@@ -888,17 +873,16 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
               m['area']?.toString() ??
               '';
 
-          // Prefer server image fields; fall back to asset so current card (Image.asset) still works
+          // Prefer server image fields; keep URL if present, else default asset.
+          // Rendering fallback is handled in the card with _imageFallback.
           final networkImage =
               m['imageUrl']?.toString() ??
               m['thumbnailUrl']?.toString() ??
               m['image']?.toString() ??
               '';
-          final image = networkImage.startsWith('http')
-              ? 'assets/images/onboarding1.png'
-              : (networkImage.isNotEmpty
-                    ? networkImage
-                    : 'assets/images/onboarding1.png');
+          final image = networkImage.isNotEmpty
+              ? networkImage
+              : 'assets/images/onboarding1.png';
 
           final description =
               m['description']?.toString() ?? 'Tour tại $location';
@@ -935,7 +919,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
             'basePrice': basePrice,
             'durationDays': durationDays,
             'duration': durationText,
-            'image': image, // keep asset-compatible path for the current card
+            'image': image, // can be a URL or asset
             'location': location,
             'description': description,
             'freeCancellation': freeCancel,
@@ -1062,22 +1046,7 @@ class _TourCard extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(16),
                 ),
-                child: Image.asset(
-                  imagePath,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 180,
-                    color: context.primaryColor.withValues(alpha: .08),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      LucideIcons.image,
-                      color: context.primaryColor,
-                      size: 34,
-                    ),
-                  ),
-                ),
+                child: _buildImage(context),
               ),
               Positioned(
                 top: 10,
@@ -1196,6 +1165,38 @@ class _TourCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // Unified image fallback for all services/screens
+  Widget _imageFallback(BuildContext context) {
+    return Container(
+      height: 180,
+      color: context.primaryColor.withValues(alpha: 0.08),
+      alignment: Alignment.center,
+      child: Icon(LucideIcons.image, color: context.primaryColor),
+    );
+  }
+
+  Widget _buildImage(BuildContext context) {
+    if (imagePath.isEmpty) {
+      return _imageFallback(context);
+    }
+    if (imagePath.startsWith('http')) {
+      return Image.network(
+        imagePath,
+        height: 180,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _imageFallback(context),
+      );
+    }
+    return Image.asset(
+      imagePath,
+      height: 180,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _imageFallback(context),
     );
   }
 
