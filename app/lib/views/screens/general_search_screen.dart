@@ -445,12 +445,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
           child: TextButton(
             onPressed: () {
               final query = _searchController.text.trim();
-              // Luôn điều hướng sang trang tổng quan tìm kiếm
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SearchOverviewScreen(searchQuery: query),
-                ),
-              );
+              _openSeeMoreForCurrentFilter(query);
             },
             child: Text(
               'Xem thêm',
@@ -463,6 +458,46 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         ),
       ],
     );
+  }
+
+  void _openSeeMoreForCurrentFilter(String query) {
+    switch (_selected) {
+      case _QuickFilter.hotel:
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => HotelOverviewSearchScreen(searchQuery: query),
+          ),
+        );
+        break;
+      case _QuickFilter.restaurant:
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RestaurantOverviewSearchScreen(searchQuery: query),
+          ),
+        );
+        break;
+      case _QuickFilter.tour:
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TourServiceOverviewScreen(searchQuery: query),
+          ),
+        );
+        break;
+      case _QuickFilter.attraction:
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AttractionOverviewSearchScreen(searchQuery: query),
+          ),
+        );
+        break;
+      case _QuickFilter.all:
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => SearchOverviewScreen(searchQuery: query),
+          ),
+        );
+        break;
+    }
   }
 
   // Suggested places
