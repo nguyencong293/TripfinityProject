@@ -5,6 +5,11 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 
+// Networking
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app/services/search_api_service.dart';
+
 class AttractionOverviewSearchScreen extends StatefulWidget {
   final String searchQuery;
   const AttractionOverviewSearchScreen({super.key, required this.searchQuery});
@@ -26,75 +31,16 @@ class _AttractionOverviewSearchScreenState
   final Set<String> _selectedTimes = {};
   final Set<String> _selectedSuitability = {};
 
-  // Data (tĩnh)
-  final List<Map<String, dynamic>> _attractions = [
-    {
-      'name': 'Tháp Chăm Po Nagar',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': 4.6,
-      'price': 120000,
-      'types': ['Văn hoá', 'Lịch sử'],
-      'services': ['Hướng dẫn viên', 'Chụp ảnh'],
-      'times': ['Sáng', 'Chiều'],
-      'suit': ['Gia đình', 'Nhóm'],
-      'img': 1,
-    },
-    {
-      'name': 'Viện Hải dương học',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': 4.5,
-      'price': 150000,
-      'types': ['Bảo tàng', 'Giáo dục'],
-      'services': ['Hướng dẫn viên', 'Khu lưu niệm'],
-      'times': ['Sáng', 'Chiều'],
-      'suit': ['Gia đình', 'Trẻ em'],
-      'img': 2,
-    },
-    {
-      'name': 'Hòn Mun',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': 4.7,
-      'price': 450000,
-      'types': ['Thiên nhiên', 'Lặn biển'],
-      'services': ['Tàu cano', 'Thuê đồ lặn'],
-      'times': ['Sáng'],
-      'suit': ['Cặp đôi', 'Nhóm'],
-      'img': 3,
-    },
-    {
-      'name': 'Chợ Đầm',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': 4.2,
-      'price': 0,
-      'types': ['Mua sắm', 'Văn hoá'],
-      'services': ['Ăn uống', 'Quầy lưu niệm'],
-      'times': ['Sáng', 'Chiều'],
-      'suit': ['Gia đình', 'Solo'],
-      'img': 4,
-    },
-    {
-      'name': 'VinWonders Nha Trang',
-      'location': 'Đảo Hòn Tre',
-      'rating': 4.8,
-      'price': 950000,
-      'types': ['Giải trí', 'Công viên'],
-      'services': ['Cáp treo', 'Ẩm thực', 'Biểu diễn'],
-      'times': ['Sáng', 'Chiều', 'Tối'],
-      'suit': ['Gia đình', 'Nhóm'],
-      'img': 1,
-    },
-    {
-      'name': 'Nhà thờ Núi',
-      'location': 'Nha Trang, Việt Nam',
-      'rating': 4.4,
-      'price': 0,
-      'types': ['Tôn giáo', 'Kiến trúc'],
-      'services': ['Chụp ảnh'],
-      'times': ['Sáng', 'Chiều'],
-      'suit': ['Solo', 'Cặp đôi'],
-      'img': 2,
-    },
-  ];
+  // Dynamic data
+  bool _loading = false;
+  String? _error;
+  List<Map<String, dynamic>> _attractions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAttractions(widget.searchQuery);
+  }
 
   bool get _hasAnyFilterApplied {
     return _priceRange != _defaultPrice ||
@@ -107,27 +53,47 @@ class _AttractionOverviewSearchScreenState
 
   List<Map<String, dynamic>> get _filteredAttractions {
     return _attractions.where((a) {
-      if (a['price'] < _priceRange.start || a['price'] > _priceRange.end) {
+      final priceInt = a['priceInt'] is num
+          ? (a['priceInt'] as num).toInt()
+          : 0;
+      final ratingVal = a['rating'];
+      final ratingNum = ratingVal is num
+          ? ratingVal
+          : (ratingVal is String ? double.tryParse(ratingVal) ?? 0.0 : 0.0);
+      final types = (a['types'] is List)
+          ? (a['types'] as List).map((e) => e.toString()).toList()
+          : const <String>[];
+      final services = (a['services'] is List)
+          ? (a['services'] as List).map((e) => e.toString()).toList()
+          : const <String>[];
+      final times = (a['times'] is List)
+          ? (a['times'] as List).map((e) => e.toString()).toList()
+          : const <String>[];
+      final suit = (a['suit'] is List)
+          ? (a['suit'] as List).map((e) => e.toString()).toList()
+          : const <String>[];
+
+      if (priceInt < _priceRange.start || priceInt > _priceRange.end) {
         return false;
       }
       if (_selectedRatings.isNotEmpty &&
-          !_selectedRatings.any((r) => a['rating'].floor() == r)) {
+          !_selectedRatings.any((r) => ratingNum.floor() == r)) {
         return false;
       }
       if (_selectedTypes.isNotEmpty &&
-          !_selectedTypes.any((t) => (a['types'] as List).contains(t))) {
+          !_selectedTypes.any((t) => types.contains(t))) {
         return false;
       }
       if (_selectedServices.isNotEmpty &&
-          !_selectedServices.any((s) => (a['services'] as List).contains(s))) {
+          !_selectedServices.any((s) => services.contains(s))) {
         return false;
       }
       if (_selectedTimes.isNotEmpty &&
-          !_selectedTimes.any((t) => (a['times'] as List).contains(t))) {
+          !_selectedTimes.any((t) => times.contains(t))) {
         return false;
       }
       if (_selectedSuitability.isNotEmpty &&
-          !_selectedSuitability.any((s) => (a['suit'] as List).contains(s))) {
+          !_selectedSuitability.any((s) => suit.contains(s))) {
         return false;
       }
       return true;
@@ -149,6 +115,7 @@ class _AttractionOverviewSearchScreenState
     );
   }
 
+  // ====== Filter bottom sheet (giữ UI, dùng state hiện có) ======
   void _openFilterSheet() {
     RangeValues tempPrice = _priceRange;
     final tempRatings = {..._selectedRatings};
@@ -176,132 +143,133 @@ class _AttractionOverviewSearchScreenState
                 return Column(
                   children: [
                     Container(
-                      width: 50,
-                      height: 5,
-                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                       decoration: BoxDecoration(
-                        color: context.dividerColor,
-                        borderRadius: BorderRadius.circular(4),
+                        color: context.backgroundColor,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(22),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
+                      child: Column(
                         children: [
+                          Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: context.textDisabledColor.withValues(
+                                alpha: 0.5,
+                              ),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
                           Text(
                             'Bộ lọc điểm tham quan',
                             style: context.subTitleOneStyle.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: () {
-                              setM(() {
-                                tempPrice = _defaultPrice;
-                                tempRatings.clear();
-                                tempTypes.clear();
-                                tempServices.clear();
-                                tempTimes.clear();
-                                tempSuit.clear();
-                              });
-                            },
-                            child: Text(
-                              'Đặt lại',
-                              style: context.captionStyle.copyWith(
-                                color: context.primaryColor,
-                              ),
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
                     Expanded(
-                      child: SingleChildScrollView(
+                      child: ListView(
                         controller: controller,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                        ).copyWith(bottom: 120),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _sectionTitle('Giá vé (VNĐ)'),
-                            RangeSlider(
-                              values: tempPrice,
-                              min: 0,
-                              max: 1000000,
-                              divisions: 50,
-                              labels: RangeLabels(
-                                tempPrice.start.toInt().toString(),
-                                tempPrice.end.toInt().toString(),
-                              ),
-                              onChanged: (v) => setM(() => tempPrice = v),
-                              activeColor: context.primaryColor,
-                              inactiveColor: context.dividerColor.withValues(
-                                alpha: 0.3,
-                              ),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        children: [
+                          _sectionTitle('Giá vé (VND)'),
+                          _priceRow(tempPrice),
+                          RangeSlider(
+                            values: tempPrice,
+                            onChanged: (v) => setM(() => tempPrice = v),
+                            min: 0,
+                            max: 2000000,
+                            divisions: 40,
+                            activeColor: context.primaryColor,
+                            labels: RangeLabels(
+                              _formatCurrency(tempPrice.start),
+                              _formatCurrency(tempPrice.end),
                             ),
-                            _priceRow(tempPrice),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton.icon(
+                                onPressed: () => setM(() {
+                                  tempPrice = _defaultPrice;
+                                }),
+                                icon: Icon(
+                                  LucideIcons.rotateCcw,
+                                  size: 16,
+                                  color: context.textSecondaryColor,
+                                ),
+                                label: Text(
+                                  'Mặc định',
+                                  style: TextStyle(
+                                    color: context.textSecondaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
 
-                            _sectionTitle('Đánh giá'),
-                            _wrapOptions(
-                              options: [5, 4, 3, 2, 1],
-                              isSelected: (o) => tempRatings.contains(o),
-                              onTap: (o) => setM(() {
-                                if (tempRatings.contains(o)) {
-                                  tempRatings.remove(o);
-                                } else {
-                                  tempRatings.add(o);
-                                }
-                              }),
-                              labelBuilder: (o) => '$o★',
+                          _sectionTitle('Đánh giá'),
+                          _wrapOptions<int>(
+                            options: const [5, 4, 3, 2],
+                            isSelected: (o) => tempRatings.contains(o),
+                            onTap: (o) => setM(
+                              () => tempRatings.contains(o)
+                                  ? tempRatings.remove(o)
+                                  : tempRatings.add(o),
                             ),
+                            labelBuilder: (o) => '$o sao',
+                          ),
 
-                            _sectionTitle('Loại'),
-                            _chipsGroup(tempTypes, [
-                              'Văn hoá',
-                              'Lịch sử',
-                              'Thiên nhiên',
-                              'Bảo tàng',
-                              'Giải trí',
-                              'Kiến trúc',
-                              'Mua sắm',
-                              'Lặn biển',
-                              'Công viên',
-                            ], setM),
+                          _sectionTitle('Loại hình'),
+                          _chipsGroup(tempTypes, const [
+                            'Văn hoá',
+                            'Lịch sử',
+                            'Thiên nhiên',
+                            'Giải trí',
+                            'Bảo tàng',
+                            'Công viên',
+                          ], setM),
 
-                            _sectionTitle('Dịch vụ / Tiện ích'),
-                            _chipsGroup(tempServices, [
-                              'Hướng dẫn viên',
-                              'Chụp ảnh',
-                              'Thuê đồ lặn',
-                              'Tàu cano',
-                              'Ẩm thực',
-                              'Cáp treo',
-                              'Khu lưu niệm',
-                              'Wifi',
-                              'Bãi đỗ xe',
-                            ], setM),
+                          _sectionTitle('Dịch vụ'),
+                          _chipsGroup(tempServices, const [
+                            'Hướng dẫn viên',
+                            'Chụp ảnh',
+                            'Ăn uống',
+                            'Biểu diễn',
+                            'Cáp treo',
+                            'Thuê đồ',
+                          ], setM),
 
-                            _sectionTitle('Thời điểm hoạt động'),
-                            _chipsGroup(tempTimes, [
-                              'Sáng',
-                              'Chiều',
-                              'Tối',
-                              'Đêm',
-                            ], setM),
+                          _sectionTitle('Thời gian'),
+                          _chipsGroup(tempTimes, const [
+                            'Sáng',
+                            'Chiều',
+                            'Tối',
+                          ], setM),
 
-                            _sectionTitle('Phù hợp với'),
-                            _chipsGroup(tempSuit, [
-                              'Gia đình',
-                              'Nhóm',
-                              'Cặp đôi',
-                              'Solo',
-                              'Trẻ em',
-                            ], setM),
-                          ],
-                        ),
+                          _sectionTitle('Phù hợp với'),
+                          _chipsGroup(tempSuit, const [
+                            'Gia đình',
+                            'Nhóm',
+                            'Trẻ em',
+                            'Cặp đôi',
+                            'Solo',
+                          ], setM),
+                          const SizedBox(height: 8),
+                        ],
                       ),
                     ),
                     _bottomActions(
@@ -325,14 +293,6 @@ class _AttractionOverviewSearchScreenState
                             ..addAll(tempSuit);
                         });
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Đã áp dụng bộ lọc (${_filteredAttractions.length} kết quả)',
-                            ),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
                       },
                     ),
                   ],
@@ -346,23 +306,20 @@ class _AttractionOverviewSearchScreenState
   }
 
   Widget _priceRow(RangeValues v) {
-    String fm(num n) {
-      if (n >= 1000000) {
-        return '${(n / 1000000).toStringAsFixed(1)}M';
-      }
-      if (n >= 1000) {
-        return '${(n / 1000).toStringAsFixed(0)}K';
-      }
-      return n.toString();
-    }
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _miniTag('Tối thiểu: ${fm(v.start.round())}'),
-        _miniTag('Tối đa: ${fm(v.end.round())}'),
+        _miniTag('Tối thiểu: ${_formatCurrency(v.start)}'),
+        _miniTag('Tối đa: ${_formatCurrency(v.end)}'),
       ],
     );
+  }
+
+  String _formatCurrency(double n) {
+    final v = n.round();
+    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(0)}K';
+    return v.toString();
   }
 
   Widget _miniTag(String text) {
@@ -512,9 +469,10 @@ class _AttractionOverviewSearchScreenState
                   });
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Đã đặt lại bộ lọc'),
+                    SnackBar(
+                      content: const Text('Đã làm mới bộ lọc'),
                       behavior: SnackBarBehavior.floating,
+                      backgroundColor: context.cardBackgroundColor,
                     ),
                   );
                 },
@@ -551,9 +509,11 @@ class _AttractionOverviewSearchScreenState
     );
   }
 
+  // ====== UI ======
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredAttractions;
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -585,11 +545,11 @@ class _AttractionOverviewSearchScreenState
               children: [
                 Expanded(
                   child: Text(
-                    'Kết quả cho: "${widget.searchQuery}"',
+                    widget.searchQuery,
                     style: TextStyle(
-                      fontSize: 14,
-                      color: context.textSecondaryColor,
-                      fontWeight: FontWeight.w500,
+                      color: context.textPrimaryColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -600,27 +560,81 @@ class _AttractionOverviewSearchScreenState
               ],
             ),
           ),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              itemCount: filtered.length,
-              itemBuilder: (context, index) {
-                final a = filtered[index];
-                return _AttractionCard(
-                  name: a['name'],
-                  location: a['location'],
-                  rating: a['rating'],
-                  price: a['price'],
-                  types: (a['types'] as List).cast<String>(),
-                  imageIndex: a['img'],
-                  onTap: () => _openAttractionDetail(a),
-                );
-              },
+          if (_loading)
+            Expanded(
+              child: Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: context.primaryColor,
+                  ),
+                ),
+              ),
+            )
+          else if (_error != null)
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    _error!,
+                    style: context.bodyOneStyle.copyWith(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            )
+          else if (_attractions.isEmpty)
+            Expanded(
+              child: Center(
+                child: Text(
+                  'Không có kết quả',
+                  style: context.captionStyle.copyWith(
+                    color: context.textSecondaryColor,
+                  ),
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () => _fetchAttractions(widget.searchQuery),
+                color: context.primaryColor,
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final a = filtered[index];
+                    final priceText = a['price']?.toString() ?? '';
+                    final imageUrl = a['imageUrl']?.toString();
+                    final types = (a['types'] is List)
+                        ? (a['types'] as List).map((e) => e.toString()).toList()
+                        : const <String>[];
+
+                    return _AttractionCard(
+                      name: a['name']?.toString() ?? '',
+                      location: a['location']?.toString() ?? '',
+                      rating: _asDouble(a['rating']),
+                      priceText: priceText,
+                      types: types,
+                      imageUrl: imageUrl,
+                      onTap: () => _openAttractionDetail(a),
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );
+  }
+
+  double _asDouble(dynamic v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0.0;
+    return 0.0;
   }
 
   Widget _buildFilterPill() {
@@ -664,33 +678,108 @@ class _AttractionOverviewSearchScreenState
       ),
     );
   }
+
+  // ===== API =====
+  Future<void> _fetchAttractions(String query) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final api = SearchApiService(dio: Dio(), prefs: prefs);
+
+      final data = await api.search(q: query, type: 'attraction');
+
+      List<Map<String, dynamic>> attractions = [];
+      if (data['attractions'] is List) {
+        attractions = List.from(data['attractions']).map<Map<String, dynamic>>((
+          e,
+        ) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = (m['currencyCode'] ?? '').toString().toUpperCase();
+
+          // Chuyển giá về string hiển thị + số nguyên để lọc
+          final displayPrice = _formatPrice(price, currency);
+          final priceInt = _toInt(price);
+
+          return {
+            'name': m['title']?.toString() ?? '',
+            'location': m['location']?.toString() ?? '',
+            'rating': m['ratingAverage'],
+            'type': 'attraction',
+            'price': displayPrice,
+            'priceInt': priceInt,
+            'description': m['serviceDescription']?.toString() ?? '',
+            'imageUrl': m['thumbnailUrl'],
+            'types': m['types'] is List ? List.from(m['types']) : <String>[],
+            'services': m['services'] is List
+                ? List.from(m['services'])
+                : <String>[],
+            'times': m['times'] is List ? List.from(m['times']) : <String>[],
+            'suit': m['suit'] is List ? List.from(m['suit']) : <String>[],
+          };
+        }).toList();
+      }
+
+      setState(() {
+        _attractions = attractions;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error =
+            'Không thể tải điểm tham quan. Vui lòng thử lại hoặc đăng nhập.';
+      });
+    }
+  }
+
+  int _toInt(dynamic price) {
+    if (price == null) return 0;
+    if (price is int) return price;
+    if (price is double) return price.round();
+    final s = price.toString().replaceAll(RegExp(r'[^\d]'), '');
+    return int.tryParse(s) ?? 0;
+  }
+
+  String _formatPrice(dynamic price, String currency) {
+    if (price == null) return '';
+    num? n;
+    if (price is num) {
+      n = price;
+    } else {
+      n = num.tryParse(price.toString());
+    }
+    if (n == null) return price.toString();
+    if (currency == 'VND' || currency == 'VNĐ') {
+      return '${n.toStringAsFixed(0)} đ';
+    }
+    if (currency.isEmpty) return n.toString();
+    return '$n $currency';
+  }
 }
 
 class _AttractionCard extends StatelessWidget {
   final String name;
   final String location;
   final double rating;
-  final int price;
+  final String priceText;
   final List<String> types;
-  final int imageIndex;
+  final String? imageUrl;
   final VoidCallback onTap;
 
   const _AttractionCard({
     required this.name,
     required this.location,
     required this.rating,
-    required this.price,
+    required this.priceText,
     required this.types,
-    required this.imageIndex,
+    required this.imageUrl,
     required this.onTap,
   });
-
-  String _formatPrice(int v) {
-    if (v == 0) return 'Miễn phí';
-    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000) return '${(v / 1000).toStringAsFixed(0)}K';
-    return v.toString();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -719,46 +808,42 @@ class _AttractionCard extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  Image.asset(
-                    'assets/images/onboarding${(imageIndex % 4) + 1}.png',
-                    height: 150,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 150,
-                      color: context.primaryColor.withValues(alpha: 0.1),
-                      child: Icon(
-                        LucideIcons.image,
-                        color: context.primaryColor,
-                      ),
-                    ),
-                  ),
+                  if (imageUrl != null && imageUrl!.startsWith('http'))
+                    Image.network(
+                      imageUrl!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _fallbackImage(context),
+                    )
+                  else
+                    _fallbackImage(context),
                   Positioned(
+                    left: 10,
                     top: 10,
-                    right: 10,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(30),
+                        color: Colors.black.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
-                            Icons.star_rounded,
+                          Icon(
+                            LucideIcons.star,
                             size: 14,
-                            color: Colors.amber,
+                            color: context.warningAlertColor,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             rating.toStringAsFixed(1),
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.white,
+                              fontWeight: FontWeight.w700,
                               fontSize: 12,
-                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -775,8 +860,10 @@ class _AttractionCard extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: context.bodyOneStyle.copyWith(
-                      fontWeight: FontWeight.w600,
+                    style: TextStyle(
+                      color: context.textPrimaryColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -787,14 +874,15 @@ class _AttractionCard extends StatelessWidget {
                       Icon(
                         LucideIcons.mapPin,
                         size: 14,
-                        color: context.primaryColor,
+                        color: context.textSecondaryColor,
                       ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           location,
-                          style: context.captionStyle.copyWith(
+                          style: TextStyle(
                             color: context.textSecondaryColor,
+                            fontSize: 12,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -804,24 +892,27 @@ class _AttractionCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Wrap(
-                    spacing: 6,
+                    spacing: 8,
                     runSpacing: 6,
                     children: types.take(4).map((t) {
                       return Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
-                          vertical: 5,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: context.primaryColor.withValues(alpha: 0.09),
+                          color: context.cardBackgroundColor,
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: context.dividerColor.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Text(
                           t,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
+                            color: context.textSecondaryColor,
                             fontWeight: FontWeight.w500,
-                            color: context.primaryColor,
                           ),
                         ),
                       );
@@ -830,34 +921,24 @@ class _AttractionCard extends StatelessWidget {
                   const SizedBox(height: 10),
                   Row(
                     children: [
+                      Icon(
+                        LucideIcons.ticket,
+                        size: 16,
+                        color: context.primaryColor,
+                      ),
+                      const SizedBox(width: 6),
                       Text(
-                        _formatPrice(price),
-                        style: context.bodyOneStyle.copyWith(
-                          fontWeight: FontWeight.w700,
+                        priceText.isEmpty ? '—' : priceText,
+                        style: TextStyle(
                           color: context.primaryColor,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const Spacer(),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: context.primaryColor,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: onTap,
-                        child: const Text(
-                          'Xem chi tiết',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      Icon(
+                        LucideIcons.chevronRight,
+                        size: 18,
+                        color: context.textSecondaryColor,
                       ),
                     ],
                   ),
@@ -867,6 +948,15 @@ class _AttractionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _fallbackImage(BuildContext context) {
+    return Container(
+      height: 180,
+      color: context.primaryColor.withValues(alpha: 0.08),
+      alignment: Alignment.center,
+      child: Icon(LucideIcons.image, color: context.primaryColor),
     );
   }
 }
