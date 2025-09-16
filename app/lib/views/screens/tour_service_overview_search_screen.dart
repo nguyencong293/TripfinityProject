@@ -876,7 +876,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
           final dynamic priceRaw = m['price'];
           final String? currency = m['currencyCode']?.toString();
 
-          final name = m['name']?.toString() ?? '';
+          final name = m['title']?.toString() ?? '';
           final rating = _getRatingString(m['ratingAverage']);
           final reviewsRaw =
               m['reviews'] ?? m['reviewCount'] ?? m['totalReviews'] ?? 0;
