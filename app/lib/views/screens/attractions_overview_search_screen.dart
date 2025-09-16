@@ -21,7 +21,11 @@ class AttractionOverviewSearchScreen extends StatefulWidget {
 
 class _AttractionOverviewSearchScreenState
     extends State<AttractionOverviewSearchScreen> {
-  // Filters state
+  // Top chips (đồng bộ với layout hotel)
+  bool _hasDate = true;
+  bool _hasGuests = true;
+
+  // Filters state (giữ nguyên logic hiện có)
   RangeValues _priceRange = const RangeValues(0, 800000); // VNĐ (vé)
   final RangeValues _defaultPrice = const RangeValues(0, 800000);
 
@@ -115,7 +119,7 @@ class _AttractionOverviewSearchScreenState
     );
   }
 
-  // ====== Filter bottom sheet (giữ UI, dùng state hiện có) ======
+  // ====== Filter bottom sheet (giữ UI & logic hiện có) ======
   void _openFilterSheet() {
     RangeValues tempPrice = _priceRange;
     final tempRatings = {..._selectedRatings};
@@ -512,169 +516,136 @@ class _AttractionOverviewSearchScreenState
   // ====== UI ======
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredAttractions;
-
     return Scaffold(
+      backgroundColor: context.backgroundColor,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: context.backgroundColor,
         leading: IconButton(
-          icon: Icon(
-            LucideIcons.arrowLeft,
-            color: context.textPrimaryColor,
-            size: 20,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Điểm tham quan',
-          style: TextStyle(
-            color: context.textPrimaryColor,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
+          icon: Icon(LucideIcons.chevronLeft, color: context.textPrimaryColor),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         centerTitle: true,
+        title: Text(
+          widget.searchQuery.isEmpty ? 'Điểm tham quan' : widget.searchQuery,
+          style: context.subTitleOneStyle.copyWith(fontWeight: FontWeight.w600),
+        ),
       ),
-      backgroundColor: context.backgroundColor,
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.searchQuery,
-                    style: TextStyle(
-                      color: context.textPrimaryColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _buildFilterPill(),
-              ],
-            ),
-          ),
-          if (_loading)
-            Expanded(
-              child: Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: context.primaryColor,
-                  ),
-                ),
-              ),
-            )
-          else if (_error != null)
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    _error!,
-                    style: context.bodyOneStyle.copyWith(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            )
-          else if (_attractions.isEmpty)
-            Expanded(
-              child: Center(
-                child: Text(
-                  'Không có kết quả',
-                  style: context.captionStyle.copyWith(
-                    color: context.textSecondaryColor,
-                  ),
-                ),
-              ),
-            )
-          else
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () => _fetchAttractions(widget.searchQuery),
-                color: context.primaryColor,
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final a = filtered[index];
-                    final priceText = a['price']?.toString() ?? '';
-                    final imageUrl = a['imageUrl']?.toString();
-                    final types = (a['types'] is List)
-                        ? (a['types'] as List).map((e) => e.toString()).toList()
-                        : const <String>[];
-
-                    return _AttractionCard(
-                      name: a['name']?.toString() ?? '',
-                      location: a['location']?.toString() ?? '',
-                      rating: _asDouble(a['rating']),
-                      priceText: priceText,
-                      types: types,
-                      imageUrl: imageUrl,
-                      onTap: () => _openAttractionDetail(a),
-                    );
-                  },
-                ),
-              ),
-            ),
+          _buildFilterChips(context),
+          Expanded(child: _buildBody()),
         ],
       ),
     );
   }
 
-  double _asDouble(dynamic v) {
-    if (v is num) return v.toDouble();
-    if (v is String) return double.tryParse(v) ?? 0.0;
-    return 0.0;
+  // Hàng chip giống Hotel: danh mục | ngày | khách | bộ lọc
+  Widget _buildFilterChips(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(
+        children: [
+          _pill(
+            context,
+            icon: LucideIcons.landmark,
+            label: 'Tham quan',
+            selected: true,
+            onTap: () {},
+          ),
+          const SizedBox(width: 8),
+          _pill(
+            context,
+            icon: _hasDate ? LucideIcons.calendarDays : LucideIcons.calendar,
+            label: _hasDate ? '11 thg 6 → 12' : 'Ngày',
+            onTap: () => setState(() => _hasDate = !_hasDate),
+          ),
+          const SizedBox(width: 8),
+          _pill(
+            context,
+            icon: LucideIcons.users,
+            label: _hasGuests ? '2 khách' : 'Khách',
+            onTap: () => setState(() => _hasGuests = !_hasGuests),
+          ),
+          const SizedBox(width: 8),
+          _pill(
+            context,
+            icon: LucideIcons.slidersHorizontal,
+            label: 'Bộ lọc',
+            selected: _hasAnyFilterApplied,
+            onTap: _openFilterSheet,
+          ),
+        ],
+      ),
+    );
   }
 
-  Widget _buildFilterPill() {
-    final active = _hasAnyFilterApplied;
-    return InkWell(
-      onTap: _openFilterSheet,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? context.primaryColor : context.cardBackgroundColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: active ? context.primaryColor : context.dividerColor,
-            width: 1.2,
+  Widget _buildBody() {
+    final filtered = _filteredAttractions;
+
+    if (_loading) {
+      return Center(
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: context.primaryColor,
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              LucideIcons.slidersHorizontal,
-              size: 16,
-              color: active
-                  ? context.buttonTextColor
-                  : context.textSecondaryColor,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              active ? 'Bộ lọc *' : 'Bộ lọc',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: active
-                    ? context.buttonTextColor
-                    : context.textSecondaryColor,
-              ),
-            ),
-          ],
+      );
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            _error!,
+            style: context.bodyOneStyle.copyWith(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
         ),
+      );
+    }
+    if (_attractions.isEmpty) {
+      return Center(
+        child: Text(
+          'Không có kết quả',
+          style: context.captionStyle.copyWith(
+            color: context.textSecondaryColor,
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => _fetchAttractions(widget.searchQuery),
+      color: context.primaryColor,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: filtered.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 16),
+        itemBuilder: (context, index) {
+          final a = filtered[index];
+          final name = a['name']?.toString() ?? '';
+          final rating = _getRatingString(a['rating']);
+          final reviews = a['reviews']?.toString() ?? ''; // backend chưa có
+          final priceText = a['price']?.toString() ?? '';
+          final imageUrl = a['imageUrl']?.toString();
+          final fallbackAsset =
+              'assets/images/onboarding${(index % 4) + 1}.png';
+
+          return _AttractionCard(
+            imageUrl: imageUrl,
+            fallbackAsset: fallbackAsset,
+            name: name,
+            rating: rating,
+            reviews: reviews,
+            price: priceText,
+            onTap: () => _openAttractionDetail(a),
+          );
+        },
       ),
     );
   }
@@ -702,7 +673,7 @@ class _AttractionOverviewSearchScreenState
           final currency = (m['currencyCode'] ?? '').toString().toUpperCase();
 
           // Chuyển giá về string hiển thị + số nguyên để lọc
-          final displayPrice = _formatPrice(price, currency);
+          final displayPrice = _formatApiPrice(price, currency);
           final priceInt = _toInt(price);
 
           return {
@@ -745,7 +716,7 @@ class _AttractionOverviewSearchScreenState
     return int.tryParse(s) ?? 0;
   }
 
-  String _formatPrice(dynamic price, String currency) {
+  String _formatApiPrice(dynamic price, String currency) {
     if (price == null) return '';
     num? n;
     if (price is num) {
@@ -760,189 +731,53 @@ class _AttractionOverviewSearchScreenState
     if (currency.isEmpty) return n.toString();
     return '$n $currency';
   }
-}
 
-class _AttractionCard extends StatelessWidget {
-  final String name;
-  final String location;
-  final double rating;
-  final String priceText;
-  final List<String> types;
-  final String? imageUrl;
-  final VoidCallback onTap;
+  String _getRatingString(dynamic rating) {
+    if (rating == null) return '0.0';
+    if (rating is String) return rating;
+    if (rating is num) return rating.toString();
+    return '0.0';
+  }
 
-  const _AttractionCard({
-    required this.name,
-    required this.location,
-    required this.rating,
-    required this.priceText,
-    required this.types,
-    required this.imageUrl,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: context.cardBackgroundColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: context.dividerColor.withValues(alpha: 0.25)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+  // Chip helper giống Hotel
+  Widget _pill(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    bool selected = false,
+    VoidCallback? onTap,
+  }) {
+    final bg = selected ? context.primaryColor : context.cardBackgroundColor;
+    final fg = selected ? context.buttonTextColor : context.textSecondaryColor;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: selected ? context.primaryColor : context.dividerColor,
+            width: 1.2,
           ),
-        ],
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Column(
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(18),
-              ),
-              child: Stack(
-                children: [
-                  if (imageUrl != null && imageUrl!.startsWith('http'))
-                    Image.network(
-                      imageUrl!,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _fallbackImage(context),
-                    )
-                  else
-                    _fallbackImage(context),
-                  Positioned(
-                    left: 10,
-                    top: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            LucideIcons.star,
-                            size: 14,
-                            color: context.warningAlertColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            rating.toStringAsFixed(1),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      color: context.textPrimaryColor,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        LucideIcons.mapPin,
-                        size: 14,
-                        color: context.textSecondaryColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          location,
-                          style: TextStyle(
-                            color: context.textSecondaryColor,
-                            fontSize: 12,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: types.take(4).map((t) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: context.cardBackgroundColor,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: context.dividerColor.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Text(
-                          t,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: context.textSecondaryColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Icon(
-                        LucideIcons.ticket,
-                        size: 16,
-                        color: context.primaryColor,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        priceText.isEmpty ? '—' : priceText,
-                        style: TextStyle(
-                          color: context.primaryColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        LucideIcons.chevronRight,
-                        size: 18,
-                        color: context.textSecondaryColor,
-                      ),
-                    ],
-                  ),
-                ],
+            Icon(icon, size: 18, color: fg),
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 140),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.bodyTwoStyle.copyWith(
+                  color: fg,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -950,13 +785,186 @@ class _AttractionCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _fallbackImage(BuildContext context) {
+// Thống nhất fallback ảnh với các service khác
+Widget _imageFallback(BuildContext context) {
+  return Container(
+    height: 180,
+    color: context.primaryColor.withValues(alpha: 0.08),
+    alignment: Alignment.center,
+    child: Icon(LucideIcons.image, color: context.primaryColor),
+  );
+}
+
+class _AttractionCard extends StatelessWidget {
+  final String? imageUrl;
+  final String fallbackAsset;
+  final String name;
+  final String rating;
+  final String reviews;
+  final String price;
+  final VoidCallback onTap;
+
+  const _AttractionCard({
+    required this.imageUrl,
+    required this.fallbackAsset,
+    required this.name,
+    required this.rating,
+    required this.reviews,
+    required this.price,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasNetwork = (imageUrl ?? '').startsWith('http');
+
     return Container(
-      height: 180,
-      color: context.primaryColor.withValues(alpha: 0.08),
-      alignment: Alignment.center,
-      child: Icon(LucideIcons.image, color: context.primaryColor),
+      decoration: BoxDecoration(
+        color: context.cardBackgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.dividerColor.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Ảnh + nút tim (giống hotel)
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                child: hasNetwork
+                    ? Image.network(
+                        imageUrl!,
+                        height: 180,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _imageFallback(context),
+                      )
+                    : Image.asset(
+                        fallbackAsset,
+                        height: 180,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _imageFallback(context),
+                      ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: context.cardBackgroundColor.withValues(alpha: 0.9),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: context.dividerColor),
+                  ),
+                  child: Icon(
+                    LucideIcons.heart,
+                    size: 18,
+                    color: context.textSecondaryColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // Tên
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+            child: Text(
+              name,
+              style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // Hàng rating + reviews (giữ cùng layout hotel)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Icon(Icons.star_rounded, color: context.primaryColor, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  rating,
+                  style: context.captionStyle.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    5,
+                    (i) => Icon(
+                      i < 3 ? Icons.star_rounded : Icons.star_border_rounded,
+                      color: context.primaryColor,
+                      size: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    reviews,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.captionStyle.copyWith(
+                      color: context.textSecondaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Hàng giá (match hotel)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Text(
+                  'Giá từ:',
+                  style: context.captionStyle.copyWith(
+                    color: context.textSecondaryColor,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  price.isEmpty ? '—' : price,
+                  style: context.bodyOneStyle.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // CTA (match hotel)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: SizedBox(
+              height: 44,
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.primaryColor,
+                  foregroundColor: context.buttonTextColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                onPressed: onTap,
+                child: Text('Xem điểm tham quan', style: context.buttonStyle),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
