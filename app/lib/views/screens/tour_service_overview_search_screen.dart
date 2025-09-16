@@ -5,6 +5,11 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 
+// Added: use the centralized API just like other screens (hotel/attraction)
+import 'package:app/services/search_api_service.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class TourServiceOverviewScreen extends StatefulWidget {
   final String searchQuery;
   const TourServiceOverviewScreen({super.key, required this.searchQuery});
@@ -63,43 +68,12 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
     _TagOption('Xe lăn', LucideIcons.accessibility),
   ];
 
-  // Mock data
-  final List<Map<String, dynamic>> _tours = List.generate(8, (i) {
-    final names = [
-      'City tour Nha Trang cổ',
-      'Khám phá đảo Bình Ba',
-      'Trải nghiệm ẩm thực địa phương',
-      'Du ngoạn vịnh bằng du thuyền',
-      'Thác Yang Bay & văn hóa',
-      'Tour mạo hiểm leo núi',
-      'Wellness & suối khoáng nóng',
-      'Nightlife & phố biển',
-    ];
-    final types = [
-      'City tour',
-      'Đảo/biển',
-      'Ẩm thực',
-      'Du thuyền',
-      'Văn hoá',
-      'Mạo hiểm',
-      'Wellness',
-      'Nightlife',
-    ];
-    final difficulties = ['Dễ', 'Dễ', 'Dễ', 'Vừa', 'Vừa', 'Khó', 'Dễ', 'Vừa'];
-    final base = 750000 + i * 150000;
-    return {
-      'name': names[i],
-      'type': types[i],
-      'difficulty': difficulties[i],
-      'rating': (4.1 + (i * 0.1)).toStringAsFixed(1),
-      'reviews': '(${1200 + i * 57})',
-      'price': '$base đ',
-      'basePrice': base,
-      'durationDays': (i % 5) + 1,
-      'duration': '${(i % 5) + 1} ngày',
-      'image': 'assets/images/onboarding${(i % 4) + 1}.png',
-    };
-  });
+  // Dynamic data fetched from API (replaces static mock list)
+  List<Map<String, dynamic>> _tours = [];
+
+  // Lightweight loading/error state (kept inside list area)
+  bool _loading = false;
+  String? _error;
 
   bool get _hasAnyFilterApplied {
     return _priceRange.start > _minPrice ||
@@ -117,18 +91,29 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
 
   List<Map<String, dynamic>> get _filteredTours {
     return _tours.where((t) {
-      final price = (t['basePrice'] as int).toDouble();
+      final price = (t['basePrice'] as num?)?.toDouble() ?? 0;
       if (price < _priceRange.start || price > _priceRange.end) return false;
-      final d = (t['durationDays'] as int).toDouble();
+      final d = (t['durationDays'] as num?)?.toDouble() ?? 1;
       if (d < _durationRange.start || d > _durationRange.end) return false;
       if (_selectedTourTypes.isNotEmpty &&
-          !_selectedTourTypes.contains(t['type']))
+          !_selectedTourTypes.contains(t['type'])) {
         return false;
+      }
       if (_difficulty != null && t['difficulty'] != _difficulty) return false;
-      if (_inStockOnly && d == 5) return false; // ví dụ chặn
-      // _selectedServices không gắn thực vào mock -> bỏ qua
+      if (_inStockOnly && t['inStock'] == false) return false;
+      if (_freeCancellation && t['freeCancellation'] == false) return false;
+      if (_instantConfirmation && t['instantConfirmation'] == false)
+        return false;
+      if (_hotelPickup && t['hotelPickup'] == false) return false;
+      // _selectedServices left as visual chips; backend mapping can be added later if available
       return true;
     }).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTours(widget.searchQuery);
   }
 
   @override
@@ -170,30 +155,71 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
               ),
             ),
           Expanded(
-            child: tours.isEmpty
-                ? _emptyState(context)
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: tours.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 16),
-                    itemBuilder: (context, i) {
-                      final t = tours[i];
-                      return InkWell(
-                        onTap: () => _openTourDetail(t),
-                        borderRadius: BorderRadius.circular(16),
-                        child: _TourCard(
-                          imagePath: t['image']!,
-                          name: t['name']!,
-                          type: t['type']!,
-                          rating: t['rating']!,
-                          reviews: t['reviews']!,
-                          price: t['price']!,
-                          duration: t['duration']!,
-                          onViewPressed: () => _openTourDetail(t),
-                        ),
-                      );
-                    },
-                  ),
+            child: _loading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: context.primaryColor,
+                    ),
+                  )
+                : (_error != null)
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            LucideIcons.alertCircle,
+                            color: Colors.redAccent,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: context.bodyOneStyle.copyWith(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: () => _fetchTours(widget.searchQuery),
+                            icon: const Icon(LucideIcons.refreshCw, size: 16),
+                            label: Text('Thử lại', style: context.buttonStyle),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : (tours.isEmpty
+                      ? _emptyState(context)
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          itemCount: tours.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 16),
+                          itemBuilder: (context, i) {
+                            final t = tours[i];
+                            return InkWell(
+                              onTap: () => _openTourDetail(t),
+                              borderRadius: BorderRadius.circular(16),
+                              child: _TourCard(
+                                // Keep your existing card API intact
+                                imagePath:
+                                    t['image'] ??
+                                    'assets/images/onboarding1.png',
+                                name: t['name'] ?? '',
+                                type: t['type'] ?? 'City tour',
+                                rating: t['rating'] ?? '0.0',
+                                reviews: t['reviews'] ?? '(0)',
+                                price: t['price'] ?? '',
+                                duration: t['duration'] ?? '1 ngày',
+                                onViewPressed: () => _openTourDetail(t),
+                              ),
+                            );
+                          },
+                        )),
           ),
         ],
       ),
@@ -202,6 +228,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
 
   // Navigation to tour detail
   void _openTourDetail(Map<String, dynamic> tour) {
+    // Pass-through the mapped tour data; detail screen uses fields like name, location, rating, price, image, duration, description
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => TourServiceDetailScreen(
@@ -311,7 +338,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
     );
   }
 
-  // Bottom sheet
+  // Bottom sheet (unchanged UI)
   Future<void> _openFilterSheet(BuildContext context) async {
     RangeValues price = _priceRange;
     RangeValues duration = _durationRange;
@@ -825,6 +852,167 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
         ),
       ),
     );
+  }
+
+  // ===== API and mapping =====
+  Future<void> _fetchTours(String query) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+      _tours = [];
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final api = SearchApiService(dio: Dio(), prefs: prefs);
+
+      final data = await api.search(q: query);
+
+      List<Map<String, dynamic>> tours = [];
+      if (data['tours'] is List) {
+        tours = List.from(data['tours']).map<Map<String, dynamic>>((e) {
+          final m = Map<String, dynamic>.from(e);
+
+          final dynamic priceRaw = m['price'];
+          final String? currency = m['currencyCode']?.toString();
+
+          final name = m['name']?.toString() ?? '';
+          final rating = _getRatingString(m['ratingAverage']);
+          final reviewsRaw =
+              m['reviews'] ?? m['reviewCount'] ?? m['totalReviews'] ?? 0;
+          final reviews = '(${reviewsRaw.toString()})';
+
+          final location =
+              m['location']?.toString() ??
+              m['city']?.toString() ??
+              m['area']?.toString() ??
+              '';
+
+          // Prefer server image fields; fall back to asset so current card (Image.asset) still works
+          final networkImage =
+              m['imageUrl']?.toString() ??
+              m['thumbnailUrl']?.toString() ??
+              m['image']?.toString() ??
+              '';
+          final image = networkImage.startsWith('http')
+              ? 'assets/images/onboarding1.png'
+              : (networkImage.isNotEmpty
+                    ? networkImage
+                    : 'assets/images/onboarding1.png');
+
+          final description =
+              m['description']?.toString() ?? 'Tour tại $location';
+
+          // Duration mapping
+          final durationText =
+              m['duration']?.toString() ??
+              m['durationText']?.toString() ??
+              _guessDurationText(m);
+          final durationDays = _durationToDays(m['durationDays'], durationText);
+
+          // Price mapping
+          final price = _formatPrice(priceRaw, currency);
+          final basePrice = _toBasePrice(priceRaw, price);
+
+          final type =
+              m['type']?.toString() ?? m['category']?.toString() ?? 'City tour';
+
+          // Optional flags
+          final freeCancel =
+              m['freeCancellation'] == true || m['free_cancel'] == true;
+          final instantConfirm =
+              m['instantConfirmation'] == true || m['instant'] == true;
+          final pickup = m['hotelPickup'] == true || m['pickup'] == true;
+          final inStock = m['inStock'] != false; // default true
+
+          return {
+            'name': name,
+            'type': type,
+            'difficulty': m['difficulty']?.toString(),
+            'rating': rating,
+            'reviews': reviews,
+            'price': price,
+            'basePrice': basePrice,
+            'durationDays': durationDays,
+            'duration': durationText,
+            'image': image, // keep asset-compatible path for the current card
+            'location': location,
+            'description': description,
+            'freeCancellation': freeCancel,
+            'instantConfirmation': instantConfirm,
+            'hotelPickup': pickup,
+            'inStock': inStock,
+          };
+        }).toList();
+      }
+
+      setState(() {
+        _tours = tours;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = 'Không thể tải dữ liệu. Vui lòng thử lại hoặc đăng nhập.';
+      });
+    }
+  }
+
+  // Utils used for mapping
+  String _getRatingString(dynamic rating) {
+    if (rating == null) return '0.0';
+    if (rating is String) return rating;
+    if (rating is num) return rating.toString();
+    return '0.0';
+  }
+
+  String _formatPrice(dynamic price, String? currency) {
+    if (price == null) return '';
+    num? n;
+    if (price is num) {
+      n = price;
+    } else {
+      n = num.tryParse(price.toString());
+    }
+    if (n == null) return price.toString();
+    final c = (currency ?? '').toUpperCase();
+    if (c == 'VND' || c == 'VNĐ') {
+      return '${n.toStringAsFixed(0)} đ';
+    }
+    if (c.isEmpty) return n.toString();
+    return '$n $c';
+  }
+
+  int _toBasePrice(dynamic priceDynamic, String formatted) {
+    if (priceDynamic is num) return priceDynamic.round();
+    final digits = formatted.replaceAll(RegExp(r'[^\d]'), '');
+    return int.tryParse(digits) ?? 0;
+  }
+
+  String _guessDurationText(Map<String, dynamic> m) {
+    final d = m['days'] ?? m['durationDays'];
+    if (d is num) return '${d.round()} ngày';
+    final h = m['hours'] ?? m['durationHours'];
+    if (h is num) return '${h.round()} giờ';
+    return '1 ngày';
+  }
+
+  double _durationToDays(dynamic raw, String text) {
+    if (raw is num) return raw.toDouble();
+    final matchDays = RegExp(
+      r'(\d+)\s*ng[aà]y',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (matchDays != null) return double.tryParse(matchDays.group(1)!) ?? 1;
+    final matchHours = RegExp(
+      r'(\d+)\s*gi[ơo]?',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (matchHours != null) {
+      final h = double.tryParse(matchHours.group(1)!) ?? 24;
+      return (h / 24).clamp(0.5, 10.0);
+    }
+    return 1;
   }
 }
 
