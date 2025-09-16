@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// API centralized (reused from General/Search Overview)
+import 'package:app/services/search_api_service.dart';
 
 class SearchMapScreen extends StatefulWidget {
   final String searchQuery;
@@ -17,58 +22,23 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
       DraggableScrollableController();
   int? selectedPinIndex;
 
-  // Dữ liệu mẫu cho các địa điểm trên bản đồ
-  final List<Map<String, dynamic>> _mapLocations = [
-    {
-      'id': 1,
-      'name': 'Vinpearl Land Nha Trang',
-      'type': 'Hoạt động giải trí',
-      'rating': 4.4,
-      'price': '800.000đ',
-      'image': 'assets/images/onboarding3.png',
-      'position': const Offset(0.3, 0.4),
-    },
-    {
-      'id': 2,
-      'name': 'Mia Resort Nha Trang',
-      'type': 'Khách sạn',
-      'rating': 4.2,
-      'price': '2.500.000đ/đêm',
-      'image': 'assets/images/onboarding2.png',
-      'position': const Offset(0.6, 0.3),
-    },
-    {
-      'id': 3,
-      'name': 'Sailing Club Restaurant',
-      'type': 'Nhà hàng',
-      'rating': 4.5,
-      'price': '500.000đ',
-      'image': 'assets/images/onboarding1.png',
-      'position': const Offset(0.5, 0.6),
-    },
-    {
-      'id': 4,
-      'name': 'Tour 4 đảo Nha Trang',
-      'type': 'Tour dịch vụ',
-      'rating': 4.3,
-      'price': '650.000đ',
-      'image': 'assets/images/onboarding4.png',
-      'position': const Offset(0.7, 0.7),
-    },
-    {
-      'id': 5,
-      'name': 'Tháp Bà Ponagar',
-      'type': 'Hoạt động giải trí',
-      'rating': 4.1,
-      'price': '50.000đ',
-      'image': 'assets/images/onboarding3.png',
-      'position': const Offset(0.4, 0.2),
-    },
-  ];
+  // Trạng thái tải
+  bool _loading = false;
+  String? _error;
+
+  // Danh sách item động hiển thị dưới sheet và trên “bản đồ”
+  // Mỗi item: { id, name, category, typeLabel, rating, price, imageUrl, assetImage, position(Offset) }
+  final List<Map<String, dynamic>> _items = [];
 
   // Chiều cao ước tính của một item và header
   final double _estimatedItemHeight = 100;
   final double _headerHeight = 96;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMapData(widget.searchQuery);
+  }
 
   @override
   void dispose() {
@@ -88,7 +58,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
       backgroundColor: context.backgroundColor,
       body: Stack(
         children: [
-          // Bản đồ chính
+          // Bản đồ chính (ảnh placeholder)
           _buildMapView(context),
 
           // Header với nút back và search
@@ -141,7 +111,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
               ),
               IconButton(
                 onPressed: () {
-                  // Xử lý search trên bản đồ
+                  // Có thể mở ô nhập để tìm lại trên bản đồ nếu muốn
                 },
                 icon: Icon(LucideIcons.search, color: context.textPrimaryColor),
               ),
@@ -152,16 +122,14 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
     );
   }
 
-  // Bản đồ với các pin địa điểm
+  // Bản đồ với các pin địa điểm (từ dữ liệu dynamic)
   Widget _buildMapView(BuildContext context) {
     return Container(
       width: double.infinity,
       height: double.infinity,
       decoration: const BoxDecoration(
         image: DecorationImage(
-          image: AssetImage(
-            'assets/images/onboarding1.png',
-          ), // Ảnh nền giả lập bản đồ
+          image: AssetImage('assets/images/onboarding1.png'), // ảnh nền giả lập
           fit: BoxFit.cover,
         ),
       ),
@@ -177,9 +145,9 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
           ),
         ),
         child: Stack(
-          children: _mapLocations.asMap().entries.map((entry) {
-            int index = entry.key;
-            Map<String, dynamic> location = entry.value;
+          children: _items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final location = entry.value;
             return _buildMapPin(context, location, index);
           }).toList(),
         ),
@@ -193,8 +161,9 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
     Map<String, dynamic> location,
     int index,
   ) {
-    bool isSelected = selectedPinIndex == index;
-    Offset position = location['position'];
+    final bool isSelected = selectedPinIndex == index;
+    final Offset position =
+        location['position'] as Offset? ?? const Offset(0.5, 0.5);
 
     return Positioned(
       left: MediaQuery.of(context).size.width * position.dx - 25,
@@ -224,7 +193,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
                   ],
                 ),
                 child: Text(
-                  location['name'],
+                  location['name']?.toString() ?? '',
                   style: context.captionStyle.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.textPrimaryColor,
@@ -253,7 +222,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
                 ],
               ),
               child: Icon(
-                _getIconForType(location['type']),
+                _getIconForType(location['type']?.toString() ?? ''),
                 color: isSelected ? Colors.white : context.primaryColor,
                 size: 24,
               ),
@@ -264,9 +233,9 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
     );
   }
 
-  // Lấy icon theo loại địa điểm
-  IconData _getIconForType(String type) {
-    switch (type) {
+  // Lấy icon theo loại địa điểm (hiển thị typeLabel tiếng Việt)
+  IconData _getIconForType(String typeLabel) {
+    switch (typeLabel) {
       case 'Tour dịch vụ':
         return LucideIcons.bus;
       case 'Khách sạn':
@@ -305,14 +274,12 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
           ),
           child: Column(
             children: [
-              // Expanded drag handle area
+              // Drag handle
               GestureDetector(
-                onVerticalDragUpdate: (details) {
-                  // This allows dragging from the entire header area
-                },
+                onVerticalDragUpdate: (_) {},
                 child: Container(
                   color: Colors.transparent,
-                  height: 40, // Increased height for easier dragging
+                  height: 40,
                   child: Center(
                     child: Container(
                       width: 40,
@@ -327,7 +294,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
                 ),
               ),
 
-              // Tiêu đề
+              // Tiêu đề + số lượng
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: Row(
@@ -340,44 +307,77 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
                       ),
                     ),
                     const Spacer(),
-                    Text(
-                      '${_mapLocations.length} địa điểm',
-                      style: context.captionStyle.copyWith(
-                        color: context.textSecondaryColor,
+                    if (_loading)
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: context.primaryColor,
+                        ),
+                      )
+                    else
+                      Text(
+                        '${_items.length} địa điểm',
+                        style: context.captionStyle.copyWith(
+                          color: context.textSecondaryColor,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
 
-              // Danh sách kết quả với physics để xử lý cả drag và scroll
-              Expanded(
-                child: NotificationListener<DraggableScrollableNotification>(
-                  onNotification: (notification) {
-                    // Cho phép bottom sheet kéo khi scroll đến đầu hoặc cuối
-                    return true;
-                  },
-                  child: ListView.separated(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    physics: const ClampingScrollPhysics(),
-                    itemCount: _mapLocations.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      return _buildLocationCard(
-                        context,
-                        _mapLocations[index],
-                        index,
-                      );
-                    },
-                  ),
-                ),
-              ),
+              // Nội dung: lỗi / rỗng / danh sách
+              Expanded(child: _buildBottomSheetContent(scrollController)),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBottomSheetContent(ScrollController scrollController) {
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            _error!,
+            style: context.bodyOneStyle.copyWith(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    if (_loading) {
+      // Để đồng bộ với tiêu đề đã có spinner, vẫn hiển thị loading nếu muốn
+      return const SizedBox.shrink();
+    }
+
+    if (_items.isEmpty) {
+      return Center(
+        child: Text(
+          'Không có kết quả',
+          style: context.captionStyle.copyWith(
+            color: context.textSecondaryColor,
+          ),
+        ),
+      );
+    }
+
+    return NotificationListener<DraggableScrollableNotification>(
+      onNotification: (_) => true,
+      child: ListView.separated(
+        controller: scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        physics: const ClampingScrollPhysics(),
+        itemCount: _items.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          return _buildLocationCard(context, _items[index], index);
+        },
+      ),
     );
   }
 
@@ -387,7 +387,9 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
     Map<String, dynamic> location,
     int index,
   ) {
-    bool isSelected = selectedPinIndex == index;
+    final bool isSelected = selectedPinIndex == index;
+    final imageUrl = (location['imageUrl'] ?? '').toString();
+    final hasNetwork = imageUrl.startsWith('http');
 
     return Container(
       decoration: BoxDecoration(
@@ -407,6 +409,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
           setState(() {
             selectedPinIndex = index;
           });
+          // Optional: scroll tới pin tương ứng (đã expand trong _showPinDetails khi tap pin)
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -415,23 +418,23 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  location['image'] ?? 'assets/images/onboarding1.png',
-                  width: 60,
-                  height: 60,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 60,
-                      height: 60,
-                      color: context.primaryColor.withValues(alpha: 0.1),
-                      child: Icon(
-                        LucideIcons.image,
-                        color: context.primaryColor,
+                child: hasNetwork
+                    ? Image.network(
+                        imageUrl,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _imageFallback(context),
+                      )
+                    : Image.asset(
+                        (location['assetImage'] ??
+                                'assets/images/onboarding1.png')
+                            .toString(),
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _imageFallback(context),
                       ),
-                    );
-                  },
-                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -439,7 +442,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      location['name'] ?? '',
+                      location['name']?.toString() ?? '',
                       style: context.bodyOneStyle.copyWith(
                         fontWeight: FontWeight.w600,
                         color: context.textPrimaryColor,
@@ -449,7 +452,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      location['type'] ?? '',
+                      location['type']?.toString() ?? '',
                       style: context.captionStyle.copyWith(
                         color: context.textSecondaryColor,
                       ),
@@ -464,27 +467,30 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          location['rating']?.toString() ?? '4.0',
+                          _getRatingString(location['rating']),
                           style: context.captionStyle.copyWith(
                             fontWeight: FontWeight.w600,
                             color: context.textPrimaryColor,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          location['price'] ?? '',
-                          style: context.captionStyle.copyWith(
-                            color: context.primaryColor,
-                            fontWeight: FontWeight.w600,
+                        if ((location['price']?.toString() ?? '')
+                            .isNotEmpty) ...[
+                          const SizedBox(width: 12),
+                          Text(
+                            location['price'].toString(),
+                            style: context.captionStyle.copyWith(
+                              color: context.primaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ],
                 ),
               ),
               Icon(
-                _getIconForType(location['type']),
+                _getIconForType(location['type']?.toString() ?? ''),
                 color: context.primaryColor,
                 size: 20,
               ),
@@ -492,6 +498,15 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _imageFallback(BuildContext context) {
+    return Container(
+      width: 60,
+      height: 60,
+      color: context.primaryColor.withValues(alpha: 0.1),
+      child: Icon(LucideIcons.image, color: context.primaryColor),
     );
   }
 
@@ -503,5 +518,166 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+  }
+
+  // ===== API + Mapping =====
+  Future<void> _fetchMapData(String query) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final api = SearchApiService(dio: Dio(), prefs: prefs);
+      final data = await api.search(q: query);
+
+      final List<Map<String, dynamic>> items = [];
+
+      // Helper: vị trí phân bố pin (giả lập) theo index
+      final positions = _predefinedPositions();
+
+      int idx = 0;
+
+      // Hotels
+      if (data['hotels'] is List) {
+        for (final e in List.from(data['hotels'])) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          items.add({
+            'id': 'hotel_$idx',
+            'name': m['title']?.toString() ?? '',
+            'category': 'hotel',
+            'type': 'Khách sạn',
+            'rating': m['ratingAverage'],
+            'price': _formatPrice(price, currency),
+            'imageUrl': m['thumbnailUrl'],
+            'assetImage': 'assets/images/onboarding2.png',
+            'position': positions[idx % positions.length],
+          });
+          idx++;
+        }
+      }
+
+      // Restaurants
+      if (data['restaurants'] is List) {
+        for (final e in List.from(data['restaurants'])) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          items.add({
+            'id': 'restaurant_$idx',
+            'name': m['title']?.toString() ?? '',
+            'category': 'restaurant',
+            'type': 'Nhà hàng',
+            'rating': m['ratingAverage'],
+            'price': _formatPrice(price, currency),
+            'imageUrl': m['thumbnailUrl'],
+            'assetImage': 'assets/images/onboarding1.png',
+            'position': positions[idx % positions.length],
+          });
+          idx++;
+        }
+      }
+
+      // Tours
+      if (data['tours'] is List) {
+        for (final e in List.from(data['tours'])) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          items.add({
+            'id': 'tour_$idx',
+            'name': m['title']?.toString() ?? '',
+            'category': 'tour',
+            'type': 'Tour dịch vụ',
+            'rating': m['ratingAverage'],
+            'price': _formatPrice(price, currency),
+            'imageUrl': m['thumbnailUrl'],
+            'assetImage': 'assets/images/onboarding4.png',
+            'position': positions[idx % positions.length],
+          });
+          idx++;
+        }
+      }
+
+      // Attractions
+      if (data['attractions'] is List) {
+        for (final e in List.from(data['attractions'])) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          items.add({
+            'id': 'attraction_$idx',
+            'name': m['title']?.toString() ?? '',
+            'category': 'attraction',
+            'type': 'Hoạt động giải trí',
+            'rating': m['ratingAverage'],
+            'price': _formatPrice(price, currency),
+            'imageUrl': m['thumbnailUrl'],
+            'assetImage': 'assets/images/onboarding3.png',
+            'position': positions[idx % positions.length],
+          });
+          idx++;
+        }
+      }
+
+      setState(() {
+        _items
+          ..clear()
+          ..addAll(items);
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error =
+            'Không thể tải dữ liệu bản đồ. Vui lòng thử lại hoặc đăng nhập.';
+      });
+    }
+  }
+
+  // Vị trí pin “giả lập” trải đều màn hình
+  List<Offset> _predefinedPositions() {
+    return const [
+      Offset(0.25, 0.30),
+      Offset(0.60, 0.28),
+      Offset(0.45, 0.55),
+      Offset(0.70, 0.70),
+      Offset(0.40, 0.20),
+      Offset(0.15, 0.45),
+      Offset(0.80, 0.40),
+      Offset(0.30, 0.75),
+      Offset(0.55, 0.60),
+      Offset(0.20, 0.65),
+      Offset(0.85, 0.25),
+      Offset(0.65, 0.50),
+    ];
+  }
+
+  // ===== Utils =====
+  String _getRatingString(dynamic rating) {
+    if (rating == null) return '0.0';
+    if (rating is String) return rating;
+    if (rating is num) return rating.toString();
+    return '0.0';
+  }
+
+  String _formatPrice(dynamic price, String? currency) {
+    if (price == null) return '';
+    num? n;
+    if (price is num) {
+      n = price;
+    } else {
+      n = num.tryParse(price.toString());
+    }
+    if (n == null) return price.toString();
+    final c = (currency ?? '').toUpperCase();
+    if (c == 'VND' || c == 'VNĐ') {
+      return '${n.toStringAsFixed(0)} đ';
+    }
+    if (c.isEmpty) return n.toString();
+    return '$n $c';
   }
 }
