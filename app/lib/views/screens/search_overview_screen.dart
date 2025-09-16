@@ -9,8 +9,13 @@ import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 import 'package:app/views/screens/search_map_screen.dart';
 import 'package:app/views/screens/tour_service_overview_search_screen.dart';
 import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+
+// API centralized
+import 'package:app/services/search_api_service.dart';
 
 class SearchOverviewScreen extends StatefulWidget {
   final String searchQuery;
@@ -26,11 +31,35 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
 
+  // State
+  bool _loading = false;
+  String? _error;
+  String _currentQuery = '';
+
+  // Area info (if present)
+  String? _areaName;
+  String? _areaCountryOrSlug;
+  String? _areaRating; // backend không trả rating cho area -> fallback '0.0'
+
+  // Lists
+  List<Map<String, dynamic>> _hotels = [];
+  List<Map<String, dynamic>> _restaurants = [];
+  List<Map<String, dynamic>> _tours = [];
+  List<Map<String, dynamic>> _attractions = [];
+
+  bool get _hasAnyResults =>
+      _hotels.isNotEmpty ||
+      _restaurants.isNotEmpty ||
+      _tours.isNotEmpty ||
+      _attractions.isNotEmpty;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
+    _currentQuery = widget.searchQuery;
     _searchController.text = widget.searchQuery;
+    _fetchAll(_currentQuery);
   }
 
   @override
@@ -49,18 +78,45 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
           children: [
             _buildHeader(context),
             _buildTabBar(context),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildOverviewTab(context),
-                  _buildTourServicesTab(context),
-                  _buildHotelsTab(context),
-                  _buildActivitiesTab(context),
-                  _buildRestaurantsTab(context),
-                ],
+            if (_loading)
+              Expanded(
+                child: Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: context.primaryColor,
+                    ),
+                  ),
+                ),
+              )
+            else if (_error != null)
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      _error!,
+                      style: context.bodyOneStyle.copyWith(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildOverviewTab(context),
+                    _buildTourServicesTab(context),
+                    _buildHotelsTab(context),
+                    _buildActivitiesTab(context),
+                    _buildRestaurantsTab(context),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -120,7 +176,12 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
                     ),
                     style: context.bodyOneStyle,
                     onSubmitted: (value) {
-                      // Xử lý tìm kiếm mới
+                      final q = value.trim();
+                      if (q.isEmpty) return;
+                      setState(() {
+                        _currentQuery = q;
+                      });
+                      _fetchAll(q);
                     },
                   ),
                 ),
@@ -141,7 +202,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
     );
   }
 
-  // Tab Bar với các danh mục - THÊM NÚT BẢN ĐỒ
+  // Tab Bar với các danh mục - ẨN NÚT BẢN ĐỒ KHI KHÔNG CÓ KẾT QUẢ
   Widget _buildTabBar(BuildContext context) {
     return Container(
       color: context.cardBackgroundColor,
@@ -159,7 +220,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             unselectedLabelStyle: context.bodyOneStyle,
             indicatorColor: context.primaryColor,
             indicatorWeight: 2,
-            tabs: [
+            tabs: const [
               Tab(text: 'Tổng quan'),
               Tab(text: 'Tour dịch vụ'),
               Tab(text: 'Khách sạn'),
@@ -167,40 +228,58 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
               Tab(text: 'Nhà hàng'),
             ],
           ),
-          // THÊM NÚT BẢN ĐỒ
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // Điều hướng đến trang bản đồ
-                _showMapView(context);
-              },
-              icon: Icon(LucideIcons.map, size: 18, color: Colors.white),
-              label: Text(
-                'Bản đồ',
-                style: context.bodyOneStyle.copyWith(
+          if (_hasAnyResults)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  _showMapView(context);
+                },
+                icon: const Icon(
+                  LucideIcons.map,
+                  size: 18,
                   color: Colors.white,
-                  fontWeight: FontWeight.w600,
                 ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
+                label: Text(
+                  'Bản đồ',
+                  style: context.bodyOneStyle.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  // Tab Tổng quan - hiển thị tất cả loại kết quả
+  // Tab Tổng quan - ẨN HOÀN TOÀN KHI KHÔNG CÓ KẾT QUẢ
   Widget _buildOverviewTab(BuildContext context) {
+    if (!_hasAnyResults) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'Không có kết quả phù hợp',
+            style: context.bodyOneStyle.copyWith(
+              color: context.textSecondaryColor,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -212,7 +291,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             context,
             title: 'Tour dịch vụ',
             icon: LucideIcons.bus,
-            items: _getTourServices(),
+            items: _tours,
             showMoreAction: () => _openTourOverview(context),
             itemType: 'tour',
           ),
@@ -221,17 +300,16 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             context,
             title: 'Khách sạn',
             icon: LucideIcons.building,
-            items: _getHotels(),
+            items: _hotels,
             showMoreAction: () => _openHotelOverview(context),
             itemType: 'hotel',
           ),
           const SizedBox(height: 24),
-          // Dùng AttractionOverview cho "Hoạt động giải trí"
           _buildSectionWithResults(
             context,
             title: 'Hoạt động giải trí',
             icon: LucideIcons.ticket,
-            items: _getActivities(),
+            items: _attractions,
             showMoreAction: () => _openAttractionOverview(context),
             itemType: 'attraction',
           ),
@@ -240,7 +318,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             context,
             title: 'Nhà hàng',
             icon: LucideIcons.utensils,
-            items: _getRestaurants(),
+            items: _restaurants,
             showMoreAction: () => _openRestaurantOverview(context),
             itemType: 'restaurant',
           ),
@@ -252,8 +330,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   void _openTourOverview(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            TourServiceOverviewScreen(searchQuery: widget.searchQuery),
+        builder: (_) => TourServiceOverviewScreen(searchQuery: _currentQuery),
       ),
     );
   }
@@ -261,8 +338,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   void _openHotelOverview(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            HotelOverviewSearchScreen(searchQuery: widget.searchQuery),
+        builder: (_) => HotelOverviewSearchScreen(searchQuery: _currentQuery),
       ),
     );
   }
@@ -271,7 +347,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) =>
-            AttractionOverviewSearchScreen(searchQuery: widget.searchQuery),
+            AttractionOverviewSearchScreen(searchQuery: _currentQuery),
       ),
     );
   }
@@ -280,7 +356,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) =>
-            RestaurantOverviewSearchScreen(searchQuery: widget.searchQuery),
+            RestaurantOverviewSearchScreen(searchQuery: _currentQuery),
       ),
     );
   }
@@ -293,10 +369,12 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
           hotel: {
             'name': hotel['name']?.toString() ?? '',
             'image':
-                hotel['image']?.toString() ?? 'assets/images/onboarding1.png',
+                hotel['image']?.toString() ??
+                hotel['imageUrl']?.toString() ??
+                'assets/images/onboarding1.png',
             'price': hotel['price']?.toString() ?? '—',
           },
-          activeAmenities: {'Wifi miễn phí', 'Bể bơi'},
+          activeAmenities: const {'Wifi miễn phí', 'Bể bơi'},
         ),
       ),
     );
@@ -309,14 +387,15 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
           restaurant: {
             'name': restaurant['name']?.toString() ?? '',
             'location': restaurant['location']?.toString() ?? '',
-            'rating': restaurant['rating']?.toString() ?? '4.0',
+            'rating': _getRatingString(restaurant['rating']),
             'type': 'restaurant',
-            'cuisine': 'Âu', // Default cuisine
-            'price': restaurant['price']?.toString() ?? '100000 đ',
-            'reviews': '(320)', // Default reviews
-            'tag': 'Bar', // Default tag
+            'cuisine': restaurant['cuisine']?.toString() ?? '—',
+            'price': restaurant['price']?.toString() ?? '',
+            'reviews': '(320)', // fallback
+            'tag': restaurant['tag']?.toString() ?? '',
             'image':
                 restaurant['image']?.toString() ??
+                restaurant['imageUrl']?.toString() ??
                 'assets/images/onboarding4.png',
           },
           activeCuisines: const {'Âu'},
@@ -332,14 +411,16 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   }
 
   void _openTourDetail(Map<String, dynamic> tour) {
-    // Convert and ensure proper data types for TourServiceDetailScreen
     final tourData = {
       'name': tour['name']?.toString() ?? '',
       'location': tour['location']?.toString() ?? '',
-      'rating': tour['rating']?.toString() ?? '4.0',
-      'price': tour['price']?.toString() ?? '0đ',
-      'image': tour['image']?.toString() ?? 'assets/images/onboarding1.png',
-      'duration': tour['duration']?.toString() ?? '1 ngày',
+      'rating': _getRatingString(tour['rating']),
+      'price': tour['price']?.toString() ?? '',
+      'image':
+          tour['image']?.toString() ??
+          tour['imageUrl']?.toString() ??
+          'assets/images/onboarding1.png',
+      'duration': tour['duration']?.toString() ?? '',
       'description': tour['description']?.toString() ?? '',
     };
 
@@ -356,24 +437,31 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   }
 
   void _openAttractionDetail(Map<String, dynamic> attraction) {
-    // Convert to proper format for AttractionsOverviewDetailScreen
+    final priceInt = _extractPrice(attraction['price']?.toString() ?? '');
     final attractionData = {
       'name': attraction['name']?.toString() ?? '',
       'location': attraction['location']?.toString() ?? '',
-      'rating': attraction['rating'] is num
-          ? attraction['rating']
-          : double.tryParse(attraction['rating']?.toString() ?? '4.0') ?? 4.0,
-      'price': attraction['price'] != null
-          ? _extractPrice(attraction['price'].toString())
-          : 0,
+      'rating': double.tryParse(_getRatingString(attraction['rating'])) ?? 0.0,
+      'price': priceInt,
       'description':
-          'Điểm tham quan tuyệt vời tại ${attraction['location']?.toString() ?? 'Nha Trang'}',
+          attraction['description']?.toString() ??
+          'Điểm tham quan tại ${attraction['location']?.toString() ?? ''}',
       'image':
-          attraction['image']?.toString() ?? 'assets/images/onboarding3.png',
-      'types': ['Tham quan', 'Giải trí'],
-      'services': ['Chụp ảnh'],
-      'times': ['Sáng', 'Chiều'],
-      'suit': ['Solo', 'Cặp đôi'],
+          attraction['image']?.toString() ??
+          attraction['imageUrl']?.toString() ??
+          'assets/images/onboarding3.png',
+      'types': attraction['types'] is List
+          ? List.from(attraction['types'])
+          : ['Tham quan'],
+      'services': attraction['services'] is List
+          ? List.from(attraction['services'])
+          : ['Chụp ảnh'],
+      'times': attraction['times'] is List
+          ? List.from(attraction['times'])
+          : ['Sáng', 'Chiều'],
+      'suit': attraction['suit'] is List
+          ? List.from(attraction['suit'])
+          : ['Solo', 'Cặp đôi'],
     };
 
     Navigator.of(context).push(
@@ -391,13 +479,16 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
 
   // Helper method to extract price from string
   int _extractPrice(String priceString) {
-    // Remove all non-digit characters and convert to int
     final numbers = priceString.replaceAll(RegExp(r'[^\d]'), '');
     return int.tryParse(numbers) ?? 0;
   }
 
   // Card địa điểm chính
   Widget _buildLocationCard(BuildContext context) {
+    final title = _areaName ?? _currentQuery;
+    final sub = _areaCountryOrSlug ?? 'Việt Nam, Châu Á';
+    final rating = _areaRating ?? '0.0';
+
     return Container(
       width: double.infinity,
       height: 200,
@@ -420,7 +511,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end, // Align content to bottom
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -436,35 +527,35 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
                 ),
               ),
             ),
-            const SizedBox(height: 8), // Reduced from 12
+            const SizedBox(height: 8),
             Text(
-              widget.searchQuery,
+              title,
               style: context.h4Style.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 16, // Reduced font size
+                fontSize: 16,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 6), // Reduced from 8
+            const SizedBox(height: 6),
             Text(
-              'Nha Trang nổi tiếng nhất với những bãi biển cát trắng mịn, làn nước trong xanh, công viên giải trí, cở sở vui chơi và những tòm bùn, chơi golf và khu nghỉ dưỡng.',
+              'Khám phá các địa điểm nổi bật và dịch vụ tại đây.',
               style: context.bodyTwoStyle.copyWith(
                 color: Colors.white.withValues(alpha: 0.9),
-                height: 1.3, // Reduced line height
-                fontSize: 11, // Reduced font size
+                height: 1.3,
+                fontSize: 11,
               ),
-              maxLines: 2, // Reduced from 3
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 12), // Reduced from 16
+            const SizedBox(height: 12),
             Wrap(
-              spacing: 8, // Reduced spacing
-              runSpacing: 4, // Added run spacing
+              spacing: 8,
+              runSpacing: 4,
               children: [
-                _buildInfoChip(context, LucideIcons.star, '4.1'),
-                _buildInfoChip(context, LucideIcons.mapPin, 'Việt Nam, Châu Á'),
+                _buildInfoChip(context, LucideIcons.star, rating),
+                _buildInfoChip(context, LucideIcons.mapPin, sub),
               ],
             ),
           ],
@@ -501,15 +592,17 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
     );
   }
 
-  // Section với kết quả và nút "Xem thêm"
+  // Section với kết quả và nút "Xem thêm" (ẩn nút khi items trống)
   Widget _buildSectionWithResults(
     BuildContext context, {
     required String title,
     required IconData icon,
     required List<Map<String, dynamic>> items,
     required VoidCallback showMoreAction,
-    required String itemType, // Add itemType parameter
+    required String itemType,
   }) {
+    final hasItems = items.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -525,41 +618,49 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
               ),
             ),
             const Spacer(),
-            TextButton(
-              onPressed: showMoreAction,
-              child: Text(
-                'Xem thêm',
-                style: context.captionStyle.copyWith(
-                  color: context.primaryColor,
-                  fontWeight: FontWeight.w600,
+            if (hasItems)
+              TextButton(
+                onPressed: showMoreAction,
+                child: Text(
+                  'Xem thêm',
+                  style: context.captionStyle.copyWith(
+                    color: context.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
-        ...items
-            .take(2)
-            .map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildResultCard(
-                  context,
-                  item,
-                  itemType,
-                ), // Pass itemType
-              ),
+        if (!hasItems)
+          Text(
+            'Không có kết quả',
+            style: context.captionStyle.copyWith(
+              color: context.textSecondaryColor,
             ),
+          )
+        else
+          ...items
+              .take(2)
+              .map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildResultCard(context, item, itemType),
+                ),
+              ),
       ],
     );
   }
 
-  // Card kết quả tìm kiếm - UPDATED WITH NAVIGATION
+  // Card kết quả tìm kiếm - ưu tiên imageUrl nếu có
   Widget _buildResultCard(
     BuildContext context,
     Map<String, dynamic> item,
     String itemType,
   ) {
+    final imageUrl = (item['imageUrl'] ?? '').toString();
+    final hasNetwork = imageUrl.startsWith('http');
+
     return Container(
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
@@ -568,7 +669,6 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
       ),
       child: InkWell(
         onTap: () {
-          // Navigate to appropriate detail screen based on itemType
           switch (itemType) {
             case 'hotel':
               _openHotelDetail(item);
@@ -593,23 +693,22 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  item['image'] ?? 'assets/images/onboarding1.png',
-                  width: 60,
-                  height: 60,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 60,
-                      height: 60,
-                      color: context.primaryColor.withValues(alpha: 0.1),
-                      child: Icon(
-                        LucideIcons.image,
-                        color: context.primaryColor,
+                child: hasNetwork
+                    ? Image.network(
+                        imageUrl,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _imageFallback(context),
+                      )
+                    : Image.asset(
+                        item['image']?.toString() ??
+                            'assets/images/onboarding1.png',
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _imageFallback(context),
                       ),
-                    );
-                  },
-                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -617,7 +716,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item['name'] ?? '',
+                      item['name']?.toString() ?? '',
                       style: context.bodyOneStyle.copyWith(
                         fontWeight: FontWeight.w600,
                         color: context.textPrimaryColor,
@@ -627,7 +726,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item['location'] ?? '',
+                      item['location']?.toString() ?? '',
                       style: context.captionStyle.copyWith(
                         color: context.textSecondaryColor,
                       ),
@@ -644,16 +743,16 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          item['rating']?.toString() ?? '4.0',
+                          _getRatingString(item['rating']),
                           style: context.captionStyle.copyWith(
                             fontWeight: FontWeight.w600,
                             color: context.textPrimaryColor,
                           ),
                         ),
-                        if (item['price'] != null) ...[
+                        if ((item['price']?.toString() ?? '').isNotEmpty) ...[
                           const SizedBox(width: 12),
                           Text(
-                            item['price'],
+                            item['price'].toString(),
                             style: context.captionStyle.copyWith(
                               color: context.primaryColor,
                               fontWeight: FontWeight.w600,
@@ -677,32 +776,51 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
     );
   }
 
+  Widget _imageFallback(BuildContext context) {
+    return Container(
+      width: 60,
+      height: 60,
+      color: context.primaryColor.withValues(alpha: 0.1),
+      child: Icon(LucideIcons.image, color: context.primaryColor),
+    );
+  }
+
   // Tab Tour dịch vụ
   Widget _buildTourServicesTab(BuildContext context) {
-    return _buildListTab(context, _getTourServices(), 'tour');
+    return _buildListTab(context, _tours, 'tour');
   }
 
   // Tab Khách sạn
   Widget _buildHotelsTab(BuildContext context) {
-    return _buildListTab(context, _getHotels(), 'hotel');
+    return _buildListTab(context, _hotels, 'hotel');
   }
 
   // Tab Hoạt động giải trí
   Widget _buildActivitiesTab(BuildContext context) {
-    return _buildListTab(context, _getActivities(), 'attraction');
+    return _buildListTab(context, _attractions, 'attraction');
   }
 
   // Tab Nhà hàng
   Widget _buildRestaurantsTab(BuildContext context) {
-    return _buildListTab(context, _getRestaurants(), 'restaurant');
+    return _buildListTab(context, _restaurants, 'restaurant');
   }
 
-  // Template cho tab hiển thị danh sách - UPDATED WITH NAVIGATION
+  // Template cho tab hiển thị danh sách
   Widget _buildListTab(
     BuildContext context,
     List<Map<String, dynamic>> items,
     String itemType,
   ) {
+    if (items.isEmpty) {
+      return Center(
+        child: Text(
+          'Không có kết quả',
+          style: context.captionStyle.copyWith(
+            color: context.textSecondaryColor,
+          ),
+        ),
+      );
+    }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: items.length,
@@ -717,152 +835,167 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   void _showMapView(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => SearchMapScreen(searchQuery: widget.searchQuery),
+        builder: (context) => SearchMapScreen(searchQuery: _currentQuery),
       ),
     );
   }
 
-  // Dữ liệu mẫu cho Tour dịch vụ
-  List<Map<String, dynamic>> _getTourServices() {
-    return [
-      {
-        'name': 'Tour Nha Trang 1 ngày',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.5,
-        'price': '850.000đ',
-        'image': 'assets/images/onboarding1.png',
-        'duration': '1 ngày',
-        'description': 'Tour tham quan Nha Trang trong 1 ngày',
-      },
-      {
-        'name': 'Du thuyền Nha Trang',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.7,
-        'price': '1.200.000đ',
-        'image': 'assets/images/onboarding2.png',
-        'duration': '4 giờ',
-        'description': 'Trải nghiệm du thuyền sang trọng',
-      },
-      {
-        'name': 'Tour tham quan 4 đảo',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.3,
-        'price': '650.000đ',
-        'image': 'assets/images/onboarding3.png',
-        'duration': '1 ngày',
-        'description': 'Khám phá 4 đảo đẹp nhất Nha Trang',
-      },
-      {
-        'name': 'Tour Vinpearl Land',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.4,
-        'price': '1.500.000đ',
-        'image': 'assets/images/onboarding4.png',
-        'duration': '1 ngày',
-        'description': 'Vui chơi tại công viên giải trí hàng đầu',
-      },
-    ];
+  // ===== API =====
+  Future<void> _fetchAll(String query) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final api = SearchApiService(dio: Dio(), prefs: prefs);
+
+      final data = await api.search(q: query);
+
+      // Area
+      String? areaName;
+      String? areaCountryOrSlug;
+      String areaRating = '0.0';
+      if (data['area'] is Map) {
+        final area = Map<String, dynamic>.from(data['area'] as Map);
+        areaName = area['name']?.toString();
+        // backend trả slug/country trong area summary; ưu tiên country nếu có
+        areaCountryOrSlug =
+            area['country']?.toString() ?? area['slug']?.toString();
+      }
+
+      // Lists
+      List<Map<String, dynamic>> hotels = [];
+      List<Map<String, dynamic>> restaurants = [];
+      List<Map<String, dynamic>> tours = [];
+      List<Map<String, dynamic>> attractions = [];
+
+      if (data['hotels'] is List) {
+        hotels = List.from(data['hotels']).map<Map<String, dynamic>>((e) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          return {
+            'name': m['title']?.toString() ?? '',
+            'location': m['location']?.toString() ?? '',
+            'rating': m['ratingAverage'],
+            'type': 'hotel',
+            'price': _formatPrice(price, currency),
+            'imageUrl': m['thumbnailUrl'],
+            'image': 'assets/images/onboarding2.png',
+          };
+        }).toList();
+      }
+
+      if (data['restaurants'] is List) {
+        restaurants = List.from(data['restaurants']).map<Map<String, dynamic>>((
+          e,
+        ) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          return {
+            'name': m['title']?.toString() ?? '',
+            'location': m['location']?.toString() ?? '',
+            'rating': m['ratingAverage'],
+            'type': 'restaurant',
+            'cuisine': m['cuisineType']?.toString(),
+            'price': _formatPrice(price, currency),
+            'tag': (m['badges'] is List && (m['badges'] as List).isNotEmpty)
+                ? (m['badges'] as List).first.toString()
+                : null,
+            'imageUrl': m['thumbnailUrl'],
+            'image': 'assets/images/onboarding3.png',
+          };
+        }).toList();
+      }
+
+      if (data['tours'] is List) {
+        tours = List.from(data['tours']).map<Map<String, dynamic>>((e) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          return {
+            'name': m['title']?.toString() ?? '',
+            'location': m['location']?.toString() ?? '',
+            'rating': m['ratingAverage'],
+            'type': 'tour',
+            'duration': (m['durationDays']?.toString() ?? ''),
+            'price': _formatPrice(price, currency),
+            'description': m['itineraryOverview']?.toString() ?? '',
+            'imageUrl': m['thumbnailUrl'],
+            'image': 'assets/images/onboarding1.png',
+          };
+        }).toList();
+      }
+
+      if (data['attractions'] is List) {
+        attractions = List.from(data['attractions']).map<Map<String, dynamic>>((
+          e,
+        ) {
+          final m = Map<String, dynamic>.from(e);
+          final price = m['price'];
+          final currency = m['currencyCode']?.toString();
+          return {
+            'name': m['title']?.toString() ?? '',
+            'location': m['location']?.toString() ?? '',
+            'rating': m['ratingAverage'],
+            'type': 'attraction',
+            'price': _formatPrice(price, currency),
+            'description': m['serviceDescription']?.toString() ?? '',
+            'imageUrl': m['thumbnailUrl'],
+            'image': 'assets/images/onboarding4.png',
+            'types': m['types'] is List ? List.from(m['types']) : [],
+            'services': m['services'] is List ? List.from(m['services']) : [],
+            'times': m['times'] is List ? List.from(m['times']) : [],
+            'suit': m['suit'] is List ? List.from(m['suit']) : [],
+          };
+        }).toList();
+      }
+
+      setState(() {
+        _areaName = areaName;
+        _areaCountryOrSlug = areaCountryOrSlug;
+        _areaRating = areaRating;
+
+        _hotels = hotels;
+        _restaurants = restaurants;
+        _tours = tours;
+        _attractions = attractions;
+
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = 'Không thể tải dữ liệu. Vui lòng thử lại hoặc đăng nhập.';
+      });
+    }
   }
 
-  // Dữ liệu mẫu cho Khách sạn
-  List<Map<String, dynamic>> _getHotels() {
-    return [
-      {
-        'name': 'Mia Resort Nha Trang',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.2,
-        'price': '2.500.000đ/đêm',
-        'image': 'assets/images/onboarding2.png',
-      },
-      {
-        'name': 'Vinpearl Resort Nha Trang',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.0,
-        'price': '3.200.000đ/đêm',
-        'image': 'assets/images/onboarding4.png',
-      },
-      {
-        'name': 'InterContinental Nha Trang',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.6,
-        'price': '4.800.000đ/đêm',
-        'image': 'assets/images/onboarding1.png',
-      },
-      {
-        'name': 'Sheraton Nha Trang Hotel',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.3,
-        'price': '3.800.000đ/đêm',
-        'image': 'assets/images/onboarding3.png',
-      },
-    ];
+  // ===== Utils =====
+  String _getRatingString(dynamic rating) {
+    if (rating == null) return '0.0';
+    if (rating is String) return rating;
+    if (rating is num) return rating.toString();
+    return '0.0';
   }
 
-  // Dữ liệu mẫu cho Hoạt động giải trí
-  List<Map<String, dynamic>> _getActivities() {
-    return [
-      {
-        'name': 'Tháp Bà Ponagar',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.0,
-        'price': '30.000đ',
-        'image': 'assets/images/onboarding3.png',
-      },
-      {
-        'name': 'Vinpearl Land Nha Trang',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.5,
-        'price': '800.000đ',
-        'image': 'assets/images/onboarding4.png',
-      },
-      {
-        'name': 'Bãi biển Nha Trang',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.3,
-        'price': 'Miễn phí',
-        'image': 'assets/images/onboarding1.png',
-      },
-      {
-        'name': 'Long Sơn Pagoda',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.1,
-        'price': 'Miễn phí',
-        'image': 'assets/images/onboarding2.png',
-      },
-    ];
-  }
-
-  // Dữ liệu mẫu cho Nhà hàng
-  List<Map<String, dynamic>> _getRestaurants() {
-    return [
-      {
-        'name': 'Banh Can 51 To Hien Thanh',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.0,
-        'price': '50.000đ',
-        'image': 'assets/images/onboarding3.png',
-      },
-      {
-        'name': 'White Rose Restaurant',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.3,
-        'price': '200.000đ',
-        'image': 'assets/images/onboarding2.png',
-      },
-      {
-        'name': 'Livin- Nha Trang',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.0,
-        'price': '150.000đ',
-        'image': 'assets/images/onboarding4.png',
-      },
-      {
-        'name': 'Nha Trang Xưa',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.2,
-        'price': '180.000đ',
-        'image': 'assets/images/onboarding1.png',
-      },
-    ];
+  String _formatPrice(dynamic price, String? currency) {
+    if (price == null) return '';
+    num? n;
+    if (price is num) {
+      n = price;
+    } else {
+      n = num.tryParse(price.toString());
+    }
+    if (n == null) return price.toString();
+    final c = (currency ?? '').toUpperCase();
+    if (c == 'VND' || c == 'VNĐ') {
+      return '${n.toStringAsFixed(0)} đ';
+    }
+    if (c.isEmpty) return n.toString();
+    return '$n $c';
   }
 }
