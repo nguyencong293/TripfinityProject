@@ -213,10 +213,12 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
 
   // Navigation to tour detail
   void _openTourDetail(Map<String, dynamic> tour) {
-    // Pass-through the mapped tour data; detail screen uses fields like name, location, rating, price, image, duration, description
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => TourServiceDetailScreen(
+          tourId: tour['tourId'] is num
+              ? (tour['tourId'] as num).toInt()
+              : null,
           tour: tour,
           activeTourTypes: _selectedTourTypes,
           activeServices: _selectedServices,
@@ -910,16 +912,17 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
           final inStock = m['inStock'] != false; // default true
 
           return {
+            'tourId': m['tourId'] ?? m['id'] ?? m['tour_id'],
             'name': name,
             'type': type,
-            'difficulty': m['difficulty']?.toString(),
+            'difficulty': m['difficultyLevel'] ?? m['difficulty']?.toString(),
             'rating': rating,
             'reviews': reviews,
             'price': price,
             'basePrice': basePrice,
             'durationDays': durationDays,
             'duration': durationText,
-            'image': image, // can be a URL or asset
+            'image': image, // url or asset
             'location': location,
             'description': description,
             'freeCancellation': freeCancel,
