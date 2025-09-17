@@ -363,9 +363,11 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
 
   // ===== NAVIGATION TO DETAIL SCREENS =====
   void _openHotelDetail(Map<String, dynamic> hotel) {
+    final id = _parseId(hotel, ['hotelId', 'id', 'hotel_id']);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => HotelDetailOverviewScreen(
+          hotelId: id, // dynamic fetch if available
           hotel: {
             'name': hotel['name']?.toString() ?? '',
             'image':
@@ -381,9 +383,11 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   }
 
   void _openRestaurantDetail(Map<String, dynamic> restaurant) {
+    final id = _parseId(restaurant, ['restaurantId', 'id', 'restaurant_id']);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RestaurantDetailScreen(
+          restaurantId: id,
           restaurant: {
             'name': restaurant['name']?.toString() ?? '',
             'location': restaurant['location']?.toString() ?? '',
@@ -411,6 +415,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   }
 
   void _openTourDetail(Map<String, dynamic> tour) {
+    final id = _parseId(tour, ['tourId', 'id', 'tour_id']);
     final tourData = {
       'name': tour['name']?.toString() ?? '',
       'location': tour['location']?.toString() ?? '',
@@ -422,11 +427,13 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
           'assets/images/onboarding1.png',
       'duration': tour['duration']?.toString() ?? '',
       'description': tour['description']?.toString() ?? '',
+      'tourId': id, // carry id in fallback too
     };
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => TourServiceDetailScreen(
+          tourId: id,
           tour: tourData,
           activeTourTypes: const {'City tour'},
           activeServices: const {},
@@ -437,6 +444,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   }
 
   void _openAttractionDetail(Map<String, dynamic> attraction) {
+    final id = _parseId(attraction, ['attractionId', 'id', 'attraction_id']);
     final priceInt = _extractPrice(attraction['price']?.toString() ?? '');
     final attractionData = {
       'name': attraction['name']?.toString() ?? '',
@@ -462,11 +470,13 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
       'suit': attraction['suit'] is List
           ? List.from(attraction['suit'])
           : ['Solo', 'Cặp đôi'],
+      'attractionId': id,
     };
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AttractionsOverviewDetailScreen(
+          attractionId: id, // dynamic fetch if available
           attraction: attractionData,
           activeTypes: const {},
           activeServices: const {},
@@ -877,6 +887,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
           final price = m['price'];
           final currency = m['currencyCode']?.toString();
           return {
+            'hotelId': m['hotelId'] ?? m['id'] ?? m['hotel_id'],
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
             'rating': m['ratingAverage'],
@@ -896,6 +907,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
           final price = m['price'];
           final currency = m['currencyCode']?.toString();
           return {
+            'restaurantId': m['restaurantId'] ?? m['id'] ?? m['restaurant_id'],
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
             'rating': m['ratingAverage'],
@@ -917,6 +929,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
           final price = m['price'];
           final currency = m['currencyCode']?.toString();
           return {
+            'tourId': m['tourId'] ?? m['id'] ?? m['tour_id'],
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
             'rating': m['ratingAverage'],
@@ -938,6 +951,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
           final price = m['price'];
           final currency = m['currencyCode']?.toString();
           return {
+            'attractionId': m['attractionId'] ?? m['id'] ?? m['attraction_id'],
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
             'rating': m['ratingAverage'],
@@ -975,6 +989,21 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   }
 
   // ===== Utils =====
+
+  // Helper to parse id from common keys
+  int? _parseId(Map<String, dynamic> m, List<String> keys) {
+    for (final k in keys) {
+      final v = m[k];
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      if (v is String) {
+        final p = int.tryParse(v);
+        if (p != null) return p;
+      }
+    }
+    return null;
+  }
+
   String _getRatingString(dynamic rating) {
     if (rating == null) return '0.0';
     if (rating is String) return rating;

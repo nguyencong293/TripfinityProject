@@ -55,7 +55,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   @override
   void initState() {
     super.initState();
-    // Không đặt mặc định "Nha Trang", không tự fetch ban đầu
     _searchController.text = '';
   }
 
@@ -131,7 +130,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                   onPressed: () {
                     _searchController.clear();
                     setState(() {
-                      // Xoá kết quả và ẩn khu vực kết quả
                       _hotelItems = [];
                       _restaurantItems = [];
                       _tourItems = [];
@@ -234,7 +232,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
 
   // Results section (dynamic theo filter)
   Widget _buildSearchResults(BuildContext context) {
-    // Trước khi user tìm kiếm: ẩn hoàn toàn khu vực kết quả (không spinner, không lỗi)
     if (!_hasSearched) return const SizedBox.shrink();
 
     if (_loading) {
@@ -254,7 +251,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     }
 
     if (_error != null) {
-      // Sau khi tìm nếu lỗi mới hiển thị lỗi
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Text(
@@ -304,20 +300,81 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
               final item = items[index];
               final imageUrl = (item['imageUrl'] ?? '').toString();
               final hasNetwork = imageUrl.startsWith('http');
+              final isDestination =
+                  (item['type']?.toString() ?? '') == 'destination';
+
+              Widget leading;
+              if (hasNetwork) {
+                // Network image: if destination and load fails -> use provided fallback
+                leading = Image.network(
+                  imageUrl,
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) {
+                    if (isDestination) {
+                      return SizedBox(
+                        width: 60,
+                        height: 60,
+                        child: _imageFallback(context),
+                      );
+                    }
+                    // keep existing small placeholder for others
+                    return Container(
+                      width: 60,
+                      height: 60,
+                      color: context.primaryColor.withValues(alpha: 0.1),
+                      child: Icon(
+                        LucideIcons.image,
+                        color: context.primaryColor,
+                        size: 20,
+                      ),
+                    );
+                  },
+                );
+              } else {
+                // Asset image: if destination and asset fails -> use provided fallback
+                leading = Image.asset(
+                  item['image']?.toString() ?? 'assets/images/onboarding1.png',
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) {
+                    if (isDestination) {
+                      return SizedBox(
+                        width: 60,
+                        height: 60,
+                        child: _imageFallback(context),
+                      );
+                    }
+                    return Container(
+                      width: 60,
+                      height: 60,
+                      color: context.primaryColor.withValues(alpha: 0.1),
+                      child: Icon(
+                        LucideIcons.image,
+                        color: context.primaryColor,
+                        size: 20,
+                      ),
+                    );
+                  },
+                );
+              }
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: InkWell(
                   onTap: () {
-                    if (item['type'] == 'hotel') {
-                      _openHotelDetail(_convertToStringMap(item));
-                    } else if (item['type'] == 'restaurant') {
-                      _openRestaurantDetail(_convertToStringMap(item));
-                    } else if (item['type'] == 'tour') {
+                    final type = item['type']?.toString();
+                    if (type == 'hotel') {
+                      _openHotelDetail(item);
+                    } else if (type == 'restaurant') {
+                      _openRestaurantDetail(item);
+                    } else if (type == 'tour') {
                       _openTourDetail(item);
-                    } else if (item['type'] == 'attraction') {
+                    } else if (type == 'attraction') {
                       _openAttractionDetail(item);
-                    } else if (item['type'] == 'destination') {
+                    } else if (type == 'destination') {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => SearchOverviewScreen(
@@ -328,7 +385,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                     } else {
                       _navigateToSpecificPage(
                         item['name'].toString(),
-                        item['type'].toString(),
+                        type ?? 'general',
                       );
                     }
                   },
@@ -336,44 +393,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: hasNetwork
-                            ? Image.network(
-                                imageUrl,
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  width: 60,
-                                  height: 60,
-                                  color: context.primaryColor.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  child: Icon(
-                                    LucideIcons.image,
-                                    color: context.primaryColor,
-                                    size: 20,
-                                  ),
-                                ),
-                              )
-                            : Image.asset(
-                                item['image']?.toString() ??
-                                    'assets/images/onboarding1.png',
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  width: 60,
-                                  height: 60,
-                                  color: context.primaryColor.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  child: Icon(
-                                    LucideIcons.image,
-                                    color: context.primaryColor,
-                                    size: 20,
-                                  ),
-                                ),
-                              ),
+                        child: leading,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -412,9 +432,8 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                if (item['type'] == 'hotel' &&
-                                    (item['price']?.toString() ?? '')
-                                        .isNotEmpty) ...[
+                                if ((item['price']?.toString() ?? '')
+                                    .isNotEmpty) ...[
                                   const SizedBox(width: 10),
                                   Text(
                                     item['price'].toString(),
@@ -571,14 +590,10 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, __, ___) => SizedBox(
                           width: 60,
                           height: 60,
-                          color: context.primaryColor.withValues(alpha: 0.1),
-                          child: Icon(
-                            LucideIcons.image,
-                            color: context.primaryColor,
-                          ),
+                          child: _imageFallback(context),
                         ),
                       ),
                     ),
@@ -762,9 +777,9 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       {
         'name': 'Tháp Chăm Po Nagar',
         'location': 'Nha Trang, Việt Nam',
-        'rating': 4.3, // Keep as numeric for recent attraction items
+        'rating': 4.3,
         'type': 'attraction',
-        'price': 25000, // Keep as numeric
+        'price': 25000,
         'description': 'Tháp cổ Chăm Po Nagar được xây dựng từ thế kỷ 8-12',
         'types': ['Tôn giáo', 'Kiến trúc'],
         'services': ['Chụp ảnh'],
@@ -784,17 +799,15 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       ),
       child: InkWell(
         onTap: () {
-          if (item['type'] == 'hotel') {
-            _openHotelDetail(_convertToStringMap(item));
-          } else if (item['type'] == 'restaurant') {
-            _openRestaurantDetail(_convertToStringMap(item));
-          } else if (item['type'] == 'attraction') {
+          final type = item['type']?.toString();
+          if (type == 'hotel') {
+            _openHotelDetail(item);
+          } else if (type == 'restaurant') {
+            _openRestaurantDetail(item);
+          } else if (type == 'attraction') {
             _openAttractionDetail(item);
           } else {
-            _navigateToSpecificPage(
-              item['name'].toString(),
-              item['type'].toString(),
-            );
+            _navigateToSpecificPage(item['name'].toString(), type ?? 'general');
           }
         },
         child: Row(
@@ -806,15 +819,10 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 width: 60,
                 height: 60,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, __, ___) => SizedBox(
                   width: 60,
                   height: 60,
-                  color: context.primaryColor.withValues(alpha: 0.1),
-                  child: Icon(
-                    LucideIcons.image,
-                    color: context.primaryColor,
-                    size: 24,
-                  ),
+                  child: _imageFallback(context),
                 ),
               ),
             ),
@@ -872,31 +880,48 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   }
 
   // ===== NAVIGATION HELPERS =====
-  void _openHotelDetail(Map<String, String> hotel) {
+  void _openHotelDetail(Map<String, dynamic> hotel) {
+    final id = _parseId(hotel, ['hotelId', 'id', 'hotel_id']);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => HotelDetailOverviewScreen(
+          hotelId: id,
           hotel: {
-            'name': hotel['name'] ?? '',
+            'name': hotel['name']?.toString() ?? '',
             'image':
-                hotel['image'] ??
-                hotel['imageUrl'] ??
+                hotel['image']?.toString() ??
+                hotel['imageUrl']?.toString() ??
                 'assets/images/onboarding1.png',
-            'price': hotel['price'] ?? '—',
+            'price': hotel['price']?.toString() ?? '—',
           },
-          activeAmenities: {'Wifi miễn phí', 'Bể bơi'},
+          activeAmenities: const {'Wifi miễn phí', 'Bể bơi'},
         ),
       ),
     );
   }
 
-  void _openRestaurantDetail(Map<String, String> restaurant) {
+  void _openRestaurantDetail(Map<String, dynamic> restaurant) {
+    final id = _parseId(restaurant, ['restaurantId', 'id', 'restaurant_id']);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RestaurantDetailScreen(
-          restaurant: restaurant,
-          activeCuisines: {restaurant['cuisine'] ?? ''},
-          activeServices: {restaurant['tag'] ?? ''},
+          restaurantId: id,
+          restaurant: {
+            'name': restaurant['name']?.toString() ?? '',
+            'location': restaurant['location']?.toString() ?? '',
+            'rating': _getRatingString(restaurant['rating']),
+            'type': 'restaurant',
+            'cuisine': restaurant['cuisine']?.toString() ?? '—',
+            'price': restaurant['price']?.toString() ?? '',
+            'reviews': '(320)',
+            'tag': restaurant['tag']?.toString() ?? '',
+            'image':
+                restaurant['image']?.toString() ??
+                restaurant['imageUrl']?.toString() ??
+                'assets/images/onboarding4.png',
+          },
+          activeCuisines: const {'Âu'},
+          activeServices: const {'Bar'},
           activeDietaries: const {},
           activeStars: const {},
           activeOpenNow: false,
@@ -908,12 +933,28 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   }
 
   void _openTourDetail(Map<String, dynamic> tour) {
+    final id = _parseId(tour, ['tourId', 'id', 'tour_id']);
+    final tourData = {
+      'name': tour['name']?.toString() ?? '',
+      'location': tour['location']?.toString() ?? '',
+      'rating': _getRatingString(tour['rating']),
+      'price': tour['price']?.toString() ?? '',
+      'image':
+          tour['image']?.toString() ??
+          tour['imageUrl']?.toString() ??
+          'assets/images/onboarding1.png',
+      'duration': tour['duration']?.toString() ?? '',
+      'description': tour['description']?.toString() ?? '',
+      'tourId': id,
+    };
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => TourServiceDetailScreen(
-          tour: tour,
+          tourId: id,
+          tour: tourData,
           activeTourTypes: {
-            tour['type']?.toString() ?? '',
+            tour['type']?.toString() ?? 'City tour',
           }.where((s) => s.isNotEmpty).toSet(),
           activeServices: const {},
           activeDifficulty: null,
@@ -923,10 +964,40 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   }
 
   void _openAttractionDetail(Map<String, dynamic> attraction) {
+    final id = _parseId(attraction, ['attractionId', 'id', 'attraction_id']);
+    final priceInt = _extractPrice(attraction['price']?.toString() ?? '');
+    final attractionData = {
+      'name': attraction['name']?.toString() ?? '',
+      'location': attraction['location']?.toString() ?? '',
+      'rating': double.tryParse(_getRatingString(attraction['rating'])) ?? 0.0,
+      'price': priceInt,
+      'description':
+          attraction['description']?.toString() ??
+          'Điểm tham quan tại ${attraction['location']?.toString() ?? ''}',
+      'image':
+          attraction['image']?.toString() ??
+          attraction['imageUrl']?.toString() ??
+          'assets/images/onboarding3.png',
+      'types': attraction['types'] is List
+          ? List.from(attraction['types'])
+          : ['Tham quan'],
+      'services': attraction['services'] is List
+          ? List.from(attraction['services'])
+          : ['Chụp ảnh'],
+      'times': attraction['times'] is List
+          ? List.from(attraction['times'])
+          : ['Sáng', 'Chiều'],
+      'suit': attraction['suit'] is List
+          ? List.from(attraction['suit'])
+          : ['Solo', 'Cặp đôi'],
+      'attractionId': id,
+    };
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AttractionsOverviewDetailScreen(
-          attraction: attraction,
+          attractionId: id,
+          attraction: attractionData,
           activeTypes: const {},
           activeServices: const {},
           activeTimes: const {},
@@ -950,7 +1021,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       _attractionItems.iterator,
     ];
 
-    // Round-robin cho đến khi đủ 5 hoặc hết dữ liệu
     while (result.length < 5) {
       bool progressed = false;
       for (final it in lists) {
@@ -961,10 +1031,29 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
           if (result.length >= 5) break;
         }
       }
-      if (!progressed) break; // không còn phần tử nào
+      if (!progressed) break;
     }
     return result;
-    // Lưu ý: nếu muốn ưu tiên thứ tự khác, có thể đổi thứ tự lists
+  }
+
+  // Helper to extract numeric price from string
+  int _extractPrice(String priceString) {
+    final numbers = priceString.replaceAll(RegExp(r'[^\d]'), '');
+    return int.tryParse(numbers) ?? 0;
+  }
+
+  // Helper to parse id from common keys
+  int? _parseId(Map<String, dynamic> m, List<String> keys) {
+    for (final k in keys) {
+      final v = m[k];
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      if (v is String) {
+        final p = int.tryParse(v);
+        if (p != null) return p;
+      }
+    }
+    return null;
   }
 
   String _getRatingString(dynamic rating) {
@@ -974,10 +1063,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       return rating.toString();
     }
     return '0.0';
-  }
-
-  Map<String, String> _convertToStringMap(Map<String, dynamic> map) {
-    return map.map((key, value) => MapEntry(key, value?.toString() ?? ''));
   }
 
   String _getSearchCategory(String query) {
@@ -1053,7 +1138,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       _hasSearched = true;
     });
 
-    // Điều chỉnh filter nếu query mang ý nghĩa cụ thể
     final category = _getSearchCategory(trimmed);
     if (category == 'hotel') {
       _selected = _QuickFilter.hotel;
@@ -1064,7 +1148,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     } else if (category == 'activity') {
       _selected = _QuickFilter.attraction;
     } else {
-      _selected = _QuickFilter.all; // chung chung => all, ưu tiên area lên đầu
+      _selected = _QuickFilter.all;
     }
 
     _fetchSearch(trimmed);
@@ -1090,10 +1174,16 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         dst.add({
           'name': area['name']?.toString() ?? 'Khu vực',
           'location': area['slug']?.toString() ?? '',
-          'rating': '0.0', // backend không trả rating cho area -> set mặc định
+          'rating': '0.0', // area không có rating
           'type': 'destination',
+          // try common image keys so errorBuilder can trigger fallback if bad
+          'imageUrl':
+              (area['thumbnailUrl'] ??
+                      area['imageUrl'] ??
+                      area['bannerUrl'] ??
+                      area['coverUrl'])
+                  ?.toString(),
           'image': 'assets/images/onboarding1.png',
-          'imageUrl': null, // không có thumbnailUrl cho area
         });
       }
 
@@ -1108,6 +1198,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
           final price = m['price'];
           final currency = m['currencyCode']?.toString();
           return {
+            'hotelId': m['hotelId'] ?? m['id'] ?? m['hotel_id'],
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
             'rating': m['ratingAverage'],
@@ -1127,11 +1218,12 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
           final price = m['price'];
           final currency = m['currencyCode']?.toString();
           return {
+            'restaurantId': m['restaurantId'] ?? m['id'] ?? m['restaurant_id'],
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
             'rating': m['ratingAverage'],
             'type': 'restaurant',
-            'cuisine': m['cuisineType']?.toString(), // nếu có
+            'cuisine': m['cuisineType']?.toString(),
             'price': _formatPrice(price, currency),
             'tag': (m['badges'] is List && (m['badges'] as List).isNotEmpty)
                 ? (m['badges'] as List).first.toString()
@@ -1148,6 +1240,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
           final price = m['price'];
           final currency = m['currencyCode']?.toString();
           return {
+            'tourId': m['tourId'] ?? m['id'] ?? m['tour_id'],
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
             'rating': m['ratingAverage'],
@@ -1169,6 +1262,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
           final price = m['price'];
           final currency = m['currencyCode']?.toString();
           return {
+            'attractionId': m['attractionId'] ?? m['id'] ?? m['attraction_id'],
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
             'rating': m['ratingAverage'],
@@ -1217,5 +1311,15 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     }
     if (c.isEmpty) return n.toString();
     return '$n $c';
+  }
+
+  // Provided fallback for area image error
+  Widget _imageFallback(BuildContext context) {
+    return Container(
+      height: 180,
+      color: context.primaryColor.withValues(alpha: 0.08),
+      alignment: Alignment.center,
+      child: Icon(LucideIcons.image, color: context.primaryColor),
+    );
   }
 }
