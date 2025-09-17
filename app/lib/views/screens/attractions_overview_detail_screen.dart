@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+import 'package:app/services/attraction_api_service.dart';
 
 class AttractionsOverviewDetailScreen extends StatefulWidget {
-  final Map<String, dynamic> attraction;
+  final int? attractionId; // Cho phép truyền id
+  final Map<String, dynamic>? attraction; // Fallback data khi chưa có id
+
   // Các filter đang được chọn để highlight
   final Set<String>? activeTypes;
   final Set<String>? activeServices;
@@ -14,12 +19,16 @@ class AttractionsOverviewDetailScreen extends StatefulWidget {
 
   const AttractionsOverviewDetailScreen({
     super.key,
-    required this.attraction,
+    this.attractionId,
+    this.attraction,
     this.activeTypes,
     this.activeServices,
     this.activeTimes,
     this.activeSuitability,
-  });
+  }) : assert(
+         attractionId != null || attraction != null,
+         'Cần truyền attractionId hoặc attraction',
+       );
 
   @override
   State<AttractionsOverviewDetailScreen> createState() =>
@@ -32,142 +41,234 @@ class _AttractionsOverviewDetailScreenState
   bool _showAllReviews = false;
   bool _showAllGallery = false;
 
-  // Thông tin chi tiết điểm tham quan
-  final List<_HighlightInfo> _highlights = [
-    _HighlightInfo(
-      'Kiến trúc độc đáo',
-      'Kiến trúc Chăm cổ từ thế kỷ 8-13',
-      LucideIcons.building,
-    ),
-    _HighlightInfo(
-      'Lịch sử văn hóa',
-      'Tìm hiểu về nền văn minh Chăm Pa',
-      LucideIcons.bookOpen,
-    ),
-    _HighlightInfo(
-      'Tầm nhìn đẹp',
-      'Ngắm toàn cảnh thành phố Nha Trang',
-      LucideIcons.eye,
-    ),
-    _HighlightInfo(
-      'Hoạt động tâm linh',
-      'Cầu nguyện, dâng hương theo tập tục',
-      LucideIcons.sparkles,
-    ),
-  ];
+  // Dynamic state from backend
+  Map<String, dynamic>? _detail;
+  bool _loading = true;
+  String? _errorMessage;
+  int? _attractionId;
 
-  final List<_TicketInfo> _ticketOptions = [
-    _TicketInfo(
-      title: 'Vé người lớn',
-      price: 120000,
-      description: 'Từ 12 tuổi trở lên',
-      features: ['Tham quan tự do', 'Hướng dẫn cơ bản'],
-    ),
-    _TicketInfo(
-      title: 'Vé trẻ em',
-      price: 60000,
-      description: '6-11 tuổi',
-      features: ['Tham quan tự do', 'Hướng dẫn cơ bản'],
-    ),
-    _TicketInfo(
-      title: 'Combo hướng dẫn viên',
-      price: 200000,
-      description: 'Người lớn + HDV riêng',
-      features: [
-        'Hướng dẫn viên chuyên nghiệp',
-        'Giải thích chi tiết lịch sử',
-        'Chụp ảnh miễn phí',
-      ],
-    ),
-  ];
+  // Reviews dynamic (backend endpoint có thể chưa có; để trống)
+  final List<Map<String, dynamic>> _reviews = [];
 
-  final Map<String, dynamic> _practicalInfo = {
-    'opening_hours': {
-      'title': 'Giờ mở cửa',
-      'content': [
-        'Hàng ngày: 6:00 - 18:00',
-        'Lễ tết: 5:30 - 19:00',
-        'Thời gian tham quan đề xuất: 1-2 tiếng',
-      ],
-    },
-    'location': {
-      'title': 'Vị trí',
-      'content': [
-        'Địa chỉ: 2 Tháng 4, Vĩnh Hải, Nha Trang',
-        'Cách trung tâm: 2km về phía Bắc',
-        'Gần các điểm: Chợ Đầm, Bãi biển Nha Trang',
-      ],
-    },
-    'transport': {
-      'title': 'Phương tiện di chuyển',
-      'content': [
-        'Xe máy: Bãi đỗ miễn phí',
-        'Taxi/Grab: 50.000 - 80.000đ từ trung tâm',
-        'Xe buýt: Tuyến 04 (15.000đ)',
-        'Đi bộ: Từ chợ Đầm khoảng 15 phút',
-      ],
-    },
-    'tips': {
-      'title': 'Lưu ý khi tham quan',
-      'content': [
-        'Ăn mặc lịch sự, tôn trọng nơi tâm linh',
-        'Không chụp ảnh flash bên trong tháp',
-        'Mang theo nước uống và kem chống nắng',
-        'Tháo giày khi vào khu vực thờ cúng',
-      ],
-    },
-  };
+  @override
+  void initState() {
+    super.initState();
+    // Ưu tiên id truyền vào; fallback sang id trong map nếu có
+    _attractionId =
+        widget.attractionId ??
+        _parseId(
+          widget.attraction?['attractionId'] ?? widget.attraction?['id'],
+        );
+    _fetchDetail();
+  }
 
-  // Gallery ảnh
-  final List<String> _galleryImages = [
-    'assets/images/onboarding1.png',
-    'assets/images/onboarding2.png',
-    'assets/images/onboarding3.png',
-    'assets/images/onboarding4.png',
-    'assets/images/onboarding1.png',
-    'assets/images/onboarding2.png',
-  ];
+  int? _parseId(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
 
-  // Reviews mock data
-  final List<Map<String, dynamic>> _reviews = [
-    {
-      'user': 'Minh Anh',
-      'avatar': 'assets/images/onboarding1.png',
-      'rating': 5.0,
-      'date': '20/8/2024',
-      'content':
-          'Điểm tham quan rất đẹp và ý nghĩa! Kiến trúc Chăm cổ kính rất ấn tượng. Hướng dẫn viên nhiệt tình giải thích về lịch sử. View nhìn xuống thành phố cũng tuyệt vời.',
-      'helpful': 12,
-      'images': ['assets/images/onboarding2.png'],
-    },
-    {
-      'user': 'Thành Đạt',
-      'avatar': 'assets/images/onboarding3.png',
-      'rating': 4.5,
-      'date': '15/8/2024',
-      'content':
-          'Nơi rất linh thiêng và yên tĩnh. Phù hợp để tìm hiểu văn hóa Chăm. Giá vé hợp lý. Chỉ có điều hơi nóng vào buổi trưa.',
-      'helpful': 8,
-      'images': null,
-    },
-    {
-      'user': 'Thu Hằng',
-      'avatar': 'assets/images/onboarding4.png',
-      'rating': 4.8,
-      'date': '10/8/2024',
-      'content':
-          'Tháp Po Nagar là điểm đến không thể bỏ qua ở Nha Trang. Kiến trúc độc đáo, không gian thiêng liêng. Đi cùng gia đình rất thích hợp.',
-      'helpful': 15,
-      'images': [
-        'assets/images/onboarding1.png',
-        'assets/images/onboarding3.png',
-      ],
-    },
-  ];
+  Future<void> _fetchDetail() async {
+    // Nếu không có id nhưng có map fallback => render từ map, không gọi API
+    if (_attractionId == null) {
+      setState(() {
+        _loading = false;
+        if (widget.attraction == null) {
+          _errorMessage = 'Thiếu attractionId để tải dữ liệu.';
+        }
+      });
+      return;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final api = AttractionApiService(dio: Dio(), prefs: prefs);
+
+      final data = await api.getAttractionById(_attractionId!);
+      // Optional: fetch reviews nếu backend có
+      // final reviews = await api.getAttractionReviews(_attractionId!);
+
+      setState(() {
+        _detail = data;
+        // _reviews = reviews;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Không thể tải dữ liệu. Vui lòng thử lại.';
+        _loading = false;
+      });
+    }
+  }
+
+  // ===== Helpers để đọc dữ liệu an toàn =====
+  Map<String, dynamic> get _data {
+    // Gộp dữ liệu truyền từ list + dữ liệu fetch (fetch ưu tiên)
+    return {...?widget.attraction, if (_detail != null) ..._detail!};
+  }
+
+  String _title(Map<String, dynamic> d) =>
+      (d['title'] ?? d['name'] ?? '').toString();
+
+  String _locationText(Map<String, dynamic> d) {
+    final loc = d['location'];
+    final addr = d['address'];
+    return (loc ?? addr ?? '').toString();
+  }
+
+  double _rating(Map<String, dynamic> d) {
+    final r = d['ratingAverage'] ?? d['rating'];
+    if (r == null) return 0.0;
+    if (r is num) return r.toDouble();
+    return double.tryParse(r.toString()) ?? 0.0;
+  }
+
+  num? _price(Map<String, dynamic> d) {
+    final p = d['price'];
+    if (p == null) return null;
+    if (p is num) return p;
+    return num.tryParse(p.toString());
+  }
+
+  String? _currency(Map<String, dynamic> d) {
+    final c = d['currencyCode'];
+    return c is String ? c : c?.toString();
+  }
+
+  List<String> _images(Map<String, dynamic> d) {
+    final imgs = d['imageUrls'];
+    if (imgs is List) {
+      return imgs.map((e) => e.toString()).toList();
+    }
+    return const [];
+  }
+
+  String? _thumbnail(Map<String, dynamic> d) {
+    final t = d['thumbnailUrl'];
+    return t?.toString();
+  }
+
+  List<String> _listOfStrings(dynamic value) {
+    if (value is List) {
+      return value.map((e) => e.toString()).toList();
+    }
+    return const [];
+  }
+
+  List<String> _visitTypes(Map<String, dynamic> d) =>
+      _listOfStrings(d['visitTypesJson']);
+
+  List<String> _features(Map<String, dynamic> d) =>
+      _listOfStrings(d['featuresJson']);
+
+  List<String> _suitableFor(Map<String, dynamic> d) =>
+      _listOfStrings(d['suitableForJson']);
+
+  List<String> _availableTimes(Map<String, dynamic> d) {
+    final v = d['availableTimesJson'];
+    if (v is List) return _listOfStrings(v);
+    if (v is Map) {
+      // Map -> "key: value"
+      return v.entries.map((e) => '${e.key}: ${e.value}').toList();
+    }
+    return const [];
+  }
+
+  String _intro(Map<String, dynamic> d) =>
+      (d['serviceDescription'] ?? '').toString();
+
+  List<String> _highlights(Map<String, dynamic> d) =>
+      _listOfStrings(d['highlightsJson']);
+
+  List<String> _openingHours(Map<String, dynamic> d) {
+    final oh = d['openingHoursJson'];
+    if (oh is List) return _listOfStrings(oh);
+    if (oh is Map) {
+      return oh.entries.map((e) => '${e.key}: ${e.value}').toList();
+    }
+    return const [];
+  }
+
+  List<String> _tips(Map<String, dynamic> d) {
+    final t = d['tipsText'];
+    if (t == null) return const [];
+    return t
+        .toString()
+        .split('\n')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
+  String _formatPrice(num? price, {String? currency}) {
+    if (price == null || price == 0) return 'Miễn phí';
+    final isVnd = (currency ?? '').toUpperCase() == 'VND';
+    String compact;
+    if (price >= 1000000) {
+      compact = '${(price / 1000000).toStringAsFixed(1)}M';
+    } else if (price >= 1000) {
+      compact = '${(price / 1000).toStringAsFixed(0)}K';
+    } else {
+      compact = price.toStringAsFixed(0);
+    }
+    return isVnd ? '$compactđ' : '$compact ${currency ?? ''}'.trim();
+  }
+
+  bool _isHttpUrl(String? s) {
+    if (s == null) return false;
+    return s.startsWith('http://') || s.startsWith('https://');
+  }
 
   @override
   Widget build(BuildContext context) {
-    final attraction = widget.attraction;
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: context.backgroundColor,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: context.backgroundColor,
+          leading: IconButton(
+            icon: Icon(LucideIcons.arrowLeft, color: context.textPrimaryColor),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: context.backgroundColor,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: context.backgroundColor,
+          leading: IconButton(
+            icon: Icon(LucideIcons.arrowLeft, color: context.textPrimaryColor),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_errorMessage!, style: context.bodyTwoStyle),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _loading = true;
+                    _errorMessage = null;
+                  });
+                  _fetchDetail();
+                },
+                child: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final attraction = _data;
     return Scaffold(
       backgroundColor: context.backgroundColor,
       appBar: AppBar(
@@ -207,44 +308,51 @@ class _AttractionsOverviewDetailScreenState
             title: 'Giới thiệu',
             child: _expandableText(
               context,
-              text:
-                  'Tháp Chăm Po Nagar là một trong những di tích lịch sử văn hóa quan trọng nhất của Nha Trang, được xây dựng từ thế kỷ 8-13 bởi người Chăm. Tháp thờ nữ thần Thiên Y Thánh Mẫu Ana Po Nagar, được người Chăm và Việt tôn kính như một vị thần linh thiêng bảo vệ ngư dân và nông dân. Kiến trúc độc đáo với những chi tiết chạm khắc tinh xảo thể hiện nền văn minh Chăm Pa phát triển. Từ đây, du khách có thể ngắm nhìn toàn cảnh sông Cái và thành phố Nha Trang.',
+              text: _intro(attraction).isNotEmpty
+                  ? _intro(attraction)
+                  : 'Chưa có mô tả chi tiết.',
               expanded: _introExpanded,
               onToggle: () => setState(() => _introExpanded = !_introExpanded),
             ),
           ),
           // ===== ĐIỂM NỔI BẬT =====
-          _sectionWrapper(
-            context,
-            title: 'Điểm nổi bật',
-            child: _highlightsSection(context),
-          ),
+          if (_highlights(attraction).isNotEmpty)
+            _sectionWrapper(
+              context,
+              title: 'Điểm nổi bật',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _highlights(
+                  attraction,
+                ).map((h) => _highlightItemText(context, h)).toList(),
+              ),
+            ),
           // ===== LOẠI VÀ DỊCH VỤ =====
           _typeAndServiceBlock(
             context,
             title: 'Loại hình tham quan',
-            options: attraction['types']?.cast<String>() ?? [],
+            options: _visitTypes(attraction),
             activeSet: widget.activeTypes ?? {},
           ),
           _typeAndServiceBlock(
             context,
             title: 'Dịch vụ có sẵn',
-            options: attraction['services']?.cast<String>() ?? [],
+            options: _features(attraction),
             activeSet: widget.activeServices ?? {},
           ),
           _typeAndServiceBlock(
             context,
             title: 'Thời gian hoạt động',
-            options: attraction['times']?.cast<String>() ?? [],
+            options: _availableTimes(attraction),
             activeSet: widget.activeTimes ?? {},
           ),
           _typeAndServiceBlock(
             context,
             title: 'Phù hợp cho',
-            options: attraction['suit']?.cast<String>() ?? [],
+            options: _suitableFor(attraction),
             activeSet: widget.activeSuitability ?? {},
           ),
-          // ===== VÉ THAM QUAN =====
+          // ===== VÉ THAM QUAN ===== (giữ nguyên demo)
           _sectionWrapper(
             context,
             title: 'Vé tham quan',
@@ -254,31 +362,32 @@ class _AttractionsOverviewDetailScreenState
           _sectionWrapper(
             context,
             title: 'Thông tin thực tế',
-            child: _practicalInfoSection(context),
+            child: _practicalInfoSectionDynamic(context, attraction),
           ),
           // ===== GALLERY =====
           _sectionWrapper(
             context,
             title: 'Thư viện ảnh',
-            child: _gallerySection(context),
+            child: _gallerySection(context, attraction),
           ),
           // ===== BẢN ĐỒ =====
           _sectionWrapper(
             context,
             title: 'Vị trí',
-            child: _mapSection(context),
+            child: _mapSection(context, attraction),
           ),
           // ===== ĐÁNH GIÁ =====
           _sectionWrapper(
             context,
             title: 'Đánh giá từ du khách',
-            child: _ratingSummary(context),
+            child: _ratingSummary(context, attraction),
           ),
-          _sectionWrapper(
-            context,
-            title: 'Tất cả đánh giá',
-            child: _reviewsSection(context),
-          ),
+          if (_reviews.isNotEmpty)
+            _sectionWrapper(
+              context,
+              title: 'Tất cả đánh giá',
+              child: _reviewsSection(context),
+            ),
           const SizedBox(height: 28),
         ],
       ),
@@ -287,19 +396,32 @@ class _AttractionsOverviewDetailScreenState
 
   // ===== HERO IMAGE =====
   Widget _heroImage(Map<String, dynamic> attraction) {
+    final images = _images(attraction);
+    final thumb = _thumbnail(attraction);
+    final first = (thumb?.isNotEmpty == true)
+        ? thumb!
+        : (images.isNotEmpty ? images.first : null);
+    final total = (images.isNotEmpty ? images.length : (first != null ? 1 : 0));
+
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            'assets/images/onboarding${(attraction['img'] ?? 1) % 4 + 1}.png',
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              color: Colors.grey.shade300,
-              child: const Icon(Icons.image, size: 48, color: Colors.white70),
-            ),
-          ),
+          if (first != null && _isHttpUrl(first))
+            Image.network(
+              first,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _heroFallback(),
+            )
+          else if (first != null)
+            Image.asset(
+              first,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _heroFallback(),
+            )
+          else
+            _heroFallback(),
           Positioned(
             bottom: 12,
             left: 12,
@@ -311,11 +433,11 @@ class _AttractionsOverviewDetailScreenState
               ),
               child: Row(
                 children: [
-                  Icon(LucideIcons.image, size: 14, color: Colors.white),
+                  const Icon(LucideIcons.image, size: 14, color: Colors.white),
                   const SizedBox(width: 6),
-                  const Text(
-                    '1 / 8',
-                    style: TextStyle(
+                  Text(
+                    total > 0 ? '1 / $total' : '0 / 0',
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -330,13 +452,21 @@ class _AttractionsOverviewDetailScreenState
     );
   }
 
+  Widget _heroFallback() {
+    return Container(
+      color: Colors.grey.shade300,
+      child: const Icon(Icons.image, size: 48, color: Colors.white70),
+    );
+  }
+
   // ===== HEADER =====
   Widget _headerInfo(BuildContext context, Map<String, dynamic> attraction) {
+    final rating = _rating(attraction);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          attraction['name'] ?? '',
+          _title(attraction),
           style: context.bodyOneStyle.copyWith(
             fontWeight: FontWeight.w700,
             fontSize: 18,
@@ -349,7 +479,7 @@ class _AttractionsOverviewDetailScreenState
             const SizedBox(width: 4),
             Expanded(
               child: Text(
-                attraction['location'] ?? '',
+                _locationText(attraction),
                 style: context.bodyTwoStyle.copyWith(
                   color: context.textSecondaryColor,
                 ),
@@ -360,15 +490,15 @@ class _AttractionsOverviewDetailScreenState
         const SizedBox(height: 8),
         Row(
           children: [
-            _starsRow(context, attraction['rating']?.toDouble() ?? 4.0),
+            _starsRow(context, rating),
             const SizedBox(width: 8),
             Text(
-              '${attraction['rating']?.toStringAsFixed(1) ?? '4.0'}',
+              rating.toStringAsFixed(1),
               style: context.bodyTwoStyle.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 8),
             Text(
-              '(2.341 đánh giá)',
+              '(đánh giá)',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
               ),
@@ -394,7 +524,10 @@ class _AttractionsOverviewDetailScreenState
     BuildContext context,
     Map<String, dynamic> attraction,
   ) {
-    final price = attraction['price'] ?? 0;
+    final price = _price(attraction);
+    final currency = _currency(attraction);
+    final priceText = _formatPrice(price, currency: currency);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -407,7 +540,7 @@ class _AttractionsOverviewDetailScreenState
               ),
             ),
             Text(
-              price == 0 ? 'Miễn phí' : '${_formatPrice(price)}đ',
+              priceText,
               style: context.bodyOneStyle.copyWith(
                 fontWeight: FontWeight.w700,
                 fontSize: 20,
@@ -445,50 +578,31 @@ class _AttractionsOverviewDetailScreenState
     );
   }
 
-  // ===== HIGHLIGHTS SECTION =====
-  Widget _highlightsSection(BuildContext context) {
-    return Column(
-      children: _highlights
-          .map((highlight) => _highlightItem(context, highlight))
-          .toList(),
-    );
-  }
-
-  Widget _highlightItem(BuildContext context, _HighlightInfo highlight) {
+  // ===== HIGHLIGHTS SECTION (text bullets) =====
+  Widget _highlightItemText(BuildContext context, String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: context.primaryColor.withValues(alpha: .12),
-              shape: BoxShape.circle,
+            width: 24,
+            alignment: Alignment.topCenter,
+            child: Icon(
+              LucideIcons.sparkles,
+              size: 16,
+              color: context.primaryColor,
             ),
-            child: Icon(highlight.icon, size: 20, color: context.primaryColor),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  highlight.title,
-                  style: context.bodyTwoStyle.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  highlight.description,
-                  style: context.captionStyle.copyWith(
-                    color: context.textSecondaryColor,
-                    height: 1.3,
-                  ),
-                ),
-              ],
+            child: Text(
+              text,
+              style: context.captionStyle.copyWith(
+                color: context.textSecondaryColor,
+                height: 1.35,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -539,10 +653,34 @@ class _AttractionsOverviewDetailScreenState
     );
   }
 
-  // ===== TICKET SECTION =====
+  // ===== TICKET SECTION (demo) =====
   Widget _ticketSection(BuildContext context) {
+    final List<_TicketInfo> ticketOptions = [
+      _TicketInfo(
+        title: 'Vé người lớn',
+        price: 120000,
+        description: 'Từ 12 tuổi trở lên',
+        features: ['Tham quan tự do', 'Hướng dẫn cơ bản'],
+      ),
+      _TicketInfo(
+        title: 'Vé trẻ em',
+        price: 60000,
+        description: '6-11 tuổi',
+        features: ['Tham quan tự do', 'Hướng dẫn cơ bản'],
+      ),
+      _TicketInfo(
+        title: 'Combo hướng dẫn viên',
+        price: 200000,
+        description: 'Người lớn + HDV riêng',
+        features: [
+          'Hướng dẫn viên chuyên nghiệp',
+          'Giải thích chi tiết lịch sử',
+          'Chụp ảnh miễn phí',
+        ],
+      ),
+    ];
     return Column(
-      children: _ticketOptions
+      children: ticketOptions
           .map((ticket) => _ticketItem(context, ticket))
           .toList(),
     );
@@ -583,7 +721,7 @@ class _AttractionsOverviewDetailScreenState
                 ),
               ),
               Text(
-                '${_formatPrice(ticket.price)}đ',
+                _formatPrice(ticket.price),
                 style: context.bodyOneStyle.copyWith(
                   fontWeight: FontWeight.w700,
                   color: context.primaryColor,
@@ -620,13 +758,48 @@ class _AttractionsOverviewDetailScreenState
     );
   }
 
-  // ===== PRACTICAL INFO SECTION =====
-  Widget _practicalInfoSection(BuildContext context) {
+  // ===== PRACTICAL INFO SECTION (từ backend nếu có) =====
+  Widget _practicalInfoSectionDynamic(
+    BuildContext context,
+    Map<String, dynamic> d,
+  ) {
+    final infos = <Map<String, dynamic>>[];
+
+    final opening = _openingHours(d);
+    if (opening.isNotEmpty) {
+      infos.add({'title': 'Giờ mở cửa', 'content': opening});
+    }
+
+    final addr = _locationText(d);
+    if (addr.isNotEmpty) {
+      infos.add({
+        'title': 'Vị trí',
+        'content': ['Địa chỉ: $addr'],
+      });
+    }
+
+    final tips = _tips(d);
+    if (tips.isNotEmpty) {
+      infos.add({'title': 'Lưu ý khi tham quan', 'content': tips});
+    }
+
+    if (infos.isEmpty) {
+      return Text(
+        'Chưa có thêm thông tin thực tế.',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
+      );
+    }
+
     return Column(
-      children: _practicalInfo.entries.map((entry) {
-        final info = entry.value;
-        return _practicalInfoItem(context, info['title'], info['content']);
-      }).toList(),
+      children: infos
+          .map(
+            (info) => _practicalInfoItem(
+              context,
+              info['title'] as String,
+              (info['content'] as List).cast<String>(),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -663,10 +836,18 @@ class _AttractionsOverviewDetailScreenState
   }
 
   // ===== GALLERY SECTION =====
-  Widget _gallerySection(BuildContext context) {
+  Widget _gallerySection(BuildContext context, Map<String, dynamic> d) {
+    final allImages = _images(d);
     final displayImages = _showAllGallery
-        ? _galleryImages
-        : _galleryImages.take(6).toList();
+        ? allImages
+        : allImages.take(6).toList();
+
+    if (allImages.isEmpty) {
+      return Text(
+        'Chưa có ảnh.',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
+      );
+    }
 
     return Column(
       children: [
@@ -681,24 +862,40 @@ class _AttractionsOverviewDetailScreenState
           ),
           itemCount: displayImages.length,
           itemBuilder: (context, index) {
+            final url = displayImages[index];
             return ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                displayImages[index],
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: context.primaryColor.withValues(alpha: .1),
-                  child: Icon(LucideIcons.image, color: context.primaryColor),
-                ),
-              ),
+              child: _isHttpUrl(url)
+                  ? Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: context.primaryColor.withValues(alpha: .1),
+                        child: Icon(
+                          LucideIcons.image,
+                          color: context.primaryColor,
+                        ),
+                      ),
+                    )
+                  : Image.asset(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: context.primaryColor.withValues(alpha: .1),
+                        child: Icon(
+                          LucideIcons.image,
+                          color: context.primaryColor,
+                        ),
+                      ),
+                    ),
             );
           },
         ),
-        if (!_showAllGallery && _galleryImages.length > 6)
+        if (!_showAllGallery && allImages.length > 6)
           TextButton(
             onPressed: () => setState(() => _showAllGallery = true),
             child: Text(
-              'Xem tất cả ${_galleryImages.length} ảnh',
+              'Xem tất cả ${allImages.length} ảnh',
               style: context.captionStyle.copyWith(
                 color: context.primaryColor,
                 fontWeight: FontWeight.w600,
@@ -710,7 +907,8 @@ class _AttractionsOverviewDetailScreenState
   }
 
   // ===== MAP SECTION =====
-  Widget _mapSection(BuildContext context) {
+  Widget _mapSection(BuildContext context, Map<String, dynamic> d) {
+    // TODO: parse d['coordinates'] (e.g., "12.34,56.78") và mở map app
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -746,7 +944,9 @@ class _AttractionsOverviewDetailScreenState
   }
 
   // ===== RATING SUMMARY =====
-  Widget _ratingSummary(BuildContext context) {
+  Widget _ratingSummary(BuildContext context, Map<String, dynamic> d) {
+    final rating = _rating(d);
+
     final rows = [
       {'label': 'Xuất sắc', 'value': 0.7},
       {'label': 'Rất tốt', 'value': 0.8},
@@ -769,16 +969,16 @@ class _AttractionsOverviewDetailScreenState
               Column(
                 children: [
                   Text(
-                    '4.6',
+                    rating.toStringAsFixed(1),
                     style: context.subTitleOneStyle.copyWith(
                       fontWeight: FontWeight.w700,
                       fontSize: 28,
                     ),
                   ),
-                  _starsRow(context, 4.6),
+                  _starsRow(context, rating),
                   const SizedBox(height: 4),
                   Text(
-                    '2.341 đánh giá',
+                    'đánh giá',
                     style: context.captionStyle.copyWith(
                       color: context.textSecondaryColor,
                     ),
@@ -818,7 +1018,7 @@ class _AttractionsOverviewDetailScreenState
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '${((r['value'] as double) * 2341).round()}',
+                                '',
                                 style: context.captionStyle.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -839,6 +1039,13 @@ class _AttractionsOverviewDetailScreenState
 
   // ===== REVIEWS SECTION =====
   Widget _reviewsSection(BuildContext context) {
+    if (_reviews.isEmpty) {
+      return Text(
+        'Chưa có đánh giá.',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
+      );
+    }
+
     final displayReviews = _showAllReviews
         ? _reviews
         : _reviews.take(2).toList();
@@ -862,6 +1069,9 @@ class _AttractionsOverviewDetailScreenState
   }
 
   Widget _reviewItem(BuildContext context, Map<String, dynamic> review) {
+    final images =
+        (review['images'] as List?)?.map((e) => e.toString()).toList() ??
+        const [];
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -877,7 +1087,9 @@ class _AttractionsOverviewDetailScreenState
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundImage: AssetImage(review['avatar']),
+                backgroundImage: const AssetImage(
+                  'assets/images/onboarding1.png',
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -885,17 +1097,20 @@ class _AttractionsOverviewDetailScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      review['user'],
+                      (review['user'] ?? 'Khách').toString(),
                       style: context.bodyTwoStyle.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     Row(
                       children: [
-                        _starsRow(context, review['rating'].toDouble()),
+                        _starsRow(
+                          context,
+                          (review['rating'] as num?)?.toDouble() ?? 0,
+                        ),
                         const SizedBox(width: 8),
                         Text(
-                          review['date'],
+                          (review['date'] ?? '').toString(),
                           style: context.captionStyle.copyWith(
                             color: context.textSecondaryColor,
                           ),
@@ -909,15 +1124,15 @@ class _AttractionsOverviewDetailScreenState
           ),
           const SizedBox(height: 12),
           Text(
-            review['content'],
+            (review['content'] ?? '').toString(),
             style: context.bodyTwoStyle.copyWith(
               height: 1.4,
               fontWeight: FontWeight.w500,
             ),
           ),
-          if (review['images'] != null) ...[
+          if (images.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _reviewImages(context, review['images']),
+            _reviewImages(context, images),
           ],
           const SizedBox(height: 8),
           Row(
@@ -929,7 +1144,7 @@ class _AttractionsOverviewDetailScreenState
               ),
               const SizedBox(width: 4),
               Text(
-                '${review['helpful']} hữu ích',
+                '${review['helpful'] ?? 0} hữu ích',
                 style: context.captionStyle.copyWith(
                   color: context.textSecondaryColor,
                 ),
@@ -949,14 +1164,12 @@ class _AttractionsOverviewDetailScreenState
         itemCount: images.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
+          final url = images[index];
           return ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.asset(
-              images[index],
-              width: 60,
-              height: 60,
-              fit: BoxFit.cover,
-            ),
+            child: _isHttpUrl(url)
+                ? Image.network(url, width: 60, height: 60, fit: BoxFit.cover)
+                : Image.asset(url, width: 60, height: 60, fit: BoxFit.cover),
           );
         },
       ),
@@ -1059,23 +1272,6 @@ class _AttractionsOverviewDetailScreenState
       ),
     );
   }
-
-  String _formatPrice(int price) {
-    if (price >= 1000000) {
-      return '${(price / 1000000).toStringAsFixed(1)}M';
-    }
-    if (price >= 1000) {
-      return '${(price / 1000).toStringAsFixed(0)}K';
-    }
-    return price.toString();
-  }
-}
-
-class _HighlightInfo {
-  final String title;
-  final String description;
-  final IconData icon;
-  const _HighlightInfo(this.title, this.description, this.icon);
 }
 
 class _TicketInfo {

@@ -106,10 +106,17 @@ class _AttractionOverviewSearchScreenState
 
   // Navigation to attraction detail
   void _openAttractionDetail(Map<String, dynamic> attraction) {
-    Navigator.of(context).push(
+    final attractionId = attraction['attractionId'] ?? attraction['id'];
+
+    Navigator.push(
+      context,
       MaterialPageRoute(
-        builder: (_) => AttractionsOverviewDetailScreen(
-          attraction: attraction,
+        builder: (context) => AttractionsOverviewDetailScreen(
+          attractionId: attractionId != null
+              ? int.tryParse(attractionId.toString())
+              : null,
+          attraction: attractionId == null ? attraction : null, // fallback
+          // FIX: use local state, not undefined widget getters
           activeTypes: _selectedTypes,
           activeServices: _selectedServices,
           activeTimes: _selectedTimes,
