@@ -89,10 +89,18 @@ class _RestaurantOverviewSearchScreenState
   }
 
   void _navigateToRestaurantDetail(Map<String, String> restaurant) {
+    // Lấy ID từ map, hỗ trợ nhiều khóa phổ biến
+    final idStr =
+        restaurant['restaurantId'] ??
+        restaurant['id'] ??
+        restaurant['restaurant_id'];
+    final parsedId = idStr != null ? int.tryParse(idStr) : null;
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => RestaurantDetailScreen(
-          restaurant: restaurant,
+          restaurantId: parsedId, // ưu tiên fetch theo ID nếu có
+          restaurant: restaurant, // fallback để vẫn hiển thị nếu thiếu ID
           activeCuisines: _cuisines,
           activeServices: _services,
           activeDietaries: _dietaries,
@@ -753,7 +761,10 @@ class _RestaurantOverviewSearchScreenState
                   : 'Ăn tại chỗ');
 
           return {
+            'restaurantId':
+                m['restaurantId']?.toString() ?? m['id']?.toString() ?? '',
             'name': m['title']?.toString() ?? '',
+            'location': m['location']?.toString() ?? '',
             'cuisine': cuisine,
             'price': priceStr,
             'rating': rating,
