@@ -4,16 +4,30 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 
+// NEW: API
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app/services/hotel_api_service.dart';
+
 class HotelDetailOverviewScreen extends StatefulWidget {
-  final Map<String, String> hotel;
-  // Tập tiện nghi đang được chọn ở màn overview (để highlight) – có thể null.
+  // Prefer id to fetch live detail
+  final int? hotelId;
+
+  // Optional fallback for instant UI while fetching (from search list)
+  final Map<String, String>? hotel;
+
+  // Set of selected amenities to highlight (optional)
   final Set<String>? activeAmenities;
 
   const HotelDetailOverviewScreen({
     super.key,
-    required this.hotel,
+    this.hotelId,
+    this.hotel,
     this.activeAmenities,
-  });
+  }) : assert(
+         hotelId != null || hotel != null,
+         'hotelId or hotel fallback must be provided',
+       );
 
   @override
   State<HotelDetailOverviewScreen> createState() =>
@@ -24,10 +38,18 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
   bool _introExpanded = false;
   bool _showAllReviews = false;
 
-  // Danh mục tiện nghi (khớp tên với bộ lọc ở HotelOverviewSearchScreen)
+  // Loading state
+  bool _loading = true;
+  String? _error;
+  Map<String, dynamic>? _detail;
+  List<Map<String, dynamic>> _reviews = [];
+
+  int? _resolvedId;
+
+  // Amenity catalogs for UI grouping (icons only)
   late final List<_Amenity> _propertyAmenities = [
     _Amenity('Wifi miễn phí', LucideIcons.wifi),
-    _Amenity('Bể bơi', LucideIcons.umbrella), // tạm dùng umbrella
+    _Amenity('Bể bơi', LucideIcons.umbrella),
     _Amenity('Spa', LucideIcons.leaf),
     _Amenity('Gym', LucideIcons.dumbbell),
     _Amenity('Nhà hàng', LucideIcons.chefHat),
@@ -35,7 +57,6 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     _Amenity('Đỗ xe miễn phí', LucideIcons.parkingCircle),
     _Amenity('Room service', LucideIcons.conciergeBell),
   ];
-
   late final List<_Amenity> _serviceAmenities = [
     _Amenity('Đưa đón sân bay', LucideIcons.plane),
     _Amenity('Lễ tân 24/7', LucideIcons.clock),
@@ -45,7 +66,6 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     _Amenity('Không hút thuốc', LucideIcons.ban),
     _Amenity('Tiếp cận xe lăn', LucideIcons.accessibility),
   ];
-
   late final List<_Amenity> _roomAmenities = [
     _Amenity('Điều hòa', LucideIcons.snowflake),
     _Amenity('Ban công riêng', LucideIcons.doorOpen),
@@ -57,37 +77,19 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     _Amenity('Bồn tắm', LucideIcons.bath),
   ];
 
-  // Chính sách & tuỳ chọn (demo – có thể mở rộng từ filter)
-  final List<String> _policies = [
-    'Miễn phí huỷ (tùy loại phòng)',
-    'Thanh toán tại nơi (một số ưu đãi)',
-    'Bao gồm bữa sáng',
-    'Có phòng còn trống',
-  ];
+  final Map<String, bool> _expandedState = {};
 
-  final List<String> _roomTypes = [
-    'Ngắm cảnh biển',
-    'Phòng cô dâu',
-    'Phòng cho gia đình',
-    'Có phòng hút thuốc',
-  ];
-
-  final List<Map<String, dynamic>> _reviews = List.generate(3, (i) {
-    return {
-      'user': 'Nguyễn Thành Công',
-      'avatar': 'assets/images/onboarding${(i % 4) + 1}.png',
-      'rating': 4.0,
-      'date': '12/6/2025',
-      'content':
-          'InterContinental Nha Trang By IHG là một lựa chọn tuyệt vời cho kỳ nghỉ dưỡng sang trọng bên bờ biển. Vị trí đắc địa trên đường Trần Phú giúp du khách dễ dàng tiếp cận bãi biển và các điểm tham quan...',
-      'reply':
-          'We believe our role is to make as many of our guests as happy as possible, and by reading your comments posted from your recent stay with us, it seems that we did just that. Thank you for ...',
-    };
-  });
+  @override
+  void initState() {
+    super.initState();
+    _resolvedId = widget.hotelId ?? _tryParseInt(widget.hotel?['hotelId']);
+    _fetchDetail();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final h = widget.hotel;
+    final data = _data; // merged view
+
     return Scaffold(
       backgroundColor: context.backgroundColor,
       appBar: AppBar(
@@ -108,181 +110,276 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          _heroImage(h['image']),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: _headerInfo(context, h),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _quickMeta(context),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _priceAndAction(context, h),
-          ),
-          const SizedBox(height: 20),
-          _sectionWrapper(
-            context,
-            title: 'Giới thiệu',
-            child: _expandableText(
-              context,
-              text:
-                  'Hãy tự hỏi tại sao khách du lịch đã lựa chọn InterContinental Nha Trang khi đến thăm Nha Trang. Khách sạn là sự tổng hợp của phong cách, dịch vụ và vị trí tuyệt vời ngay tại bờ biển... Phòng nghỉ hiện đại, tiện nghi đẳng cấp và tầm nhìn biển ngoạn mục giúp kỳ nghỉ của bạn trở nên đáng nhớ.',
-              expanded: _introExpanded,
-              onToggle: () => setState(() => _introExpanded = !_introExpanded),
-            ),
-          ),
-          // ===== TIỆN NGHI (chi tiết) =====
-          _amenitiesBlock(
-            context,
-            title: 'Tiện nghi nổi bật',
-            amenities: _propertyAmenities,
-            initiallyVisible: 6,
-          ),
-          _amenitiesBlock(
-            context,
-            title: 'Dịch vụ & tiện ích bổ sung',
-            amenities: _serviceAmenities,
-            initiallyVisible: 5,
-          ),
-          _amenitiesBlock(
-            context,
-            title: 'Tiện nghi trong phòng',
-            amenities: _roomAmenities,
-            initiallyVisible: 6,
-          ),
-          _sectionWrapper(
-            context,
-            title: 'Chính sách & tuỳ chọn',
-            child: _bulletList(context, _policies),
-          ),
-          _sectionWrapper(
-            context,
-            title: 'Loại phòng',
-            child: _bulletList(context, _roomTypes),
-          ),
-          _sectionWrapper(
-            context,
-            title: 'Khu vực',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: _loading
+          ? Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: context.primaryColor,
+                ),
+              ),
+            )
+          : _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  _error!,
+                  style: context.bodyOneStyle.copyWith(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          : ListView(
+              padding: EdgeInsets.zero,
               children: [
-                InkWell(
-                  onTap: () {},
-                  child: Text(
-                    '32-34 Tran Phu Street, Nha Trang 300200 Việt Nam',
-                    style: context.bodyTwoStyle.copyWith(
-                      color: context.primaryColor,
-                      decoration: TextDecoration.underline,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                _heroImage(_primaryImage(data)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: _headerInfo(context, data),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _quickMeta(context),
                 ),
                 const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    'assets/images/onboarding2.png',
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _priceAndAction(context, data),
+                ),
+                const SizedBox(height: 20),
+
+                // Giới thiệu
+                _sectionWrapper(
+                  context,
+                  title: 'Giới thiệu',
+                  child: _expandableText(
+                    context,
+                    text: data['serviceDescription']?.toString() ?? '—',
+                    expanded: _introExpanded,
+                    onToggle: () =>
+                        setState(() => _introExpanded = !_introExpanded),
                   ),
                 ),
-              ],
-            ),
-          ),
-          _sectionWrapper(
-            context,
-            title: 'Thông tin khách du lịch',
-            child: _ratingSummary(context),
-          ),
-          _sectionWrapper(
-            context,
-            title: 'Tất cả đánh giá',
-            child: Column(
-              children: [
-                ..._reviews.map((r) => _reviewItem(context, r)),
-                const SizedBox(height: 8),
-                if (!_showAllReviews)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () => setState(() => _showAllReviews = true),
-                      child: Text(
-                        'Xem tất cả đánh giá',
-                        style: context.captionStyle.copyWith(
-                          color: context.primaryColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+
+                // Highlights (from highlightsJson)
+                if (_listOfString(data['highlightsJson']).isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Điểm nổi bật',
+                    child: _bulletList(
+                      context,
+                      _listOfString(data['highlightsJson']),
                     ),
                   ),
+
+                // Amenity blocks
+                _amenitiesBlock(
+                  context,
+                  title: 'Tiện nghi nổi bật',
+                  amenities: _propertyAmenities,
+                  initiallyVisible: 6,
+                ),
+                _amenitiesBlock(
+                  context,
+                  title: 'Dịch vụ & tiện ích bổ sung',
+                  amenities: _serviceAmenities,
+                  initiallyVisible: 5,
+                ),
+                _amenitiesBlock(
+                  context,
+                  title: 'Tiện nghi trong phòng',
+                  amenities: _roomAmenities,
+                  initiallyVisible: 6,
+                ),
+
+                // Amenities from backend (amenitiesJson)
+                if (_listOfString(data['amenitiesJson']).isNotEmpty)
+                  _amenitiesBlock(
+                    context,
+                    title: 'Tiện nghi theo khách sạn',
+                    amenities: _listOfString(data['amenitiesJson']),
+                    initiallyVisible: 8,
+                  ),
+
+                // Policies
+                if ((data['policiesText'] ?? '').toString().isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Chính sách & tuỳ chọn',
+                    child: _bulletList(
+                      context,
+                      (data['policiesText'] as String)
+                          .split('\n')
+                          .where((s) => s.trim().isNotEmpty)
+                          .toList(),
+                    ),
+                  ),
+
+                // Khu vực
+                _sectionWrapper(
+                  context,
+                  title: 'Khu vực',
+                  child: _locationBlock(context, data),
+                ),
+
+                // Thông tin khách du lịch (rating summary placeholder)
+                _sectionWrapper(
+                  context,
+                  title: 'Thông tin khách du lịch',
+                  child: _ratingSummary(context, data),
+                ),
+
+                // Reviews
+                _sectionWrapper(
+                  context,
+                  title: 'Tất cả đánh giá',
+                  child: _reviewsBlock(context),
+                ),
+
+                const SizedBox(height: 28),
               ],
             ),
-          ),
-          const SizedBox(height: 28),
-        ],
-      ),
     );
   }
 
-  // ===== HERO IMAGE =====
-  Widget _heroImage(String? path) {
+  // ===== Fetch & merge =====
+  Future<void> _fetchDetail() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      Map<String, dynamic>? detail;
+      List<Map<String, dynamic>> reviews = [];
+
+      if (_resolvedId != null) {
+        final prefs = await SharedPreferences.getInstance();
+        final api = HotelApiService(dio: Dio(), prefs: prefs);
+
+        detail = await api.getHotelById(_resolvedId!);
+        // Reviews are optional; load but don't fail the whole screen
+        try {
+          reviews = await api.getHotelReviews(_resolvedId!);
+        } catch (_) {}
+      } else {
+        // No id: render fallback only
+        detail = null;
+      }
+
+      setState(() {
+        _detail = detail;
+        _reviews = reviews;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = 'Không thể tải chi tiết khách sạn. Vui lòng thử lại.';
+      });
+    }
+  }
+
+  Map<String, dynamic> get _data {
+    // Merge: fetched detail wins over fallback
+    final merged = <String, dynamic>{};
+    if (widget.hotel != null) merged.addAll(widget.hotel!);
+    if (_detail != null) merged.addAll(_detail!);
+    return merged;
+  }
+
+  // ===== UI pieces =====
+  Widget _heroImage(String? urlOrAsset) {
+    final images = _imageList(_data);
+    final primary = (urlOrAsset ?? '').isNotEmpty
+        ? urlOrAsset!
+        : (images.isNotEmpty ? images.first : '');
+
+    final isNetwork = primary.startsWith('http');
+
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            path ?? 'assets/images/onboarding1.png',
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              color: Colors.grey.shade300,
-              child: const Icon(Icons.image, size: 48, color: Colors.white70),
+          // Use fallback if empty or any load error happens
+          if (primary.isEmpty)
+            _imageFallback(context)
+          else if (isNetwork)
+            Image.network(
+              primary,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _imageFallback(context),
+            )
+          else
+            Image.asset(
+              primary,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _imageFallback(context),
             ),
-          ),
-          Positioned(
-            bottom: 12,
-            left: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Row(
-                children: [
-                  Icon(LucideIcons.image, size: 14, color: Colors.white),
-                  const SizedBox(width: 6),
-                  const Text(
-                    '1 / 12',
-                    style: TextStyle(
-                      fontSize: 12,
+
+          if (images.length > 1)
+            Positioned(
+              bottom: 12,
+              left: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      LucideIcons.image,
+                      size: 14,
                       color: Colors.white,
-                      fontWeight: FontWeight.w600,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 6),
+                    Text(
+                      '1 / ${images.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  // ===== HEADER =====
-  Widget _headerInfo(BuildContext context, Map<String, String> h) {
+  Widget _headerInfo(BuildContext context, Map<String, dynamic> d) {
+    final name = d['title']?.toString() ?? d['name']?.toString() ?? '';
+    final ratingAvg =
+        _toDouble(d['ratingAverage']) ?? _toDouble(d['rating']) ?? 0.0;
+    final starRating = _toInt(d['starRating']);
+    final ratingLabel = ratingAvg > 4.2
+        ? 'Tuyệt vời'
+        : ratingAvg > 3.5
+        ? 'Tốt'
+        : ratingAvg > 2.5
+        ? 'Ổn'
+        : '—';
+
+    final reviewsCount =
+        _reviews.length; // can replace by aggregate if backend adds
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          h['name'] ?? '',
+          name,
           style: context.bodyOneStyle.copyWith(
             fontWeight: FontWeight.w700,
             fontSize: 16,
@@ -291,17 +388,33 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
         const SizedBox(height: 6),
         Row(
           children: [
-            _starsRow(context, 4.0),
-            const SizedBox(width: 6),
+            if (starRating != null) _starsRow(context, starRating.toDouble()),
+            if (starRating != null) const SizedBox(width: 8),
+            Icon(Icons.star_rounded, color: context.primaryColor, size: 16),
+            const SizedBox(width: 4),
             Text(
-              '(99.999)',
-              style: context.captionStyle.copyWith(
-                color: context.textSecondaryColor,
-                fontWeight: FontWeight.w500,
+              ratingAvg.toStringAsFixed(1),
+              style: context.captionStyle.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                '($reviewsCount)',
+                style: context.captionStyle.copyWith(
+                  color: context.textSecondaryColor,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
         ),
+        if (ratingLabel != '—') ...[
+          const SizedBox(height: 4),
+          Text(
+            ratingLabel,
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ],
         const SizedBox(height: 10),
         Wrap(
           spacing: 16,
@@ -316,7 +429,6 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  // ===== QUICK META (DATE / GUEST) =====
   Widget _quickMeta(BuildContext context) {
     return Row(
       children: [
@@ -341,13 +453,18 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  // ===== PRICE & ACTION =====
-  Widget _priceAndAction(BuildContext context, Map<String, String> h) {
+  Widget _priceAndAction(BuildContext context, Map<String, dynamic> d) {
+    final price = d['price'];
+    final currency = d['currencyCode']?.toString();
+    final priceText = price == null
+        ? (d['price']?.toString() ?? '—')
+        : _formatPrice(price, currency);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          h['price'] ?? '—',
+          priceText,
           style: context.bodyOneStyle.copyWith(
             fontWeight: FontWeight.w700,
             fontSize: 18,
@@ -377,7 +494,6 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  // ===== GENERIC SECTION WRAPPER =====
   Widget _sectionWrapper(
     BuildContext context, {
     required String title,
@@ -410,11 +526,10 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  // ===== AMENITIES BLOCK (tolerant with List<String> or List<_Amenity>) =====
   Widget _amenitiesBlock(
     BuildContext context, {
     required String title,
-    required List amenities, // chấp nhận dynamic list
+    required List amenities, // accepts List<String> or List<_Amenity>
     int initiallyVisible = 6,
   }) {
     final List<_Amenity> amenityObjs = _coerceAmenities(amenities);
@@ -472,12 +587,9 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
   List<_Amenity> _coerceAmenities(List raw) {
     return raw.map<_Amenity>((e) {
       if (e is _Amenity) return e;
-      // Nếu chỉ là String -> gán icon mặc định
       return _Amenity(e.toString(), LucideIcons.check);
     }).toList();
   }
-
-  final Map<String, bool> _expandedState = {};
 
   Widget _amenityChip(BuildContext context, _Amenity a, bool highlighted) {
     final bg = highlighted ? context.primaryColor : context.cardBackgroundColor;
@@ -516,7 +628,6 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  // ===== INTRO EXPANDABLE =====
   Widget _expandableText(
     BuildContext context, {
     required String text,
@@ -552,7 +663,6 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  // ===== GENERIC LIST (POLICIES / ROOM TYPES) =====
   Widget _bulletList(BuildContext context, List<String> items) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -572,8 +682,16 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  // ===== RATING SUMMARY =====
-  Widget _ratingSummary(BuildContext context) {
+  Widget _ratingSummary(BuildContext context, Map<String, dynamic> d) {
+    final avg = _toDouble(d['ratingAverage']) ?? 0.0;
+    final label = avg >= 4.5
+        ? 'Tuyệt vời'
+        : avg >= 4.0
+        ? 'Rất tốt'
+        : avg >= 3.5
+        ? 'Tốt'
+        : 'Khá';
+
     final rows = [
       {'label': 'Xuất sắc', 'value': 0.9},
       {'label': 'Tốt', 'value': 0.8},
@@ -589,20 +707,20 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
             Column(
               children: [
                 Text(
-                  '4,0',
+                  avg.toStringAsFixed(1),
                   style: context.h5Style.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 32,
                   ),
                 ),
                 Text(
-                  'Tốt',
+                  label,
                   style: context.bodyTwoStyle.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 6),
-                _starsRow(context, 4.0),
+                _starsRow(context, (avg / 1.0).clamp(0, 5)),
               ],
             ),
             const SizedBox(width: 24),
@@ -638,7 +756,7 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '99.999',
+                              '—',
                               style: context.captionStyle.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -674,8 +792,46 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  // ===== REVIEW ITEM =====
+  Widget _reviewsBlock(BuildContext context) {
+    if (_reviews.isEmpty) {
+      return Text(
+        'Chưa có đánh giá',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
+      );
+    }
+
+    final visible = _showAllReviews ? _reviews : _reviews.take(2);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...visible.map((r) => _reviewItem(context, r)),
+        const SizedBox(height: 8),
+        if (_reviews.length > 2 && !_showAllReviews)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => setState(() => _showAllReviews = true),
+              child: Text(
+                'Xem thêm ${_reviews.length - 2} đánh giá',
+                style: context.captionStyle.copyWith(
+                  color: context.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _reviewItem(BuildContext context, Map<String, dynamic> r) {
+    final userName = r['userName']?.toString() ?? 'Người dùng';
+    final rating = _toDouble(r['rating']) ?? 5.0;
+    final content = r['content']?.toString() ?? '';
+    final createdAt = r['createdAt']?.toString() ?? '';
+    final date = _formatDate(createdAt);
+    final replyCount = _toInt(r['replyCount']) ?? 0;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
@@ -685,19 +841,26 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundImage: AssetImage(r['avatar'] as String),
+                backgroundColor: context.primaryColor.withValues(alpha: 0.1),
+                child: Text(
+                  userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                  style: TextStyle(
+                    color: context.primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  r['user'] as String,
+                  userName,
                   style: context.bodyOneStyle.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
               Text(
-                r['date'] as String,
+                date,
                 style: context.captionStyle.copyWith(
                   color: context.textSecondaryColor,
                   fontWeight: FontWeight.w500,
@@ -706,86 +869,138 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          _starsRow(context, r['rating'] as double),
+          _starsRow(context, rating),
           const SizedBox(height: 6),
-          Text(
-            r['content'] as String,
-            style: context.bodyTwoStyle.copyWith(height: 1.35),
-          ),
-          const SizedBox(height: 6),
-          InkWell(
-            onTap: () {},
-            child: Text(
-              'Hiển thị thêm thêm',
-              style: context.captionStyle.copyWith(
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _ownerReply(context, r['reply'] as String),
-        ],
-      ),
-    );
-  }
-
-  // ===== OWNER REPLY =====
-  Widget _ownerReply(BuildContext context, String text) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: Color(0xFF23A455), width: 3)),
-      ),
-      padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(LucideIcons.award, size: 16, color: Color(0xFFB8860B)),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'IC Nha Trang',
-                  style: context.bodyTwoStyle.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(
-                '12/6/2025',
+          Text(content, style: context.bodyTwoStyle.copyWith(height: 1.35)),
+          if (replyCount > 0) ...[
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: () {},
+              child: Text(
+                'Hiển thị phản hồi ( $replyCount )',
                 style: context.captionStyle.copyWith(
-                  color: context.textSecondaryColor,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            text,
-            style: context.captionStyle.copyWith(
-              height: 1.35,
-              fontWeight: FontWeight.w500,
             ),
-          ),
-          const SizedBox(height: 4),
-          InkWell(
-            onTap: () {},
-            child: Text(
-              'Hiển thị thêm thêm',
-              style: context.captionStyle.copyWith(
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  // ===== STARS ROW =====
+  Widget _locationBlock(BuildContext context, Map<String, dynamic> d) {
+    final address = d['address']?.toString();
+    final location = d['location']?.toString();
+    final text = address?.isNotEmpty == true ? address! : (location ?? '');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (text.isNotEmpty)
+          InkWell(
+            onTap: () {},
+            child: Text(
+              text,
+              style: context.bodyTwoStyle.copyWith(
+                color: context.primaryColor,
+                decoration: TextDecoration.underline,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.asset(
+            'assets/images/onboarding2.png',
+            height: 160,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ===== Helpers =====
+  int? _tryParseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
+  }
+
+  double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
+
+  int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
+  }
+
+  String _primaryImage(Map<String, dynamic> d) {
+    final images = _imageList(d);
+    if (images.isNotEmpty) return images.first;
+    final th = d['thumbnailUrl']?.toString() ?? d['image']?.toString() ?? '';
+    return th;
+  }
+
+  List<String> _imageList(Map<String, dynamic> d) {
+    final raw = d['imageUrls'];
+    if (raw is List) {
+      return raw.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+    }
+    return const [];
+  }
+
+  List<String> _listOfString(dynamic v) {
+    if (v is List) return v.map((e) => e.toString()).toList();
+    return const [];
+  }
+
+  String _formatDate(String iso) {
+    if (iso.isEmpty) return '';
+    // Cheap formatter: take yyyy-mm-dd or yyyy-mm-ddTHH
+    final parts = iso.split('T').first.split('-');
+    if (parts.length == 3) {
+      return '${parts[2]}/${parts[1]}/${parts[0]}';
+    }
+    return iso;
+  }
+
+  String _formatPrice(dynamic price, String? currency) {
+    if (price == null) return '';
+    num? n;
+    if (price is num) {
+      n = price;
+    } else {
+      n = num.tryParse(price.toString());
+    }
+    if (n == null) return price.toString();
+    final c = (currency ?? '').toUpperCase();
+    if (c == 'VND' || c == 'VNĐ') {
+      return '${n.toStringAsFixed(0)} đ';
+    }
+    if (c.isEmpty) return n.toString();
+    return '$n $c';
+  }
+
+  // NEW: unified image fallback (used for hero image load errors)
+  Widget _imageFallback(BuildContext context) {
+    return Container(
+      height: 180,
+      color: context.primaryColor.withValues(alpha: 0.08),
+      alignment: Alignment.center,
+      child: Icon(LucideIcons.image, color: context.primaryColor),
+    );
+  }
+
   Widget _starsRow(BuildContext context, double rating) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -803,7 +1018,6 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  // ===== INLINE LINK =====
   Widget _inlineAction(BuildContext context, String label) {
     return InkWell(
       onTap: () {},
@@ -817,7 +1031,6 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  // ===== OUTLINED CHIP =====
   Widget _outlinedChip(
     BuildContext context, {
     required IconData icon,

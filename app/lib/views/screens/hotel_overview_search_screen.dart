@@ -154,17 +154,40 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
             rating: rating,
             reviews: reviews,
             price: price,
-            onViewPressed: () => _openHotelDetail({
-              'name': name,
-              'rating': rating,
-              'reviews': reviews,
-              'price': price,
-              'image': imageUrl?.isNotEmpty == true ? imageUrl! : imageAsset,
-            }),
+            onViewPressed: () =>
+                _openHotelDetail(h), // pass full map with hotelId
           );
         },
       ),
     );
+  }
+
+  void _openHotelDetail(Map<String, dynamic> h) {
+    final int? id = _tryParseInt(h['hotelId']);
+    // Provide a tiny fallback map so the hero/title/price render instantly while fetching
+    final fallback = <String, String>{
+      'name': (h['name'] ?? '').toString(),
+      'rating': _getRatingString(h['rating']),
+      'reviews': '',
+      'price': (h['price'] ?? '').toString(),
+      'image': (h['imageUrl'] ?? '').toString(),
+    };
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HotelDetailOverviewScreen(
+          hotelId: id,
+          hotel: fallback,
+          activeAmenities: _selectedAmenities, // highlight amenities if needed
+        ),
+      ),
+    );
+  }
+
+  int? _tryParseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
   }
 
   Future<void> _fetchHotels(String query) async {
@@ -184,15 +207,20 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
       if (data['hotels'] is List) {
         hotels = List.from(data['hotels']).map<Map<String, dynamic>>((e) {
           final m = Map<String, dynamic>.from(e);
+
           final price = m['price'];
           final currency = m['currencyCode']?.toString();
+          final ratingAvg = m['ratingAverage'];
+
           return {
+            'hotelId': m['hotelId'], // NEW: id from backend
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
-            'rating': m['ratingAverage'],
+            'rating': ratingAvg,
             'price': _formatPrice(price, currency),
             'imageUrl': m['thumbnailUrl'],
-            // 'reviews': m['reviewsCount']?.toString(), // nếu backend bổ sung
+            // optional: 'starRating': m['starRating'],
+            // optional: 'address': m['address'],
           };
         }).toList();
       }
@@ -207,14 +235,6 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
         _error = 'Không thể tải khách sạn. Vui lòng thử lại hoặc đăng nhập.';
       });
     }
-  }
-
-  void _openHotelDetail(Map<String, String> hotel) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => HotelDetailOverviewScreen(hotel: hotel),
-      ),
-    );
   }
 
   // Top chips row: Khách sạn | Ngày | Khách | Bộ lọc (price moved inside the sheet)
