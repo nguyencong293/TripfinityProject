@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class ChatHelpBotScreen extends StatefulWidget {
   const ChatHelpBotScreen({super.key});
@@ -27,6 +28,23 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Convert format từ bot thành markdown chuẩn
+  String _convertToMarkdown(String text) {
+    // Convert *** thành ** cho bold
+    text = text.replaceAllMapped(RegExp(r'\*\*\*(.*?)\*\*\*'), (match) {
+      return '**${match.group(1)}**';
+    });
+
+    // Convert format danh sách
+    text = text.replaceAllMapped(RegExp(r'^(\s*)\* (.+)', multiLine: true), (
+      match,
+    ) {
+      return '${match.group(1)}- ${match.group(2)}';
+    });
+
+    return text;
   }
 
   void _scrollToBottom() {
@@ -689,16 +707,54 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
             ),
             const SizedBox(height: 4),
           ],
-          Text(
-            message.text,
-            style: context.bodyOneStyle.copyWith(
-              color: isUser
-                  ? Colors.white
-                  : (message.isError
-                        ? Colors.red.shade700
-                        : context.textPrimaryColor),
+
+          // Sử dụng Markdown cho tin nhắn từ bot, Text thường cho user
+          if (isUser)
+            Text(
+              message.text,
+              style: context.bodyOneStyle.copyWith(color: Colors.white),
+            )
+          else
+            MarkdownBody(
+              data: _convertToMarkdown(message.text),
+              styleSheet: MarkdownStyleSheet(
+                p: context.bodyOneStyle.copyWith(
+                  color: message.isError
+                      ? Colors.red.shade700
+                      : context.textPrimaryColor,
+                ),
+                strong: context.bodyOneStyle.copyWith(
+                  color: message.isError
+                      ? Colors.red.shade700
+                      : context.textPrimaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+                em: context.bodyOneStyle.copyWith(
+                  color: message.isError
+                      ? Colors.red.shade700
+                      : context.textPrimaryColor,
+                  fontStyle: FontStyle.italic,
+                ),
+                listBullet: context.bodyOneStyle.copyWith(
+                  color: message.isError
+                      ? Colors.red.shade700
+                      : context.textPrimaryColor,
+                ),
+                code: context.bodyOneStyle.copyWith(
+                  color: message.isError
+                      ? Colors.red.shade700
+                      : context.textPrimaryColor,
+                  backgroundColor: context.backgroundColor,
+                  fontFamily: 'monospace',
+                ),
+                codeblockDecoration: BoxDecoration(
+                  color: context.backgroundColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: context.borderLineColor),
+                ),
+              ),
+              selectable: true,
             ),
-          ),
         ],
       ),
     );
