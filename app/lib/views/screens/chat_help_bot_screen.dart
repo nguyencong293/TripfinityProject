@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:app/services/trip_bot_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -18,6 +19,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
   bool _isConnectedToStaff = false;
+  bool _isLoading = false;
   final List<ChatMessage> _messages = [];
 
   @override
@@ -39,32 +41,86 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
     }
   }
 
-  void _onSendMessage() {
+  /// Xử lý gửi tin nhắn
+  void _onSendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isLoading) return;
 
+    // Thêm message của user
     setState(() {
       _messages.add(
         ChatMessage(text: text, isFromUser: true, timestamp: DateTime.now()),
       );
+      _isLoading = true;
     });
 
     _messageController.clear();
     _scrollToBottom();
 
     if (!_isConnectedToStaff) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        setState(() {
-          _messages.add(
-            ChatMessage(
-              text: 'Cảm ơn bạn đã liên hệ. Tôi sẽ hỗ trợ bạn ngay.',
-              isFromUser: false,
-              timestamp: DateTime.now(),
-            ),
-          );
-        });
-        _scrollToBottom();
+      await _handleBotResponse(text);
+    } else {
+      // Logic chat với staff (giữ nguyên)
+      setState(() {
+        _isLoading = false;
       });
+    }
+  }
+
+  /// Xử lý phản hồi từ TripBot
+  Future<void> _handleBotResponse(String userMessage) async {
+    try {
+      // Hiển thị typing indicator
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text: 'TripBot đang soạn tin...',
+            isFromUser: false,
+            timestamp: DateTime.now(),
+            isTyping: true,
+          ),
+        );
+      });
+      _scrollToBottom();
+
+      // Gọi TripBot service
+      final response = await TripBotService.sendMessage(userMessage);
+
+      // Xóa typing indicator
+      setState(() {
+        _messages.removeWhere((msg) => msg.isTyping);
+      });
+
+      // Thêm phản hồi từ bot
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text: response.isSuccess
+                ? response.message
+                : response.userFriendlyErrorMessage,
+            isFromUser: false,
+            timestamp: DateTime.now(),
+            isError: !response.isSuccess,
+          ),
+        );
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      // Xử lý lỗi không mong muốn
+      setState(() {
+        _messages.removeWhere((msg) => msg.isTyping);
+        _messages.add(
+          ChatMessage(
+            text: 'Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.',
+            isFromUser: false,
+            timestamp: DateTime.now(),
+            isError: true,
+          ),
+        );
+        _isLoading = false;
+      });
+      _scrollToBottom();
     }
   }
 
@@ -197,6 +253,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
     setState(() {
       _messages.clear();
       _isConnectedToStaff = false;
+      _isLoading = false;
     });
   }
 
@@ -286,7 +343,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
       } else if (e.code == 'permission_denied') {
         errorMessage = 'Cần cấp quyền truy cập camera để chụp ảnh.';
       }
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -295,6 +352,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Đã xảy ra lỗi: $e'),
@@ -325,6 +383,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         errorMessage = 'Cần cấp quyền truy cập thư viện ảnh để chọn hình.';
       }
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -333,6 +392,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Đã xảy ra lỗi: $e'),
@@ -346,7 +406,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
     setState(() {
       _messages.add(
         ChatMessage(
-          text: '', // Text rỗng cho image message
+          text: '',
           isFromUser: true,
           timestamp: DateTime.now(),
           isImage: true,
@@ -454,17 +514,18 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
 
   Widget _buildMessageBubble(BuildContext context, ChatMessage message) {
     final isUser = message.isFromUser;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    // Logic để xác định icon hiển thị
+    // Khoảng cách margin từ cạnh màn hình
+    const double sideMargin = 80.0; // Tin nhắn sẽ cách cạnh màn hình 80px
+
     IconData getMessageIcon() {
       if (isUser) {
         return LucideIcons.user;
       } else {
-        // Nếu là system message, luôn hiển thị bot icon
         if (message.isSystemMessage) {
           return LucideIcons.bot;
         }
-        // Nếu đang ở chế độ staff thì hiển thị users2, ngược lại hiển thị bot
         return _isConnectedToStaff ? LucideIcons.users2 : LucideIcons.bot;
       }
     }
@@ -475,40 +536,52 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         mainAxisAlignment: isUser
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end, // Icon sẽ nằm ở dưới cùng
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // Avatar cho tin nhắn từ bot/staff (bên trái)
           if (!isUser) ...[
-            // Icon ở dưới cùng cho message từ bot/staff
             CircleAvatar(
               radius: 16,
-              backgroundColor: context.primaryColor,
+              backgroundColor: message.isError
+                  ? Colors.red
+                  : context.primaryColor,
               child: Icon(getMessageIcon(), size: 16, color: Colors.white),
             ),
             const SizedBox(width: 8),
           ],
 
-          // Kiểm tra nếu là ảnh thì hiển thị ảnh thuần túy, không có container xung quanh
-          Flexible(
+          // Container chứa tin nhắn với width được giới hạn
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: screenWidth - sideMargin - 40, // Trừ avatar và spacing
+            ),
             child: message.isImage && message.imagePath != null
                 ? _buildPureImageMessage(context, message)
                 : _buildTextMessage(context, message),
           ),
 
+          // Avatar cho tin nhắn từ user (bên phải)
           if (isUser) ...[
             const SizedBox(width: 8),
-            // Icon ở dưới cùng cho message từ user
             CircleAvatar(
               radius: 16,
               backgroundColor: context.primaryColor,
               child: Icon(getMessageIcon(), size: 16, color: Colors.white),
             ),
           ],
+
+          // Spacing để tạo khoảng cách với cạnh màn hình
+          if (isUser)
+            const SizedBox(width: 0) // User message đã có avatar làm spacing
+          else
+            SizedBox(
+              width: sideMargin - 32,
+            ), // Bot message cần thêm spacing để cách xa bên phải
         ],
       ),
     );
   }
 
-  // Widget hiển thị ảnh thuần túy như Facebook Messenger - không có container xung quanh
   Widget _buildPureImageMessage(BuildContext context, ChatMessage message) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
@@ -550,16 +623,58 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
     );
   }
 
-  // Widget hiển thị text message với container background
   Widget _buildTextMessage(BuildContext context, ChatMessage message) {
     final isUser = message.isFromUser;
+
+    // Typing indicator
+    if (message.isTyping) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: context.cardBackgroundColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: context.borderLineColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              message.text,
+              style: context.bodyOneStyle.copyWith(
+                color: context.textSecondaryColor,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isUser ? context.primaryColor : context.cardBackgroundColor,
+        color: isUser
+            ? context.primaryColor
+            : (message.isError
+                  ? Colors.red.shade50
+                  : context.cardBackgroundColor),
         borderRadius: BorderRadius.circular(12),
-        border: isUser ? null : Border.all(color: context.borderLineColor),
+        border: isUser
+            ? null
+            : Border.all(
+                color: message.isError
+                    ? Colors.red.shade300
+                    : context.borderLineColor,
+              ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -577,7 +692,11 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
           Text(
             message.text,
             style: context.bodyOneStyle.copyWith(
-              color: isUser ? Colors.white : context.textPrimaryColor,
+              color: isUser
+                  ? Colors.white
+                  : (message.isError
+                        ? Colors.red.shade700
+                        : context.textPrimaryColor),
             ),
           ),
         ],
@@ -716,11 +835,12 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
           Expanded(
             child: TextField(
               controller: _messageController,
+              enabled: !_isLoading,
               style: context.bodyOneStyle.copyWith(
                 color: context.textPrimaryColor,
               ),
               decoration: InputDecoration(
-                hintText: 'Nhập câu hỏi của bạn',
+                hintText: _isLoading ? 'Đang gửi...' : 'Nhập câu hỏi của bạn',
                 hintStyle: context.bodyOneStyle.copyWith(
                   color: context.textSecondaryColor,
                 ),
@@ -735,7 +855,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
             ),
           ),
           GestureDetector(
-            onTap: _onSendMessage,
+            onTap: _isLoading ? null : _onSendMessage,
             child: Container(
               width: 32,
               height: 32,
@@ -744,11 +864,22 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
                 shape: BoxShape.circle,
                 color: Colors.transparent,
               ),
-              child: Icon(
-                LucideIcons.send,
-                size: 18,
-                color: context.textPrimaryColor,
-              ),
+              child: _isLoading
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          context.textSecondaryColor,
+                        ),
+                      ),
+                    )
+                  : Icon(
+                      LucideIcons.send,
+                      size: 18,
+                      color: context.textPrimaryColor,
+                    ),
             ),
           ),
         ],
@@ -766,6 +897,8 @@ class ChatMessage {
   final bool isSystemMessage;
   final bool isImage;
   final String? imagePath;
+  final bool isTyping;
+  final bool isError;
 
   ChatMessage({
     required this.text,
@@ -775,5 +908,7 @@ class ChatMessage {
     this.isSystemMessage = false,
     this.isImage = false,
     this.imagePath,
+    this.isTyping = false,
+    this.isError = false,
   });
 }

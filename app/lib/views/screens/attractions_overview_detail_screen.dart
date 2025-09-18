@@ -908,7 +908,6 @@ class _AttractionsOverviewDetailScreenState
 
   // ===== MAP SECTION =====
   Widget _mapSection(BuildContext context, Map<String, dynamic> d) {
-    // TODO: parse d['coordinates'] (e.g., "12.34,56.78") và mở map app
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
