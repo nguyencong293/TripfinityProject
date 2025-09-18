@@ -23,6 +23,7 @@ dependencies:
   fluttertoast: ^8.2.4
   lucide_icons: ^0.257.0
   share_plus: ^7.2.1
+  image_picker: ^1.0.4
 
   flutter_localizations:
     sdk: flutter

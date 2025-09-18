@@ -2,6 +2,7 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/localization_service.dart';
 import 'package:app/views/screens/badges_and_points_user_screen.dart';
+import 'package:app/views/screens/chat_help_bot_screen.dart';
 import 'package:app/views/screens/contact_user_screen.dart';
 import 'package:app/views/screens/forget_account_screen.dart';
 import 'package:app/views/screens/introduction_trip_screen.dart';
@@ -40,6 +41,7 @@ class AppRouter {
   static const String postDetail = '/post-detail';
   static const String aboutTripfinity = '/about-tripfinity';
   static const String termsPolicies = '/terms-policies';
+  static const String chatHelpBot = '/chat-help-bot';
 
   // router configurations
   static late final GoRouter _router;
@@ -163,6 +165,11 @@ class AppRouter {
         path: termsPolicies,
         name: 'terms-policies',
         builder: (context, state) => const TermsPolicieScreen(),
+      ),
+      GoRoute(
+        path: chatHelpBot,
+        name: 'chat-help-bot',
+        builder: (context, state) => const ChatHelpBotScreen(),
       ),
     ];
   }

@@ -63,7 +63,9 @@ class DashboardUserScreen extends StatelessWidget {
                 _ActionTile(
                   icon: LucideIcons.lifeBuoy,
                   title: 'account_support'.tr,
-                  onTap: () {},
+                  onTap: () {
+                    context.push(AppRouter.chatHelpBot);
+                  },
                 ),
                 _ActionTile(
                   icon: LucideIcons.settings2,
