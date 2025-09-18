@@ -32,6 +32,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _tabIndex = 0;
+  String? _initialSearchQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -41,8 +42,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Simple placeholder pages per tab (localized)
     final pages = [
-      _HomeContent(user: user),
-      const GeneralSearchScreen(),
+      _HomeContent(
+        user: user,
+        onSubmitSearch: (q) {
+          final query = q.trim();
+          if (query.isEmpty) return;
+          setState(() {
+            _initialSearchQuery = query; // pass query to search screen
+            _tabIndex = 1; // switch to Search tab
+          });
+        },
+      ),
+      GeneralSearchScreen(initialQuery: _initialSearchQuery),
       const TripUserScreen(),
       const TripReviewUserScreen(),
       const DashboardUserScreen(),
@@ -90,7 +101,8 @@ class _Category {
 // Redesigned home content to match the provided UI
 class _HomeContent extends StatelessWidget {
   final dynamic user;
-  const _HomeContent({required this.user});
+  final ValueChanged<String> onSubmitSearch;
+  const _HomeContent({required this.user, required this.onSubmitSearch});
 
   @override
   Widget build(BuildContext context) {
@@ -142,14 +154,17 @@ class _HomeContent extends StatelessWidget {
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 filled: true,
-                // dùng token từ theme
                 fillColor: context.cardBackgroundColor.withValues(alpha: 0.6),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(28),
                   borderSide: BorderSide.none,
                 ),
               ),
-              onTap: () {},
+              textInputAction:
+                  TextInputAction.search, // show search action on keyboard
+              onSubmitted: (value) =>
+                  onSubmitSearch(value), // trigger navigation + query
+              onTap: () {}, // keep existing if you want tap behavior
             ),
             const SizedBox(height: 20),
             // Optional greeting (uses user if available)

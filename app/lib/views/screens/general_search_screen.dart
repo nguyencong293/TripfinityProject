@@ -28,7 +28,8 @@ import 'package:app/services/search_api_service.dart';
 enum _QuickFilter { all, restaurant, hotel, tour, attraction }
 
 class GeneralSearchScreen extends StatefulWidget {
-  const GeneralSearchScreen({super.key});
+  final String? initialQuery; // add this
+  const GeneralSearchScreen({super.key, this.initialQuery});
 
   @override
   State<GeneralSearchScreen> createState() => _GeneralSearchScreenState();
@@ -55,7 +56,25 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   @override
   void initState() {
     super.initState();
-    _searchController.text = '';
+    final iq = widget.initialQuery?.trim();
+    if (iq != null && iq.isNotEmpty) {
+      _searchController.text = iq;
+      // ensure it runs after first frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _performSearch(iq);
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant GeneralSearchScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final newQ = widget.initialQuery?.trim();
+    final oldQ = oldWidget.initialQuery?.trim();
+    if (newQ != null && newQ.isNotEmpty && newQ != oldQ) {
+      _searchController.text = newQ;
+      _performSearch(newQ);
+    }
   }
 
   @override
