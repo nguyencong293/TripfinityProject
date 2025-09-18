@@ -44,6 +44,14 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
       return '${match.group(1)}- ${match.group(2)}';
     });
 
+    // Convert numbered lists
+    text = text.replaceAllMapped(
+      RegExp(r'^(\s*)(\d+)\. (.+)', multiLine: true),
+      (match) {
+        return '${match.group(1)}${match.group(2)}. ${match.group(3)}';
+      },
+    );
+
     return text;
   }
 
@@ -57,6 +65,72 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         );
       });
     }
+  }
+
+  /// Kiểm tra xem user có muốn chuyển sang nhân viên không
+  bool _shouldTransferToStaff(String message) {
+    final lowerMessage = message.toLowerCase().trim();
+
+    // Danh sách các từ khóa đa ngôn ngữ
+    final transferKeywords = [
+      // Tiếng Việt
+      'tôi muốn gặp nhân viên',
+      'gặp nhân viên',
+      'muốn gặp người thật',
+      'nói chuyện với nhân viên',
+      'chat với nhân viên',
+      'kết nối nhân viên',
+      'tôi cần hỗ trợ',
+      'cần người hỗ trợ',
+      'muốn được tư vấn',
+      'gọi nhân viên',
+      'chuyển nhân viên',
+
+      // English
+      'i want to talk to human',
+      'talk to human',
+      'speak to agent',
+      'connect to staff',
+      'human support',
+      'live chat',
+      'customer service',
+      'talk to someone',
+      'need help from staff',
+      'transfer to agent',
+
+      // 中文
+      '我想和人工客服聊天',
+      '转人工',
+      '人工服务',
+      '联系客服',
+
+      // 日本語
+      'スタッフと話したい',
+      '人間のサポート',
+      'オペレーターに繋いで',
+
+      // 한국어
+      '직원과 대화하고 싶어요',
+      '상담원 연결',
+      '사람과 이야기하고 싶어요',
+
+      // Français
+      'parler à un humain',
+      'service client',
+      'agent en direct',
+
+      // Español
+      'hablar con humano',
+      'atención al cliente',
+      'agente en vivo',
+
+      // Deutsch
+      'mit mensch sprechen',
+      'kundenservice',
+      'live support',
+    ];
+
+    return transferKeywords.any((keyword) => lowerMessage.contains(keyword));
   }
 
   /// Xử lý gửi tin nhắn
@@ -76,6 +150,15 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
     _scrollToBottom();
 
     if (!_isConnectedToStaff) {
+      // Kiểm tra xem user có muốn chuyển sang nhân viên không
+      if (_shouldTransferToStaff(text)) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showStaffTransferDialog();
+        return;
+      }
+
       await _handleBotResponse(text);
     } else {
       // Logic chat với staff (giữ nguyên)
@@ -109,13 +192,24 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         _messages.removeWhere((msg) => msg.isTyping);
       });
 
+      // Kiểm tra xem bot có gợi ý chuyển nhân viên không
+      bool shouldShowTransferDialog = false;
+      String botResponse = response.isSuccess
+          ? response.message
+          : response.userFriendlyErrorMessage;
+
+      if (botResponse.contains('[TRANSFER_TO_STAFF]')) {
+        shouldShowTransferDialog = true;
+        botResponse = botResponse.replaceAll('[TRANSFER_TO_STAFF]', '').trim();
+      }
+
       // Thêm phản hồi từ bot
       setState(() {
         _messages.add(
           ChatMessage(
-            text: response.isSuccess
-                ? response.message
-                : response.userFriendlyErrorMessage,
+            text: botResponse.isNotEmpty
+                ? botResponse
+                : 'Tôi hiểu bạn cần hỗ trợ thêm. Bạn có muốn tôi kết nối với nhân viên không?',
             isFromUser: false,
             timestamp: DateTime.now(),
             isError: !response.isSuccess,
@@ -124,6 +218,13 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         _isLoading = false;
       });
       _scrollToBottom();
+
+      // Hiển thị dialog chuyển nhân viên nếu cần
+      if (shouldShowTransferDialog) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _showStaffTransferDialog();
+        });
+      }
     } catch (e) {
       // Xử lý lỗi không mong muốn
       setState(() {
@@ -163,6 +264,74 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
       );
     });
     _scrollToBottom();
+  }
+
+  void _showStaffTransferDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: context.cardBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(LucideIcons.users2, color: context.primaryColor, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Chuyển đến nhân viên',
+                style: context.h5Style.copyWith(
+                  color: context.textPrimaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Tôi nhận thấy bạn cần hỗ trợ từ nhân viên. Bạn có muốn tôi kết nối bạn với nhân viên hỗ trợ không?',
+            style: context.bodyOneStyle.copyWith(
+              color: context.textPrimaryColor,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Tiếp tục với TripBOT',
+                style: context.bodyOneStyle.copyWith(
+                  color: context.textSecondaryColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _connectToStaff();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Kết nối nhân viên',
+                style: context.bodyOneStyle.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showStaffConfirmationDialog() {
@@ -268,11 +437,68 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
   }
 
   void _onNewChat() {
-    setState(() {
-      _messages.clear();
-      _isConnectedToStaff = false;
-      _isLoading = false;
-    });
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: context.cardBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Cuộc trò chuyện mới',
+            style: context.h5Style.copyWith(
+              color: context.textPrimaryColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            'Bạn có muốn bắt đầu cuộc trò chuyện mới không? Tất cả tin nhắn hiện tại sẽ bị xóa.',
+            style: context.bodyOneStyle.copyWith(
+              color: context.textPrimaryColor,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Hủy',
+                style: context.bodyOneStyle.copyWith(
+                  color: context.textSecondaryColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  _messages.clear();
+                  _isConnectedToStaff = false;
+                  _isLoading = false;
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Bắt đầu mới',
+                style: context.bodyOneStyle.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _onAttachImage() {
@@ -467,13 +693,49 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         ),
       ),
       title: Text(
-        'Trò chuyện/ Hỗ trợ',
+        _isConnectedToStaff ? 'Chat với nhân viên' : 'Trò chuyện/ Hỗ trợ',
         style: context.h5Style.copyWith(
           fontWeight: FontWeight.w600,
           color: context.textPrimaryColor,
         ),
       ),
       centerTitle: true,
+      actions: [
+        if (_isConnectedToStaff)
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Online',
+                      style: context.captionStyle.copyWith(
+                        color: Colors.green,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -484,6 +746,16 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 60),
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: context.primaryColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(LucideIcons.bot, size: 40, color: context.primaryColor),
+          ),
+          const SizedBox(height: 24),
           Text(
             'Xin chào tôi là',
             style: context.subTitleOneStyle.copyWith(
@@ -501,9 +773,17 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
             ),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 16),
+          Text(
+            'Trợ lý thông minh cho chuyến du lịch của bạn',
+            style: context.bodyOneStyle.copyWith(
+              color: context.textSecondaryColor,
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 40),
           Text(
-            'Tôi có thể giúp gì cho bạn ?',
+            'Tôi có thể giúp gì cho bạn?',
             style: context.h5Style.copyWith(
               color: context.textPrimaryColor,
               fontWeight: FontWeight.w600,
@@ -511,10 +791,66 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
+          _buildSuggestedQuestions(context),
+          const SizedBox(height: 32),
           _buildContactStaffButton(context),
           const SizedBox(height: 60),
         ],
       ),
+    );
+  }
+
+  Widget _buildSuggestedQuestions(BuildContext context) {
+    final suggestions = [
+      'Tìm tour du lịch phù hợp',
+      'Địa điểm nổi tiếng ở Việt Nam',
+      'Lên kế hoạch chuyến đi',
+      'Khách sạn tốt nhất',
+    ];
+
+    return Column(
+      children: [
+        Text(
+          'Câu hỏi gợi ý:',
+          style: context.bodyOneStyle.copyWith(
+            color: context.textSecondaryColor,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: suggestions.map((suggestion) {
+            return GestureDetector(
+              onTap: () {
+                _messageController.text = suggestion;
+                _onSendMessage();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: context.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: context.primaryColor.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Text(
+                  suggestion,
+                  style: context.captionStyle.copyWith(
+                    color: context.primaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -542,10 +878,17 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         return LucideIcons.user;
       } else {
         if (message.isSystemMessage) {
-          return LucideIcons.bot;
+          return LucideIcons.info;
         }
         return _isConnectedToStaff ? LucideIcons.users2 : LucideIcons.bot;
       }
+    }
+
+    Color getAvatarColor() {
+      if (message.isError) return Colors.red;
+      if (message.isSystemMessage) return Colors.orange;
+      if (_isConnectedToStaff && !isUser) return Colors.green;
+      return context.primaryColor;
     }
 
     return Container(
@@ -560,9 +903,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
           if (!isUser) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: message.isError
-                  ? Colors.red
-                  : context.primaryColor,
+              backgroundColor: getAvatarColor(),
               child: Icon(getMessageIcon(), size: 16, color: Colors.white),
             ),
             const SizedBox(width: 8),
@@ -684,14 +1025,18 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
             ? context.primaryColor
             : (message.isError
                   ? Colors.red.shade50
-                  : context.cardBackgroundColor),
+                  : (message.isSystemMessage
+                        ? Colors.orange.shade50
+                        : context.cardBackgroundColor)),
         borderRadius: BorderRadius.circular(12),
         border: isUser
             ? null
             : Border.all(
                 color: message.isError
                     ? Colors.red.shade300
-                    : context.borderLineColor,
+                    : (message.isSystemMessage
+                          ? Colors.orange.shade300
+                          : context.borderLineColor),
               ),
       ),
       child: Column(
@@ -721,29 +1066,39 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
                 p: context.bodyOneStyle.copyWith(
                   color: message.isError
                       ? Colors.red.shade700
-                      : context.textPrimaryColor,
+                      : (message.isSystemMessage
+                            ? Colors.orange.shade700
+                            : context.textPrimaryColor),
                 ),
                 strong: context.bodyOneStyle.copyWith(
                   color: message.isError
                       ? Colors.red.shade700
-                      : context.textPrimaryColor,
+                      : (message.isSystemMessage
+                            ? Colors.orange.shade700
+                            : context.textPrimaryColor),
                   fontWeight: FontWeight.bold,
                 ),
                 em: context.bodyOneStyle.copyWith(
                   color: message.isError
                       ? Colors.red.shade700
-                      : context.textPrimaryColor,
+                      : (message.isSystemMessage
+                            ? Colors.orange.shade700
+                            : context.textPrimaryColor),
                   fontStyle: FontStyle.italic,
                 ),
                 listBullet: context.bodyOneStyle.copyWith(
                   color: message.isError
                       ? Colors.red.shade700
-                      : context.textPrimaryColor,
+                      : (message.isSystemMessage
+                            ? Colors.orange.shade700
+                            : context.textPrimaryColor),
                 ),
                 code: context.bodyOneStyle.copyWith(
                   color: message.isError
                       ? Colors.red.shade700
-                      : context.textPrimaryColor,
+                      : (message.isSystemMessage
+                            ? Colors.orange.shade700
+                            : context.textPrimaryColor),
                   backgroundColor: context.backgroundColor,
                   fontFamily: 'monospace',
                 ),
@@ -755,6 +1110,20 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
               ),
               selectable: true,
             ),
+
+          // Timestamp
+          if (!message.isTyping) ...[
+            const SizedBox(height: 4),
+            Text(
+              '${message.timestamp.hour.toString().padLeft(2, '0')}:${message.timestamp.minute.toString().padLeft(2, '0')}',
+              style: context.captionStyle.copyWith(
+                color: isUser
+                    ? Colors.white.withValues(alpha: 0.7)
+                    : context.textSecondaryColor,
+                fontSize: 10,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -777,13 +1146,15 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                LucideIcons.users,
+                _isConnectedToStaff ? LucideIcons.bot : LucideIcons.users,
                 size: 20,
                 color: context.textSecondaryColor,
               ),
               const SizedBox(width: 10),
               Text(
-                'Trò chuyện trực tiếp với nhân viên',
+                _isConnectedToStaff
+                    ? 'Quay về TripBOT'
+                    : 'Trò chuyện trực tiếp với nhân viên',
                 style: context.bodyOneStyle.copyWith(
                   color: context.textSecondaryColor,
                   fontWeight: FontWeight.w500,
@@ -824,8 +1195,12 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
                       ? LucideIcons.bot
                       : LucideIcons.users2,
                   onTap: _onContactStaff,
-                  backgroundColor: context.primaryColor.withValues(alpha: 0.1),
-                  iconColor: context.primaryColor,
+                  backgroundColor: _isConnectedToStaff
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : context.primaryColor.withValues(alpha: 0.1),
+                  iconColor: _isConnectedToStaff
+                      ? Colors.green
+                      : context.primaryColor,
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
@@ -868,7 +1243,6 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
 
   Widget _buildMessageInput(BuildContext context) {
     return Container(
-      height: 44,
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(22),
@@ -895,6 +1269,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
               style: context.bodyOneStyle.copyWith(
                 color: context.textPrimaryColor,
               ),
+              maxLines: null,
               decoration: InputDecoration(
                 hintText: _isLoading ? 'Đang gửi...' : 'Nhập câu hỏi của bạn',
                 hintStyle: context.bodyOneStyle.copyWith(
@@ -904,7 +1279,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
                 focusedBorder: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 isDense: true,
-                contentPadding: EdgeInsets.zero,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _onSendMessage(),
@@ -916,7 +1291,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
               width: 32,
               height: 32,
               margin: const EdgeInsets.only(right: 6),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.transparent,
               ),
