@@ -109,7 +109,7 @@ class _HomeContent extends StatelessWidget {
     final categories = const <_Category>[
       _Category(LucideIcons.hotel, 'cat_hotels'),
       _Category(LucideIcons.utensils, 'cat_food'),
-      _Category(LucideIcons.ticket, 'cat_tickets'),
+      _Category(LucideIcons.ticket, 'cat_attraction'),
       _Category(LucideIcons.partyPopper, 'cat_entertainment'),
       _Category(LucideIcons.map, 'cat_itinerary'),
       _Category(LucideIcons.tag, 'cat_deals'),
