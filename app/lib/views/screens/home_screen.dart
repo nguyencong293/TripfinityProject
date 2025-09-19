@@ -1,4 +1,5 @@
 import 'package:app/routes/app_router.dart';
+import 'package:app/services/search_api_service.dart';
 import 'package:app/views/screens/attractions_overview_search_screen.dart';
 import 'package:app/views/screens/general_search_screen.dart';
 import 'package:app/views/screens/hotel_overview_search_screen.dart';
@@ -9,9 +10,11 @@ import 'package:app/views/screens/trip_review_user_screen.dart';
 import 'package:app/views/widgets/article_banner_card.dart';
 import 'package:app/views/widgets/bottom_nav.dart';
 import 'package:app/views/widgets/experience_card.dart';
+import 'package:app/views/widgets/home_service_item.dart';
 import 'package:app/views/widgets/recent_item_tile.dart';
 import 'package:app/views/widgets/section_header.dart';
 import 'package:app/views/widgets/weekend_city_card.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -23,6 +26,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/localization_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../controllers/auth_controller.dart';
 import 'dashboard_user_screen.dart';
@@ -107,6 +111,65 @@ class _HomeContent extends StatelessWidget {
   final dynamic user;
   final ValueChanged<String> onSubmitSearch;
   const _HomeContent({required this.user, required this.onSubmitSearch});
+
+  Future<List<HomeServiceItem>> _loadHomeRestaurants() async {
+    final prefs = await SharedPreferences.getInstance();
+    final api = SearchApiService(dio: Dio(), prefs: prefs);
+    final data = await api.search(q: '', type: 'restaurant');
+
+    final list = (data['restaurants'] is List)
+        ? List.from(data['restaurants'])
+        : const [];
+
+    final items = <HomeServiceItem>[];
+    for (final e in list) {
+      final m = Map<String, dynamic>.from(e as Map);
+
+      final title = (m['title'] ?? m['name'] ?? '').toString();
+      if (title.isEmpty) continue;
+
+      final ratingAny =
+          m['ratingAverage'] ??
+          m['rating'] ??
+          m['ratingAvg'] ??
+          m['avg_rating'];
+      final rating = (ratingAny is num)
+          ? ratingAny.toDouble()
+          : (double.tryParse(ratingAny?.toString() ?? '') ?? 0.0);
+
+      final imageUrl =
+          (m['thumbnailUrl'] ?? m['imageUrl'] ?? m['image'])?.toString() ?? '';
+
+      final priceText = _formatPrice(m['price'], m['currencyCode']?.toString());
+
+      items.add(
+        HomeServiceItem(
+          title: title,
+          rating: rating,
+          imageUrl: imageUrl,
+          price: priceText,
+        ),
+      );
+    }
+
+    items.shuffle();
+    return items.length > 10 ? items.sublist(0, 10) : items;
+  }
+
+  String _formatPrice(dynamic price, String? currency) {
+    if (price == null) return '';
+    num? n;
+    if (price is num) {
+      n = price;
+    } else {
+      n = num.tryParse(price.toString());
+    }
+    if (n == null) return '';
+    final c = (currency ?? '').toUpperCase();
+    if (c == 'VND' || c == 'VNĐ') return '${n.toStringAsFixed(0)} đ';
+    if (c.isEmpty) return n.toString();
+    return '$n $c';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -332,28 +395,18 @@ class _HomeContent extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Nearby restaurants (reuse ExperienceCard)
-            SectionHeader(
+            HomeHorizontalSection(
               title: 'nearby_restaurants'.tr,
-              actionLabel: 'see_more'.tr,
-              onAction: () {},
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: ExperienceCard.listHeight(context),
-              child: ListView.separated(
-                key: const PageStorageKey('restaurants'),
-                primary: false,
-                physics: const BouncingScrollPhysics(),
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                itemBuilder: (_, i) => const ExperienceCard(
-                  imageAsset: 'assets/images/onboarding3.png',
-                  title: 'Bếp Cuốn Đà Nẵng',
-                  rating: 4,
-                ),
-                separatorBuilder: (_, __) => const SizedBox(width: 16),
-                itemCount: 10,
-              ),
+              pageStorageKey: 'restaurants',
+              futureItems: _loadHomeRestaurants(),
+              onSeeMore: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const RestaurantOverviewSearchScreen(searchQuery: ''),
+                  ),
+                );
+              },
             ),
           ],
         ),
