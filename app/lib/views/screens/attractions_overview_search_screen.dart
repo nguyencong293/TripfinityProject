@@ -534,7 +534,7 @@ class _AttractionOverviewSearchScreenState
         ),
         centerTitle: true,
         title: Text(
-          widget.searchQuery.isEmpty ? 'Điểm tham quan' : widget.searchQuery,
+          widget.searchQuery.isEmpty ? 'Điểm Tham Quan' : widget.searchQuery,
           style: context.subTitleOneStyle.copyWith(fontWeight: FontWeight.w600),
         ),
       ),

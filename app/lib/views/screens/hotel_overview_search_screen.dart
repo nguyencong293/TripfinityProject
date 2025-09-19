@@ -81,7 +81,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
         ),
         centerTitle: true,
         title: Text(
-          widget.searchQuery.isEmpty ? 'Khách sạn' : widget.searchQuery,
+          widget.searchQuery.isEmpty ? 'Khách Sạn' : widget.searchQuery,
           style: context.subTitleOneStyle.copyWith(fontWeight: FontWeight.w600),
         ),
       ),

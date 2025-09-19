@@ -132,7 +132,7 @@ class _RestaurantOverviewSearchScreenState
         ),
         centerTitle: true,
         title: Text(
-          widget.searchQuery.isEmpty ? 'Nha Trang' : widget.searchQuery,
+          widget.searchQuery.isEmpty ? 'Nhà Hàng' : widget.searchQuery,
           style: context.subTitleOneStyle.copyWith(fontWeight: FontWeight.w600),
         ),
       ),

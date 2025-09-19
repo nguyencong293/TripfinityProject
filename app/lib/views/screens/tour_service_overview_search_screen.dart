@@ -131,7 +131,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
         ),
         centerTitle: true,
         title: Text(
-          widget.searchQuery.isEmpty ? 'Nha Trang' : widget.searchQuery,
+          widget.searchQuery.isEmpty ? 'Tour Dịch Vụ' : widget.searchQuery,
           style: context.subTitleOneStyle.copyWith(fontWeight: FontWeight.w600),
         ),
       ),

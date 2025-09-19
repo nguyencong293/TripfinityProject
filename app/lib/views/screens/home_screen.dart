@@ -1,5 +1,9 @@
 import 'package:app/routes/app_router.dart';
+import 'package:app/views/screens/attractions_overview_search_screen.dart';
 import 'package:app/views/screens/general_search_screen.dart';
+import 'package:app/views/screens/hotel_overview_search_screen.dart';
+import 'package:app/views/screens/restaurant_overview_search_screen.dart';
+import 'package:app/views/screens/tour_service_overview_search_screen.dart';
 import 'package:app/views/screens/trip__user_screen.dart';
 import 'package:app/views/screens/trip_review_user_screen.dart';
 import 'package:app/views/widgets/article_banner_card.dart';
@@ -108,6 +112,7 @@ class _HomeContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final categories = const <_Category>[
       _Category(LucideIcons.hotel, 'cat_hotels'),
+      _Category(LucideIcons.bus, 'cat_tour'),
       _Category(LucideIcons.utensils, 'cat_food'),
       _Category(LucideIcons.ticket, 'cat_attraction'),
       _Category(LucideIcons.partyPopper, 'cat_entertainment'),
@@ -182,7 +187,7 @@ class _HomeContent extends StatelessWidget {
               crossAxisCount: 4,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 1.0, // square tiles: width == height
+              childAspectRatio: 1.0,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               children: categories.map((c) {
@@ -191,7 +196,51 @@ class _HomeContent extends StatelessWidget {
                   label: c.labelKey.tr,
                   surface: context.cardBackgroundColor,
                   onSurface: context.textSecondaryColor,
-                  onTap: () {},
+
+                  onTap: () {
+                    switch (c.labelKey) {
+                      case 'cat_hotels':
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const HotelOverviewSearchScreen(
+                              searchQuery: '',
+                            ),
+                          ),
+                        );
+                        break;
+                      case 'cat_attraction':
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const AttractionOverviewSearchScreen(
+                                  searchQuery: '',
+                                ),
+                          ),
+                        );
+                        break;
+                      case 'cat_food':
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const RestaurantOverviewSearchScreen(
+                                  searchQuery: '',
+                                ),
+                          ),
+                        );
+                        break;
+                      case 'cat_tour':
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const TourServiceOverviewScreen(
+                              searchQuery: '',
+                            ),
+                          ),
+                        );
+                        break;
+                      default:
+                        break;
+                    }
+                  },
                 );
               }).toList(),
             ),
