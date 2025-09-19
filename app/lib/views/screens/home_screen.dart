@@ -1,4 +1,5 @@
 import 'package:app/routes/app_router.dart';
+import 'package:app/services/area_api_service.dart';
 import 'package:app/services/search_api_service.dart';
 import 'package:app/views/screens/attractions_overview_search_screen.dart';
 import 'package:app/views/screens/general_search_screen.dart';
@@ -13,7 +14,7 @@ import 'package:app/views/widgets/experience_card.dart';
 import 'package:app/views/widgets/home_service_item.dart';
 import 'package:app/views/widgets/recent_item_tile.dart';
 import 'package:app/views/widgets/section_header.dart';
-import 'package:app/views/widgets/weekend_city_card.dart';
+import 'package:app/views/widgets/area_preview_item.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -302,6 +303,47 @@ class _HomeContent extends StatelessWidget {
     return '$n $c';
   }
 
+  Future<List<AreaPreviewItem>> _loadHomeAreas() async {
+    final prefs = await SharedPreferences.getInstance();
+    final api = AreaApiService(dio: Dio(), prefs: prefs);
+
+    final List<Map<String, dynamic>> list = await api.getAll();
+    final items = <AreaPreviewItem>[];
+
+    for (final e in list) {
+      final m = Map<String, dynamic>.from(e);
+
+      final name = (m['name'] ?? '').toString();
+      if (name.isEmpty) continue;
+
+      final imageUrl =
+          (m['coverImageUrl'] ?? m['imageUrl'] ?? m['bannerUrl'])?.toString() ??
+          '';
+
+      final shortDesc = m['shortDescription']?.toString();
+      final type = (m['areaType']?.toString() ?? '').toLowerCase();
+      String country;
+      if (shortDesc != null && shortDesc.trim().isNotEmpty) {
+        country = shortDesc.trim();
+      } else if (type == 'province') {
+        country = 'Tỉnh, Việt Nam';
+      } else if (type == 'city') {
+        country = 'Thành phố, Việt Nam';
+      } else if (type == 'district') {
+        country = 'Quận/Huyện, Việt Nam';
+      } else {
+        country = 'Việt Nam';
+      }
+
+      items.add(
+        AreaPreviewItem(name: name, country: country, imageUrl: imageUrl),
+      );
+    }
+
+    items.shuffle();
+    return items.length > 10 ? items.sublist(0, 10) : items;
+  }
+
   @override
   Widget build(BuildContext context) {
     final categories = const <_Category>[
@@ -497,18 +539,48 @@ class _HomeContent extends StatelessWidget {
             SectionHeader(title: 'weekend_ideas'.tr),
             const SizedBox(height: 8),
             SizedBox(
-              height: WeekendCityCard.kHeight,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemBuilder: (_, i) => WeekendCityCard(
-                  imageAsset: i.isEven
-                      ? 'assets/images/onboarding2.png'
-                      : 'assets/images/onboarding3.png',
-                  city: i.isEven ? 'Nha Trang' : 'Huế',
-                  country: 'Việt Nam',
-                ),
-                separatorBuilder: (_, __) => const SizedBox(width: 16),
-                itemCount: 5,
+              height: AreaPreviewCard.kHeight,
+              child: FutureBuilder<List<AreaPreviewItem>>(
+                future: _loadHomeAreas(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Không thể tải khu vực',
+                        style: context.captionStyle.copyWith(
+                          color: context.errorColor,
+                        ),
+                      ),
+                    );
+                  }
+                  final items = snapshot.data ?? const <AreaPreviewItem>[];
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'Chưa có khu vực',
+                        style: context.captionStyle.copyWith(
+                          color: context.textSecondaryColor,
+                        ),
+                      ),
+                    );
+                  }
+                  return ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemBuilder: (_, i) {
+                      final it = items[i];
+                      return AreaPreviewCard(
+                        imageUrl: it.imageUrl,
+                        city: it.name,
+                        country: it.country,
+                      );
+                    },
+                    separatorBuilder: (_, __) => const SizedBox(width: 16),
+                    itemCount: items.length,
+                  );
+                },
               ),
             ),
 
