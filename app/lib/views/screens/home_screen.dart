@@ -156,6 +156,137 @@ class _HomeContent extends StatelessWidget {
     return items.length > 10 ? items.sublist(0, 10) : items;
   }
 
+  Future<List<HomeServiceItem>> _loadHomeHotels() async {
+    final prefs = await SharedPreferences.getInstance();
+    final api = SearchApiService(dio: Dio(), prefs: prefs);
+    final data = await api.search(q: '', type: 'hotel');
+
+    final list = (data['hotels'] is List)
+        ? List.from(data['hotels'])
+        : const [];
+    final items = <HomeServiceItem>[];
+
+    for (final e in list) {
+      final m = Map<String, dynamic>.from(e as Map);
+
+      final title = (m['title'] ?? m['name'] ?? '').toString();
+      if (title.isEmpty) continue;
+
+      final ratingAny =
+          m['ratingAverage'] ??
+          m['rating'] ??
+          m['ratingAvg'] ??
+          m['avg_rating'];
+      final rating = (ratingAny is num)
+          ? ratingAny.toDouble()
+          : (double.tryParse(ratingAny?.toString() ?? '') ?? 0.0);
+
+      final imageUrl =
+          (m['thumbnailUrl'] ?? m['imageUrl'] ?? m['image'])?.toString() ?? '';
+
+      final priceText = _formatPrice(m['price'], m['currencyCode']?.toString());
+
+      items.add(
+        HomeServiceItem(
+          title: title,
+          rating: rating,
+          imageUrl: imageUrl,
+          price: priceText,
+        ),
+      );
+    }
+
+    items.shuffle();
+    return items.length > 10 ? items.sublist(0, 10) : items;
+  }
+
+  Future<List<HomeServiceItem>> _loadHomeTours() async {
+    final prefs = await SharedPreferences.getInstance();
+    final api = SearchApiService(dio: Dio(), prefs: prefs);
+    final data = await api.search(q: '', type: 'tour');
+
+    final list = (data['tours'] is List) ? List.from(data['tours']) : const [];
+    final items = <HomeServiceItem>[];
+
+    for (final e in list) {
+      final m = Map<String, dynamic>.from(e as Map);
+
+      final title = (m['title'] ?? m['name'] ?? '').toString();
+      if (title.isEmpty) continue;
+
+      final ratingAny =
+          m['ratingAverage'] ??
+          m['rating'] ??
+          m['ratingAvg'] ??
+          m['avg_rating'];
+      final rating = (ratingAny is num)
+          ? ratingAny.toDouble()
+          : (double.tryParse(ratingAny?.toString() ?? '') ?? 0.0);
+
+      final imageUrl =
+          (m['thumbnailUrl'] ?? m['imageUrl'] ?? m['image'])?.toString() ?? '';
+
+      final priceText = _formatPrice(m['price'], m['currencyCode']?.toString());
+
+      items.add(
+        HomeServiceItem(
+          title: title,
+          rating: rating,
+          imageUrl: imageUrl,
+          price: priceText,
+        ),
+      );
+    }
+
+    items.shuffle();
+    return items.length > 10 ? items.sublist(0, 10) : items;
+  }
+
+  Future<List<HomeServiceItem>> _loadHomeAttractions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final api = SearchApiService(dio: Dio(), prefs: prefs);
+    final data = await api.search(q: '', type: 'attraction');
+
+    final list = (data['attractions'] is List)
+        ? List.from(data['attractions'])
+        : const [];
+    final items = <HomeServiceItem>[];
+
+    for (final e in list) {
+      final m = Map<String, dynamic>.from(e as Map);
+
+      final title = (m['title'] ?? m['name'] ?? '').toString();
+      if (title.isEmpty) continue;
+
+      final ratingAny =
+          m['ratingAverage'] ??
+          m['rating'] ??
+          m['ratingAvg'] ??
+          m['avg_rating'];
+      final rating = (ratingAny is num)
+          ? ratingAny.toDouble()
+          : (double.tryParse(ratingAny?.toString() ?? '') ?? 0.0);
+
+      final imageUrl =
+          (m['thumbnailUrl'] ?? m['imageUrl'] ?? m['image'])?.toString() ?? '';
+
+      // At attractions, price may be missing; empty string is fine for UI
+      final priceText = _formatPrice(m['price'], m['currencyCode']?.toString());
+
+      items.add(
+        HomeServiceItem(
+          title: title,
+          rating: rating,
+          imageUrl: imageUrl,
+          price: priceText,
+        ),
+      );
+    }
+
+    items.shuffle();
+    return items.length > 10 ? items.sublist(0, 10) : items;
+  }
+
   String _formatPrice(dynamic price, String? currency) {
     if (price == null) return '';
     num? n;
@@ -390,6 +521,70 @@ class _HomeContent extends StatelessWidget {
               imageAsset: 'assets/images/onboarding4.png',
               title: 'Top 8 cây cầu Đà Nẵng',
               ctaLabel: 'explore_now'.tr,
+            ),
+
+            const SizedBox(height: 24),
+
+            HomeHorizontalSection(
+              title: 'nearby_hotels'.tr,
+              pageStorageKey: 'hotels',
+              futureItems: _loadHomeHotels(),
+              onSeeMore: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const HotelOverviewSearchScreen(searchQuery: ''),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+
+            HomeHorizontalSection(
+              title: 'nearby_hotels'.tr,
+              pageStorageKey: 'hotels',
+              futureItems: _loadHomeHotels(),
+              onSeeMore: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const HotelOverviewSearchScreen(searchQuery: ''),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+
+            HomeHorizontalSection(
+              title: 'nearby_tours'.tr,
+              pageStorageKey: 'tours',
+              futureItems: _loadHomeTours(),
+              onSeeMore: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const TourServiceOverviewScreen(searchQuery: ''),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+
+            HomeHorizontalSection(
+              title: 'nearby_attractions'.tr,
+              pageStorageKey: 'attractions',
+              futureItems: _loadHomeAttractions(),
+              onSeeMore: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const AttractionOverviewSearchScreen(searchQuery: ''),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 24),
