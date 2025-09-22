@@ -406,5 +406,32 @@
   "svc_entry_tickets": "Vé tham quan",
   "svc_meals_included": "Bao gồm bữa ăn",
   "svc_insurance": "Bảo hiểm",
-  "svc_wheelchair": "Xe lăn"
+  "svc_wheelchair": "Xe lăn",
+
+  "tour_intro": "Giới thiệu tour",
+
+  "services_included": "Dịch vụ bao gồm",
+  "services_excluded": "Dịch vụ không bao gồm",
+  "itinerary_detail": "Lịch trình chi tiết",
+  "tour_policies": "Chính sách tour",
+
+  "difficulty_easy_desc": "Phù hợp với mọi lứa tuổi, không yêu cầu thể lực đặc biệt",
+  "difficulty_medium_desc": "Cần thể lực trung bình, có thể đi bộ trong thời gian dài",
+  "difficulty_hard_desc": "Yêu cầu thể lực tốt, có hoạt động mạo hiểm",
+  "departure_info": "Điểm khởi hành",
+  "languages": "Ngôn ngữ",
+  "view_more_photos": "Xem thêm ảnh",
+  "contact": "Liên hệ",
+
+  "no_itinerary_info": "Chưa có thông tin lịch trình",
+  "rating_info": "Thông tin đánh giá",
+
+  "view_all_reviews": "Xem tất cả đánh giá",
+  "user": "Người dùng",
+  "reviews": "đánh giá",
+
+  "read_less": "Thu gọn",
+  "error_loading": "Lỗi tải dữ liệu",
+
+  "error_load_tour_detail": "Không thể tải dữ liệu tour. Vui lòng thử lại hoặc đăng nhập."
 }

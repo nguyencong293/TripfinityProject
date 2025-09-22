@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+import 'package:app/services/localization_service.dart';
 
 class TourServiceDetailScreen extends StatefulWidget {
   final int? tourId; // optional id for fetching fresh data
@@ -35,7 +36,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
   bool _loading = false;
   String? _error;
 
-  Map<String, dynamic>? _detail; // fetched TourDTO
+  Map<String, dynamic>? _detail;
   List<Map<String, dynamic>> _reviews = [];
 
   int? get _idFromFallback {
@@ -52,14 +53,12 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
 
   Map<String, dynamic> get _data {
     final base = Map<String, dynamic>.from(widget.tour ?? {});
-    // Normalize overview field names so UI is simpler
     if (base['title'] == null && base['name'] != null) {
       base['title'] = base['name'];
     }
     if (base['thumbnailUrl'] == null && base['image'] != null) {
       base['thumbnailUrl'] = base['image'];
     }
-    // Merge fetched detail (detail values take precedence)
     if (_detail != null) base.addAll(_detail!);
     return base;
   }
@@ -73,7 +72,6 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
   Future<void> _load() async {
     final id = _resolvedId;
     if (id == null) {
-      // No id, we still can render from fallback
       setState(() {
         _loading = false;
         _error = null;
@@ -101,7 +99,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = 'Không thể tải dữ liệu tour. Vui lòng thử lại hoặc đăng nhập.';
+        _error = 'error_load_tour_detail'.tr;
       });
     }
   }
@@ -169,7 +167,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                 const SizedBox(height: 20),
                 _sectionWrapper(
                   context,
-                  title: 'Giới thiệu tour',
+                  title: 'tour_intro'.tr,
                   child: _expandableText(
                     context,
                     text:
@@ -184,17 +182,17 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                 ),
                 _tourTypeBlock(
                   context,
-                  title: 'Loại tour',
+                  title: 'tour_types'.tr,
                   selected: widget.activeTourTypes ?? {},
                 ),
                 _serviceChipsBlock(
                   context,
-                  title: 'Dịch vụ bao gồm',
+                  title: 'services_included'.tr,
                   selected: widget.activeServices ?? {},
                 ),
                 _sectionWrapper(
                   context,
-                  title: 'Lịch trình chi tiết',
+                  title: 'itinerary_detail'.tr,
                   child: _itineraryOverview(context, d['itineraryOverview']),
                 ),
                 _includedExcludedSection(context, d),
@@ -207,12 +205,12 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                 _departureInfoSection(context, d),
                 _sectionWrapper(
                   context,
-                  title: 'Thông tin đánh giá',
+                  title: 'rating_info'.tr,
                   child: _ratingSummary(context, rating, reviewCount),
                 ),
                 _sectionWrapper(
                   context,
-                  title: 'Tất cả đánh giá',
+                  title: 'all_reviews'.tr,
                   child: _reviewsSection(context),
                 ),
                 const SizedBox(height: 28),
@@ -228,16 +226,10 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (url == null || url.isEmpty)
+          if (url == null || url.isEmpty || !url.startsWith('http'))
             _imageFallback(context)
-          else if (url.startsWith('http'))
-            Image.network(
-              url,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _imageFallback(context),
-            )
           else
-            Image.asset(
+            Image.network(
               url,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => _imageFallback(context),
@@ -248,7 +240,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: context.cardBackgroundColor.withValues(alpha: .85),
+                color: context.cardBackgroundColor.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: context.dividerColor),
               ),
@@ -261,7 +253,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    'Xem thêm ảnh',
+                    'view_more_photos'.tr,
                     style: context.captionStyle.copyWith(
                       color: context.textPrimaryColor,
                       fontWeight: FontWeight.w600,
@@ -300,12 +292,22 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
             _starsRow(context, rating),
             const SizedBox(width: 6),
             Text(
-              '(${(reviewCount ?? 0)})',
+              '(${rating.toStringAsFixed(1)})',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
+            if ((reviewCount ?? 0) > 0) ...[
+              const SizedBox(width: 8),
+              Text(
+                '${reviewCount ?? 0} ${'reviews'.tr}',
+                style: context.captionStyle.copyWith(
+                  color: context.textSecondaryColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
             if (location.isNotEmpty) ...[
               const SizedBox(width: 10),
               Icon(
@@ -331,9 +333,9 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
         Wrap(
           spacing: 16,
           children: [
-            _inlineAction(context, 'Liên hệ'),
-            _inlineAction(context, 'Viết đánh giá'),
-            _inlineAction(context, 'Chia sẻ'),
+            _inlineAction(context, 'contact'.tr),
+            _inlineAction(context, 'write_review'.tr),
+            _inlineAction(context, 'share'.tr),
           ],
         ),
       ],
@@ -347,7 +349,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     final durationDays = _numberFromAny(d['durationDays']);
     final dateText = start != null && end != null
         ? '$start → $end'
-        : (durationDays != null ? '$durationDays ngày' : '—');
+        : (durationDays != null ? '$durationDays ${'day'.tr}' : '—');
     return Row(
       children: [
         Expanded(
@@ -363,7 +365,8 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
           child: _outlinedChip(
             context,
             icon: LucideIcons.users,
-            label: '${d['capacity'] ?? d['minParticipants'] ?? '2'} khách',
+            label:
+                '${d['capacity'] ?? d['minParticipants'] ?? '2'} ${'guests_short'.tr}',
             onTap: () {},
           ),
         ),
@@ -401,9 +404,9 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
               elevation: 0,
             ),
             onPressed: () {},
-            child: const Text(
-              'Đặt tour ngay',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            child: Text(
+              'book_now'.tr,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
         ),
@@ -467,7 +470,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
         InkWell(
           onTap: onToggle,
           child: Text(
-            expanded ? 'Thu gọn' : 'Đọc thêm',
+            expanded ? 'read_less'.tr : 'read_more'.tr,
             style: context.captionStyle.copyWith(
               color: context.textPrimaryColor,
               fontWeight: FontWeight.w600,
@@ -479,7 +482,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     );
   }
 
-  // ===== TOUR TYPE & SERVICES (chips from filters) =====
+  // ===== TOUR TYPE & SERVICES
   Widget _tourTypeBlock(
     BuildContext context, {
     required String title,
@@ -496,7 +499,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: context.primaryColor.withValues(alpha: .1),
+              color: context.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: context.primaryColor),
             ),
@@ -536,7 +539,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: context.primaryColor.withValues(alpha: .1),
+              color: context.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: context.primaryColor),
             ),
@@ -564,7 +567,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
   Widget _itineraryOverview(BuildContext context, dynamic overviewRaw) {
     final overview = overviewRaw?.toString() ?? '';
     if (overview.isEmpty) {
-      return _emptyBox(context, 'Chưa có thông tin lịch trình');
+      return _emptyBox(context, 'no_itinerary_info'.tr);
     }
     final items = overview
         .split(RegExp(r'\r?\n'))
@@ -617,7 +620,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
         if (included.isNotEmpty)
           _sectionWrapper(
             context,
-            title: 'Dịch vụ bao gồm',
+            title: 'services_included'.tr,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: included
@@ -628,7 +631,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
         if (excluded.isNotEmpty)
           _sectionWrapper(
             context,
-            title: 'Dịch vụ không bao gồm',
+            title: 'services_excluded'.tr,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: excluded
@@ -649,7 +652,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
           Icon(
             good ? LucideIcons.checkCircle2 : LucideIcons.xCircle,
             size: 16,
-            color: good ? context.primaryColor : Colors.red,
+            color: good ? context.primaryColor : context.errorColor,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -677,41 +680,51 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
         .toList();
     return _sectionWrapper(
       context,
-      title: 'Chính sách tour',
+      title: 'tour_policies'.tr,
       child: _bulletList(context, lines),
     );
   }
 
   // ===== DIFFICULTY =====
   Widget _difficultySection(BuildContext context, String difficultyLabel) {
+    final display = _difficultyDisplayLabel(difficultyLabel);
     return _sectionWrapper(
       context,
-      title: 'Độ khó: $difficultyLabel',
-      child: _difficultyInfo(context, difficultyLabel),
+      title: '${'difficulty'.tr}: $display',
+      child: _difficultyInfo(context, display),
     );
   }
 
+  String _difficultyDisplayLabel(String labelOrCode) {
+    final code = (labelOrCode.trim().toLowerCase());
+    if (code == 'easy' || labelOrCode == 'Dễ') return 'difficulty_easy'.tr;
+    if (code == 'moderate' || labelOrCode == 'Vừa') {
+      return 'difficulty_medium'.tr;
+    }
+    if (code == 'hard' || labelOrCode == 'Khó') return 'difficulty_hard'.tr;
+    return 'difficulty_easy'.tr;
+  }
+
   Widget _difficultyInfo(BuildContext context, String difficulty) {
-    // Map labels to icon + color + description
     final map = <String, Map<String, Object>>{
-      'Dễ': {
+      'difficulty_easy'.tr: {
         'icon': LucideIcons.smile,
-        'color': Colors.green,
-        'desc': 'Phù hợp với mọi lứa tuổi, không yêu cầu thể lực đặc biệt',
+        'color': context.primaryColor,
+        'desc': 'difficulty_easy_desc'.tr,
       },
-      'Vừa': {
+      'difficulty_medium'.tr: {
         'icon': LucideIcons.meh,
-        'color': Colors.orange,
-        'desc': 'Cần thể lực trung bình, có thể đi bộ trong thời gian dài',
+        'color': context.textSecondaryColor,
+        'desc': 'difficulty_medium_desc'.tr,
       },
-      'Khó': {
+      'difficulty_hard'.tr: {
         'icon': LucideIcons.frown,
-        'color': Colors.red,
-        'desc': 'Yêu cầu thể lực tốt, có hoạt động mạo hiểm',
+        'color': context.errorColor,
+        'desc': 'difficulty_hard_desc'.tr,
       },
     };
 
-    final cfg = map[difficulty] ?? map['Dễ']!;
+    final cfg = map[difficulty] ?? map['difficulty_easy'.tr]!;
     final icon = cfg['icon'] as IconData;
     final color = cfg['color'] as Color;
     final desc = cfg['desc'] as String;
@@ -734,7 +747,6 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     );
   }
 
-  // ===== DEPARTURE / MEETING / LANGS =====
   Widget _departureInfoSection(BuildContext context, Map<String, dynamic> d) {
     final meetingPoint = d['meetingPoint']?.toString();
     final departure = d['departureLocation']?.toString();
@@ -748,7 +760,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
 
     return _sectionWrapper(
       context,
-      title: 'Điểm khởi hành',
+      title: 'departure_info'.tr,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -760,7 +772,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
             _itineraryDetail(
               context,
               LucideIcons.languages,
-              'Ngôn ngữ: ${langs.join(', ')}',
+              '${'languages'.tr}: ${langs.join(', ')}',
             ),
         ],
       ),
@@ -774,7 +786,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: .3)),
+        border: Border.all(color: context.dividerColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -784,7 +796,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                 width: 54,
                 height: 54,
                 decoration: BoxDecoration(
-                  color: context.primaryColor.withValues(alpha: .1),
+                  color: context.primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -804,7 +816,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                     _starsRow(context, rating),
                     const SizedBox(height: 4),
                     Text(
-                      '${count ?? 0} đánh giá',
+                      '${count ?? 0} ${'reviews'.tr}',
                       style: context.captionStyle.copyWith(
                         color: context.textSecondaryColor,
                       ),
@@ -824,7 +836,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                 color: context.primaryColor,
               ),
               label: Text(
-                'Viết đánh giá',
+                'write_review'.tr,
                 style: context.captionStyle.copyWith(
                   color: context.primaryColor,
                   fontWeight: FontWeight.w600,
@@ -844,7 +856,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
   // ===== REVIEWS LIST =====
   Widget _reviewsSection(BuildContext context) {
     if (_reviews.isEmpty) {
-      return _emptyBox(context, 'Chưa có đánh giá');
+      return _emptyBox(context, 'no_reviews'.tr);
     }
     final visible = _showAllReviews ? _reviews : _reviews.take(3).toList();
     return Column(
@@ -854,7 +866,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
           TextButton(
             onPressed: () => setState(() => _showAllReviews = true),
             child: Text(
-              'Xem tất cả đánh giá',
+              'view_all_reviews'.tr,
               style: context.captionStyle.copyWith(
                 color: context.textPrimaryColor,
                 fontWeight: FontWeight.w600,
@@ -879,7 +891,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: .25)),
+        border: Border.all(color: context.dividerColor.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -888,7 +900,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: context.primaryColor.withValues(alpha: .1),
+                backgroundColor: context.primaryColor.withValues(alpha: 0.1),
                 child: Icon(
                   LucideIcons.user,
                   size: 16,
@@ -901,7 +913,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Người dùng #${userId ?? '—'}',
+                      '${'user'.tr} #${userId ?? '—'}',
                       style: context.captionStyle.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -1013,9 +1025,15 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
-        final filled = rating >= (i + 1) - 0.25;
+        final starIndex = i + 1;
+        final isFull = rating >= starIndex - 0.25;
+        final isHalf = !isFull && rating >= starIndex - 0.75;
         return Icon(
-          filled ? Icons.star_rounded : Icons.star_border_rounded,
+          isFull
+              ? Icons.star_rounded
+              : isHalf
+              ? Icons.star_half_rounded
+              : Icons.star_border_rounded,
           color: context.primaryColor,
           size: 16,
         );
@@ -1129,13 +1147,13 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     final c = code?.toString().toLowerCase();
     switch (c) {
       case 'easy':
-        return 'Dễ';
+        return 'difficulty_easy'.tr;
       case 'moderate':
-        return 'Vừa';
+        return 'difficulty_medium'.tr;
       case 'hard':
-        return 'Khó';
+        return 'difficulty_hard'.tr;
       default:
-        return 'Dễ';
+        return 'difficulty_easy'.tr;
     }
   }
 
@@ -1153,7 +1171,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Lỗi tải dữ liệu',
+              'error_loading'.tr,
               style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
@@ -1171,7 +1189,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                 side: BorderSide(color: context.primaryColor),
               ),
               child: Text(
-                'Thử lại',
+                'retry'.tr,
                 style: context.bodyTwoStyle.copyWith(
                   color: context.primaryColor,
                   fontWeight: FontWeight.w600,
