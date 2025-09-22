@@ -630,12 +630,9 @@ class _AttractionOverviewSearchScreenState
           final reviews = a['reviews']?.toString() ?? '';
           final priceText = a['price']?.toString() ?? '';
           final imageUrl = a['imageUrl']?.toString();
-          final fallbackAsset =
-              'assets/images/onboarding${(index % 4) + 1}.png';
 
           return _AttractionCard(
             imageUrl: imageUrl,
-            fallbackAsset: fallbackAsset,
             name: name,
             rating: rating,
             reviews: reviews,
@@ -792,7 +789,6 @@ Widget _imageFallback(BuildContext context) {
 
 class _AttractionCard extends StatelessWidget {
   final String? imageUrl;
-  final String fallbackAsset;
   final String name;
   final String rating;
   final String reviews;
@@ -801,7 +797,6 @@ class _AttractionCard extends StatelessWidget {
 
   const _AttractionCard({
     required this.imageUrl,
-    required this.fallbackAsset,
     required this.name,
     required this.rating,
     required this.reviews,
@@ -811,7 +806,6 @@ class _AttractionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasNetwork = (imageUrl ?? '').startsWith('http');
     final double ratingVal = double.tryParse(rating) ?? 0.0;
 
     return Container(
@@ -829,7 +823,7 @@ class _AttractionCard extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(16),
                 ),
-                child: hasNetwork
+                child: (imageUrl != null && imageUrl!.startsWith('http'))
                     ? Image.network(
                         imageUrl!,
                         height: 180,
@@ -837,13 +831,7 @@ class _AttractionCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => _imageFallback(context),
                       )
-                    : Image.asset(
-                        fallbackAsset,
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _imageFallback(context),
-                      ),
+                    : _imageFallback(context),
               ),
               Positioned(
                 top: 10,
