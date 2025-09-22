@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/attraction_api_service.dart';
+import 'package:app/services/localization_service.dart';
 
 class AttractionsOverviewDetailScreen extends StatefulWidget {
   final int? attractionId;
@@ -69,7 +70,7 @@ class _AttractionsOverviewDetailScreenState
       setState(() {
         _loading = false;
         if (widget.attraction == null) {
-          _errorMessage = 'Thiếu attractionId để tải dữ liệu.';
+          _errorMessage = 'missing_attraction_id'.tr;
         }
       });
       return;
@@ -82,12 +83,11 @@ class _AttractionsOverviewDetailScreenState
 
       setState(() {
         _detail = data;
-        // _reviews = reviews;
         _loading = false;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Không thể tải dữ liệu. Vui lòng thử lại.';
+        _errorMessage = 'error_load_failed'.tr;
         _loading = false;
       });
     }
@@ -191,7 +191,7 @@ class _AttractionsOverviewDetailScreenState
   }
 
   String _formatPrice(num? price, {String? currency}) {
-    if (price == null || price == 0) return 'Miễn phí';
+    if (price == null || price == 0) return 'free'.tr;
     final isVnd = (currency ?? '').toUpperCase() == 'VND';
     String compact;
     if (price >= 1000000) {
@@ -251,7 +251,7 @@ class _AttractionsOverviewDetailScreenState
                   });
                   _fetchDetail();
                 },
-                child: const Text('Thử lại'),
+                child: Text('retry'.tr),
               ),
             ],
           ),
@@ -296,21 +296,20 @@ class _AttractionsOverviewDetailScreenState
           const SizedBox(height: 20),
           _sectionWrapper(
             context,
-            title: 'Giới thiệu',
+            title: 'introduction'.tr,
             child: _expandableText(
               context,
               text: _intro(attraction).isNotEmpty
                   ? _intro(attraction)
-                  : 'Chưa có mô tả chi tiết.',
+                  : 'no_description'.tr,
               expanded: _introExpanded,
               onToggle: () => setState(() => _introExpanded = !_introExpanded),
             ),
           ),
-          // ===== ĐIỂM NỔI BẬT =====
           if (_highlights(attraction).isNotEmpty)
             _sectionWrapper(
               context,
-              title: 'Điểm nổi bật',
+              title: 'highlights'.tr,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: _highlights(
@@ -318,65 +317,59 @@ class _AttractionsOverviewDetailScreenState
                 ).map((h) => _highlightItemText(context, h)).toList(),
               ),
             ),
-          // ===== LOẠI VÀ DỊCH VỤ =====
           _typeAndServiceBlock(
             context,
-            title: 'Loại hình tham quan',
+            title: 'visit_types'.tr,
             options: _visitTypes(attraction),
             activeSet: widget.activeTypes ?? {},
           ),
           _typeAndServiceBlock(
             context,
-            title: 'Dịch vụ có sẵn',
+            title: 'available_services'.tr,
             options: _features(attraction),
             activeSet: widget.activeServices ?? {},
           ),
           _typeAndServiceBlock(
             context,
-            title: 'Thời gian hoạt động',
+            title: 'operating_times'.tr,
             options: _availableTimes(attraction),
             activeSet: widget.activeTimes ?? {},
           ),
           _typeAndServiceBlock(
             context,
-            title: 'Phù hợp cho',
+            title: 'suitable_for'.tr,
             options: _suitableFor(attraction),
             activeSet: widget.activeSuitability ?? {},
           ),
-          // ===== VÉ THAM QUAN =====
           _sectionWrapper(
             context,
-            title: 'Vé tham quan',
+            title: 'tickets'.tr,
             child: _ticketSection(context),
           ),
-          // ===== THÔNG TIN THỰC TẾ =====
           _sectionWrapper(
             context,
-            title: 'Thông tin thực tế',
+            title: 'practical_info'.tr,
             child: _practicalInfoSectionDynamic(context, attraction),
           ),
-          // ===== GALLERY =====
           _sectionWrapper(
             context,
-            title: 'Thư viện ảnh',
+            title: 'gallery'.tr,
             child: _gallerySection(context, attraction),
           ),
-          // ===== BẢN ĐỒ =====
           _sectionWrapper(
             context,
-            title: 'Vị trí',
+            title: 'location'.tr,
             child: _mapSection(context, attraction),
           ),
-          // ===== ĐÁNH GIÁ =====
           _sectionWrapper(
             context,
-            title: 'Đánh giá từ du khách',
+            title: 'reviews_title'.tr,
             child: _ratingSummary(context, attraction),
           ),
           if (_reviews.isNotEmpty)
             _sectionWrapper(
               context,
-              title: 'Tất cả đánh giá',
+              title: 'all_reviews'.tr,
               child: _reviewsSection(context),
             ),
           const SizedBox(height: 28),
@@ -419,18 +412,22 @@ class _AttractionsOverviewDetailScreenState
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.45),
+                color: context.overlayModalBackdropColor,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.image, size: 14, color: Colors.white),
+                  Icon(
+                    LucideIcons.image,
+                    size: 14,
+                    color: context.buttonTextColor,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     total > 0 ? '1 / $total' : '0 / 0',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white,
+                      color: context.buttonTextColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -445,8 +442,8 @@ class _AttractionsOverviewDetailScreenState
 
   Widget _heroFallback() {
     return Container(
-      color: Colors.grey.shade300,
-      child: const Icon(Icons.image, size: 48, color: Colors.white70),
+      color: context.skeletonPlaceholderColor,
+      child: Icon(Icons.image, size: 48, color: context.textSecondaryColor),
     );
   }
 
@@ -489,7 +486,7 @@ class _AttractionsOverviewDetailScreenState
             ),
             const SizedBox(width: 8),
             Text(
-              '(đánh giá)',
+              'reviews_title'.tr,
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
               ),
@@ -500,10 +497,10 @@ class _AttractionsOverviewDetailScreenState
         Wrap(
           spacing: 16,
           children: [
-            _inlineAction(context, 'Xem bản đồ'),
-            _inlineAction(context, 'Liên hệ'),
-            _inlineAction(context, 'Viết đánh giá'),
-            _inlineAction(context, 'Chia sẻ'),
+            _inlineAction(context, 'view_map'.tr),
+            _inlineAction(context, 'contact_title'.tr),
+            _inlineAction(context, 'write_review'.tr),
+            _inlineAction(context, 'share'.tr),
           ],
         ),
       ],
@@ -525,7 +522,7 @@ class _AttractionsOverviewDetailScreenState
         Row(
           children: [
             Text(
-              'Từ ',
+              '${'from'.tr} ',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
               ),
@@ -539,7 +536,7 @@ class _AttractionsOverviewDetailScreenState
               ),
             ),
             Text(
-              '/người',
+              '/${'per_person'.tr}',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
               ),
@@ -559,9 +556,9 @@ class _AttractionsOverviewDetailScreenState
               elevation: 0,
             ),
             onPressed: () {},
-            child: const Text(
-              'Đặt vé ngay',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            child: Text(
+              'book_now'.tr,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
         ),
@@ -622,7 +619,7 @@ class _AttractionsOverviewDetailScreenState
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: isActive
-                  ? context.primaryColor.withValues(alpha: .12)
+                  ? context.primaryColor.withValues(alpha: 0.12)
                   : context.cardBackgroundColor,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
@@ -648,25 +645,31 @@ class _AttractionsOverviewDetailScreenState
   Widget _ticketSection(BuildContext context) {
     final List<_TicketInfo> ticketOptions = [
       _TicketInfo(
-        title: 'Vé người lớn',
+        title: 'ticket_adult'.tr,
         price: 120000,
-        description: 'Từ 12 tuổi trở lên',
-        features: ['Tham quan tự do', 'Hướng dẫn cơ bản'],
-      ),
-      _TicketInfo(
-        title: 'Vé trẻ em',
-        price: 60000,
-        description: '6-11 tuổi',
-        features: ['Tham quan tự do', 'Hướng dẫn cơ bản'],
-      ),
-      _TicketInfo(
-        title: 'Combo hướng dẫn viên',
-        price: 200000,
-        description: 'Người lớn + HDV riêng',
+        description: 'ticket_adult_desc'.tr,
         features: [
-          'Hướng dẫn viên chuyên nghiệp',
-          'Giải thích chi tiết lịch sử',
-          'Chụp ảnh miễn phí',
+          'ticket_feature_free_visit'.tr,
+          'ticket_feature_basic_guide'.tr,
+        ],
+      ),
+      _TicketInfo(
+        title: 'ticket_child'.tr,
+        price: 60000,
+        description: 'ticket_child_desc'.tr,
+        features: [
+          'ticket_feature_free_visit'.tr,
+          'ticket_feature_basic_guide'.tr,
+        ],
+      ),
+      _TicketInfo(
+        title: 'ticket_combo_guide'.tr,
+        price: 200000,
+        description: 'ticket_combo_guide_desc'.tr,
+        features: [
+          'ticket_feature_pro_guide'.tr,
+          'ticket_feature_history'.tr,
+          'ticket_feature_photos'.tr,
         ],
       ),
     ];
@@ -684,7 +687,7 @@ class _AttractionsOverviewDetailScreenState
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: .3)),
+        border: Border.all(color: context.dividerColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -758,25 +761,25 @@ class _AttractionsOverviewDetailScreenState
 
     final opening = _openingHours(d);
     if (opening.isNotEmpty) {
-      infos.add({'title': 'Giờ mở cửa', 'content': opening});
+      infos.add({'title': 'opening_hours'.tr, 'content': opening});
     }
 
     final addr = _locationText(d);
     if (addr.isNotEmpty) {
       infos.add({
-        'title': 'Vị trí',
-        'content': ['Địa chỉ: $addr'],
+        'title': 'location'.tr,
+        'content': ['${'address'.tr}: $addr'],
       });
     }
 
     final tips = _tips(d);
     if (tips.isNotEmpty) {
-      infos.add({'title': 'Lưu ý khi tham quan', 'content': tips});
+      infos.add({'title': 'visiting_tips'.tr, 'content': tips});
     }
 
     if (infos.isEmpty) {
       return Text(
-        'Chưa có thêm thông tin thực tế.',
+        'no_description'.tr,
         style: context.captionStyle.copyWith(color: context.textSecondaryColor),
       );
     }
@@ -835,7 +838,7 @@ class _AttractionsOverviewDetailScreenState
 
     if (allImages.isEmpty) {
       return Text(
-        'Chưa có ảnh.',
+        'no_photos'.tr,
         style: context.captionStyle.copyWith(color: context.textSecondaryColor),
       );
     }
@@ -861,7 +864,7 @@ class _AttractionsOverviewDetailScreenState
                       url,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
-                        color: context.primaryColor.withValues(alpha: .1),
+                        color: context.primaryColor.withValues(alpha: 0.1),
                         child: Icon(
                           LucideIcons.image,
                           color: context.primaryColor,
@@ -872,7 +875,7 @@ class _AttractionsOverviewDetailScreenState
                       url,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
-                        color: context.primaryColor.withValues(alpha: .1),
+                        color: context.primaryColor.withValues(alpha: 0.1),
                         child: Icon(
                           LucideIcons.image,
                           color: context.primaryColor,
@@ -886,7 +889,7 @@ class _AttractionsOverviewDetailScreenState
           TextButton(
             onPressed: () => setState(() => _showAllGallery = true),
             child: Text(
-              'Xem tất cả ${allImages.length} ảnh',
+              '${'see_all'.tr} ${allImages.length} ${'photos'.tr}',
               style: context.captionStyle.copyWith(
                 color: context.primaryColor,
                 fontWeight: FontWeight.w600,
@@ -921,7 +924,7 @@ class _AttractionsOverviewDetailScreenState
           ),
           icon: Icon(LucideIcons.map, size: 18, color: context.primaryColor),
           label: Text(
-            'Mở bản đồ',
+            'open_map'.tr,
             style: context.bodyTwoStyle.copyWith(
               color: context.primaryColor,
               fontWeight: FontWeight.w600,
@@ -938,11 +941,11 @@ class _AttractionsOverviewDetailScreenState
     final rating = _rating(d);
 
     final rows = [
-      {'label': 'Xuất sắc', 'value': 0.7},
-      {'label': 'Rất tốt', 'value': 0.8},
-      {'label': 'Trung bình', 'value': 0.1},
-      {'label': 'Kém', 'value': 0.0},
-      {'label': 'Tệ', 'value': 0.0},
+      {'label': 'rating_excellent'.tr, 'value': 0.7},
+      {'label': 'rating_very_good'.tr, 'value': 0.8},
+      {'label': 'rating_good'.tr, 'value': 0.1},
+      {'label': 'rating_fair'.tr, 'value': 0.0},
+      {'label': 'rating_poor'.tr, 'value': 0.0},
     ];
 
     return Container(
@@ -950,7 +953,7 @@ class _AttractionsOverviewDetailScreenState
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: .3)),
+        border: Border.all(color: context.dividerColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -968,7 +971,7 @@ class _AttractionsOverviewDetailScreenState
                   _starsRow(context, rating),
                   const SizedBox(height: 4),
                   Text(
-                    'đánh giá',
+                    'reviews_title'.tr,
                     style: context.captionStyle.copyWith(
                       color: context.textSecondaryColor,
                     ),
@@ -1031,7 +1034,7 @@ class _AttractionsOverviewDetailScreenState
   Widget _reviewsSection(BuildContext context) {
     if (_reviews.isEmpty) {
       return Text(
-        'Chưa có đánh giá.',
+        'no_reviews'.tr,
         style: context.captionStyle.copyWith(color: context.textSecondaryColor),
       );
     }
@@ -1047,7 +1050,7 @@ class _AttractionsOverviewDetailScreenState
           TextButton(
             onPressed: () => setState(() => _showAllReviews = true),
             child: Text(
-              'Xem tất cả đánh giá',
+              'see_all_reviews'.tr,
               style: context.captionStyle.copyWith(
                 color: context.primaryColor,
                 fontWeight: FontWeight.w600,
@@ -1068,18 +1071,16 @@ class _AttractionsOverviewDetailScreenState
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: .25)),
+        border: Border.all(color: context.dividerColor.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              CircleAvatar(
+              const CircleAvatar(
                 radius: 18,
-                backgroundImage: const AssetImage(
-                  'assets/images/onboarding1.png',
-                ),
+                backgroundImage: AssetImage('assets/images/onboarding1.png'),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1087,7 +1088,7 @@ class _AttractionsOverviewDetailScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      (review['user'] ?? 'Khách').toString(),
+                      (review['user'] ?? 'guest'.tr).toString(),
                       style: context.bodyTwoStyle.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -1134,7 +1135,7 @@ class _AttractionsOverviewDetailScreenState
               ),
               const SizedBox(width: 4),
               Text(
-                '${review['helpful'] ?? 0} hữu ích',
+                '${review['helpful'] ?? 0} ${'helpful'.tr}',
                 style: context.captionStyle.copyWith(
                   color: context.textSecondaryColor,
                 ),
@@ -1222,7 +1223,7 @@ class _AttractionsOverviewDetailScreenState
         InkWell(
           onTap: onToggle,
           child: Text(
-            expanded ? 'Thu gọn' : 'Đọc thêm',
+            expanded ? 'show_less'.tr : 'read_more'.tr,
             style: context.captionStyle.copyWith(
               color: context.textPrimaryColor,
               fontWeight: FontWeight.w600,
@@ -1255,8 +1256,7 @@ class _AttractionsOverviewDetailScreenState
       child: Text(
         label,
         style: context.captionStyle.copyWith(
-          color: context.primaryColor,
-          fontWeight: FontWeight.w600,
+          color: context.textPrimaryColor,
           decoration: TextDecoration.underline,
         ),
       ),
