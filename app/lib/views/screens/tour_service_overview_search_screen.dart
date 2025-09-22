@@ -5,7 +5,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 
-// Centralized API like other screens
 import 'package:app/services/search_api_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,11 +20,9 @@ class TourServiceOverviewScreen extends StatefulWidget {
 }
 
 class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
-  // Quick chips
   bool _hasDate = true;
   bool _hasGuests = true;
 
-  // Filters
   static const double _minPrice = 0;
   static const double _maxPrice = 10_000_000;
   RangeValues _priceRange = const RangeValues(500000, 3_500_000);
@@ -1049,17 +1046,17 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
 }
 
 class _TagOption {
-  final String label; // lang key
+  final String label;
   final IconData icon;
   const _TagOption(this.label, this.icon);
 }
 
 class _TourCard extends StatelessWidget {
-  final String imagePath; // url
+  final String imagePath;
   final String name;
   final String type;
-  final String rating; // string
-  final String reviews; // already like "(123)"
+  final String rating;
+  final String reviews;
   final String price;
   final String duration;
   final VoidCallback onViewPressed;
@@ -1083,9 +1080,7 @@ class _TourCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: context.dividerColor.withValues(alpha: 0.25),
-        ), // FIX
+        border: Border.all(color: context.dividerColor.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1197,7 +1192,6 @@ class _TourCard extends StatelessWidget {
     );
   }
 
-  // Only cloud image; fallback if missing or error
   Widget _buildImage(BuildContext context) {
     if (imagePath.isNotEmpty && imagePath.startsWith('http')) {
       return Image.network(
