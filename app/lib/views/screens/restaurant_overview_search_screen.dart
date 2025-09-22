@@ -5,7 +5,6 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 
-// Dynamic data: dùng service tập trung như các màn khác
 import 'package:app/services/search_api_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,7 +24,6 @@ class _RestaurantOverviewSearchScreenState
   bool _hasDate = true;
   bool _hasGuests = true;
 
-  // Price per person (UI filter only; không tác động đến fetch server-side)
   RangeValues _priceRange = const RangeValues(50000, 450000);
   static const double _minPrice = 0;
   static const double _maxPrice = 1000000;
@@ -39,7 +37,6 @@ class _RestaurantOverviewSearchScreenState
   bool _takeAway = false;
   bool _inStockOnly = false;
 
-  // Localized option catalogs (labels localized at build-time)
   List<_TagOption> get _cuisineCatalog => [
     _TagOption('cuisine_vietnamese'.tr, LucideIcons.wine),
     _TagOption('cuisine_seafood'.tr, LucideIcons.fish),
@@ -70,10 +67,8 @@ class _RestaurantOverviewSearchScreenState
     _TagOption('dietary_dairy_free'.tr, LucideIcons.milkOff),
   ];
 
-  // Thay dữ liệu tĩnh bằng dữ liệu động
   List<Map<String, String>> _restaurants = [];
 
-  // Loading/Error state gọn trong vùng list
   bool _loading = false;
   String? _error;
 
@@ -91,7 +86,6 @@ class _RestaurantOverviewSearchScreenState
   }
 
   void _navigateToRestaurantDetail(Map<String, String> restaurant) {
-    // Lấy ID từ map, hỗ trợ nhiều khóa phổ biến
     final idStr =
         restaurant['restaurantId'] ??
         restaurant['id'] ??
@@ -101,8 +95,8 @@ class _RestaurantOverviewSearchScreenState
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => RestaurantDetailScreen(
-          restaurantId: parsedId, // ưu tiên fetch theo ID nếu có
-          restaurant: restaurant, // fallback để vẫn hiển thị nếu thiếu ID
+          restaurantId: parsedId,
+          restaurant: restaurant,
           activeCuisines: _cuisines,
           activeServices: _services,
           activeDietaries: _dietaries,
@@ -193,7 +187,7 @@ class _RestaurantOverviewSearchScreenState
                     itemBuilder: (context, index) {
                       final r = _restaurants[index];
                       return _RestaurantCard(
-                        imagePath: r['image']!, // URL hoặc empty => fallback
+                        imagePath: r['image']!,
                         name: r['name']!,
                         cuisine: r['cuisine']!,
                         price: r['price']!,
@@ -251,7 +245,6 @@ class _RestaurantOverviewSearchScreenState
   }
 
   Future<void> _openFilterSheet(BuildContext context) async {
-    // snapshot current state
     RangeValues price = _priceRange;
     final cuisines = Set<String>.from(_cuisines);
     final services = Set<String>.from(_services);
@@ -724,7 +717,7 @@ class _RestaurantOverviewSearchScreenState
     );
   }
 
-  // ===== Dynamic fetch + mapping (giữ nguyên cấu trúc frontend) =====
+  // ===== Dynamic fetch + mapping
   Future<void> _fetchRestaurants(String query) async {
     setState(() {
       _loading = true;
@@ -742,7 +735,6 @@ class _RestaurantOverviewSearchScreenState
         items = List.from(data['restaurants']).map<Map<String, String>>((e) {
           final m = Map<String, dynamic>.from(e);
 
-          // Rating + reviews: hỗ trợ các biến thể field từ backend
           final rating = _getRatingString(
             m['rating'] ??
                 m['rating_average'] ??
@@ -762,7 +754,6 @@ class _RestaurantOverviewSearchScreenState
           // Giá
           final priceStr = _formatPrice(m['price'], m['currencyCode']);
 
-          // Ảnh: chỉ dùng URL; nếu thiếu/invalid -> fallback trong UI
           final imageUrl =
               m['imageUrl']?.toString() ??
               m['thumbnailUrl']?.toString() ??
@@ -770,7 +761,6 @@ class _RestaurantOverviewSearchScreenState
               '';
           final image = imageUrl.startsWith('http') ? imageUrl : '';
 
-          // Cuisine/Tag best-effort
           final cuisine =
               m['cuisine']?.toString() ??
               m['category']?.toString() ??
@@ -790,7 +780,7 @@ class _RestaurantOverviewSearchScreenState
             'price': priceStr,
             'rating': rating,
             'reviews': '(${reviewsRaw.toString()})',
-            'image': image, // URL hoặc empty -> UI fallback
+            'image': image,
             'tag': tag,
           };
         }).toList();
@@ -808,7 +798,6 @@ class _RestaurantOverviewSearchScreenState
     }
   }
 
-  // Fallback helpers (đồng bộ với các màn khác)
   String _getRatingString(dynamic rating) {
     if (rating == null) return '0.0';
     if (rating is String) return rating;
