@@ -9,6 +9,7 @@ import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 import 'package:app/services/search_api_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app/services/localization_service.dart';
 
 class RestaurantOverviewSearchScreen extends StatefulWidget {
   final String searchQuery;
@@ -38,34 +39,35 @@ class _RestaurantOverviewSearchScreenState
   bool _takeAway = false;
   bool _inStockOnly = false;
 
-  final List<_TagOption> _cuisineCatalog = const [
-    _TagOption('Việt', LucideIcons.wine),
-    _TagOption('Hải sản', LucideIcons.fish),
-    _TagOption('Âu', LucideIcons.wine),
-    _TagOption('Hàn', LucideIcons.wine),
-    _TagOption('Nhật', LucideIcons.wine),
-    _TagOption('Thái', LucideIcons.eggFried),
-    _TagOption('Trung', LucideIcons.wine),
-    _TagOption('Chay', LucideIcons.leaf),
-    _TagOption('Nướng', LucideIcons.flame),
-    _TagOption('Cà phê', LucideIcons.coffee),
+  // Localized option catalogs (labels localized at build-time)
+  List<_TagOption> get _cuisineCatalog => [
+    _TagOption('cuisine_vietnamese'.tr, LucideIcons.wine),
+    _TagOption('cuisine_seafood'.tr, LucideIcons.fish),
+    _TagOption('cuisine_western'.tr, LucideIcons.wine),
+    _TagOption('cuisine_korean'.tr, LucideIcons.wine),
+    _TagOption('cuisine_japanese'.tr, LucideIcons.wine),
+    _TagOption('cuisine_thai'.tr, LucideIcons.eggFried),
+    _TagOption('cuisine_chinese'.tr, LucideIcons.wine),
+    _TagOption('cuisine_vegan'.tr, LucideIcons.leaf),
+    _TagOption('cuisine_grill'.tr, LucideIcons.flame),
+    _TagOption('cuisine_coffee'.tr, LucideIcons.coffee),
   ];
 
-  final List<_TagOption> _serviceCatalog = const [
-    _TagOption('Ăn tại chỗ', LucideIcons.utensils),
-    _TagOption('Mang đi', LucideIcons.shoppingBag),
-    _TagOption('Giao hàng', LucideIcons.bike),
-    _TagOption('Bar', LucideIcons.beer),
-    _TagOption('Sân vườn', LucideIcons.treePine),
-    _TagOption('Phòng riêng', LucideIcons.doorClosed),
+  List<_TagOption> get _serviceCatalog => [
+    _TagOption('service_dine_in'.tr, LucideIcons.utensils),
+    _TagOption('service_take_away'.tr, LucideIcons.shoppingBag),
+    _TagOption('service_delivery'.tr, LucideIcons.bike),
+    _TagOption('service_bar'.tr, LucideIcons.beer),
+    _TagOption('service_garden'.tr, LucideIcons.treePine),
+    _TagOption('service_private_room'.tr, LucideIcons.doorClosed),
   ];
 
-  final List<_TagOption> _dietaryCatalog = const [
-    _TagOption('Vegan', LucideIcons.leaf),
-    _TagOption('Halal', LucideIcons.badgeCheck),
-    _TagOption('Gluten-free', LucideIcons.wheatOff),
-    _TagOption('Ít calo', LucideIcons.scale),
-    _TagOption('Không sữa', LucideIcons.milkOff),
+  List<_TagOption> get _dietaryCatalog => [
+    _TagOption('dietary_vegan'.tr, LucideIcons.leaf),
+    _TagOption('dietary_halal'.tr, LucideIcons.badgeCheck),
+    _TagOption('dietary_gluten_free'.tr, LucideIcons.wheatOff),
+    _TagOption('dietary_low_calorie'.tr, LucideIcons.scale),
+    _TagOption('dietary_dairy_free'.tr, LucideIcons.milkOff),
   ];
 
   // Thay dữ liệu tĩnh bằng dữ liệu động
@@ -132,7 +134,9 @@ class _RestaurantOverviewSearchScreenState
         ),
         centerTitle: true,
         title: Text(
-          widget.searchQuery.isEmpty ? 'Nhà Hàng' : widget.searchQuery,
+          widget.searchQuery.isEmpty
+              ? 'restaurants_title'.tr
+              : widget.searchQuery,
           style: context.subTitleOneStyle.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
@@ -155,7 +159,7 @@ class _RestaurantOverviewSearchScreenState
                         children: [
                           Icon(
                             LucideIcons.alertCircle,
-                            color: Colors.redAccent,
+                            color: context.errorColor,
                             size: 40,
                           ),
                           const SizedBox(height: 12),
@@ -163,7 +167,7 @@ class _RestaurantOverviewSearchScreenState
                             _error!,
                             textAlign: TextAlign.center,
                             style: context.bodyOneStyle.copyWith(
-                              color: Colors.redAccent,
+                              color: context.errorColor,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -172,7 +176,11 @@ class _RestaurantOverviewSearchScreenState
                             onPressed: () =>
                                 _fetchRestaurants(widget.searchQuery),
                             icon: const Icon(LucideIcons.refreshCw, size: 16),
-                            label: Text('Thử lại', style: context.buttonStyle),
+                            label: Text('retry'.tr, style: context.buttonStyle),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: context.primaryColor,
+                              foregroundColor: context.buttonTextColor,
+                            ),
                           ),
                         ],
                       ),
@@ -185,7 +193,7 @@ class _RestaurantOverviewSearchScreenState
                     itemBuilder: (context, index) {
                       final r = _restaurants[index];
                       return _RestaurantCard(
-                        imagePath: r['image']!, // có thể là URL hoặc asset
+                        imagePath: r['image']!, // URL hoặc empty => fallback
                         name: r['name']!,
                         cuisine: r['cuisine']!,
                         price: r['price']!,
@@ -212,28 +220,28 @@ class _RestaurantOverviewSearchScreenState
           _pill(
             context,
             icon: LucideIcons.utensils,
-            label: 'Nhà hàng',
+            label: 'restaurants'.tr,
             selected: true,
           ),
           const SizedBox(width: 8),
           _pill(
             context,
             icon: _hasDate ? LucideIcons.calendarDays : LucideIcons.calendar,
-            label: _hasDate ? '11 thg 6' : 'Ngày',
+            label: _hasDate ? '11 thg 6' : 'date'.tr,
             onTap: () => setState(() => _hasDate = !_hasDate),
           ),
           const SizedBox(width: 8),
           _pill(
             context,
             icon: LucideIcons.users,
-            label: _hasGuests ? '2 người' : 'Khách',
+            label: _hasGuests ? '2 ${'guests_short'.tr}' : 'guests_short'.tr,
             onTap: () => setState(() => _hasGuests = !_hasGuests),
           ),
           const SizedBox(width: 8),
           _pill(
             context,
             icon: LucideIcons.slidersHorizontal,
-            label: 'Bộ lọc',
+            label: 'filter'.tr,
             selected: _hasAnyFilterApplied,
             onTap: () => _openFilterSheet(context),
           ),
@@ -243,6 +251,7 @@ class _RestaurantOverviewSearchScreenState
   }
 
   Future<void> _openFilterSheet(BuildContext context) async {
+    // snapshot current state
     RangeValues price = _priceRange;
     final cuisines = Set<String>.from(_cuisines);
     final services = Set<String>.from(_services);
@@ -262,256 +271,268 @@ class _RestaurantOverviewSearchScreenState
       ),
       builder: (ctx) {
         return SafeArea(
-          child: StatefulBuilder(
-            builder: (ctx, setSheet) {
-              final media = MediaQuery.of(ctx);
-              return ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: media.size.height * 0.9),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 8,
-                    bottom: media.viewInsets.bottom + 16,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: context.dividerColor,
-                          borderRadius: BorderRadius.circular(2),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.92,
+            minChildSize: 0.5,
+            maxChildSize: 0.96,
+            expand: false,
+            builder: (context, controller) {
+              return StatefulBuilder(
+                builder: (ctx, setSheet) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ListView(
+                      controller: controller,
+                      shrinkWrap: true,
+                      children: [
+                        const SizedBox(height: 8),
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: context.dividerColor,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Bộ lọc nhà hàng',
-                              style: context.subTitleOneStyle.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              setSheet(() {
-                                price = const RangeValues(50000, 450000);
-                                cuisines.clear();
-                                services.clear();
-                                dietaries.clear();
-                                stars.clear();
-                                openNow = false;
-                                reservation = false;
-                                takeAway = false;
-                                stock = false;
-                              });
-                            },
-                            child: Text(
-                              'Đặt lại',
-                              style: context.captionStyle.copyWith(
-                                color: context.primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Giá
-                      _sectionTitle(ctx, LucideIcons.wallet, 'Giá mỗi người'),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _priceTag(ctx, _formatCurrency(price.start)),
-                          _priceTag(ctx, _formatCurrency(price.end)),
-                        ],
-                      ),
-                      RangeSlider(
-                        values: price,
-                        onChanged: (v) =>
-                            setSheet(() => price = _normalizeRange(v)),
-                        min: _minPrice,
-                        max: _maxPrice,
-                        divisions: 100,
-                        activeColor: context.primaryColor,
-                        labels: RangeLabels(
-                          _formatCurrency(price.start),
-                          _formatCurrency(price.end),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(
-                        ctx,
-                        LucideIcons.utensilsCrossed,
-                        'Ẩm thực',
-                      ),
-                      const SizedBox(height: 8),
-                      _wrapOptions(
-                        ctx,
-                        _cuisineCatalog,
-                        cuisines,
-                        setSheet,
-                        maxWidth: 140,
-                      ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.briefcase, 'Dịch vụ'),
-                      const SizedBox(height: 8),
-                      _wrapOptions(
-                        ctx,
-                        _serviceCatalog,
-                        services,
-                        setSheet,
-                        maxWidth: 170,
-                      ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.leaf, 'Chế độ ăn'),
-                      const SizedBox(height: 8),
-                      _wrapOptions(
-                        ctx,
-                        _dietaryCatalog,
-                        dietaries,
-                        setSheet,
-                        maxWidth: 170,
-                      ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.star, 'Đánh giá sao'),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: List.generate(5, (i) {
-                          final star = i + 1;
-                          final sel = stars.contains(star);
-                          return FilterChip(
-                            selected: sel,
-                            showCheckmark: false,
-                            label: Text(
-                              '$star★',
-                              style: context.bodyTwoStyle.copyWith(
-                                color: sel
-                                    ? context.buttonTextColor
-                                    : context.textSecondaryColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            backgroundColor: context.cardBackgroundColor,
-                            selectedColor: context.primaryColor,
-                            side: BorderSide(
-                              color: sel
-                                  ? context.primaryColor
-                                  : context.dividerColor,
-                            ),
-                            onSelected: (_) => setSheet(() {
-                              sel ? stars.remove(star) : stars.add(star);
-                            }),
-                          );
-                        }),
-                      ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(
-                        ctx,
-                        LucideIcons.settings2,
-                        'Tùy chọn khác',
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _toggleChip(
-                            ctx,
-                            'Đang mở cửa',
-                            openNow,
-                            (v) => setSheet(() => openNow = v),
-                          ),
-                          _toggleChip(
-                            ctx,
-                            'Có đặt bàn',
-                            reservation,
-                            (v) => setSheet(() => reservation = v),
-                          ),
-                          _toggleChip(
-                            ctx,
-                            'Mang đi',
-                            takeAway,
-                            (v) => setSheet(() => takeAway = v),
-                          ),
-                          _toggleChip(
-                            ctx,
-                            'Còn chỗ',
-                            stock,
-                            (v) => setSheet(() => stock = v),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: context.textPrimaryColor,
-                                side: BorderSide(color: context.dividerColor),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'restaurant_filter_title'.tr,
+                                style: context.subTitleOneStyle.copyWith(
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              child: const Text('Hủy'),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
+                            TextButton(
                               onPressed: () {
-                                setState(() {
-                                  _priceRange = price;
-                                  _cuisines
-                                    ..clear()
-                                    ..addAll(cuisines);
-                                  _services
-                                    ..clear()
-                                    ..addAll(services);
-                                  _dietaries
-                                    ..clear()
-                                    ..addAll(dietaries);
-                                  _selectedStars
-                                    ..clear()
-                                    ..addAll(stars);
-                                  _openNow = openNow;
-                                  _reservation = reservation;
-                                  _takeAway = takeAway;
-                                  _inStockOnly = stock;
+                                setSheet(() {
+                                  price = const RangeValues(50000, 450000);
+                                  cuisines.clear();
+                                  services.clear();
+                                  dietaries.clear();
+                                  stars.clear();
+                                  openNow = false;
+                                  reservation = false;
+                                  takeAway = false;
+                                  stock = false;
                                 });
-                                Navigator.pop(ctx);
                               },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: context.primaryColor,
-                                foregroundColor: context.buttonTextColor,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
+                              child: Text(
+                                'reset'.tr,
+                                style: context.captionStyle.copyWith(
+                                  color: context.primaryColor,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              child: const Text('Áp dụng'),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Giá
+                        _sectionTitle(
+                          ctx,
+                          LucideIcons.wallet,
+                          'price_per_person'.tr,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _priceTag(ctx, _formatCurrency(price.start)),
+                            _priceTag(ctx, _formatCurrency(price.end)),
+                          ],
+                        ),
+                        RangeSlider(
+                          values: price,
+                          onChanged: (v) =>
+                              setSheet(() => price = _normalizeRange(v)),
+                          min: _minPrice,
+                          max: _maxPrice,
+                          divisions: 100,
+                          activeColor: context.primaryColor,
+                          labels: RangeLabels(
+                            _formatCurrency(price.start),
+                            _formatCurrency(price.end),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                        ),
+
+                        const SizedBox(height: 16),
+                        _sectionTitle(
+                          ctx,
+                          LucideIcons.utensilsCrossed,
+                          'cuisines'.tr,
+                        ),
+                        const SizedBox(height: 8),
+                        _wrapOptions(
+                          ctx,
+                          _cuisineCatalog,
+                          cuisines,
+                          setSheet,
+                          maxWidth: 140,
+                        ),
+
+                        const SizedBox(height: 16),
+                        _sectionTitle(
+                          ctx,
+                          LucideIcons.briefcase,
+                          'services'.tr,
+                        ),
+                        const SizedBox(height: 8),
+                        _wrapOptions(
+                          ctx,
+                          _serviceCatalog,
+                          services,
+                          setSheet,
+                          maxWidth: 170,
+                        ),
+
+                        const SizedBox(height: 16),
+                        _sectionTitle(ctx, LucideIcons.leaf, 'dietaries'.tr),
+                        const SizedBox(height: 8),
+                        _wrapOptions(
+                          ctx,
+                          _dietaryCatalog,
+                          dietaries,
+                          setSheet,
+                          maxWidth: 170,
+                        ),
+
+                        const SizedBox(height: 16),
+                        _sectionTitle(ctx, LucideIcons.star, 'star_rating'.tr),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: List.generate(5, (i) {
+                            final star = i + 1;
+                            final sel = stars.contains(star);
+                            return FilterChip(
+                              selected: sel,
+                              showCheckmark: false,
+                              label: Text(
+                                '$star★',
+                                style: context.bodyTwoStyle.copyWith(
+                                  color: sel
+                                      ? context.buttonTextColor
+                                      : context.textSecondaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              backgroundColor: context.cardBackgroundColor,
+                              selectedColor: context.primaryColor,
+                              side: BorderSide(
+                                color: sel
+                                    ? context.primaryColor
+                                    : context.dividerColor,
+                              ),
+                              onSelected: (_) => setSheet(() {
+                                sel ? stars.remove(star) : stars.add(star);
+                              }),
+                            );
+                          }),
+                        ),
+
+                        const SizedBox(height: 16),
+                        _sectionTitle(
+                          ctx,
+                          LucideIcons.settings2,
+                          'more_options'.tr,
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _toggleChip(
+                              ctx,
+                              'open_now'.tr,
+                              openNow,
+                              (v) => setSheet(() => openNow = v),
+                            ),
+                            _toggleChip(
+                              ctx,
+                              'reservation'.tr,
+                              reservation,
+                              (v) => setSheet(() => reservation = v),
+                            ),
+                            _toggleChip(
+                              ctx,
+                              'take_away'.tr,
+                              takeAway,
+                              (v) => setSheet(() => takeAway = v),
+                            ),
+                            _toggleChip(
+                              ctx,
+                              'in_stock_only'.tr,
+                              stock,
+                              (v) => setSheet(() => stock = v),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: context.textPrimaryColor,
+                                  side: BorderSide(color: context.dividerColor),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                                child: Text('cancel'.tr),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _priceRange = price;
+                                    _cuisines
+                                      ..clear()
+                                      ..addAll(cuisines);
+                                    _services
+                                      ..clear()
+                                      ..addAll(services);
+                                    _dietaries
+                                      ..clear()
+                                      ..addAll(dietaries);
+                                    _selectedStars
+                                      ..clear()
+                                      ..addAll(stars);
+                                    _openNow = openNow;
+                                    _reservation = reservation;
+                                    _takeAway = takeAway;
+                                    _inStockOnly = stock;
+                                  });
+                                  Navigator.pop(ctx);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: context.primaryColor,
+                                  foregroundColor: context.buttonTextColor,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                                child: Text('apply'.tr),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -741,24 +762,24 @@ class _RestaurantOverviewSearchScreenState
           // Giá
           final priceStr = _formatPrice(m['price'], m['currencyCode']);
 
-          // Ảnh: nếu có URL -> dùng URL, ngược lại fallback asset
+          // Ảnh: chỉ dùng URL; nếu thiếu/invalid -> fallback trong UI
           final imageUrl =
               m['imageUrl']?.toString() ??
               m['thumbnailUrl']?.toString() ??
               m['image']?.toString() ??
               '';
-          final image = imageUrl.isNotEmpty
-              ? imageUrl
-              : 'assets/images/onboarding1.png';
+          final image = imageUrl.startsWith('http') ? imageUrl : '';
 
           // Cuisine/Tag best-effort
           final cuisine =
-              m['cuisine']?.toString() ?? m['category']?.toString() ?? 'Âu';
+              m['cuisine']?.toString() ??
+              m['category']?.toString() ??
+              'cuisine_western'.tr;
           final tag =
               m['tag']?.toString() ??
               (m['services'] is List && (m['services'] as List).isNotEmpty
                   ? (m['services'] as List).first.toString()
-                  : 'Ăn tại chỗ');
+                  : 'service_dine_in'.tr);
 
           return {
             'restaurantId':
@@ -769,7 +790,7 @@ class _RestaurantOverviewSearchScreenState
             'price': priceStr,
             'rating': rating,
             'reviews': '(${reviewsRaw.toString()})',
-            'image': image, // có thể là URL hoặc asset
+            'image': image, // URL hoặc empty -> UI fallback
             'tag': tag,
           };
         }).toList();
@@ -782,7 +803,7 @@ class _RestaurantOverviewSearchScreenState
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = 'Không thể tải dữ liệu. Vui lòng thử lại hoặc đăng nhập.';
+        _error = 'error_load_restaurants'.tr;
       });
     }
   }
@@ -845,6 +866,7 @@ class _RestaurantCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isNetwork = imagePath.startsWith('http');
+    final rv = double.tryParse(rating) ?? 0.0;
 
     return GestureDetector(
       onTap: onCardTap,
@@ -874,11 +896,7 @@ class _RestaurantCard extends StatelessWidget {
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => _imgFallback(context),
                           )
-                        : Image.asset(
-                            imagePath,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _imgFallback(context),
-                          ),
+                        : _imgFallback(context),
                   ),
                 ),
                 Positioned(
@@ -916,39 +934,13 @@ class _RestaurantCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.star_rounded,
-                    color: context.primaryColor,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
+                  // Stars + (x.x) + reviews
+                  _starsRow(context, rv),
+                  const SizedBox(width: 6),
                   Text(
-                    rating,
+                    '(${rv.toStringAsFixed(1)})',
                     style: context.captionStyle.copyWith(
                       fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Row(
-                    children: List.generate(5, (i) {
-                      final rv = double.tryParse(rating) ?? 0.0;
-                      final filled = rv >= (i + 1) - 0.25;
-                      return Icon(
-                        filled ? Icons.star_rounded : Icons.star_border_rounded,
-                        color: context.primaryColor,
-                        size: 14,
-                      );
-                    }),
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      reviews,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.captionStyle.copyWith(
-                        color: context.textSecondaryColor,
-                      ),
                     ),
                   ),
                 ],
@@ -969,7 +961,7 @@ class _RestaurantCard extends StatelessWidget {
               child: Row(
                 children: [
                   Text(
-                    'Giá từ:',
+                    'price_from'.tr,
                     style: context.captionStyle.copyWith(
                       color: context.textSecondaryColor,
                     ),
@@ -999,13 +991,33 @@ class _RestaurantCard extends StatelessWidget {
                     ),
                   ),
                   onPressed: onViewPressed,
-                  child: Text('Xem nhà hàng', style: context.buttonStyle),
+                  child: Text('view_restaurant'.tr, style: context.buttonStyle),
                 ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _starsRow(BuildContext context, double rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final starIndex = i + 1;
+        final isFull = rating >= starIndex - 0.25;
+        final isHalf = !isFull && rating >= starIndex - 0.75;
+        return Icon(
+          isFull
+              ? Icons.star_rounded
+              : isHalf
+              ? Icons.star_half_rounded
+              : Icons.star_border_rounded,
+          color: context.primaryColor,
+          size: 14,
+        );
+      }),
     );
   }
 
