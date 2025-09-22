@@ -355,5 +355,56 @@
   "free_cancellation": "Miễn phí huỷ",
   "pay_at_hotel": "Thanh toán tại nơi",
   "breakfast_included": "Bao gồm bữa sáng",
-  "in_stock_only": "Chỉ hiển thị còn phòng"
+  "in_stock_only": "Chỉ hiển thị còn phòng",
+  "tours_title": "Tour & Dịch vụ",
+  "cat_tours": "Tour",
+
+  "guests_short": "khách",
+
+  "try_relax_filters": "Hãy thử nới lỏng tiêu chí lọc hoặc đặt lại bộ lọc.",
+  "reset_filters": "Đặt lại bộ lọc",
+
+  "tour_filter_title": "Bộ lọc tour",
+
+  "price_per_person": "Giá mỗi người",
+  "duration_days": "Thời lượng (ngày)",
+  "tour_types": "Loại tour",
+  "services": "Dịch vụ",
+  "difficulty": "Độ khó",
+
+  "difficulty_easy": "Dễ",
+  "difficulty_medium": "Vừa",
+  "difficulty_hard": "Khó",
+
+  "instant_confirmation": "Xác nhận ngay",
+  "hotel_pickup": "Đón tại khách sạn",
+
+  "view_tour": "Xem tour",
+  "day": "ngày",
+  "hour": "giờ",
+  "tour_at": "Tour tại",
+  "error_load_tours": "Không thể tải dữ liệu. Vui lòng thử lại hoặc đăng nhập.",
+
+  "tour_type_city": "City tour",
+  "tour_type_nature": "Thiên nhiên",
+  "tour_type_culture": "Văn hoá",
+  "tour_type_food": "Ẩm thực",
+  "tour_type_adventure": "Mạo hiểm",
+  "tour_type_island_beach": "Đảo/biển",
+  "tour_type_cruise": "Du thuyền",
+  "tour_type_history": "Lịch sử",
+  "tour_type_wellness": "Wellness",
+  "tour_type_family": "Gia đình",
+  "tour_type_nightlife": "Nightlife",
+
+  "svc_hotel_pickup": "Đón tại khách sạn",
+  "svc_small_group": "Nhóm nhỏ",
+  "svc_private": "Riêng tư",
+  "svc_guide_en": "Hướng dẫn EN",
+  "svc_guide_vi": "Hướng dẫn VI",
+  "svc_multi_language": "Nhiều ngôn ngữ",
+  "svc_entry_tickets": "Vé tham quan",
+  "svc_meals_included": "Bao gồm bữa ăn",
+  "svc_insurance": "Bảo hiểm",
+  "svc_wheelchair": "Xe lăn"
 }

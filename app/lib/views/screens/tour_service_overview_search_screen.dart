@@ -5,10 +5,11 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 
-// Added: use the centralized API just like other screens (hotel/attraction)
+// Centralized API like other screens
 import 'package:app/services/search_api_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app/services/localization_service.dart'; // ADD: lang
 
 class TourServiceOverviewScreen extends StatefulWidget {
   final String searchQuery;
@@ -42,36 +43,35 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
   bool _inStockOnly = false;
 
   final List<_TagOption> _tourTypes = const [
-    _TagOption('City tour', LucideIcons.building2),
-    _TagOption('Thiên nhiên', LucideIcons.treePine),
-    _TagOption('Văn hoá', LucideIcons.landmark),
-    _TagOption('Ẩm thực', LucideIcons.utensils),
-    _TagOption('Mạo hiểm', LucideIcons.mountain),
-    _TagOption('Đảo/biển', LucideIcons.umbrella),
-    _TagOption('Du thuyền', LucideIcons.ship),
-    _TagOption('Lịch sử', LucideIcons.bookOpen),
-    _TagOption('Wellness', LucideIcons.heartPulse),
-    _TagOption('Gia đình', LucideIcons.users),
-    _TagOption('Nightlife', LucideIcons.moonStar),
+    _TagOption('tour_type_city', LucideIcons.building2),
+    _TagOption('tour_type_nature', LucideIcons.treePine),
+    _TagOption('tour_type_culture', LucideIcons.landmark),
+    _TagOption('tour_type_food', LucideIcons.utensils),
+    _TagOption('tour_type_adventure', LucideIcons.mountain),
+    _TagOption('tour_type_island_beach', LucideIcons.umbrella),
+    _TagOption('tour_type_cruise', LucideIcons.ship),
+    _TagOption('tour_type_history', LucideIcons.bookOpen),
+    _TagOption('tour_type_wellness', LucideIcons.heartPulse),
+    _TagOption('tour_type_family', LucideIcons.users),
+    _TagOption('tour_type_nightlife', LucideIcons.moonStar),
   ];
 
   final List<_TagOption> _services = const [
-    _TagOption('Đón khách sạn', LucideIcons.mapPin),
-    _TagOption('Nhóm nhỏ', LucideIcons.users),
-    _TagOption('Riêng tư', LucideIcons.lock),
-    _TagOption('Hướng dẫn EN', LucideIcons.messageSquare),
-    _TagOption('Hướng dẫn VI', LucideIcons.messageSquare),
-    _TagOption('Nhiều ngôn ngữ', LucideIcons.languages),
-    _TagOption('Vé tham quan', LucideIcons.ticket),
-    _TagOption('Bao gồm bữa ăn', LucideIcons.pizza),
-    _TagOption('Bảo hiểm', LucideIcons.shieldCheck),
-    _TagOption('Xe lăn', LucideIcons.accessibility),
+    _TagOption('svc_hotel_pickup', LucideIcons.mapPin),
+    _TagOption('svc_small_group', LucideIcons.users),
+    _TagOption('svc_private', LucideIcons.lock),
+    _TagOption('svc_guide_en', LucideIcons.messageSquare),
+    _TagOption('svc_guide_vi', LucideIcons.messageSquare),
+    _TagOption('svc_multi_language', LucideIcons.languages),
+    _TagOption('svc_entry_tickets', LucideIcons.ticket),
+    _TagOption('svc_meals_included', LucideIcons.pizza),
+    _TagOption('svc_insurance', LucideIcons.shieldCheck),
+    _TagOption('svc_wheelchair', LucideIcons.accessibility),
   ];
 
   // Dynamic data fetched from API (replaces static mock list)
   List<Map<String, dynamic>> _tours = [];
 
-  // Lightweight loading/error state (kept inside list area)
   bool _loading = false;
   String? _error;
 
@@ -106,7 +106,6 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
         return false;
       }
       if (_hotelPickup && t['hotelPickup'] == false) return false;
-      // _selectedServices left as visual chips; backend mapping can be added later if available
       return true;
     }).toList();
   }
@@ -131,7 +130,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
         ),
         centerTitle: true,
         title: Text(
-          widget.searchQuery.isEmpty ? 'Tour Dịch Vụ' : widget.searchQuery,
+          widget.searchQuery.isEmpty ? 'tours_title'.tr : widget.searchQuery,
           style: context.subTitleOneStyle.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
@@ -155,7 +154,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                         children: [
                           Icon(
                             LucideIcons.alertCircle,
-                            color: Colors.redAccent,
+                            color: context.errorColor,
                             size: 40,
                           ),
                           const SizedBox(height: 12),
@@ -163,7 +162,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                             _error!,
                             textAlign: TextAlign.center,
                             style: context.bodyOneStyle.copyWith(
-                              color: Colors.redAccent,
+                              color: context.errorColor,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -171,7 +170,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                           ElevatedButton.icon(
                             onPressed: () => _fetchTours(widget.searchQuery),
                             icon: const Icon(LucideIcons.refreshCw, size: 16),
-                            label: Text('Thử lại', style: context.buttonStyle),
+                            label: Text('retry'.tr, style: context.buttonStyle),
                           ),
                         ],
                       ),
@@ -179,31 +178,32 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                   )
                 : (tours.isEmpty
                       ? _emptyState(context)
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                          itemCount: tours.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 16),
-                          itemBuilder: (context, i) {
-                            final t = tours[i];
-                            return InkWell(
-                              onTap: () => _openTourDetail(t),
-                              borderRadius: BorderRadius.circular(16),
-                              child: _TourCard(
-                                // Keep your existing card API intact
-                                imagePath:
-                                    t['image'] ??
-                                    'assets/images/onboarding1.png',
-                                name: t['name'] ?? '',
-                                type: t['type'] ?? 'City tour',
-                                rating: t['rating'] ?? '0.0',
-                                reviews: t['reviews'] ?? '(0)',
-                                price: t['price'] ?? '',
-                                duration: t['duration'] ?? '1 ngày',
-                                onViewPressed: () => _openTourDetail(t),
-                              ),
-                            );
-                          },
+                      : RefreshIndicator(
+                          color: context.primaryColor,
+                          onRefresh: () => _fetchTours(widget.searchQuery),
+                          child: ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                            itemCount: tours.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 16),
+                            itemBuilder: (context, i) {
+                              final t = tours[i];
+                              return InkWell(
+                                onTap: () => _openTourDetail(t),
+                                borderRadius: BorderRadius.circular(16),
+                                child: _TourCard(
+                                  imagePath: (t['image'] as String?) ?? '',
+                                  name: t['name'] ?? '',
+                                  type: t['type'] ?? 'tour_type_city'.tr,
+                                  rating: t['rating'] ?? '0.0',
+                                  reviews: t['reviews'] ?? '(0)',
+                                  price: t['price'] ?? '',
+                                  duration: t['duration'] ?? '1 ${'day'.tr}',
+                                  onViewPressed: () => _openTourDetail(t),
+                                ),
+                              );
+                            },
+                          ),
                         )),
           ),
         ],
@@ -238,28 +238,28 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
           _pill(
             context,
             icon: LucideIcons.mapPin,
-            label: 'Tour',
+            label: 'cat_tours'.tr,
             selected: true,
           ),
           const SizedBox(width: 8),
           _pill(
             context,
             icon: _hasDate ? LucideIcons.calendarDays : LucideIcons.calendar,
-            label: _hasDate ? '11 thg 6 → 15' : 'Ngày',
+            label: _hasDate ? '11 thg 6 → 15' : 'date'.tr,
             onTap: () => setState(() => _hasDate = !_hasDate),
           ),
           const SizedBox(width: 8),
           _pill(
             context,
             icon: LucideIcons.users,
-            label: _hasGuests ? '2 khách' : 'Khách',
+            label: _hasGuests ? '2 ${'guests_short'.tr}' : 'guests'.tr,
             onTap: () => setState(() => _hasGuests = !_hasGuests),
           ),
           const SizedBox(width: 8),
           _pill(
             context,
             icon: LucideIcons.slidersHorizontal,
-            label: 'Bộ lọc',
+            label: 'filter'.tr,
             selected: _hasAnyFilterApplied,
             onTap: () => _openFilterSheet(context),
           ),
@@ -282,12 +282,12 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Không tìm thấy tour phù hợp',
+              'no_results'.tr,
               style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
-              'Hãy thử nới lỏng tiêu chí lọc hoặc đặt lại bộ lọc.',
+              'try_relax_filters'.tr,
               textAlign: TextAlign.center,
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
@@ -312,7 +312,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                 side: BorderSide(color: context.primaryColor),
               ),
               child: Text(
-                'Đặt lại bộ lọc',
+                'reset_filters'.tr,
                 style: context.bodyTwoStyle.copyWith(
                   color: context.primaryColor,
                   fontWeight: FontWeight.w600,
@@ -325,7 +325,6 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
     );
   }
 
-  // Bottom sheet (unchanged UI)
   Future<void> _openFilterSheet(BuildContext context) async {
     RangeValues price = _priceRange;
     RangeValues duration = _durationRange;
@@ -340,317 +339,364 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.cardBackgroundColor,
+      backgroundColor: context.backgroundColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (ctx) {
-        return SafeArea(
-          child: StatefulBuilder(
-            builder: (ctx, setSheetState) {
-              final media = MediaQuery.of(ctx);
-              return ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: media.size.height * 0.9),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 8,
-                    bottom: media.viewInsets.bottom + 16,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.85,
+          maxChildSize: 0.95,
+          minChildSize: 0.5,
+          builder: (_, controller) {
+            return SafeArea(
+              child: StatefulBuilder(
+                builder: (ctx, setSheetState) {
+                  return Column(
                     children: [
+                      // Header + drag handle
                       Container(
-                        width: 40,
-                        height: 4,
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                         decoration: BoxDecoration(
-                          color: context.dividerColor,
-                          borderRadius: BorderRadius.circular(2),
+                          color: context.backgroundColor,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(22),
+                          ),
+                          border: Border(
+                            bottom: BorderSide(color: context.dividerColor),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Bộ lọc tour',
-                              style: context.subTitleOneStyle.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              setSheetState(() {
-                                price = const RangeValues(_minPrice, _maxPrice);
-                                duration = const RangeValues(
-                                  _minDays,
-                                  _maxDays,
-                                );
-                                tourTypes.clear();
-                                services.clear();
-                                difficulty = null;
-                                freeCancel = false;
-                                instantConfirm = false;
-                                pickup = false;
-                                inStock = false;
-                              });
-                            },
-                            child: Text(
-                              'Đặt lại',
-                              style: context.captionStyle.copyWith(
-                                color: context.primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      _sectionTitle(
-                        ctx,
-                        LucideIcons.badgeDollarSign,
-                        'Giá mỗi người',
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _priceTag(ctx, _formatCurrency(price.start)),
-                          _priceTag(ctx, _formatCurrency(price.end)),
-                        ],
-                      ),
-                      RangeSlider(
-                        values: price,
-                        min: _minPrice,
-                        max: _maxPrice,
-                        divisions: 20,
-                        activeColor: context.primaryColor,
-                        labels: RangeLabels(
-                          _formatCurrency(price.start),
-                          _formatCurrency(price.end),
-                        ),
-                        onChanged: (v) => setSheetState(
-                          () => price = _normalizePriceRange(v),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(
-                        ctx,
-                        LucideIcons.timer,
-                        'Thời lượng (ngày)',
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _priceTag(ctx, '${duration.start.round()} ngày'),
-                          _priceTag(ctx, '${duration.end.round()} ngày'),
-                        ],
-                      ),
-                      RangeSlider(
-                        values: duration,
-                        min: _minDays,
-                        max: _maxDays,
-                        divisions: (_maxDays - _minDays).toInt(),
-                        activeColor: context.primaryColor,
-                        labels: RangeLabels(
-                          '${duration.start.round()}',
-                          '${duration.end.round()}',
-                        ),
-                        onChanged: (v) => setSheetState(
-                          () => duration = _normalizeDayRange(v),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.map, 'Loại tour'),
-                      const SizedBox(height: 8),
-                      _wrapChips(
-                        ctx,
-                        options: _tourTypes,
-                        selected: tourTypes,
-                        onToggle: (n) {
-                          setSheetState(() {
-                            tourTypes.contains(n)
-                                ? tourTypes.remove(n)
-                                : tourTypes.add(n);
-                          });
-                        },
-                      ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.briefcase, 'Dịch vụ'),
-                      const SizedBox(height: 8),
-                      _wrapChips(
-                        ctx,
-                        options: _services,
-                        selected: services,
-                        maxLabelWidth: 170,
-                        onToggle: (n) {
-                          setSheetState(() {
-                            services.contains(n)
-                                ? services.remove(n)
-                                : services.add(n);
-                          });
-                        },
-                      ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.gauge, 'Độ khó'),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: ['Dễ', 'Vừa', 'Khó'].map((d) {
-                          final sel = difficulty == d;
-                          return FilterChip(
-                            selected: sel,
-                            showCheckmark: false,
-                            label: Text(
-                              d,
-                              style: context.bodyTwoStyle.copyWith(
-                                color: sel
-                                    ? context.buttonTextColor
-                                    : context.textSecondaryColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            backgroundColor: context.cardBackgroundColor,
-                            selectedColor: context.primaryColor,
-                            side: BorderSide(
-                              color: sel
-                                  ? context.primaryColor
-                                  : context.dividerColor,
-                            ),
-                            onSelected: (_) => setSheetState(() {
-                              difficulty = sel ? null : d;
-                            }),
-                          );
-                        }).toList(),
-                      ),
-
-                      const SizedBox(height: 16),
-                      _sectionTitle(ctx, LucideIcons.checkCircle2, 'Tùy chọn'),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _toggleChip(
-                            ctx,
-                            'Miễn phí huỷ',
-                            freeCancel,
-                            (v) => setSheetState(() => freeCancel = v),
-                          ),
-                          _toggleChip(
-                            ctx,
-                            'Xác nhận ngay',
-                            instantConfirm,
-                            (v) => setSheetState(() => instantConfirm = v),
-                          ),
-                          _toggleChip(
-                            ctx,
-                            'Đón khách sạn',
-                            pickup,
-                            (v) => setSheetState(() => pickup = v),
-                          ),
-                          _toggleChip(
-                            ctx,
-                            'Chỉ còn chỗ',
-                            inStock,
-                            (v) => setSheetState(() => inStock = v),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: context.textPrimaryColor,
-                                side: BorderSide(color: context.dividerColor),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: context.textDisabledColor.withValues(
+                                  alpha: 0.5,
                                 ),
+                                borderRadius: BorderRadius.circular(4),
                               ),
-                              child: const Text('Hủy'),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _priceRange = price;
-                                  _durationRange = duration;
-                                  _selectedTourTypes
-                                    ..clear()
-                                    ..addAll(tourTypes);
-                                  _selectedServices
-                                    ..clear()
-                                    ..addAll(services);
-                                  _difficulty = difficulty;
-                                  _freeCancellation = freeCancel;
-                                  _instantConfirmation = instantConfirm;
-                                  _hotelPickup = pickup;
-                                  _inStockOnly = inStock;
-                                });
-                                Navigator.pop(ctx);
-                                final count =
-                                    (_priceRange.start > _minPrice ||
-                                            _priceRange.end < _maxPrice
-                                        ? 1
-                                        : 0) +
-                                    (_durationRange.start > _minDays ||
-                                            _durationRange.end < _maxDays
-                                        ? 1
-                                        : 0) +
-                                    _selectedTourTypes.length +
-                                    _selectedServices.length +
-                                    (_difficulty != null ? 1 : 0) +
-                                    (_freeCancellation ? 1 : 0) +
-                                    (_instantConfirmation ? 1 : 0) +
-                                    (_hotelPickup ? 1 : 0) +
-                                    (_inStockOnly ? 1 : 0);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Đã áp dụng $count tiêu chí lọc (demo)',
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'tour_filter_title'.tr,
+                                    style: context.subTitleOneStyle.copyWith(
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: context.primaryColor,
-                                foregroundColor: context.buttonTextColor,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
                                 ),
-                              ),
-                              child: const Text('Áp dụng'),
+                                TextButton(
+                                  onPressed: () {
+                                    setSheetState(() {
+                                      price = const RangeValues(
+                                        _minPrice,
+                                        _maxPrice,
+                                      );
+                                      duration = const RangeValues(
+                                        _minDays,
+                                        _maxDays,
+                                      );
+                                      tourTypes.clear();
+                                      services.clear();
+                                      difficulty = null;
+                                      freeCancel = false;
+                                      instantConfirm = false;
+                                      pickup = false;
+                                      inStock = false;
+                                    });
+                                  },
+                                  child: Text(
+                                    'reset'.tr,
+                                    style: context.captionStyle.copyWith(
+                                      color: context.primaryColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+
+                      // Content
+                      Expanded(
+                        child: ListView(
+                          controller: controller,
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          children: [
+                            _sectionTitle(
+                              ctx,
+                              LucideIcons.badgeDollarSign,
+                              'price_per_person'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _priceTag(ctx, _formatCurrency(price.start)),
+                                _priceTag(ctx, _formatCurrency(price.end)),
+                              ],
+                            ),
+                            RangeSlider(
+                              values: price,
+                              min: _minPrice,
+                              max: _maxPrice,
+                              divisions: 20,
+                              activeColor: context.primaryColor,
+                              labels: RangeLabels(
+                                _formatCurrency(price.start),
+                                _formatCurrency(price.end),
+                              ),
+                              onChanged: (v) => setSheetState(
+                                () => price = _normalizePriceRange(v),
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+                            _sectionTitle(
+                              ctx,
+                              LucideIcons.timer,
+                              'duration_days'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _priceTag(
+                                  ctx,
+                                  '${duration.start.round()} ${'day'.tr}',
+                                ),
+                                _priceTag(
+                                  ctx,
+                                  '${duration.end.round()} ${'day'.tr}',
+                                ),
+                              ],
+                            ),
+                            RangeSlider(
+                              values: duration,
+                              min: _minDays,
+                              max: _maxDays,
+                              divisions: (_maxDays - _minDays).toInt(),
+                              activeColor: context.primaryColor,
+                              labels: RangeLabels(
+                                '${duration.start.round()}',
+                                '${duration.end.round()}',
+                              ),
+                              onChanged: (v) => setSheetState(
+                                () => duration = _normalizeDayRange(v),
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+                            _sectionTitle(
+                              ctx,
+                              LucideIcons.map,
+                              'tour_types'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            _wrapChips(
+                              ctx,
+                              options: _tourTypes,
+                              selected: tourTypes,
+                              onToggle: (n) {
+                                setSheetState(() {
+                                  tourTypes.contains(n)
+                                      ? tourTypes.remove(n)
+                                      : tourTypes.add(n);
+                                });
+                              },
+                            ),
+
+                            const SizedBox(height: 16),
+                            _sectionTitle(
+                              ctx,
+                              LucideIcons.briefcase,
+                              'services'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            _wrapChips(
+                              ctx,
+                              options: _services,
+                              selected: services,
+                              maxLabelWidth: 170,
+                              onToggle: (n) {
+                                setSheetState(() {
+                                  services.contains(n)
+                                      ? services.remove(n)
+                                      : services.add(n);
+                                });
+                              },
+                            ),
+
+                            const SizedBox(height: 16),
+                            _sectionTitle(
+                              ctx,
+                              LucideIcons.gauge,
+                              'difficulty'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children:
+                                  [
+                                    'difficulty_easy',
+                                    'difficulty_medium',
+                                    'difficulty_hard',
+                                  ].map((key) {
+                                    final sel = difficulty == key;
+                                    return FilterChip(
+                                      selected: sel,
+                                      showCheckmark: false,
+                                      label: Text(
+                                        key.tr,
+                                        style: context.bodyTwoStyle.copyWith(
+                                          color: sel
+                                              ? context.buttonTextColor
+                                              : context.textSecondaryColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      backgroundColor:
+                                          context.cardBackgroundColor,
+                                      selectedColor: context.primaryColor,
+                                      side: BorderSide(
+                                        color: sel
+                                            ? context.primaryColor
+                                            : context.dividerColor,
+                                      ),
+                                      onSelected: (_) => setSheetState(() {
+                                        difficulty = sel ? null : key;
+                                      }),
+                                    );
+                                  }).toList(),
+                            ),
+
+                            const SizedBox(height: 16),
+                            _sectionTitle(
+                              ctx,
+                              LucideIcons.checkCircle2,
+                              'options'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _toggleChip(
+                                  ctx,
+                                  'free_cancellation'.tr,
+                                  freeCancel,
+                                  (v) => setSheetState(() => freeCancel = v),
+                                ),
+                                _toggleChip(
+                                  ctx,
+                                  'instant_confirmation'.tr,
+                                  instantConfirm,
+                                  (v) =>
+                                      setSheetState(() => instantConfirm = v),
+                                ),
+                                _toggleChip(
+                                  ctx,
+                                  'hotel_pickup'.tr,
+                                  pickup,
+                                  (v) => setSheetState(() => pickup = v),
+                                ),
+                                _toggleChip(
+                                  ctx,
+                                  'in_stock_only'.tr,
+                                  inStock,
+                                  (v) => setSheetState(() => inStock = v),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      ),
+
+                      // Footer actions
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: context.textPrimaryColor,
+                                  side: BorderSide(color: context.dividerColor),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text('cancel'.tr),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _priceRange = price;
+                                    _durationRange = duration;
+                                    _selectedTourTypes
+                                      ..clear()
+                                      ..addAll(tourTypes);
+                                    _selectedServices
+                                      ..clear()
+                                      ..addAll(services);
+                                    _difficulty = difficulty;
+                                    _freeCancellation = freeCancel;
+                                    _instantConfirmation = instantConfirm;
+                                    _hotelPickup = pickup;
+                                    _inStockOnly = inStock;
+                                  });
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('filters_applied'.tr),
+                                      duration: const Duration(seconds: 1),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: context.primaryColor,
+                                  foregroundColor: context.buttonTextColor,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text('apply'.tr),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                ),
-              );
-            },
-          ),
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  // Shared helpers
   Widget _sectionTitle(BuildContext ctx, IconData icon, String title) {
     return Row(
       children: [
@@ -710,7 +756,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                 ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: maxLabelWidth),
                   child: Text(
-                    o.label,
+                    o.label.tr,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.bodyTwoStyle.copyWith(
@@ -875,19 +921,16 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
               m['area']?.toString() ??
               '';
 
-          // Prefer server image fields; keep URL if present, else default asset.
-          // Rendering fallback is handled in the card with _imageFallback.
+          // Only cloud image; no asset fallback
           final networkImage =
               m['imageUrl']?.toString() ??
               m['thumbnailUrl']?.toString() ??
               m['image']?.toString() ??
               '';
-          final image = networkImage.isNotEmpty
-              ? networkImage
-              : 'assets/images/onboarding1.png';
+          final image = networkImage; // may be empty; UI handles fallback
 
           final description =
-              m['description']?.toString() ?? 'Tour tại $location';
+              m['description']?.toString() ?? '${'tour_at'.tr} $location';
 
           // Duration mapping
           final durationText =
@@ -901,7 +944,9 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
           final basePrice = _toBasePrice(priceRaw, price);
 
           final type =
-              m['type']?.toString() ?? m['category']?.toString() ?? 'City tour';
+              m['type']?.toString() ??
+              m['category']?.toString() ??
+              'tour_type_city'.tr;
 
           // Optional flags
           final freeCancel =
@@ -922,7 +967,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
             'basePrice': basePrice,
             'durationDays': durationDays,
             'duration': durationText,
-            'image': image, // url or asset
+            'image': image, // url only
             'location': location,
             'description': description,
             'freeCancellation': freeCancel,
@@ -940,7 +985,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = 'Không thể tải dữ liệu. Vui lòng thử lại hoặc đăng nhập.';
+        _error = 'error_load_tours'.tr;
       });
     }
   }
@@ -978,10 +1023,10 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
 
   String _guessDurationText(Map<String, dynamic> m) {
     final d = m['days'] ?? m['durationDays'];
-    if (d is num) return '${d.round()} ngày';
+    if (d is num) return '${d.round()} ${'day'.tr}';
     final h = m['hours'] ?? m['durationHours'];
-    if (h is num) return '${h.round()} giờ';
-    return '1 ngày';
+    if (h is num) return '${h.round()} ${'hour'.tr}';
+    return '1 ${'day'.tr}';
   }
 
   double _durationToDays(dynamic raw, String text) {
@@ -1004,17 +1049,17 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
 }
 
 class _TagOption {
-  final String label;
+  final String label; // lang key
   final IconData icon;
   const _TagOption(this.label, this.icon);
 }
 
 class _TourCard extends StatelessWidget {
-  final String imagePath;
+  final String imagePath; // url
   final String name;
   final String type;
-  final String rating;
-  final String reviews;
+  final String rating; // string
+  final String reviews; // already like "(123)"
   final String price;
   final String duration;
   final VoidCallback onViewPressed;
@@ -1038,7 +1083,9 @@ class _TourCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.dividerColor.withValues(alpha: .25)),
+        border: Border.all(
+          color: context.dividerColor.withValues(alpha: 0.25),
+        ), // FIX
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1058,7 +1105,7 @@ class _TourCard extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: context.cardBackgroundColor.withValues(alpha: .9),
+                    color: context.cardBackgroundColor.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
                     border: Border.all(color: context.dividerColor),
                   ),
@@ -1080,38 +1127,17 @@ class _TourCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          // Rating row: stars + (4.6) + reviews
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                Icon(Icons.star_rounded, color: context.primaryColor, size: 16),
-                const SizedBox(width: 4),
+                _ratingStars(context, rVal),
+                const SizedBox(width: 6),
                 Text(
-                  rating,
+                  ' (${rVal.toStringAsFixed(1)})',
                   style: context.captionStyle.copyWith(
                     fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Row(
-                  children: List.generate(5, (i) {
-                    final filled = rVal >= (i + 1) - 0.25;
-                    return Icon(
-                      filled ? Icons.star_rounded : Icons.star_border_rounded,
-                      color: context.primaryColor,
-                      size: 14,
-                    );
-                  }),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    reviews,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.captionStyle.copyWith(
-                      color: context.textSecondaryColor,
-                    ),
                   ),
                 ),
               ],
@@ -1132,7 +1158,7 @@ class _TourCard extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  'Giá từ:',
+                  'price_from'.tr,
                   style: context.captionStyle.copyWith(
                     color: context.textSecondaryColor,
                   ),
@@ -1162,7 +1188,7 @@ class _TourCard extends StatelessWidget {
                   ),
                 ),
                 onPressed: onViewPressed,
-                child: Text('Xem tour', style: context.buttonStyle),
+                child: Text('view_tour'.tr, style: context.buttonStyle),
               ),
             ),
           ),
@@ -1171,21 +1197,9 @@ class _TourCard extends StatelessWidget {
     );
   }
 
-  // Unified image fallback for all services/screens
-  Widget _imageFallback(BuildContext context) {
-    return Container(
-      height: 180,
-      color: context.primaryColor.withValues(alpha: 0.08),
-      alignment: Alignment.center,
-      child: Icon(LucideIcons.image, color: context.primaryColor),
-    );
-  }
-
+  // Only cloud image; fallback if missing or error
   Widget _buildImage(BuildContext context) {
-    if (imagePath.isEmpty) {
-      return _imageFallback(context);
-    }
-    if (imagePath.startsWith('http')) {
+    if (imagePath.isNotEmpty && imagePath.startsWith('http')) {
       return Image.network(
         imagePath,
         height: 180,
@@ -1194,12 +1208,16 @@ class _TourCard extends StatelessWidget {
         errorBuilder: (_, __, ___) => _imageFallback(context),
       );
     }
-    return Image.asset(
-      imagePath,
+    return _imageFallback(context);
+  }
+
+  // Themed fallback
+  Widget _imageFallback(BuildContext context) {
+    return Container(
       height: 180,
-      width: double.infinity,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _imageFallback(context),
+      color: context.primaryColor.withValues(alpha: 0.08), // FIX
+      alignment: Alignment.center,
+      child: Icon(LucideIcons.image, color: context.primaryColor),
     );
   }
 
@@ -1207,7 +1225,7 @@ class _TourCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: context.primaryColor.withValues(alpha: .08),
+        color: context.primaryColor.withValues(alpha: 0.08), // FIX
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -1217,6 +1235,24 @@ class _TourCard extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+
+  Widget _ratingStars(BuildContext context, double rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final idx = i + 1;
+        IconData icon;
+        if (rating >= idx - 0.25) {
+          icon = Icons.star_rounded;
+        } else if (rating >= idx - 0.75) {
+          icon = Icons.star_half_rounded;
+        } else {
+          icon = Icons.star_border_rounded;
+        }
+        return Icon(icon, color: context.primaryColor, size: 14);
+      }),
     );
   }
 }
