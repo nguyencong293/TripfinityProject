@@ -74,7 +74,6 @@ public class AttractionDTO {
     private List<@Size(max = 100) String> featuresJson;
     private List<@Size(max = 200) String> highlightsJson;
 
-    // opening hours and available times can be structured JSON; accept generic
     // map/list
     private Object availableTimesJson;
     private Object openingHoursJson;

@@ -15,7 +15,6 @@ public class HotelReviewDTO {
 
     private Integer reviewId;
 
-    // Optional in body. Will be filled from path variable in controller.
     private Integer hotelId;
 
     @NotNull(message = "userId không được để trống")
@@ -37,7 +36,6 @@ public class HotelReviewDTO {
     private Integer likesCount;
     private Integer replyCount;
 
-    // approved | rejected
     private String reviewStatus;
 
     @Valid

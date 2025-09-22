@@ -58,13 +58,11 @@ public class TourDTO {
     private List<@Size(max = 100) String> badges;
 
     @Size(max = 32)
-    private String tourStatus; // published/archived/disabled
+    private String tourStatus;
 
-    // Chi tiết tour
     private String itineraryOverview;
     @Size(max = 255)
     private String meetingPoint;
-    // Cho phép truyền 1 hoặc nhiều ngôn ngữ hướng dẫn
     private List<@Size(max = 100) String> guideLanguage;
 
     // Cho phép truyền danh sách mục bao gồm/không bao gồm

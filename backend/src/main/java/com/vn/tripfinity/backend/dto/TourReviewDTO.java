@@ -18,7 +18,6 @@ public class TourReviewDTO {
 
     private Integer reviewId;
 
-    // Optional in body; will be set from path in controller
     @JsonAlias({ "tour_id" })
     private Integer tourId;
 

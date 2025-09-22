@@ -1,4 +1,4 @@
-package com.vn.tripfinity.backend.sevice;
+package com.vn.tripfinity.backend.service;
 
 import com.vn.tripfinity.backend.dto.AreaDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;

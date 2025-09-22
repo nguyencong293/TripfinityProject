@@ -19,7 +19,7 @@ public class RestaurantReviewDTO {
     private Integer reviewId;
 
     @JsonAlias({ "restaurant_id" })
-    private Integer restaurantId; // will be set from path
+    private Integer restaurantId;
 
     @NotNull(message = "userId không được để trống")
     @JsonAlias({ "user_id" })

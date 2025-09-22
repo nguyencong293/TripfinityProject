@@ -31,7 +31,6 @@ public class Hotel {
     @Column(name = "hotel_id")
     private Integer hotelId;
 
-    // FK -> providers.provider_id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "provider_id", nullable = false)
     @ToString.Exclude
@@ -91,7 +90,6 @@ public class Hotel {
     @Column(name = "hotel_status", nullable = false, length = 32)
     private HotelStatus hotelStatus;
 
-    // Chi tiết hotel
     @Column(name = "star_rating")
     private Integer starRating; // 1..5
 

@@ -42,7 +42,6 @@ public class Tour {
     @EqualsAndHashCode.Exclude
     private Area area;
 
-    // Chung
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
@@ -89,7 +88,6 @@ public class Tour {
     @Column(name = "tour_status", nullable = false, length = 32)
     private TourStatus tourStatus;
 
-    // Chi tiết tour
     @Column(name = "itinerary_overview", columnDefinition = "TEXT")
     private String itineraryOverview;
 

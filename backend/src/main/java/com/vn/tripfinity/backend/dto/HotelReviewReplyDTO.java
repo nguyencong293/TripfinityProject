@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 public class HotelReviewReplyDTO {
     private Integer replyId;
 
-    // Optional in body; path provides hotel review id context
     private Integer reviewId;
 
     @NotNull(message = "replierId không được để trống")

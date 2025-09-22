@@ -22,7 +22,6 @@ public class AreaDTO {
     @Size(max = 255)
     private String slug;
 
-    // province/city/district
     @Size(max = 32)
     private String areaType;
 

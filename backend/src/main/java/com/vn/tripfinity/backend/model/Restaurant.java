@@ -43,7 +43,6 @@ public class Restaurant {
     @EqualsAndHashCode.Exclude
     private Area area;
 
-    // Chung
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
@@ -90,10 +89,9 @@ public class Restaurant {
     @Column(name = "restaurant_status", nullable = false, length = 32)
     private RestaurantStatus restaurantStatus;
 
-    // Chi tiết restaurant
     @Enumerated(EnumType.STRING)
     @Column(name = "price_level", length = 32)
-    private PriceLevel priceLevel; // cheap/moderate/expensive/luxury
+    private PriceLevel priceLevel;
 
     @Column(name = "phone", length = 20)
     private String phone;

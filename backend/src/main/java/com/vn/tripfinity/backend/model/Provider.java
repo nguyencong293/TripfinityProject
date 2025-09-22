@@ -25,7 +25,6 @@ public class Provider {
     @Column(name = "provider_id")
     private Integer providerId;
 
-    // FK tới users.user_id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @ToString.Exclude

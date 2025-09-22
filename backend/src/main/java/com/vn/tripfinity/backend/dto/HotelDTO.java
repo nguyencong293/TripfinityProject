@@ -58,7 +58,6 @@ public class HotelDTO {
 
     private List<@Size(max = 100) String> badges;
 
-    // published/archived/disabled
     @Size(max = 32)
     private String hotelStatus;
 

@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 public class RestaurantReviewReplyDTO {
     private Integer replyId;
 
-    // Provided by path param in controller
     private Integer reviewId;
 
     @NotNull(message = "replierId không được để trống")
