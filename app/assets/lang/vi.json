@@ -469,5 +469,26 @@
   "dietary_low_calorie": "Ít calo",
   "dietary_dairy_free": "Không sữa",
   "view_restaurant": "Xem nhà hàng",
-  "error_load_restaurants": "Không thể tải dữ liệu. Vui lòng thử lại hoặc đăng nhập."
+  "error_load_restaurants": "Không thể tải dữ liệu. Vui lòng thử lại hoặc đăng nhập.",
+  "intro": "Giới thiệu",
+
+  "book_table": "Đặt bàn",
+  "visit_website": "Truy cập trang web",
+  "call_to_book": "Gọi đặt bàn",
+  "get_directions": "Chỉ đường",
+
+  "view_more": "Xem thêm",
+  "based_on": "Dựa trên",
+  "map_preview": "Xem bản đồ",
+  "error_load_restaurant_detail": "Không thể tải dữ liệu nhà hàng. Vui lòng thử lại hoặc đăng nhập.",
+  "area": "Khu vực",
+  "customer_info": "Thông tin khách hàng",
+  "aspect_quality": "Chất lượng",
+  "aspect_service": "Phục vụ",
+  "aspect_price": "Giá cả",
+  "aspect_location": "Vị trí",
+  "aspect_ambience": "Không gian",
+  "restaurant_manager": "Quản lý nhà hàng",
+  "manager_reply_thanks": "Cảm ơn bạn đã đánh giá. Chúng tôi rất vui khi bạn hài lòng với dịch vụ.",
+  "restaurant_intro_fallback": "Nhà hàng %s là điểm đến lý tưởng cho những ai yêu thích ẩm thực %s."
 }

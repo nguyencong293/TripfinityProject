@@ -4,15 +4,14 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 
-// Dynamic data services
 import 'package:app/services/restaurant_api_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app/services/localization_service.dart';
 
 class RestaurantDetailScreen extends StatefulWidget {
-  final int? restaurantId; // Primary way to load restaurant
-  final Map<String, String>? restaurant; // Fallback for backward compatibility
-  // Các filter đang được chọn từ overview để highlight
+  final int? restaurantId;
+  final Map<String, String>? restaurant;
   final Set<String> activeCuisines;
   final Set<String> activeServices;
   final Set<String> activeDietaries;
@@ -46,42 +45,40 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   bool _showAllReviews = false;
   final Map<String, bool> _expandedState = {};
 
-  // ===== DYNAMIC DATA =====
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _restaurantData;
   List<Map<String, dynamic>> _reviews = [];
   List<Map<String, dynamic>> _openingHours = [];
 
-  // ===== DANH MỤC ĐẶC ĐIỂM NHÀ HÀNG =====
-  late final List<_RestaurantFeature> _cuisineFeatures = [
-    _RestaurantFeature('Việt', LucideIcons.wine),
-    _RestaurantFeature('Hải sản', LucideIcons.fish),
-    _RestaurantFeature('Âu', LucideIcons.wine),
-    _RestaurantFeature('Hàn', LucideIcons.wine),
-    _RestaurantFeature('Nhật', LucideIcons.wine),
-    _RestaurantFeature('Thái', LucideIcons.eggFried),
-    _RestaurantFeature('Trung', LucideIcons.wine),
-    _RestaurantFeature('Chay', LucideIcons.leaf),
-    _RestaurantFeature('Nướng', LucideIcons.flame),
-    _RestaurantFeature('Cà phê', LucideIcons.coffee),
+  List<_RestaurantFeature> get _cuisineFeatures => [
+    _RestaurantFeature('cuisine_vietnamese'.tr, LucideIcons.wine),
+    _RestaurantFeature('cuisine_seafood'.tr, LucideIcons.fish),
+    _RestaurantFeature('cuisine_western'.tr, LucideIcons.wine),
+    _RestaurantFeature('cuisine_korean'.tr, LucideIcons.wine),
+    _RestaurantFeature('cuisine_japanese'.tr, LucideIcons.wine),
+    _RestaurantFeature('cuisine_thai'.tr, LucideIcons.eggFried),
+    _RestaurantFeature('cuisine_chinese'.tr, LucideIcons.wine),
+    _RestaurantFeature('cuisine_vegan'.tr, LucideIcons.leaf),
+    _RestaurantFeature('cuisine_grill'.tr, LucideIcons.flame),
+    _RestaurantFeature('cuisine_coffee'.tr, LucideIcons.coffee),
   ];
 
-  late final List<_RestaurantFeature> _serviceFeatures = [
-    _RestaurantFeature('Ăn tại chỗ', LucideIcons.utensils),
-    _RestaurantFeature('Mang đi', LucideIcons.shoppingBag),
-    _RestaurantFeature('Giao hàng', LucideIcons.bike),
-    _RestaurantFeature('Bar', LucideIcons.beer),
-    _RestaurantFeature('Sân vườn', LucideIcons.treePine),
-    _RestaurantFeature('Phòng riêng', LucideIcons.doorClosed),
+  List<_RestaurantFeature> get _serviceFeatures => [
+    _RestaurantFeature('service_dine_in'.tr, LucideIcons.utensils),
+    _RestaurantFeature('service_take_away'.tr, LucideIcons.shoppingBag),
+    _RestaurantFeature('service_delivery'.tr, LucideIcons.bike),
+    _RestaurantFeature('service_bar'.tr, LucideIcons.beer),
+    _RestaurantFeature('service_garden'.tr, LucideIcons.treePine),
+    _RestaurantFeature('service_private_room'.tr, LucideIcons.doorClosed),
   ];
 
-  late final List<_RestaurantFeature> _dietaryFeatures = [
-    _RestaurantFeature('Vegan', LucideIcons.leaf),
-    _RestaurantFeature('Halal', LucideIcons.badgeCheck),
-    _RestaurantFeature('Gluten-free', LucideIcons.wheatOff),
-    _RestaurantFeature('Ít calo', LucideIcons.scale),
-    _RestaurantFeature('Không sữa', LucideIcons.milkOff),
+  List<_RestaurantFeature> get _dietaryFeatures => [
+    _RestaurantFeature('dietary_vegan'.tr, LucideIcons.leaf),
+    _RestaurantFeature('dietary_halal'.tr, LucideIcons.badgeCheck),
+    _RestaurantFeature('dietary_gluten_free'.tr, LucideIcons.wheatOff),
+    _RestaurantFeature('dietary_low_calorie'.tr, LucideIcons.scale),
+    _RestaurantFeature('dietary_dairy_free'.tr, LucideIcons.milkOff),
   ];
 
   @override
@@ -128,7 +125,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               children: [
                 Icon(
                   LucideIcons.alertCircle,
-                  color: Colors.redAccent,
+                  color: context.errorColor,
                   size: 48,
                 ),
                 const SizedBox(height: 16),
@@ -136,7 +133,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   _error!,
                   textAlign: TextAlign.center,
                   style: context.bodyOneStyle.copyWith(
-                    color: Colors.redAccent,
+                    color: context.errorColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -144,7 +141,11 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 ElevatedButton.icon(
                   onPressed: _fetchRestaurantData,
                   icon: const Icon(LucideIcons.refreshCw, size: 16),
-                  label: Text('Thử lại', style: context.buttonStyle),
+                  label: Text('retry'.tr, style: context.buttonStyle),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.primaryColor,
+                    foregroundColor: context.buttonTextColor,
+                  ),
                 ),
               ],
             ),
@@ -195,7 +196,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           // ===== GIỚI THIỆU =====
           _sectionWrapper(
             context,
-            title: 'Giới thiệu',
+            title: 'intro'.tr,
             child: _expandableText(
               context,
               text: _getDescription(),
@@ -204,10 +205,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             ),
           ),
 
-          // ===== CÁC KHỐI TÍNH NĂNG =====
           _featuresBlock(
             context,
-            title: 'Ẩm thực',
+            title: 'cuisines'.tr,
             features: _cuisineFeatures,
             activeFeatures: _getActiveCuisines(),
             initiallyVisible: 6,
@@ -215,7 +215,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
           _featuresBlock(
             context,
-            title: 'Dịch vụ',
+            title: 'services'.tr,
             features: _serviceFeatures,
             activeFeatures: _getActiveServices(),
             initiallyVisible: 4,
@@ -223,7 +223,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
           _featuresBlock(
             context,
-            title: 'Chế độ ăn',
+            title: 'dietaries'.tr,
             features: _dietaryFeatures,
             activeFeatures: _getActiveDietaries(),
             initiallyVisible: 3,
@@ -233,7 +233,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           if (_openingHours.isNotEmpty)
             _sectionWrapper(
               context,
-              title: 'Giờ mở cửa',
+              title: 'opening_hours'.tr,
               child: Column(
                 children: _openingHours.map((hour) {
                   final isToday = _isToday(hour['day'] ?? '');
@@ -272,15 +272,15 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF23A455,
-                              ).withValues(alpha: 0.1),
+                              color: context.primaryColor.withValues(
+                                alpha: 0.1,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              'Đang mở',
+                              'open_now'.tr,
                               style: context.captionStyle.copyWith(
-                                color: const Color(0xFF23A455),
+                                color: context.primaryColor,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -295,7 +295,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           // ===== KHU VỰC =====
           _sectionWrapper(
             context,
-            title: 'Khu vực',
+            title: 'area'.tr,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -313,11 +313,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    'assets/images/onboarding2.png',
+                  child: SizedBox(
                     height: 160,
                     width: double.infinity,
-                    fit: BoxFit.cover,
+                    child: _mapPlaceholder(context),
                   ),
                 ),
               ],
@@ -327,7 +326,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           // ===== THÔNG TIN KHÁCH HÀNG =====
           _sectionWrapper(
             context,
-            title: 'Thông tin khách hàng',
+            title: 'customer_info'.tr,
             child: _ratingSummary(context),
           ),
 
@@ -335,7 +334,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           if (_reviews.isNotEmpty)
             _sectionWrapper(
               context,
-              title: 'Tất cả đánh giá',
+              title: 'all_reviews'.tr,
               child: Column(
                 children: [
                   ...(_showAllReviews ? _reviews : _reviews.take(2)).map(
@@ -347,8 +346,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                           setState(() => _showAllReviews = !_showAllReviews),
                       child: Text(
                         _showAllReviews
-                            ? 'Thu gọn'
-                            : 'Xem thêm ${_reviews.length - 2} đánh giá',
+                            ? 'read_less'.tr
+                            : '${'view_more'.tr} ${_reviews.length - 2} ${'reviews'.tr}',
                         style: context.bodyTwoStyle.copyWith(
                           color: context.primaryColor,
                           fontWeight: FontWeight.w600,
@@ -379,22 +378,17 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       Map<String, dynamic> restaurantData;
 
       if (widget.restaurantId != null) {
-        // Primary way: fetch by ID
         restaurantData = await api.getRestaurantById(widget.restaurantId!);
       } else {
-        // Fallback: use existing restaurant data
         restaurantData = _convertOldFormatToNew(widget.restaurant!);
       }
 
-      // Fetch reviews if we have restaurant ID
       List<Map<String, dynamic>> reviews = [];
       if (widget.restaurantId != null) {
         try {
           reviews = await api.getRestaurantReviews(widget.restaurantId!);
         } catch (e) {
           // Reviews fetch failed but restaurant data succeeded
-          // ignore: avoid_print
-          print('Failed to fetch reviews: $e');
         }
       }
 
@@ -407,19 +401,19 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error =
-            'Không thể tải dữ liệu nhà hàng. Vui lòng thử lại hoặc đăng nhập.';
+        _error = 'error_load_restaurant_detail'.tr;
       });
     }
   }
 
-  // Convert old restaurant format to new format for backward compatibility
   Map<String, dynamic> _convertOldFormatToNew(Map<String, String> oldFormat) {
     return {
       'title': oldFormat['name'] ?? '',
       'location': oldFormat['location'] ?? '',
-      'serviceDescription':
-          'Nhà hàng ${oldFormat['name']} mang đến trải nghiệm ẩm thực tuyệt vời.',
+      'serviceDescription': 'restaurant_intro_fallback'.tr.replaceFirst(
+        '%s',
+        oldFormat['name'] ?? '',
+      ),
       'ratingAverage': double.tryParse(oldFormat['rating'] ?? '0') ?? 0.0,
       'price': _parsePrice(oldFormat['price'] ?? ''),
       'currencyCode': 'VND',
@@ -428,8 +422,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       'website': '',
       'thumbnailUrl': oldFormat['image'],
       'imageUrls': [oldFormat['image'] ?? ''],
-      'cuisines': [oldFormat['cuisine'] ?? 'Âu'],
-      'services': ['Ăn tại chỗ'],
+      'cuisines': [oldFormat['cuisine'] ?? 'cuisine_western'.tr],
+      'services': ['service_dine_in'.tr],
       'diets': [],
       'badges': [],
       'priceLevel': 'moderate',
@@ -443,7 +437,6 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
   List<Map<String, dynamic>> _parseOpeningHours(dynamic openingHours) {
     if (openingHours == null) {
-      // Return default opening hours
       return [
         {'day': 'Thứ 2', 'hours': '09:00 - 22:00'},
         {'day': 'Thứ 3', 'hours': '09:00 - 22:00'},
@@ -497,7 +490,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
   bool _isToday(String day) {
     final now = DateTime.now();
-    final weekday = now.weekday; // 1 = Monday, 7 = Sunday
+    final weekday = now.weekday;
 
     switch (weekday) {
       case 1:
@@ -523,20 +516,28 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   String _getRestaurantName() {
     return _restaurantData?['title']?.toString() ??
         widget.restaurant?['name'] ??
-        'Nhà hàng';
+        'restaurants_title'.tr;
   }
 
-  String _getRating() {
+  String _getRatingStr() {
     final rating = _restaurantData?['ratingAverage'];
-    if (rating is num) return rating.toString();
-    return widget.restaurant?['rating'] ?? '4.0';
+    if (rating is num) return rating.toStringAsFixed(1);
+    final s = widget.restaurant?['rating'] ?? '0.0';
+    final n = double.tryParse(s) ?? 0.0;
+    return n.toStringAsFixed(1);
+  }
+
+  double _getRatingVal() {
+    final rating = _restaurantData?['ratingAverage'];
+    if (rating is num) return rating.toDouble();
+    return double.tryParse(widget.restaurant?['rating'] ?? '0.0') ?? 0.0;
   }
 
   String _getReviewCount() {
     if (_reviews.isNotEmpty) {
       return '(${_reviews.length})';
     }
-    return widget.restaurant?['reviews'] ?? '(99)';
+    return widget.restaurant?['reviews'] ?? '(0)';
   }
 
   String _getPrice() {
@@ -550,7 +551,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       return '$price $currency';
     }
 
-    return widget.restaurant?['price'] ?? '120.000 đ';
+    return widget.restaurant?['price'] ?? '';
   }
 
   String _getImageUrl() {
@@ -558,13 +559,12 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     if (thumbnailUrl != null && thumbnailUrl.isNotEmpty) {
       return thumbnailUrl;
     }
-
     final imageUrls = _restaurantData?['imageUrls'];
     if (imageUrls is List && imageUrls.isNotEmpty) {
       return imageUrls.first.toString();
     }
-
-    return widget.restaurant?['image'] ?? 'assets/images/onboarding1.png';
+    final fallback = widget.restaurant?['image'] ?? '';
+    return fallback.startsWith('http') ? fallback : '';
   }
 
   String _getDescription() {
@@ -577,18 +577,16 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         ? cuisines.first.toLowerCase()
         : 'đa dạng';
 
-    return 'Nhà hàng $name là điểm đến lý tưởng cho những ai yêu thích ẩm thực $cuisineText. '
-        'Với không gian ấm cúng, thực đơn đa dạng và đội ngũ phục vụ chuyên nghiệp, '
-        'chúng tôi cam kết mang đến cho quý khách những trải nghiệm ẩm thực tuyệt vời nhất. '
-        'Nhà hàng sử dụng nguyên liệu tươi ngon, chế biến theo công thức truyền thống '
-        'kết hợp với sự sáng tạo hiện đại.';
+    return 'restaurant_intro_fallback'.tr
+        .replaceFirst('%s', name)
+        .replaceFirst('%s', cuisineText);
   }
 
   String _getAddress() {
     return _restaurantData?['address']?.toString() ??
         _restaurantData?['location']?.toString() ??
         widget.restaurant?['location'] ??
-        '32-34 Trần Phú, Nha Trang 300200 Việt Nam';
+        '';
   }
 
   Set<String> _getActiveCuisines() {
@@ -597,7 +595,6 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       return cuisines.map((e) => e.toString()).toSet();
     }
 
-    // Fallback to user's active cuisines or restaurant cuisine
     if (widget.activeCuisines.isNotEmpty) {
       return widget.activeCuisines;
     }
@@ -607,7 +604,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       return {cuisine};
     }
 
-    return {'Âu'}; // Default
+    return {'cuisine_western'.tr};
   }
 
   Set<String> _getActiveServices() {
@@ -620,7 +617,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       return widget.activeServices;
     }
 
-    return {'Ăn tại chỗ'}; // Default
+    return {'service_dine_in'.tr};
   }
 
   Set<String> _getActiveDietaries() {
@@ -635,24 +632,19 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   // ===== HERO IMAGE =====
   Widget _heroImage() {
     final imageUrl = _getImageUrl();
-    final isNetworkImage = imageUrl.startsWith('http');
 
     return Stack(
       children: [
         SizedBox(
           height: 220,
           width: double.infinity,
-          child: isNetworkImage
+          child: (imageUrl.isNotEmpty && imageUrl.startsWith('http'))
               ? Image.network(
                   imageUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => _imageFallback(),
                 )
-              : Image.asset(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _imageFallback(),
-                ),
+              : _imageFallback(),
         ),
         Positioned(
           bottom: 12,
@@ -660,18 +652,22 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.45),
+              color: context.cardBackgroundColor.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: context.dividerColor),
             ),
             child: Row(
               children: [
-                Icon(LucideIcons.image, size: 14, color: Colors.white),
+                Icon(
+                  LucideIcons.image,
+                  size: 14,
+                  color: context.textSecondaryColor,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   '1 / ${_getImageCount()}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white,
+                  style: context.captionStyle.copyWith(
+                    color: context.textPrimaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -686,19 +682,44 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   Widget _imageFallback() {
     return Container(
       height: 220,
-      color: context.primaryColor.withValues(alpha: 0.15),
-      child: const Icon(Icons.image, size: 48, color: Colors.white70),
+      color: context.primaryColor.withValues(alpha: 0.08),
+      alignment: Alignment.center,
+      child: Icon(LucideIcons.image, size: 48, color: context.primaryColor),
+    );
+  }
+
+  Widget _mapPlaceholder(BuildContext context) {
+    return Container(
+      color: context.primaryColor.withValues(alpha: 0.08),
+      alignment: Alignment.center,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(LucideIcons.map, color: context.primaryColor, size: 22),
+          const SizedBox(width: 8),
+          Text(
+            'map_preview'.tr,
+            style: context.captionStyle.copyWith(
+              color: context.primaryColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   int _getImageCount() {
     final imageUrls = _restaurantData?['imageUrls'];
     if (imageUrls is List) return imageUrls.length;
-    return 8; // Default fallback
+    return 1; // Default fallback
   }
 
   // ===== HEADER INFO =====
   Widget _headerInfo(BuildContext context) {
+    final ratingVal = _getRatingVal();
+    final ratingStr = _getRatingStr();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -712,10 +733,18 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         const SizedBox(height: 6),
         Row(
           children: [
-            _starsRow(context, double.tryParse(_getRating()) ?? 4.0),
+            _starsRow(context, ratingVal),
             const SizedBox(width: 6),
             Text(
-              _getReviewCount(),
+              '($ratingStr)',
+              style: context.captionStyle.copyWith(
+                color: context.textSecondaryColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '${_getReviewCount().replaceAll(RegExp(r"[()]"), "")} ${'reviews'.tr}',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
                 fontWeight: FontWeight.w500,
@@ -727,10 +756,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         Wrap(
           spacing: 16,
           children: [
-            if (_hasWebsite()) _inlineAction(context, 'Truy cập trang web'),
-            if (_hasPhone()) _inlineAction(context, 'Gọi đặt bàn'),
-            _inlineAction(context, 'Viết đánh giá'),
-            _inlineAction(context, 'Chỉ đường'),
+            if (_hasWebsite()) _inlineAction(context, 'visit_website'.tr),
+            if (_hasPhone()) _inlineAction(context, 'call_to_book'.tr),
+            _inlineAction(context, 'write_review'.tr),
+            _inlineAction(context, 'get_directions'.tr),
           ],
         ),
       ],
@@ -755,7 +784,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           child: _outlinedChip(
             context,
             icon: LucideIcons.calendar,
-            label: '11 thg 6',
+            label: 'date'.tr,
           ),
         ),
         const SizedBox(width: 12),
@@ -763,7 +792,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           child: _outlinedChip(
             context,
             icon: LucideIcons.users,
-            label: '2 người',
+            label: '2 ${'guests_short'.tr}',
           ),
         ),
       ],
@@ -779,7 +808,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Giá từ:',
+                'price_from'.tr,
                 style: context.captionStyle.copyWith(
                   color: context.textSecondaryColor,
                 ),
@@ -807,9 +836,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               elevation: 0,
             ),
             onPressed: () {},
-            child: const Text(
-              'Đặt bàn',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            child: Text(
+              'book_table'.tr,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
         ),
@@ -870,7 +899,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         InkWell(
           onTap: onToggle,
           child: Text(
-            expanded ? 'Thu gọn' : 'Xem thêm',
+            expanded ? 'read_less'.tr : 'read_more'.tr,
             style: context.bodyTwoStyle.copyWith(
               color: context.primaryColor,
               fontWeight: FontWeight.w600,
@@ -958,8 +987,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                     setState(() => _expandedState[showAllKey] = !showingAll),
                 child: Text(
                   showingAll
-                      ? 'Thu gọn'
-                      : 'Xem thêm ${features.length - initiallyVisible}',
+                      ? 'read_less'.tr
+                      : '${'view_more'.tr} ${features.length - initiallyVisible}',
                   style: context.bodyTwoStyle.copyWith(
                     color: context.primaryColor,
                     fontWeight: FontWeight.w600,
@@ -974,9 +1003,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
   // ===== RATING SUMMARY =====
   Widget _ratingSummary(BuildContext context) {
-    final rating = double.tryParse(_getRating()) ?? 4.3;
+    final rating = _getRatingVal();
 
-    // Generate rating aspects from reviews if available
     final ratingData = _generateRatingAspects();
 
     return Column(
@@ -998,7 +1026,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   _starsRow(context, rating),
                   const SizedBox(height: 4),
                   Text(
-                    'Dựa trên ${_reviews.length} đánh giá',
+                    '${'based_on'.tr} ${_reviews.length} ${'reviews'.tr}',
                     style: context.captionStyle.copyWith(
                       color: context.textSecondaryColor,
                     ),
@@ -1032,8 +1060,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                             minHeight: 8,
                             value: r['value'] as double,
                             backgroundColor: context.dividerColor,
-                            valueColor: const AlwaysStoppedAnimation(
-                              Color(0xFF23A455),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              context.primaryColor,
                             ),
                           ),
                         ),
@@ -1069,7 +1097,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               color: context.textPrimaryColor,
             ),
             label: Text(
-              'Viết đánh giá',
+              'write_review'.tr,
               style: context.bodyTwoStyle.copyWith(
                 fontWeight: FontWeight.w600,
                 color: context.textPrimaryColor,
@@ -1082,7 +1110,6 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   }
 
   List<Map<String, dynamic>> _generateRatingAspects() {
-    // Try to get rating aspects from reviews data
     if (_reviews.isNotEmpty) {
       double totalQuality = 0,
           totalService = 0,
@@ -1105,22 +1132,22 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
       if (count > 0) {
         return [
-          {'label': 'Chất lượng', 'value': (totalQuality / count) / 5},
-          {'label': 'Phục vụ', 'value': (totalService / count) / 5},
-          {'label': 'Giá cả', 'value': (totalPrice / count) / 5},
-          {'label': 'Vị trí', 'value': (totalLocation / count) / 5},
-          {'label': 'Không gian', 'value': (totalAmbience / count) / 5},
+          {'label': 'aspect_quality'.tr, 'value': (totalQuality / count) / 5},
+          {'label': 'aspect_service'.tr, 'value': (totalService / count) / 5},
+          {'label': 'aspect_price'.tr, 'value': (totalPrice / count) / 5},
+          {'label': 'aspect_location'.tr, 'value': (totalLocation / count) / 5},
+          {'label': 'aspect_ambience'.tr, 'value': (totalAmbience / count) / 5},
         ];
       }
     }
 
     // Fallback to default values
     return [
-      {'label': 'Chất lượng', 'value': 0.85},
-      {'label': 'Phục vụ', 'value': 0.92},
-      {'label': 'Giá cả', 'value': 0.78},
-      {'label': 'Vị trí', 'value': 0.88},
-      {'label': 'Không gian', 'value': 0.90},
+      {'label': 'aspect_quality'.tr, 'value': 0.85},
+      {'label': 'aspect_service'.tr, 'value': 0.92},
+      {'label': 'aspect_price'.tr, 'value': 0.78},
+      {'label': 'aspect_location'.tr, 'value': 0.88},
+      {'label': 'aspect_ambience'.tr, 'value': 0.90},
     ];
   }
 
@@ -1130,9 +1157,11 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         review['user']?['fullName']?.toString() ??
         review['user']?['username']?.toString() ??
         review['userName']?.toString() ??
-        'Người dùng';
+        'user'.tr;
 
-    final rating = review['rating']?.toDouble() ?? 5.0;
+    final rating = (review['rating'] is num)
+        ? (review['rating'] as num).toDouble()
+        : 5.0;
     final content = review['content']?.toString() ?? '';
     final createdAt = review['createdAt']?.toString() ?? '';
     final date = _formatDate(createdAt);
@@ -1199,10 +1228,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           if (hasReply)
             Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: _managerReply(
-                context,
-                'Cảm ơn bạn đã đánh giá. Chúng tôi rất vui khi bạn hài lòng với dịch vụ.',
-              ),
+              child: _managerReply(context, 'manager_reply_thanks'.tr),
             ),
         ],
       ),
@@ -1211,7 +1237,6 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
   String _formatDate(String dateString) {
     if (dateString.isEmpty) return '';
-
     try {
       final date = DateTime.parse(dateString);
       return '${date.day}/${date.month}/${date.year}';
@@ -1223,8 +1248,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   // ===== MANAGER REPLY =====
   Widget _managerReply(BuildContext context, String text) {
     return Container(
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: Color(0xFF23A455), width: 3)),
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: context.primaryColor, width: 3)),
       ),
       padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
       child: Column(
@@ -1232,11 +1257,15 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         children: [
           Row(
             children: [
-              const Icon(LucideIcons.award, size: 16, color: Color(0xFFB8860B)),
+              Icon(
+                LucideIcons.award,
+                size: 16,
+                color: context.textSecondaryColor,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Quản lý nhà hàng',
+                  'restaurant_manager'.tr,
                   style: context.bodyTwoStyle.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -1263,30 +1292,23 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     );
   }
 
-  // ===== STARS ROW =====
+  // ===== STARS ROW
   Widget _starsRow(BuildContext context, double rating) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
-        if (i < rating.floor()) {
-          return Icon(
-            Icons.star_rounded,
-            color: context.primaryColor,
-            size: 16,
-          );
-        } else if (i < rating) {
-          return Icon(
-            Icons.star_half_rounded,
-            color: context.primaryColor,
-            size: 16,
-          );
-        } else {
-          return Icon(
-            Icons.star_border_rounded,
-            color: context.primaryColor,
-            size: 16,
-          );
-        }
+        final starIndex = i + 1;
+        final isFull = rating >= starIndex - 0.25;
+        final isHalf = !isFull && rating >= starIndex - 0.75;
+        return Icon(
+          isFull
+              ? Icons.star_rounded
+              : isHalf
+              ? Icons.star_half_rounded
+              : Icons.star_border_rounded,
+          color: context.primaryColor,
+          size: 16,
+        );
       }),
     );
   }
