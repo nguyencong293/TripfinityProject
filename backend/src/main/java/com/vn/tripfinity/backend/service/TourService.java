@@ -1,4 +1,4 @@
-package com.vn.tripfinity.backend.sevice;
+package com.vn.tripfinity.backend.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

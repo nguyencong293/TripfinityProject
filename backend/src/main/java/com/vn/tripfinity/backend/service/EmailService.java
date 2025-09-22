@@ -1,4 +1,4 @@
-package com.vn.tripfinity.backend.sevice;
+package com.vn.tripfinity.backend.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -18,8 +18,8 @@ public class EmailService {
     }
 
     public void sendEmail(String to,
-                          String subject,
-                          String body) throws MessagingException, UnsupportedEncodingException {
+            String subject,
+            String body) throws MessagingException, UnsupportedEncodingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 

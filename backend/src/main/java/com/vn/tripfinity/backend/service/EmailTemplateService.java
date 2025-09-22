@@ -1,4 +1,4 @@
-package com.vn.tripfinity.backend.sevice;
+package com.vn.tripfinity.backend.service;
 
 import jakarta.mail.MessagingException;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ public class EmailTemplateService {
         private final String icon;
 
         EmailType(String defaultSubject,
-                  String icon) {
+                String icon) {
             this.defaultSubject = defaultSubject;
             this.icon = icon;
         }
@@ -87,7 +87,7 @@ public class EmailTemplateService {
         }
 
         public EmailData ctaButton(String ctaText,
-                                   String ctaUrl) {
+                String ctaUrl) {
             this.ctaText = ctaText;
             this.ctaUrl = ctaUrl;
             return this;
@@ -99,7 +99,7 @@ public class EmailTemplateService {
         }
 
         public EmailData addFeature(String icon,
-                                    String title) {
+                String title) {
             this.features.add(new FeatureItem(icon, title));
             return this;
         }
@@ -152,7 +152,7 @@ public class EmailTemplateService {
         private String title;
 
         public FeatureItem(String icon,
-                           String title) {
+                String title) {
             this.icon = icon;
             this.title = title;
         }
@@ -168,11 +168,10 @@ public class EmailTemplateService {
 
     // Method chính để gửi email
     public void sendEmail(String recipientEmail,
-                          EmailType emailType,
-                          EmailData emailData) {
-        String subject = emailData.getCustomSubject() != null ?
-                emailData.getCustomSubject() :
-                emailType.getIcon() + " " + emailType.getDefaultSubject();
+            EmailType emailType,
+            EmailData emailData) {
+        String subject = emailData.getCustomSubject() != null ? emailData.getCustomSubject()
+                : emailType.getIcon() + " " + emailType.getDefaultSubject();
 
         String body = createEmailTemplate(emailType, emailData);
 
@@ -186,18 +185,24 @@ public class EmailTemplateService {
 
     // Method tạo template chung
     private String createEmailTemplate(EmailType emailType,
-                                       EmailData data) {
+            EmailData data) {
         String template = getBaseEmailTemplate();
 
         // Thay thế các placeholder
-        template = template.replace("{{RECIPIENT_NAME}}", data.getRecipientName() != null ? data.getRecipientName() : "Khách hàng");
+        template = template.replace("{{RECIPIENT_NAME}}",
+                data.getRecipientName() != null ? data.getRecipientName() : "Khách hàng");
         template = template.replace("{{EMAIL_ICON}}", emailType.getIcon());
-        template = template.replace("{{MAIN_TITLE}}", data.getMainTitle() != null ? data.getMainTitle() : "Chào mừng bạn đến với cộng đồng du lịch!");
-        template = template.replace("{{MAIN_MESSAGE}}", data.getMainMessage() != null ? data.getMainMessage() : "Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi.");
-        template = template.replace("{{HIGHLIGHT_TEXT}}", data.getHighlightText() != null ? data.getHighlightText() : "");
+        template = template.replace("{{MAIN_TITLE}}",
+                data.getMainTitle() != null ? data.getMainTitle() : "Chào mừng bạn đến với cộng đồng du lịch!");
+        template = template.replace("{{MAIN_MESSAGE}}",
+                data.getMainMessage() != null ? data.getMainMessage() : "Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi.");
+        template = template.replace("{{HIGHLIGHT_TEXT}}",
+                data.getHighlightText() != null ? data.getHighlightText() : "");
         template = template.replace("{{CTA_TEXT}}", data.getCtaText() != null ? data.getCtaText() : "Khám phá ngay!");
-        template = template.replace("{{CTA_URL}}", data.getCtaUrl() != null ? data.getCtaUrl() : "https://tripfinity.com");
-        template = template.replace("{{WARNING_MESSAGE}}", data.getWarningMessage() != null ? data.getWarningMessage() : "");
+        template = template.replace("{{CTA_URL}}",
+                data.getCtaUrl() != null ? data.getCtaUrl() : "https://tripfinity.com");
+        template = template.replace("{{WARNING_MESSAGE}}",
+                data.getWarningMessage() != null ? data.getWarningMessage() : "");
 
         // Tạo features HTML
         String featuresHtml = generateFeaturesHtml(data.getFeatures());
@@ -226,8 +231,7 @@ public class EmailTemplateService {
                             "<div class=\"feature-icon\">%s</div>" +
                             "<div class=\"feature-title\">%s</div>" +
                             "</div>",
-                    feature.getIcon(), feature.getTitle()
-            ));
+                    feature.getIcon(), feature.getTitle()));
         }
 
         html.append("</div>");
@@ -249,7 +253,7 @@ public class EmailTemplateService {
                             padding: 0;
                             box-sizing: border-box;
                         }
-                
+
                         body {
                             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
                             background-color: #f8fafc;
@@ -257,7 +261,7 @@ public class EmailTemplateService {
                             line-height: 1.6;
                             color: #334155;
                         }
-                
+
                         .email-container {
                             max-width: 600px;
                             margin: 0 auto;
@@ -266,14 +270,14 @@ public class EmailTemplateService {
                             overflow: hidden;
                             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
                         }
-                
+
                         .header {
                             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
                             padding: 40px 30px;
                             text-align: center;
                             position: relative;
                         }
-                
+
                         .header::before {
                             content: '';
                             position: absolute;
@@ -284,7 +288,7 @@ public class EmailTemplateService {
                             background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="10" cy="10" r="1" fill="white" opacity="0.1"/><circle cx="90" cy="20" r="1" fill="white" opacity="0.1"/><circle cx="30" cy="90" r="1" fill="white" opacity="0.1"/><circle cx="70" cy="70" r="1" fill="white" opacity="0.1"/></svg>') repeat;
                             pointer-events: none;
                         }
-                
+
                         .logo {
                             background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
                             color: white;
@@ -298,7 +302,7 @@ public class EmailTemplateService {
                             z-index: 1;
                             box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
                         }
-                
+
                         .welcome-text {
                             color: #e2e8f0;
                             font-size: 18px;
@@ -307,29 +311,29 @@ public class EmailTemplateService {
                             position: relative;
                             z-index: 1;
                         }
-                
+
                         .content {
                             padding: 40px 30px;
                         }
-                
+
                         .greeting {
                             font-size: 24px;
                             color: #1e293b;
                             margin-bottom: 24px;
                             font-weight: 600;
                         }
-                
+
                         .greeting strong {
                             color: #3b82f6;
                         }
-                
+
                         .message {
                             font-size: 16px;
                             color: #64748b;
                             margin-bottom: 32px;
                             line-height: 1.7;
                         }
-                
+
                         .highlight-box {
                             background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
                             border-left: 4px solid #3b82f6;
@@ -338,21 +342,21 @@ public class EmailTemplateService {
                             margin: 32px 0;
                             position: relative;
                         }
-                
+
                         .highlight-text {
                             font-size: 16px;
                             font-weight: 600;
                             color: #1e40af;
                             margin: 0;
                         }
-                
+
                         .features-container {
                             display: grid;
                             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
                             gap: 16px;
                             margin: 32px 0;
                         }
-                
+
                         .feature-item {
                             background: #f8fafc;
                             border: 1px solid #e2e8f0;
@@ -361,25 +365,25 @@ public class EmailTemplateService {
                             border-radius: 8px;
                             text-align: center;
                         }
-                
+
                         .feature-icon {
                             font-size: 32px;
                             margin-bottom: 12px;
                             display: block;
                         }
-                
+
                         .feature-title {
                             font-size: 14px;
                             font-weight: 600;
                             color: #475569;
                             line-height: 1.4;
                         }
-                
+
                         .cta-container {
                             text-align: center;
                             margin: 40px 0;
                         }
-                
+
                         .cta-button {
                             display: inline-block;
                             background: #3b82f6;
@@ -393,13 +397,13 @@ public class EmailTemplateService {
                             mso-style-priority: 100;
                             -webkit-text-size-adjust: none;
                         }
-                
+
                         .divider {
                             height: 1px;
                             background: #e2e8f0;
                             margin: 32px 0;
                         }
-                
+
                         .warning-box {
                             background: #fef3c7;
                             border: 1px solid #fbbf24;
@@ -407,53 +411,53 @@ public class EmailTemplateService {
                             padding: 20px;
                             margin: 24px 0;
                         }
-                
+
                         .warning-box strong {
                             color: #92400e;
                             font-weight: 600;
                         }
-                
+
                         .warning-text {
                             color: #92400e;
                             font-size: 14px;
                             line-height: 1.5;
                         }
-                
+
                         .footer {
                             background: #f8fafc;
                             padding: 32px 30px;
                             text-align: center;
                             border-top: 1px solid #e2e8f0;
                         }
-                
+
                         .footer-logo {
                             font-size: 18px;
                             font-weight: 700;
                             color: #1e293b;
                             margin-bottom: 16px;
                         }
-                
+
                         .footer-text {
                             font-size: 14px;
                             color: #64748b;
                             margin-bottom: 16px;
                             line-height: 1.5;
                         }
-                
+
                         .footer-contact {
                             font-size: 14px;
                             color: #64748b;
                             margin-bottom: 20px;
                         }
-                
+
                         .footer-contact strong {
                             color: #334155;
                         }
-                
+
                         .social-links {
                             margin-top: 16px;
                         }
-                
+
                         .social-links a {
                             color: #3b82f6;
                             text-decoration: none;
@@ -461,69 +465,69 @@ public class EmailTemplateService {
                             font-size: 14px;
                             font-weight: 500;
                         }
-                
+
                         /* Responsive Design */
                         @media (max-width: 600px) {
                             body {
                                 padding: 10px;
                             }
-                
+
                             .email-container {
                                 border-radius: 12px;
                             }
-                
+
                             .header {
                                 padding: 30px 20px;
                             }
-                
+
                             .content {
                                 padding: 30px 20px;
                             }
-                
+
                             .footer {
                                 padding: 24px 20px;
                             }
-                
+
                             .logo {
                                 font-size: 20px;
                                 padding: 10px 20px;
                             }
-                
+
                             .welcome-text {
                                 font-size: 16px;
                             }
-                
+
                             .greeting {
                                 font-size: 20px;
                             }
-                
+
                             .features-container {
                                 grid-template-columns: 1fr;
                                 gap: 12px;
                             }
-                
+
                             .cta-button {
                                 padding: 14px 28px;
                                 font-size: 15px;
                             }
-                
+
                             .social-links a {
                                 margin: 0 8px;
                             }
                         }
-                
+
                         /* Print Styles */
                         @media print {
                             body {
                                 background: white;
                                 padding: 0;
                             }
-                
+
                             .email-container {
                                 box-shadow: none;
                                 border: 1px solid #e2e8f0;
                             }
-                
+
                             .cta-button {
                                 background: #3b82f6 !important;
                                 -webkit-print-color-adjust: exact;
@@ -537,33 +541,33 @@ public class EmailTemplateService {
                             <div class="logo">TRIPFINITY</div>
                             <div class="welcome-text">{{MAIN_TITLE}}</div>
                         </div>
-                
+
                         <div class="content">
                             <div class="greeting">
                                 Xin chào <strong>{{RECIPIENT_NAME}}</strong>! <span style="font-size: 20px;">{{EMAIL_ICON}}</span>
                             </div>
-                
+
                             <div class="message">{{MAIN_MESSAGE}}</div>
-                
+
                             <div class="highlight-box" style="{{HIGHLIGHT_TEXT}} ? '' : 'display: none;'">
                                 <div class="highlight-text">{{HIGHLIGHT_TEXT}}</div>
                             </div>
-                
+
                             {{FEATURES}}
-                
+
                             <div class="divider"></div>
-                
+
                             <div class="warning-box" style="{{WARNING_MESSAGE}} ? '' : 'display: none;'">
                                 <div class="warning-text">
                                     <strong>Lưu ý:</strong> {{WARNING_MESSAGE}}
                                 </div>
                             </div>
-                
+
                             <div class="cta-container">
                                 <a href="{{CTA_URL}}" class="cta-button" style="background: #3b82f6; color: white; text-decoration: none; display: inline-block; padding: 16px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">{{CTA_TEXT}}</a>
                             </div>
                         </div>
-                
+
                         <div class="footer">
                             <div class="footer-logo">TRIPFINITY</div>
                             <div class="footer-text">

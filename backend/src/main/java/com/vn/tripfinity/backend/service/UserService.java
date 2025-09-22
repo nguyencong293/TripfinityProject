@@ -1,4 +1,4 @@
-package com.vn.tripfinity.backend.sevice;
+package com.vn.tripfinity.backend.service;
 
 import com.vn.tripfinity.backend.dto.UserDTO;
 import com.vn.tripfinity.backend.exception.DuplicateResourceException;
@@ -90,7 +90,7 @@ public class UserService {
     }
 
     public boolean verifyOtp(String email,
-                             String otp) {
+            String otp) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại!"));
 
@@ -110,11 +110,10 @@ public class UserService {
         return true;
     }
 
-
     public String resetPassword(String email,
-                                String otp,
-                                String newPassword,
-                                String newConfirmPassword) {
+            String otp,
+            String newPassword,
+            String newConfirmPassword) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại!"));
 
@@ -135,7 +134,7 @@ public class UserService {
     }
 
     public void sendPasswordResetEmail(User user,
-                                       String otp) {
+            String otp) {
         EmailTemplateService.EmailData emailData = EmailTemplateService.EmailData.builder()
                 .recipientName(user.getFullName())
                 .mainTitle("Khôi phục mật khẩu")
@@ -160,14 +159,14 @@ public class UserService {
                         "Tài khoản của bạn đã được tạo thành công và sẵn sàng để khám phá những chuyến đi tuyệt vời.")
                 .highlightText("🎉 Chúc mừng! Bạn đã chính thức trở thành thành viên TRIPFINITY")
                 .ctaButton("Bắt đầu khám phá ngay!", "#")
-                .warningMessage("Nếu bạn không thực hiện yêu cầu tạo tài khoản này, vui lòng liên hệ với chúng tôi ngay lập tức để được hỗ trợ.")
+                .warningMessage(
+                        "Nếu bạn không thực hiện yêu cầu tạo tài khoản này, vui lòng liên hệ với chúng tôi ngay lập tức để được hỗ trợ.")
                 .addFeature("🗺️", "Khám phá điểm đến")
                 .addFeature("🏨", "Tìm khách sạn")
                 .addFeature("📱", "Quản lý hành trình");
 
         emailTemplateService.sendEmail(user.getEmail(), EmailTemplateService.EmailType.WELCOME, emailData);
     }
-
 
     private UserDTO convertToDTO(User user) {
         return UserDTO.builder()
@@ -200,7 +199,6 @@ public class UserService {
                 null,
                 null,
                 userDTO.getCreatedAt(),
-                userDTO.getUpdatedAt()
-        );
+                userDTO.getUpdatedAt());
     }
 }
