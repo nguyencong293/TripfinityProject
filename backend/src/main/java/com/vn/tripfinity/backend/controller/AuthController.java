@@ -1,7 +1,8 @@
 package com.vn.tripfinity.backend.controller;
 
 import com.vn.tripfinity.backend.dto.auth.LoginRequest;
-import com.vn.tripfinity.backend.sevice.auth.AuthService;
+import com.vn.tripfinity.backend.service.auth.AuthService;
+
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -48,7 +49,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logoutUser(HttpServletRequest request,
-                                        HttpServletResponse response) {
+            HttpServletResponse response) {
         // Xóa SecurityContext
         SecurityContextHolder.clearContext();
         // Hủy session nếu có
@@ -66,7 +67,7 @@ public class AuthController {
         return ResponseEntity.ok("User logged out successfully");
     }
 
-    //    Google Login
+    // Google Login
     @GetMapping("/google")
     public void redirectToGoogle(HttpServletResponse response) throws IOException {
         response.sendRedirect("/oauth2/authorization/google");

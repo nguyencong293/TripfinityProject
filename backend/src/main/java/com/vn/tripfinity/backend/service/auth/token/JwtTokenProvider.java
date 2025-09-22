@@ -1,4 +1,4 @@
-package com.vn.tripfinity.backend.sevice.auth.token;
+package com.vn.tripfinity.backend.service.auth.token;
 
 import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,7 +29,7 @@ public class JwtTokenProvider {
     }
 
     private String createToken(Map<String, Object> claims,
-                               String subject) {
+            String subject) {
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
@@ -51,8 +51,8 @@ public class JwtTokenProvider {
         try {
             Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token);
             return true;
-        } catch (SignatureException | MalformedJwtException | ExpiredJwtException | UnsupportedJwtException |
-                 IllegalArgumentException ex) {
+        } catch (SignatureException | MalformedJwtException | ExpiredJwtException | UnsupportedJwtException
+                | IllegalArgumentException ex) {
             return false;
         }
     }

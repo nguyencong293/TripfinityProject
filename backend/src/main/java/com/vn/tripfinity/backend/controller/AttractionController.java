@@ -1,7 +1,8 @@
 package com.vn.tripfinity.backend.controller;
 
 import com.vn.tripfinity.backend.dto.AttractionDTO;
-import com.vn.tripfinity.backend.sevice.AttractionService;
+import com.vn.tripfinity.backend.service.AttractionService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

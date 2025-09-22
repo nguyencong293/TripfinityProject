@@ -1,12 +1,13 @@
 package com.vn.tripfinity.backend.controller;
 
-import com.vn.tripfinity.backend.sevice.SearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.vn.tripfinity.backend.service.SearchService;
 
 import java.util.Map;
 

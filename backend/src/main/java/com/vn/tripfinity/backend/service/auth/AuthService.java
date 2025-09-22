@@ -1,4 +1,4 @@
-package com.vn.tripfinity.backend.sevice.auth;
+package com.vn.tripfinity.backend.service.auth;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -6,8 +6,9 @@ import com.vn.tripfinity.backend.dto.auth.LoginRequest;
 import com.vn.tripfinity.backend.dto.auth.LoginResponse;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.UserRepository;
-import com.vn.tripfinity.backend.sevice.UserService;
-import com.vn.tripfinity.backend.sevice.auth.token.JwtTokenProvider;
+import com.vn.tripfinity.backend.service.UserService;
+import com.vn.tripfinity.backend.service.auth.token.JwtTokenProvider;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -37,11 +38,11 @@ public class AuthService {
     private final UserService userService;
 
     public AuthService(AuthenticationManager authenticationManager,
-                       JwtTokenProvider tokenProvider,
-                       UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
-                       GoogleIdTokenVerifier tokenVerifier,
-                       UserService userService) {
+            JwtTokenProvider tokenProvider,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            GoogleIdTokenVerifier tokenVerifier,
+            UserService userService) {
         this.authenticationManager = authenticationManager;
         this.tokenProvider = tokenProvider;
         this.userRepository = userRepository;
@@ -71,9 +72,7 @@ public class AuthService {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getEmail(),
-                        loginRequest.getPassword()
-                )
-        );
+                        loginRequest.getPassword()));
 
         // Set authentication vào SecurityContext
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -85,7 +84,7 @@ public class AuthService {
     }
 
     public ResponseEntity<?> handleGoogleLoginProvider(String idTokenString) {
-//        System.out.println("Nhận token Google: " + idTokenString);
+        // System.out.println("Nhận token Google: " + idTokenString);
         try {
             // Xác minh ID token
             GoogleIdToken idToken = tokenVerifier.verify(idTokenString);
@@ -111,8 +110,8 @@ public class AuthService {
     }
 
     private User findOrCreateProvider(String email,
-                                  String name,
-                                  String avatar) {
+            String name,
+            String avatar) {
         return userRepository.findByEmail(email).orElseGet(() -> {
             User newUser = new User();
             newUser.setEmail(email);
@@ -148,9 +147,7 @@ public class AuthService {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getEmail(),
-                        loginRequest.getPassword()
-                )
-        );
+                        loginRequest.getPassword()));
 
         // Set authentication vào SecurityContext
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -162,7 +159,7 @@ public class AuthService {
     }
 
     public ResponseEntity<?> handleGoogleLogin(String idTokenString) {
-//        System.out.println("Nhận token Google: " + idTokenString);
+        // System.out.println("Nhận token Google: " + idTokenString);
         try {
             // Xác minh ID token
             GoogleIdToken idToken = tokenVerifier.verify(idTokenString);
@@ -188,8 +185,8 @@ public class AuthService {
     }
 
     private User findOrCreateUser(String email,
-                                  String name,
-                                  String avatar) {
+            String name,
+            String avatar) {
         return userRepository.findByEmail(email).orElseGet(() -> {
             User newUser = new User();
             newUser.setEmail(email);
@@ -208,8 +205,7 @@ public class AuthService {
         UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPasswordHash(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getAccountRole().name()))
-        );
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getAccountRole().name())));
 
         String jwt = tokenProvider.generateToken(userDetails);
 

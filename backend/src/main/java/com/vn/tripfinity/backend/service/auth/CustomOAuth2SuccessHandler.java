@@ -1,10 +1,11 @@
-package com.vn.tripfinity.backend.sevice.auth;
+package com.vn.tripfinity.backend.service.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.UserRepository;
-import com.vn.tripfinity.backend.sevice.UserService;
-import com.vn.tripfinity.backend.sevice.auth.token.JwtTokenProvider;
+import com.vn.tripfinity.backend.service.UserService;
+import com.vn.tripfinity.backend.service.auth.token.JwtTokenProvider;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -36,8 +37,8 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
-                                        HttpServletResponse response,
-                                        Authentication authentication) throws IOException, ServletException {
+            HttpServletResponse response,
+            Authentication authentication) throws IOException, ServletException {
         OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
         String email = oauth2User.getAttribute("email");
         String name = oauth2User.getAttribute("name");
@@ -58,8 +59,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPasswordHash(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getAccountRole().name()))
-        );
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getAccountRole().name())));
         // Sinh token JWT
         String jwt = tokenProvider.generateToken(userDetails);
 

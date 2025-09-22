@@ -2,8 +2,9 @@ package com.vn.tripfinity.backend.controller;
 
 import com.vn.tripfinity.backend.dto.RestaurantDTO;
 import com.vn.tripfinity.backend.dto.RestaurantReviewDTO;
-import com.vn.tripfinity.backend.sevice.RestaurantService;
 import com.vn.tripfinity.backend.dto.RestaurantReviewReplyDTO;
+import com.vn.tripfinity.backend.service.RestaurantService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

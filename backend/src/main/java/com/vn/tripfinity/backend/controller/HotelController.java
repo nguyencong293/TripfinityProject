@@ -3,7 +3,8 @@ package com.vn.tripfinity.backend.controller;
 import com.vn.tripfinity.backend.dto.HotelDTO;
 import com.vn.tripfinity.backend.dto.HotelReviewDTO;
 import com.vn.tripfinity.backend.dto.HotelReviewReplyDTO;
-import com.vn.tripfinity.backend.sevice.HotelService;
+import com.vn.tripfinity.backend.service.HotelService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

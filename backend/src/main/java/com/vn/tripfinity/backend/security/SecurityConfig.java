@@ -1,8 +1,5 @@
 package com.vn.tripfinity.backend.security;
 
-import com.vn.tripfinity.backend.sevice.auth.CustomOAuth2SuccessHandler;
-import com.vn.tripfinity.backend.sevice.auth.CustomUserDetailsService;
-import com.vn.tripfinity.backend.sevice.auth.token.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,6 +14,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.vn.tripfinity.backend.service.auth.CustomOAuth2SuccessHandler;
+import com.vn.tripfinity.backend.service.auth.CustomUserDetailsService;
+import com.vn.tripfinity.backend.service.auth.token.JwtAuthenticationFilter;
 
 import java.util.Arrays;
 
