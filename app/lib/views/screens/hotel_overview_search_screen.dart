@@ -5,10 +5,10 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 
-// New: API
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/search_api_service.dart';
+import 'package:app/services/localization_service.dart';
 
 class HotelOverviewSearchScreen extends StatefulWidget {
   final String searchQuery;
@@ -21,11 +21,9 @@ class HotelOverviewSearchScreen extends StatefulWidget {
 }
 
 class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
-  // Top chips (date/guests are simple UI toggles for now)
   bool _hasDate = true;
   bool _hasGuests = true;
 
-  // Filter state (demo-only, not filtering the list yet)
   RangeValues _priceRange = const RangeValues(800000, 3500000);
   static const double _minPrice = 0;
   static const double _maxPrice = 10000000;
@@ -38,23 +36,23 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
   bool _inStockOnly = false;
 
   final List<_Amenity> _amenityCatalog = const [
-    _Amenity('Wifi miễn phí', LucideIcons.wifi),
-    _Amenity('Bể bơi', LucideIcons.wifi),
-    _Amenity('Spa', LucideIcons.wifi),
-    _Amenity('Gym', LucideIcons.dumbbell),
-    _Amenity('Đưa đón sân bay', LucideIcons.plane),
-    _Amenity('Bãi biển riêng', LucideIcons.umbrella),
-    _Amenity('Đỗ xe miễn phí', LucideIcons.parkingCircle),
-    _Amenity('Nhà hàng', LucideIcons.chefHat),
-    _Amenity('Bar', LucideIcons.wine),
-    _Amenity('Lễ tân 24/7', LucideIcons.clock),
-    _Amenity('Phòng gia đình', LucideIcons.users),
-    _Amenity('Thân thiện thú cưng', LucideIcons.wifi),
-    _Amenity('Tiếp cận xe lăn', LucideIcons.accessibility),
-    _Amenity('Không hút thuốc', LucideIcons.wifi),
-    _Amenity('Điều hòa', LucideIcons.snowflake),
-    _Amenity('Room service', LucideIcons.conciergeBell),
-    _Amenity('Máy giặt/giặt ủi', LucideIcons.wifi),
+    _Amenity('amenity_wifi', LucideIcons.wifi),
+    _Amenity('amenity_pool', LucideIcons.wifi),
+    _Amenity('amenity_spa', LucideIcons.wifi),
+    _Amenity('amenity_gym', LucideIcons.dumbbell),
+    _Amenity('amenity_airport_transfer', LucideIcons.plane),
+    _Amenity('amenity_private_beach', LucideIcons.umbrella),
+    _Amenity('amenity_free_parking', LucideIcons.parkingCircle),
+    _Amenity('amenity_restaurant', LucideIcons.chefHat),
+    _Amenity('amenity_bar', LucideIcons.wine),
+    _Amenity('amenity_reception_24_7', LucideIcons.clock),
+    _Amenity('amenity_family_room', LucideIcons.users),
+    _Amenity('amenity_pet_friendly', LucideIcons.wifi),
+    _Amenity('amenity_wheelchair_access', LucideIcons.accessibility),
+    _Amenity('amenity_non_smoking', LucideIcons.wifi),
+    _Amenity('amenity_air_conditioning', LucideIcons.snowflake),
+    _Amenity('amenity_room_service', LucideIcons.conciergeBell),
+    _Amenity('amenity_laundry', LucideIcons.wifi),
   ];
 
   // Dynamic data from API
@@ -81,7 +79,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
         ),
         centerTitle: true,
         title: Text(
-          widget.searchQuery.isEmpty ? 'Khách Sạn' : widget.searchQuery,
+          widget.searchQuery.isEmpty ? 'hotels_title'.tr : widget.searchQuery,
           style: context.subTitleOneStyle.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
@@ -113,7 +111,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
           padding: const EdgeInsets.all(16),
           child: Text(
             _error!,
-            style: context.bodyOneStyle.copyWith(color: Colors.red),
+            style: context.bodyOneStyle.copyWith(color: context.errorColor),
             textAlign: TextAlign.center,
           ),
         ),
@@ -122,7 +120,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
     if (_hotels.isEmpty) {
       return Center(
         child: Text(
-          'Không có khách sạn phù hợp',
+          'no_results'.tr,
           style: context.captionStyle.copyWith(
             color: context.textSecondaryColor,
           ),
@@ -145,11 +143,9 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
               h['reviews']?.toString() ?? ''; // backend chưa có -> rỗng
           final price = h['price']?.toString() ?? '';
           final imageUrl = h['imageUrl']?.toString();
-          final imageAsset = 'assets/images/onboarding${(index % 4) + 1}.png';
 
           return _HotelCard(
             imageUrl: imageUrl,
-            fallbackAsset: imageAsset,
             name: name,
             rating: rating,
             reviews: reviews,
@@ -164,7 +160,6 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
 
   void _openHotelDetail(Map<String, dynamic> h) {
     final int? id = _tryParseInt(h['hotelId']);
-    // Provide a tiny fallback map so the hero/title/price render instantly while fetching
     final fallback = <String, String>{
       'name': (h['name'] ?? '').toString(),
       'rating': _getRatingString(h['rating']),
@@ -178,7 +173,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
         builder: (_) => HotelDetailOverviewScreen(
           hotelId: id,
           hotel: fallback,
-          activeAmenities: _selectedAmenities, // highlight amenities if needed
+          activeAmenities: _selectedAmenities,
         ),
       ),
     );
@@ -200,7 +195,6 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
       final prefs = await SharedPreferences.getInstance();
       final api = SearchApiService(dio: Dio(), prefs: prefs);
 
-      // Chỉ lấy khách sạn để tối ưu
       final data = await api.search(q: query, type: 'hotel');
 
       List<Map<String, dynamic>> hotels = [];
@@ -213,14 +207,12 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
           final ratingAvg = m['ratingAverage'];
 
           return {
-            'hotelId': m['hotelId'], // NEW: id from backend
+            'hotelId': m['hotelId'],
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
             'rating': ratingAvg,
             'price': _formatPrice(price, currency),
             'imageUrl': m['thumbnailUrl'],
-            // optional: 'starRating': m['starRating'],
-            // optional: 'address': m['address'],
           };
         }).toList();
       }
@@ -232,12 +224,11 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = 'Không thể tải khách sạn. Vui lòng thử lại hoặc đăng nhập.';
+        _error = 'error_load_hotels'.tr;
       });
     }
   }
 
-  // Top chips row: Khách sạn | Ngày | Khách | Bộ lọc (price moved inside the sheet)
   Widget _buildFilterChips(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -247,7 +238,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
           _pill(
             context,
             icon: LucideIcons.hotel,
-            label: 'Khách sạn',
+            label: 'cat_hotels'.tr,
             selected: true,
             onTap: () {},
           ),
@@ -255,22 +246,21 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
           _pill(
             context,
             icon: _hasDate ? LucideIcons.calendarDays : LucideIcons.calendar,
-            label: _hasDate ? '11 thg 6 → 12' : 'Ngày',
+            label: _hasDate ? '11 thg 6 → 12' : 'date'.tr,
             onTap: () => setState(() => _hasDate = !_hasDate),
           ),
           const SizedBox(width: 8),
           _pill(
             context,
             icon: LucideIcons.bedDouble,
-            label: _hasGuests ? '1  ·  2' : 'Khách',
+            label: _hasGuests ? '1  ·  2' : 'guests'.tr,
             onTap: () => setState(() => _hasGuests = !_hasGuests),
           ),
           const SizedBox(width: 8),
-          // Filter as a pill, selected when any filter is applied
           _pill(
             context,
             icon: LucideIcons.slidersHorizontal,
-            label: 'Bộ lọc',
+            label: 'filter'.tr,
             selected: _hasAnyFilterApplied,
             onTap: () => _openFilterSheet(context),
           ),
@@ -290,9 +280,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
         _priceRange.end < _maxPrice;
   }
 
-  // Bottom sheet with all hotel filters (price + amenities + policies)
   Future<void> _openFilterSheet(BuildContext context) async {
-    // Work on a local copy; apply only when pressing "Áp dụng"
     RangeValues price = _priceRange;
     final selectedStars = Set<int>.from(_selectedStars);
     final selectedAmenities = Set<String>.from(_selectedAmenities);
@@ -304,332 +292,386 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.cardBackgroundColor,
+      backgroundColor: context.backgroundColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (ctx) {
-        return SafeArea(
-          child: StatefulBuilder(
-            builder: (ctx, setSheetState) {
-              final view = MediaQuery.of(ctx);
-              final maxH = view.size.height * 0.9; // cap to 90% height
-              return ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxH),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 8,
-                    bottom: view.viewInsets.bottom + 16,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.85,
+          maxChildSize: 0.95,
+          minChildSize: 0.5,
+          builder: (_, controller) {
+            return SafeArea(
+              child: StatefulBuilder(
+                builder: (ctx, setSheetState) {
+                  return Column(
                     children: [
                       Container(
-                        width: 40,
-                        height: 4,
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                         decoration: BoxDecoration(
-                          color: context.dividerColor,
-                          borderRadius: BorderRadius.circular(2),
+                          color: context.backgroundColor,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(22),
+                          ),
+                          border: Border(
+                            bottom: BorderSide(color: context.dividerColor),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Bộ lọc',
-                              style: context.subTitleOneStyle.copyWith(
-                                fontWeight: FontWeight.w600,
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: context.textDisabledColor.withValues(
+                                  alpha: 0.5,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
                               ),
                             ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              // Reset local copy
-                              setSheetState(() {
-                                price = const RangeValues(_minPrice, _maxPrice);
-                                selectedStars.clear();
-                                selectedAmenities.clear();
-                                freeCancel = false;
-                                payAtHotel = false;
-                                breakfast = false;
-                                inStock = false;
-                              });
-                            },
-                            child: Text(
-                              'Đặt lại',
-                              style: context.captionStyle.copyWith(
-                                color: context.primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Price section
-                      _sectionTitle(
-                        ctx,
-                        LucideIcons.badgeDollarSign,
-                        'Giá mỗi đêm',
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _priceTag(ctx, _formatCurrency(price.start)),
-                          _priceTag(ctx, _formatCurrency(price.end)),
-                        ],
-                      ),
-                      RangeSlider(
-                        values: price,
-                        min: _minPrice,
-                        max: _maxPrice,
-                        divisions: 20,
-                        activeColor: context.primaryColor,
-                        labels: RangeLabels(
-                          _formatCurrency(price.start),
-                          _formatCurrency(price.end),
-                        ),
-                        onChanged: (v) =>
-                            setSheetState(() => price = _normalizeRange(v)),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Star rating
-                      _sectionTitle(ctx, Icons.star_rounded, 'Hạng sao'),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: List.generate(5, (i) {
-                          final star = i + 1;
-                          final selected = selectedStars.contains(star);
-                          return FilterChip(
-                            selected: selected,
-                            showCheckmark: false,
-                            label: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            const SizedBox(height: 10),
+                            Row(
                               children: [
-                                ...List.generate(
-                                  star,
-                                  (idx) => Padding(
-                                    padding: const EdgeInsets.only(right: 1),
-                                    child: Icon(
-                                      Icons.star_rounded,
-                                      size: 14,
-                                      color: context.primaryColor,
+                                Expanded(
+                                  child: Text(
+                                    'filter'.tr,
+                                    style: context.subTitleOneStyle.copyWith(
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '$star sao',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: context.bodyTwoStyle,
+                                TextButton(
+                                  onPressed: () {
+                                    setSheetState(() {
+                                      price = const RangeValues(
+                                        _minPrice,
+                                        _maxPrice,
+                                      );
+                                      selectedStars.clear();
+                                      selectedAmenities.clear();
+                                      freeCancel = false;
+                                      payAtHotel = false;
+                                      breakfast = false;
+                                      inStock = false;
+                                    });
+                                  },
+                                  child: Text(
+                                    'reset'.tr,
+                                    style: context.captionStyle.copyWith(
+                                      color: context.primaryColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                            backgroundColor: context.cardBackgroundColor,
-                            selectedColor: context.primaryColor,
-                            side: BorderSide(
-                              color: selected
-                                  ? context.primaryColor
-                                  : context.dividerColor,
-                            ),
-                            onSelected: (_) {
-                              setSheetState(() {
-                                if (selected) {
-                                  selectedStars.remove(star);
-                                } else {
-                                  selectedStars.add(star);
-                                }
-                              });
-                            },
-                          );
-                        }),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Amenities
-                      _sectionTitle(ctx, LucideIcons.sofa, 'Tiện ích'),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _amenityCatalog.map((a) {
-                            final selected = selectedAmenities.contains(a.name);
-                            return FilterChip(
-                              selected: selected,
-                              showCheckmark: false,
-                              label: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    a.icon,
-                                    size: 16,
-                                    color: selected
-                                        ? context.buttonTextColor
-                                        : context.textSecondaryColor,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 160,
-                                    ),
-                                    child: Text(
-                                      a.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: context.bodyTwoStyle.copyWith(
-                                        color: selected
-                                            ? context.buttonTextColor
-                                            : context.textSecondaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              backgroundColor: context.cardBackgroundColor,
-                              selectedColor: context.primaryColor,
-                              side: BorderSide(
-                                color: selected
-                                    ? context.primaryColor
-                                    : context.dividerColor,
-                              ),
-                              onSelected: (_) {
-                                setSheetState(() {
-                                  if (selected) {
-                                    selectedAmenities.remove(a.name);
-                                  } else {
-                                    selectedAmenities.add(a.name);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
+                          ],
                         ),
                       ),
 
-                      const SizedBox(height: 12),
+                      Expanded(
+                        child: ListView(
+                          controller: controller,
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          children: [
+                            _sectionTitle(
+                              ctx,
+                              LucideIcons.badgeDollarSign,
+                              'price_per_night'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _priceTag(ctx, _formatCurrency(price.start)),
+                                _priceTag(ctx, _formatCurrency(price.end)),
+                              ],
+                            ),
+                            RangeSlider(
+                              values: price,
+                              min: _minPrice,
+                              max: _maxPrice,
+                              divisions: 20,
+                              activeColor: context.primaryColor,
+                              labels: RangeLabels(
+                                _formatCurrency(price.start),
+                                _formatCurrency(price.end),
+                              ),
+                              onChanged: (v) => setSheetState(
+                                () => price = _normalizeRange(v),
+                              ),
+                            ),
 
-                      // Policies and other toggles
-                      _sectionTitle(ctx, LucideIcons.checkCircle2, 'Tùy chọn'),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _toggleChip(
-                            ctx,
-                            'Miễn phí huỷ',
-                            _freeCancellation,
-                            (v) => setSheetState(() => _freeCancellation = v),
-                          ),
-                          _toggleChip(
-                            ctx,
-                            'Thanh toán tại nơi',
-                            _payAtHotel,
-                            (v) => setSheetState(() => _payAtHotel = v),
-                          ),
-                          _toggleChip(
-                            ctx,
-                            'Bao gồm bữa sáng',
-                            _breakfastIncluded,
-                            (v) => setSheetState(() => _breakfastIncluded = v),
-                          ),
-                          _toggleChip(
-                            ctx,
-                            'Chỉ hiển thị còn phòng',
-                            _inStockOnly,
-                            (v) => setSheetState(() => _inStockOnly = v),
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+
+                            // Star rating
+                            _sectionTitle(
+                              ctx,
+                              Icons.star_rounded,
+                              'star_class'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: List.generate(5, (i) {
+                                final star = i + 1;
+                                final selected = selectedStars.contains(star);
+                                final iconColor = selected
+                                    ? context.buttonTextColor
+                                    : context.primaryColor;
+                                final textColor = selected
+                                    ? context.buttonTextColor
+                                    : context.textSecondaryColor;
+
+                                return FilterChip(
+                                  selected: selected,
+                                  showCheckmark: false,
+                                  label: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ...List.generate(
+                                        star,
+                                        (idx) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            right: 1,
+                                          ),
+                                          child: Icon(
+                                            Icons.star_rounded,
+                                            size: 14,
+                                            color:
+                                                iconColor, // selected -> white, else primary
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '$star ${'stars'.tr}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: context.bodyTwoStyle.copyWith(
+                                          color:
+                                              textColor, // selected -> white, else secondary
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  backgroundColor: context.cardBackgroundColor,
+                                  selectedColor: context.primaryColor,
+                                  side: BorderSide(
+                                    color: selected
+                                        ? context.primaryColor
+                                        : context.dividerColor,
+                                  ),
+                                  onSelected: (_) {
+                                    setSheetState(() {
+                                      if (selected) {
+                                        selectedStars.remove(star);
+                                      } else {
+                                        selectedStars.add(star);
+                                      }
+                                    });
+                                  },
+                                );
+                              }),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // Amenities
+                            _sectionTitle(
+                              ctx,
+                              LucideIcons.sofa,
+                              'amenities'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _amenityCatalog.map((a) {
+                                  final selected = selectedAmenities.contains(
+                                    a.name,
+                                  );
+                                  return FilterChip(
+                                    selected: selected,
+                                    showCheckmark: false,
+                                    label: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          a.icon,
+                                          size: 16,
+                                          color: selected
+                                              ? context.buttonTextColor
+                                              : context.textSecondaryColor,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 160,
+                                          ),
+                                          child: Text(
+                                            a.name.tr,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: context.bodyTwoStyle
+                                                .copyWith(
+                                                  color: selected
+                                                      ? context.buttonTextColor
+                                                      : context
+                                                            .textSecondaryColor,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor:
+                                        context.cardBackgroundColor,
+                                    selectedColor: context.primaryColor,
+                                    side: BorderSide(
+                                      color: selected
+                                          ? context.primaryColor
+                                          : context.dividerColor,
+                                    ),
+                                    onSelected: (_) {
+                                      setSheetState(() {
+                                        if (selected) {
+                                          selectedAmenities.remove(a.name);
+                                        } else {
+                                          selectedAmenities.add(a.name);
+                                        }
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // Policies and other toggles
+                            _sectionTitle(
+                              ctx,
+                              LucideIcons.checkCircle2,
+                              'options'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _toggleChip(
+                                  ctx,
+                                  'free_cancellation'.tr,
+                                  _freeCancellation,
+                                  (v) => setSheetState(
+                                    () => _freeCancellation = v,
+                                  ),
+                                ),
+                                _toggleChip(
+                                  ctx,
+                                  'pay_at_hotel'.tr,
+                                  _payAtHotel,
+                                  (v) => setSheetState(() => _payAtHotel = v),
+                                ),
+                                _toggleChip(
+                                  ctx,
+                                  'breakfast_included'.tr,
+                                  _breakfastIncluded,
+                                  (v) => setSheetState(
+                                    () => _breakfastIncluded = v,
+                                  ),
+                                ),
+                                _toggleChip(
+                                  ctx,
+                                  'in_stock_only'.tr,
+                                  _inStockOnly,
+                                  (v) => setSheetState(() => _inStockOnly = v),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
                       ),
 
-                      const SizedBox(height: 16),
-
-                      // Apply / Cancel
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: context.textPrimaryColor,
-                                side: BorderSide(color: context.dividerColor),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                              onPressed: () => Navigator.of(ctx).pop(),
-                              child: const Text('Hủy'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: context.primaryColor,
-                                foregroundColor: context.buttonTextColor,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                              onPressed: () {
-                                // Commit local copy to screen state (demo-only)
-                                setState(() {
-                                  _priceRange = price;
-                                  _selectedStars
-                                    ..clear()
-                                    ..addAll(selectedStars);
-                                  _selectedAmenities
-                                    ..clear()
-                                    ..addAll(selectedAmenities);
-                                  _freeCancellation = freeCancel;
-                                  _payAtHotel = payAtHotel;
-                                  _breakfastIncluded = breakfast;
-                                  _inStockOnly = inStock;
-                                });
-                                Navigator.of(ctx).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('Đã áp dụng bộ lọc'),
-                                    duration: const Duration(seconds: 1),
-                                    behavior: SnackBarBehavior.floating,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: context.textPrimaryColor,
+                                  side: BorderSide(color: context.dividerColor),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                );
-                              },
-                              child: const Text('Áp dụng'),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                                onPressed: () => Navigator.of(ctx).pop(),
+                                child: Text('cancel'.tr),
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: context.primaryColor,
+                                  foregroundColor: context.buttonTextColor,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _priceRange = price;
+                                    _selectedStars
+                                      ..clear()
+                                      ..addAll(selectedStars);
+                                    _selectedAmenities
+                                      ..clear()
+                                      ..addAll(selectedAmenities);
+                                    _freeCancellation = freeCancel;
+                                    _payAtHotel = payAtHotel;
+                                    _breakfastIncluded = breakfast;
+                                    _inStockOnly = inStock;
+                                  });
+                                  Navigator.of(ctx).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('filters_applied'.tr),
+                                      duration: const Duration(seconds: 1),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                },
+                                child: Text('apply'.tr),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                ),
-              );
-            },
-          ),
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  // UI helpers
   Widget _sectionTitle(BuildContext ctx, IconData icon, String title) {
     return Row(
       children: [
@@ -660,7 +702,6 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
 
   RangeValues _normalizeRange(RangeValues v) {
     if (v.end - v.start < 100000) {
-      // keep a minimal gap so labels don't overlap
       final mid = (v.start + v.end) / 2;
       return RangeValues(mid - 50000, mid + 50000);
     }
@@ -668,7 +709,6 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
   }
 
   String _formatCurrency(double value) {
-    // Very light Vietnamese currency formatter for demo: 1.234.567 đ
     final intVal = value.round();
     final s = intVal.toString();
     final buf = StringBuffer();
@@ -783,14 +823,13 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
 }
 
 class _Amenity {
-  final String name;
+  final String name; // lang key
   final IconData icon;
   const _Amenity(this.name, this.icon);
 }
 
 class _HotelCard extends StatelessWidget {
   final String? imageUrl;
-  final String fallbackAsset;
   final String name;
   final String rating;
   final String reviews;
@@ -799,7 +838,6 @@ class _HotelCard extends StatelessWidget {
 
   const _HotelCard({
     required this.imageUrl,
-    required this.fallbackAsset,
     required this.name,
     required this.rating,
     required this.reviews,
@@ -809,7 +847,7 @@ class _HotelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasNetwork = (imageUrl ?? '').startsWith('http');
+    final double ratingVal = double.tryParse(rating) ?? 0.0;
 
     return Container(
       decoration: BoxDecoration(
@@ -827,7 +865,7 @@ class _HotelCard extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(16),
                 ),
-                child: hasNetwork
+                child: (imageUrl != null && imageUrl!.startsWith('http'))
                     ? Image.network(
                         imageUrl!,
                         height: 180,
@@ -835,13 +873,7 @@ class _HotelCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => _imageFallback(context),
                       )
-                    : Image.asset(
-                        fallbackAsset,
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _imageFallback(context),
-                      ),
+                    : _imageFallback(context),
               ),
               Positioned(
                 top: 10,
@@ -876,24 +908,12 @@ class _HotelCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                Icon(Icons.star_rounded, color: context.primaryColor, size: 16),
-                const SizedBox(width: 4),
+                _ratingStars(context, ratingVal),
+                const SizedBox(width: 6),
                 Text(
-                  rating,
+                  ' (${ratingVal.toStringAsFixed(1)})',
                   style: context.captionStyle.copyWith(
                     fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(
-                    5,
-                    (i) => Icon(
-                      i < 3 ? Icons.star_rounded : Icons.star_border_rounded,
-                      color: context.primaryColor,
-                      size: 14,
-                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -916,7 +936,7 @@ class _HotelCard extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  'Giá từ:',
+                  'price_from'.tr,
                   style: context.captionStyle.copyWith(
                     color: context.textSecondaryColor,
                   ),
@@ -946,7 +966,7 @@ class _HotelCard extends StatelessWidget {
                   ),
                 ),
                 onPressed: onViewPressed,
-                child: Text('Xem khách sạn', style: context.buttonStyle),
+                child: Text('view_hotel'.tr, style: context.buttonStyle),
               ),
             ),
           ),
@@ -961,6 +981,24 @@ class _HotelCard extends StatelessWidget {
       color: context.primaryColor.withValues(alpha: 0.08),
       alignment: Alignment.center,
       child: Icon(LucideIcons.image, color: context.primaryColor),
+    );
+  }
+
+  Widget _ratingStars(BuildContext context, double rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final idx = i + 1;
+        IconData icon;
+        if (rating >= idx - 0.25) {
+          icon = Icons.star_rounded;
+        } else if (rating >= idx - 0.75) {
+          icon = Icons.star_half_rounded;
+        } else {
+          icon = Icons.star_border_rounded;
+        }
+        return Icon(icon, color: context.primaryColor, size: 14);
+      }),
     );
   }
 }

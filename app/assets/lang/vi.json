@@ -321,5 +321,39 @@
   "suit_group": "Nhóm",
   "suit_kids": "Trẻ em",
   "suit_couple": "Cặp đôi",
-  "suit_solo": "Solo"
+  "suit_solo": "Solo",
+  "hotels_title": "Khách sạn",
+  "error_load_hotels": "Không thể tải khách sạn. Vui lòng thử lại hoặc đăng nhập.",
+  "filters_applied": "Đã áp dụng bộ lọc",
+  "reset": "Đặt lại",
+
+  "price_per_night": "Giá mỗi đêm",
+  "star_class": "Hạng sao",
+  "amenities": "Tiện ích",
+  "options": "Tùy chọn",
+
+  "view_hotel": "Xem khách sạn",
+
+  "amenity_wifi": "Wifi miễn phí",
+  "amenity_pool": "Bể bơi",
+  "amenity_spa": "Spa",
+  "amenity_gym": "Gym",
+  "amenity_airport_transfer": "Đưa đón sân bay",
+  "amenity_private_beach": "Bãi biển riêng",
+  "amenity_free_parking": "Đỗ xe miễn phí",
+  "amenity_restaurant": "Nhà hàng",
+  "amenity_bar": "Bar",
+  "amenity_reception_24_7": "Lễ tân 24/7",
+  "amenity_family_room": "Phòng gia đình",
+  "amenity_pet_friendly": "Thân thiện thú cưng",
+  "amenity_wheelchair_access": "Tiếp cận xe lăn",
+  "amenity_non_smoking": "Không hút thuốc",
+  "amenity_air_conditioning": "Điều hòa",
+  "amenity_room_service": "Room service",
+  "amenity_laundry": "Máy giặt/giặt ủi",
+
+  "free_cancellation": "Miễn phí huỷ",
+  "pay_at_hotel": "Thanh toán tại nơi",
+  "breakfast_included": "Bao gồm bữa sáng",
+  "in_stock_only": "Chỉ hiển thị còn phòng"
 }
