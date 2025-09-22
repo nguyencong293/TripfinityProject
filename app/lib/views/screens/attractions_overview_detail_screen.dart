@@ -8,10 +8,9 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/attraction_api_service.dart';
 
 class AttractionsOverviewDetailScreen extends StatefulWidget {
-  final int? attractionId; // Cho phép truyền id
-  final Map<String, dynamic>? attraction; // Fallback data khi chưa có id
+  final int? attractionId;
+  final Map<String, dynamic>? attraction;
 
-  // Các filter đang được chọn để highlight
   final Set<String>? activeTypes;
   final Set<String>? activeServices;
   final Set<String>? activeTimes;
@@ -41,19 +40,16 @@ class _AttractionsOverviewDetailScreenState
   bool _showAllReviews = false;
   bool _showAllGallery = false;
 
-  // Dynamic state from backend
   Map<String, dynamic>? _detail;
   bool _loading = true;
   String? _errorMessage;
   int? _attractionId;
 
-  // Reviews dynamic (backend endpoint có thể chưa có; để trống)
   final List<Map<String, dynamic>> _reviews = [];
 
   @override
   void initState() {
     super.initState();
-    // Ưu tiên id truyền vào; fallback sang id trong map nếu có
     _attractionId =
         widget.attractionId ??
         _parseId(
@@ -69,7 +65,6 @@ class _AttractionsOverviewDetailScreenState
   }
 
   Future<void> _fetchDetail() async {
-    // Nếu không có id nhưng có map fallback => render từ map, không gọi API
     if (_attractionId == null) {
       setState(() {
         _loading = false;
@@ -84,8 +79,6 @@ class _AttractionsOverviewDetailScreenState
       final api = AttractionApiService(dio: Dio(), prefs: prefs);
 
       final data = await api.getAttractionById(_attractionId!);
-      // Optional: fetch reviews nếu backend có
-      // final reviews = await api.getAttractionReviews(_attractionId!);
 
       setState(() {
         _detail = data;
@@ -100,9 +93,7 @@ class _AttractionsOverviewDetailScreenState
     }
   }
 
-  // ===== Helpers để đọc dữ liệu an toàn =====
   Map<String, dynamic> get _data {
-    // Gộp dữ liệu truyền từ list + dữ liệu fetch (fetch ưu tiên)
     return {...?widget.attraction, if (_detail != null) ..._detail!};
   }
 
@@ -352,7 +343,7 @@ class _AttractionsOverviewDetailScreenState
             options: _suitableFor(attraction),
             activeSet: widget.activeSuitability ?? {},
           ),
-          // ===== VÉ THAM QUAN ===== (giữ nguyên demo)
+          // ===== VÉ THAM QUAN =====
           _sectionWrapper(
             context,
             title: 'Vé tham quan',

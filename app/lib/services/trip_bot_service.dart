@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class TripBotService {
-  // Cập nhật URL mới từ ngrok
   static const String _baseUrl = 'https://61adf89b1d31.ngrok-free.app';
   static const String _chatEndpoint = '/api/chat';
   static const Duration _timeout = Duration(seconds: 30);
