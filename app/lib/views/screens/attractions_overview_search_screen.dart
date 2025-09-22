@@ -9,6 +9,7 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/search_api_service.dart';
+import 'package:app/services/localization_service.dart';
 
 class AttractionOverviewSearchScreen extends StatefulWidget {
   final String searchQuery;
@@ -21,11 +22,9 @@ class AttractionOverviewSearchScreen extends StatefulWidget {
 
 class _AttractionOverviewSearchScreenState
     extends State<AttractionOverviewSearchScreen> {
-  // Top chips (đồng bộ với layout hotel)
   bool _hasDate = true;
   bool _hasGuests = true;
 
-  // Filters state (giữ nguyên logic hiện có)
   RangeValues _priceRange = const RangeValues(0, 800000); // VNĐ (vé)
   final RangeValues _defaultPrice = const RangeValues(0, 800000);
 
@@ -35,7 +34,6 @@ class _AttractionOverviewSearchScreenState
   final Set<String> _selectedTimes = {};
   final Set<String> _selectedSuitability = {};
 
-  // Dynamic data
   bool _loading = false;
   String? _error;
   List<Map<String, dynamic>> _attractions = [];
@@ -104,7 +102,6 @@ class _AttractionOverviewSearchScreenState
     }).toList();
   }
 
-  // Navigation to attraction detail
   void _openAttractionDetail(Map<String, dynamic> attraction) {
     final attractionId = attraction['attractionId'] ?? attraction['id'];
 
@@ -116,7 +113,6 @@ class _AttractionOverviewSearchScreenState
               ? int.tryParse(attractionId.toString())
               : null,
           attraction: attractionId == null ? attraction : null, // fallback
-          // FIX: use local state, not undefined widget getters
           activeTypes: _selectedTypes,
           activeServices: _selectedServices,
           activeTimes: _selectedTimes,
@@ -126,7 +122,7 @@ class _AttractionOverviewSearchScreenState
     );
   }
 
-  // ====== Filter bottom sheet (giữ UI & logic hiện có) ======
+  // ====== Filter bottom sheet ======
   void _openFilterSheet() {
     RangeValues tempPrice = _priceRange;
     final tempRatings = {..._selectedRatings};
@@ -160,13 +156,6 @@ class _AttractionOverviewSearchScreenState
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(22),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: Column(
                         children: [
@@ -182,7 +171,7 @@ class _AttractionOverviewSearchScreenState
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            'Bộ lọc điểm tham quan',
+                            'attraction_filter_title'.tr,
                             style: context.subTitleOneStyle.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
@@ -195,7 +184,7 @@ class _AttractionOverviewSearchScreenState
                         controller: controller,
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                         children: [
-                          _sectionTitle('Giá vé (VND)'),
+                          _sectionTitle('ticket_price_vnd'.tr),
                           _priceRow(tempPrice),
                           RangeSlider(
                             values: tempPrice,
@@ -222,7 +211,7 @@ class _AttractionOverviewSearchScreenState
                                   color: context.textSecondaryColor,
                                 ),
                                 label: Text(
-                                  'Mặc định',
+                                  'default'.tr,
                                   style: TextStyle(
                                     color: context.textSecondaryColor,
                                     fontWeight: FontWeight.w600,
@@ -232,7 +221,7 @@ class _AttractionOverviewSearchScreenState
                             ],
                           ),
 
-                          _sectionTitle('Đánh giá'),
+                          _sectionTitle('reviews_title'.tr),
                           _wrapOptions<int>(
                             options: const [5, 4, 3, 2],
                             isSelected: (o) => tempRatings.contains(o),
@@ -241,43 +230,43 @@ class _AttractionOverviewSearchScreenState
                                   ? tempRatings.remove(o)
                                   : tempRatings.add(o),
                             ),
-                            labelBuilder: (o) => '$o sao',
+                            labelBuilder: (o) => '$o ${'stars'.tr}',
                           ),
 
-                          _sectionTitle('Loại hình'),
-                          _chipsGroup(tempTypes, const [
-                            'Văn hoá',
-                            'Lịch sử',
-                            'Thiên nhiên',
-                            'Giải trí',
-                            'Bảo tàng',
-                            'Công viên',
+                          _sectionTitle('visit_types'.tr),
+                          _chipsGroup(tempTypes, [
+                            'type_culture'.tr,
+                            'type_history'.tr,
+                            'type_nature'.tr,
+                            'type_entertainment'.tr,
+                            'type_museum'.tr,
+                            'type_park'.tr,
                           ], setM),
 
-                          _sectionTitle('Dịch vụ'),
-                          _chipsGroup(tempServices, const [
-                            'Hướng dẫn viên',
-                            'Chụp ảnh',
-                            'Ăn uống',
-                            'Biểu diễn',
-                            'Cáp treo',
-                            'Thuê đồ',
+                          _sectionTitle('available_services'.tr),
+                          _chipsGroup(tempServices, [
+                            'svc_guide'.tr,
+                            'svc_photo'.tr,
+                            'svc_food'.tr,
+                            'svc_show'.tr,
+                            'svc_cable_car'.tr,
+                            'svc_rentals'.tr,
                           ], setM),
 
-                          _sectionTitle('Thời gian'),
-                          _chipsGroup(tempTimes, const [
-                            'Sáng',
-                            'Chiều',
-                            'Tối',
+                          _sectionTitle('operating_times'.tr),
+                          _chipsGroup(tempTimes, [
+                            'time_morning'.tr,
+                            'time_afternoon'.tr,
+                            'time_evening'.tr,
                           ], setM),
 
-                          _sectionTitle('Phù hợp với'),
-                          _chipsGroup(tempSuit, const [
-                            'Gia đình',
-                            'Nhóm',
-                            'Trẻ em',
-                            'Cặp đôi',
-                            'Solo',
+                          _sectionTitle('suitable_for'.tr),
+                          _chipsGroup(tempSuit, [
+                            'suit_family'.tr,
+                            'suit_group'.tr,
+                            'suit_kids'.tr,
+                            'suit_couple'.tr,
+                            'suit_solo'.tr,
                           ], setM),
                           const SizedBox(height: 8),
                         ],
@@ -320,8 +309,8 @@ class _AttractionOverviewSearchScreenState
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _miniTag('Tối thiểu: ${_formatCurrency(v.start)}'),
-        _miniTag('Tối đa: ${_formatCurrency(v.end)}'),
+        _miniTag('${'min'.tr}: ${_formatCurrency(v.start)}'),
+        _miniTag('${'max'.tr}: ${_formatCurrency(v.end)}'),
       ],
     );
   }
@@ -451,7 +440,7 @@ class _AttractionOverviewSearchScreenState
         boxShadow: [
           BoxShadow(
             blurRadius: 16,
-            color: Colors.black.withValues(alpha: 0.08),
+            color: context.overlayModalBackdropColor,
             offset: const Offset(0, -4),
           ),
         ],
@@ -481,14 +470,14 @@ class _AttractionOverviewSearchScreenState
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Đã làm mới bộ lọc'),
+                      content: Text('filters_reset'.tr),
                       behavior: SnackBarBehavior.floating,
                       backgroundColor: context.cardBackgroundColor,
                     ),
                   );
                 },
                 child: Text(
-                  'Làm mới',
+                  'clear_filters'.tr,
                   style: TextStyle(
                     color: context.textPrimaryColor,
                     fontWeight: FontWeight.w600,
@@ -508,9 +497,9 @@ class _AttractionOverviewSearchScreenState
                   elevation: 0,
                 ),
                 onPressed: onApply,
-                child: const Text(
-                  'Áp dụng',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                child: Text(
+                  'apply'.tr,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -534,7 +523,9 @@ class _AttractionOverviewSearchScreenState
         ),
         centerTitle: true,
         title: Text(
-          widget.searchQuery.isEmpty ? 'Điểm Tham Quan' : widget.searchQuery,
+          widget.searchQuery.isEmpty
+              ? 'attractions_title'.tr
+              : widget.searchQuery,
           style: context.subTitleOneStyle.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
@@ -547,7 +538,6 @@ class _AttractionOverviewSearchScreenState
     );
   }
 
-  // Hàng chip giống Hotel: danh mục | ngày | khách | bộ lọc
   Widget _buildFilterChips(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -557,7 +547,7 @@ class _AttractionOverviewSearchScreenState
           _pill(
             context,
             icon: LucideIcons.landmark,
-            label: 'Tham quan',
+            label: 'cat_attraction'.tr,
             selected: true,
             onTap: () {},
           ),
@@ -565,21 +555,21 @@ class _AttractionOverviewSearchScreenState
           _pill(
             context,
             icon: _hasDate ? LucideIcons.calendarDays : LucideIcons.calendar,
-            label: _hasDate ? '11 thg 6 → 12' : 'Ngày',
+            label: _hasDate ? '11 thg 6 → 12' : 'date'.tr,
             onTap: () => setState(() => _hasDate = !_hasDate),
           ),
           const SizedBox(width: 8),
           _pill(
             context,
             icon: LucideIcons.users,
-            label: _hasGuests ? '2 khách' : 'Khách',
+            label: _hasGuests ? '2 ${'guests'.tr}' : 'guests'.tr,
             onTap: () => setState(() => _hasGuests = !_hasGuests),
           ),
           const SizedBox(width: 8),
           _pill(
             context,
             icon: LucideIcons.slidersHorizontal,
-            label: 'Bộ lọc',
+            label: 'filter'.tr,
             selected: _hasAnyFilterApplied,
             onTap: _openFilterSheet,
           ),
@@ -609,7 +599,7 @@ class _AttractionOverviewSearchScreenState
           padding: const EdgeInsets.all(16),
           child: Text(
             _error!,
-            style: context.bodyOneStyle.copyWith(color: Colors.red),
+            style: context.bodyOneStyle.copyWith(color: context.errorColor),
             textAlign: TextAlign.center,
           ),
         ),
@@ -618,7 +608,7 @@ class _AttractionOverviewSearchScreenState
     if (_attractions.isEmpty) {
       return Center(
         child: Text(
-          'Không có kết quả',
+          'no_results'.tr,
           style: context.captionStyle.copyWith(
             color: context.textSecondaryColor,
           ),
@@ -637,7 +627,7 @@ class _AttractionOverviewSearchScreenState
           final a = filtered[index];
           final name = a['name']?.toString() ?? '';
           final rating = _getRatingString(a['rating']);
-          final reviews = a['reviews']?.toString() ?? ''; // backend chưa có
+          final reviews = a['reviews']?.toString() ?? '';
           final priceText = a['price']?.toString() ?? '';
           final imageUrl = a['imageUrl']?.toString();
           final fallbackAsset =
@@ -679,7 +669,6 @@ class _AttractionOverviewSearchScreenState
           final price = m['price'];
           final currency = (m['currencyCode'] ?? '').toString().toUpperCase();
 
-          // Chuyển giá về string hiển thị + số nguyên để lọc
           final displayPrice = _formatApiPrice(price, currency);
           final priceInt = _toInt(price);
 
@@ -709,8 +698,7 @@ class _AttractionOverviewSearchScreenState
     } catch (e) {
       setState(() {
         _loading = false;
-        _error =
-            'Không thể tải điểm tham quan. Vui lòng thử lại hoặc đăng nhập.';
+        _error = 'error_load_attractions'.tr;
       });
     }
   }
@@ -746,7 +734,6 @@ class _AttractionOverviewSearchScreenState
     return '0.0';
   }
 
-  // Chip helper giống Hotel
   Widget _pill(
     BuildContext context, {
     required IconData icon,
@@ -794,7 +781,6 @@ class _AttractionOverviewSearchScreenState
   }
 }
 
-// Thống nhất fallback ảnh với các service khác
 Widget _imageFallback(BuildContext context) {
   return Container(
     height: 180,
@@ -826,6 +812,7 @@ class _AttractionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasNetwork = (imageUrl ?? '').startsWith('http');
+    final double ratingVal = double.tryParse(rating) ?? 0.0;
 
     return Container(
       decoration: BoxDecoration(
@@ -836,7 +823,6 @@ class _AttractionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Ảnh + nút tim (giống hotel)
           Stack(
             children: [
               ClipRRect(
@@ -866,6 +852,7 @@ class _AttractionCard extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
+                    // FIX: use withOpacity()
                     color: context.cardBackgroundColor.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
                     border: Border.all(color: context.dividerColor),
@@ -889,29 +876,16 @@ class _AttractionCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // Hàng rating + reviews (giữ cùng layout hotel)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                Icon(Icons.star_rounded, color: context.primaryColor, size: 16),
-                const SizedBox(width: 4),
+                _ratingStars(context, ratingVal),
+                const SizedBox(width: 6),
                 Text(
-                  rating,
+                  ' (${ratingVal.toStringAsFixed(1)})',
                   style: context.captionStyle.copyWith(
                     fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(
-                    5,
-                    (i) => Icon(
-                      i < 3 ? Icons.star_rounded : Icons.star_border_rounded,
-                      color: context.primaryColor,
-                      size: 14,
-                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -929,13 +903,12 @@ class _AttractionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          // Hàng giá (match hotel)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
                 Text(
-                  'Giá từ:',
+                  'price_from'.tr,
                   style: context.captionStyle.copyWith(
                     color: context.textSecondaryColor,
                   ),
@@ -951,7 +924,6 @@ class _AttractionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // CTA (match hotel)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             child: SizedBox(
@@ -966,12 +938,30 @@ class _AttractionCard extends StatelessWidget {
                   ),
                 ),
                 onPressed: onTap,
-                child: Text('Xem điểm tham quan', style: context.buttonStyle),
+                child: Text('view_attraction'.tr, style: context.buttonStyle),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _ratingStars(BuildContext context, double rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final idx = i + 1;
+        IconData icon;
+        if (rating >= idx - 0.25) {
+          icon = Icons.star_rounded;
+        } else if (rating >= idx - 0.75) {
+          icon = Icons.star_half_rounded;
+        } else {
+          icon = Icons.star_border_rounded;
+        }
+        return Icon(icon, color: context.primaryColor, size: 14);
+      }),
     );
   }
 }
