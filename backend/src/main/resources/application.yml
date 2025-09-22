@@ -21,13 +21,13 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
-        '[format_sql]': true
+        "[format_sql]": true
         connection:
           useUnicode: true
           characterEncoding: UTF-8
           CharSet: utf8mb4
         jdbc:
-          '[time_zone]': UTC
+          "[time_zone]": UTC
     database-platform: org.hibernate.dialect.MySQL8Dialect
   mail:
     host: smtp.gmail.com
@@ -85,10 +85,10 @@ server:
 
 logging:
   level:
-    '[com.company.student_backend]': ${LOG_LEVEL:DEBUG}
-    '[org.springframework.web]': ${LOG_LEVEL_WEB:DEBUG}
-    '[org.springframework.security]': ${LOG_LEVEL_SECURITY:WARN}
-    '[org.hibernate.SQL]': ${LOG_LEVEL_SQL:DEBUG}
+    "[com.company.student_backend]": ${LOG_LEVEL:DEBUG}
+    "[org.springframework.web]": ${LOG_LEVEL_WEB:DEBUG}
+    "[org.springframework.security]": ${LOG_LEVEL_SECURITY:WARN}
+    "[org.hibernate.SQL]": ${LOG_LEVEL_SQL:DEBUG}
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
@@ -106,4 +106,3 @@ management:
     metrics:
       export:
         enabled: true
-
