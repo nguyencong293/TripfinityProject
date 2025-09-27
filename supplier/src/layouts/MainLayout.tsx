@@ -1,198 +1,350 @@
-import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
-interface MainLayoutProps {
-  children: React.ReactNode;
-}
+import React, { useState, useEffect } from "react";
+import type { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Bell,
+  User,
+  LogOut,
+  Settings,
+  HelpCircle,
+  ChevronDown,
+  Menu,
+  Globe,
+  Smartphone,
+  Monitor,
+} from "lucide-react";
+import type { LoginResponse } from "../types";
+import { logoutSupplier } from "../services/supplierAuthService";
 
-const navItems: Array<{
+const sidebarMenuItems = [
+  { icon: Globe, label: "Trang chủ", to: "/supplier" },
+  { icon: Settings, label: "Cài đặt", to: "/supplier/settings" },
+];
+
+const SidebarMenuItem = ({
+  icon: Icon,
+  label,
+  to,
+  active,
+}: {
+  icon: React.ElementType;
   label: string;
   to: string;
-  hasDropdown?: boolean;
-}> = [
-  { label: "Tổng Quan", to: "/overview" },
-  { label: "Dịch Vụ", to: "/services", hasDropdown: true },
-  { label: "Đặt chỗ", to: "/bookings", hasDropdown: true },
-  { label: "Khách hàng", to: "/customers", hasDropdown: true },
-  { label: "Tài chính", to: "/finance", hasDropdown: true },
-];
+  active?: boolean;
+}) => (
+  <a
+    href={to}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
+      active
+        ? "theme-bg-primary theme-text-button font-medium"
+        : "hover:theme-bg-secondary theme-text-secondary hover:theme-text-primary"
+    }`}
+  >
+    <Icon className="w-5 h-5" />
+    <span className="flex-1">{label}</span>
+  </a>
+);
 
-const footerLinks: Array<{ label: string; to: string }> = [
-  { label: "Giới thiệu", to: "/about" },
-  { label: "Liên hệ", to: "/contact" },
-  { label: "Bảo mật", to: "/privacy" },
-  { label: "Cookies", to: "/cookies" },
-  { label: "Trợ giúp", to: "/help" },
-  { label: "Hỗ trợ", to: "/support" },
-];
+interface MainLayoutProps {
+  children: ReactNode;
+}
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  const location = useLocation();
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const isActiveStartsWith = (path: string) =>
-    location.pathname === path || location.pathname.startsWith(path + "/");
+  // Authentication state
+  const [authUser, setAuthUser] = useState<LoginResponse | null>(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      const token = localStorage.getItem("token");
+      if (stored && token) {
+        return JSON.parse(stored) as LoginResponse;
+      }
+      return null;
+    } catch {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      return null;
+    }
+  });
+
+  // Listen for storage changes (for multi-tab sync)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const stored = localStorage.getItem("user");
+        const token = localStorage.getItem("token");
+        if (stored && token) {
+          setAuthUser(JSON.parse(stored) as LoginResponse);
+        } else {
+          setAuthUser(null);
+        }
+      } catch {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+        setAuthUser(null);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  // Close user menu if not authenticated
+  useEffect(() => {
+    if (!authUser) {
+      setUserMenuOpen(false);
+    }
+  }, [authUser]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!authUser || !token) {
+      navigate("/supplier/login", { replace: true });
+    }
+  }, [authUser, navigate]);
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logoutSupplier();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      // Clear local state and storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setAuthUser(null);
+      setUserMenuOpen(false);
+      navigate("/supplier/login", { replace: true });
+    }
+  };
+
+  // Don't render layout if not authenticated
+  if (!authUser) {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-gray-900">
-      {/* Skip link */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-black text-white px-4 py-2 rounded"
+    <div className="theme-bg-background min-h-screen flex">
+      {/* Sidebar */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 theme-bg-card border-r theme-border transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
-        Bỏ qua nội dung điều hướng
-      </a>
-
-      {/* HEADER / TOP NAV */}
-      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-        <div className="mx-auto max-w-[1280px] px-6">
-          <div className="flex h-16 items-center justify-between gap-6">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="font-extrabold tracking-tight text-lg">
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center gap-3 p-6 border-b theme-border">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <Globe className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold theme-text-primary">
                 TRIPFINITY
+              </h1>
+              <p className="text-xs theme-text-secondary">Supplier Dashboard</p>
+            </div>
+          </div>
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-2">
+            {sidebarMenuItems.map((item, index) => (
+              <SidebarMenuItem
+                key={index}
+                icon={item.icon}
+                label={item.label}
+                to={item.to}
+                active={window.location.pathname === item.to}
+              />
+            ))}
+          </nav>
+          {/* User Profile */}
+          <div className="p-4 border-t theme-border">
+            <div className="flex items-center gap-3 p-3 theme-bg-secondary rounded-xl">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold">
+                {authUser.name?.[0]?.toUpperCase() ||
+                  authUser.email?.[0]?.toUpperCase() ||
+                  "U"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="theme-text-primary font-medium truncate">
+                  {authUser.name || "Người dùng"}
+                </p>
+                <p className="theme-text-secondary text-sm truncate">
+                  {authUser.email}
+                </p>
               </div>
             </div>
-
-            {/* Primary Navigation */}
-            <nav aria-label="Main navigation" className="hidden lg:block">
-              <ul className="flex items-center gap-4 xl:gap-6">
-                {navItems.map((item) => (
-                  <li key={item.to} className="relative">
-                    <NavLink
-                      to={item.to}
-                      className={({ isActive }) =>
-                        [
-                          "px-2 py-2 text-sm font-medium transition-colors relative",
-                          isActiveStartsWith(item.to) || isActive
-                            ? "text-gray-900"
-                            : "text-gray-500 hover:text-gray-900",
-                        ].join(" ")
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <span>{item.label}</span>
-                          {item.hasDropdown && (
-                            <span
-                              className="ml-1 text-xs text-gray-400"
-                              aria-hidden="true"
-                            >
-                              ▾
-                            </span>
-                          )}
-                          {(isActive || isActiveStartsWith(item.to)) && (
-                            <span className="absolute inset-x-1 -bottom-[6px] h-0.5 rounded-full bg-gray-900" />
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-
-            {/* Right actions */}
+          </div>
+        </div>
+      </div>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header */}
+        <header className="theme-bg-card border-b theme-border sticky top-0 z-40">
+          <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-4">
-              {/* Notification button */}
               <button
-                type="button"
-                aria-label="Thông báo"
-                className="relative rounded-full p-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden btn-outline p-2"
               >
-                <span className="block h-5 w-5">
-                  {/* Simple bell icon */}
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-5 w-5 text-gray-700"
-                  >
-                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                    <path d="M10 21h4" />
-                  </svg>
-                </span>
-                <span className="absolute top-1.5 right-1.5 inline-block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-              </button>
-
-              {/* Avatar */}
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 ring-2 ring-transparent hover:ring-gray-300 focus:outline-none focus:ring-gray-400"
-                aria-label="Tài khoản"
-              >
-                <span className="text-sm font-semibold text-gray-700">A</span>
+                <Menu className="w-5 h-5" />
               </button>
             </div>
-          </div>
-        </div>
-      </header>
-
-      {/* MAIN (content placeholder) */}
-      <main
-        id="main-content"
-        className="flex-1 w-full border-t border-transparent"
-      >
-        {children}
-      </main>
-
-      {/* FOOTER */}
-      <footer className="mt-16 border-t border-gray-200 bg-white">
-        <div className="mx-auto max-w-[1280px] px-6 py-12 flex flex-col gap-10 lg:flex-row lg:justify-between">
-          {/* Branding + description */}
-          <div className="max-w-md">
-            <div className="text-lg font-extrabold tracking-tight">
-              TRIPFINITY
-            </div>
-            <p className="mt-4 text-sm leading-relaxed text-gray-600">
-              Nền tảng booking du lịch hàng đầu Việt Nam, kết nối du khách với
-              các nhà cung cấp dịch vụ chất lượng cao. Trải nghiệm du lịch thông
-              minh với công nghệ tiên tiến.
-            </p>
-            <ul className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
-              {footerLinks.map((l) => (
-                <li key={l.to}>
-                  <a
-                    href={l.to}
-                    className="hover:text-gray-800 transition-colors"
+            <div className="flex items-center gap-4">
+              {/* Notifications & User Menu */}
+              <div className="flex items-center gap-2">
+                <button className="relative btn-outline p-3">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    3
+                  </span>
+                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-3 p-2 rounded-xl hover:theme-bg-secondary transition-colors"
                   >
-                    {l.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-8 text-xs text-gray-400">
-              © 2025 Tripfinity. Bản quyền thuộc về chúng tôi.
-            </p>
-          </div>
-
-          {/* App download card */}
-          <div className="lg:w-72">
-            <div className="rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-800 mb-4">
-                Tải ứng dụng
-              </h3>
-              <div className="flex flex-col gap-3">
-                <button
-                  type="button"
-                  className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-                >
-                  <span></span>
-                  <span>Tải trên App Store</span>
-                </button>
-                <button
-                  type="button"
-                  className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-                >
-                  <span className="text-base">▶</span>
-                  <span>Tải trên Google Play</span>
-                </button>
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                      {authUser.name?.[0]?.toUpperCase() ||
+                        authUser.email?.[0]?.toUpperCase() ||
+                        "U"}
+                    </div>
+                    <ChevronDown className="w-4 h-4 theme-text-secondary" />
+                  </button>
+                  {userMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-64 theme-bg-card border theme-border rounded-2xl shadow-lg py-2 z-50">
+                      <div className="px-4 py-3 border-b theme-border">
+                        <p className="theme-text-primary font-medium">
+                          {authUser.name || "Người dùng"}
+                        </p>
+                        <p className="theme-text-secondary text-sm">
+                          {authUser.email}
+                        </p>
+                      </div>
+                      <div className="py-2">
+                        <button className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary">
+                          <User className="w-4 h-4" />
+                          Thông tin tài khoản
+                        </button>
+                        <button className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary">
+                          <Settings className="w-4 h-4" />
+                          Cài đặt
+                        </button>
+                        <button className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary">
+                          <HelpCircle className="w-4 h-4" />
+                          Hỗ trợ
+                        </button>
+                        <hr className="my-2 theme-border" />
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-error"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Đăng xuất
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </footer>
+        </header>
+        {/* Main Content */}
+        <main className="flex-1 p-6 overflow-auto">{children}</main>
+        {/* Footer */}
+        <footer className="theme-bg-card border-t theme-border p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Globe className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold theme-text-primary">
+                    TRIPFINITY
+                  </h3>
+                </div>
+                <p className="theme-text-secondary text-sm leading-relaxed mb-4">
+                  Nền tảng booking du lịch hàng đầu Việt Nam cùng với những sản
+                  phẩm khuyến mại về các chương trình cộng với dịch vụ uy tín
+                  hàng cao. Tại nghiệp du lịch thính như là điểm tốt.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold theme-text-primary mb-4">
+                  Dịch vụ
+                </h4>
+                <div className="space-y-2 text-sm theme-text-secondary">
+                  <div>Đặt phòng</div>
+                  <div>Đặt vé máy bay</div>
+                  <div>Thuê xe</div>
+                  <div>Tour du lịch</div>
+                  <div>Khám phá</div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold theme-text-primary mb-4">
+                  Hỗ trợ
+                </h4>
+                <div className="space-y-2 text-sm theme-text-secondary">
+                  <div>Liên hệ</div>
+                  <div>Câu hỏi thường gặp</div>
+                  <div>Chính sách</div>
+                  <div>Điều khoản sử dụng</div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold theme-text-primary mb-4">
+                  Tải ứng dụng
+                </h4>
+                <div className="space-y-3">
+                  <button className="flex items-center gap-3 p-3 theme-bg-secondary rounded-xl w-full hover:shadow-md transition-all">
+                    <Smartphone className="w-5 h-5 theme-text-brand" />
+                    <div className="text-left">
+                      <div className="text-xs theme-text-secondary">Tải từ</div>
+                      <div className="text-sm font-medium theme-text-primary">
+                        App Store
+                      </div>
+                    </div>
+                  </button>
+                  <button className="flex items-center gap-3 p-3 theme-bg-secondary rounded-xl w-full hover:shadow-md transition-all">
+                    <Monitor className="w-5 h-5 theme-text-brand" />
+                    <div className="text-left">
+                      <div className="text-xs theme-text-secondary">Tải từ</div>
+                      <div className="text-sm font-medium theme-text-primary">
+                        Google Play
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="pt-6 border-t theme-border flex flex-col md:flex-row items-center justify-between gap-4">
+              <p className="theme-text-secondary text-sm">
+                © 2025 Tripfinity. Bản quyền thuộc về chúng tôi.
+              </p>
+              <div className="flex items-center gap-6 text-sm theme-text-secondary">
+                <span>Chính sách</span>
+                <span>Điều khoản</span>
+                <span>Cookie</span>
+                <span>Bảo mật</span>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 };

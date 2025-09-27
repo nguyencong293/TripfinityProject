@@ -131,7 +131,7 @@ const SupplierLoginPage: React.FC = () => {
           <div className="mt-6 sm:mt-8 flex flex-col gap-3 sm:gap-4">
             {!showEmailForm ? (
               <>
-                <div className="w-full">
+                <div className="w-full max-w-[400px] mx-auto">
                   <div
                     ref={setGoogleBtnRef}
                     className="w-full flex justify-center"
@@ -140,11 +140,11 @@ const SupplierLoginPage: React.FC = () => {
                     <button
                       ref={firstActionRef}
                       type="button"
-                      className="btn-outline w-full flex items-center justify-center gap-3 py-3 sm:py-3"
+                      className="btn-outline w-full max-w-[400px] mx-auto flex items-center justify-center gap-3 h-10 sm:h-10"
                       disabled
                     >
                       <img className="h-5 w-5" src={googleLogo} alt="Google" />
-                      <span className="btn-text-responsive">
+                      <span className="btn-text-responsive font-semibold">
                         {t("login_with_google")}
                       </span>
                     </button>
@@ -153,7 +153,7 @@ const SupplierLoginPage: React.FC = () => {
 
                 <button
                   type="button"
-                  className="btn-outline w-full flex items-center justify-center gap-3 py-3 sm:py-3"
+                  className="btn-outline w-full max-w-[400px] mx-auto flex items-center justify-center gap-3 h-10 sm:h-10"
                   onClick={() => setShowEmailForm(true)}
                 >
                   <Mail
