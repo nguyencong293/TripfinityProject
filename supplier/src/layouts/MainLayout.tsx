@@ -10,23 +10,170 @@ import {
   ChevronDown,
   Menu,
   Globe,
-  Smartphone,
-  Monitor,
   ChevronLeft,
   ChevronRight,
   Sun,
   Moon,
   Languages,
+  BarChart3,
+  Plus,
+  Package,
+  Calendar,
+  Inbox,
+  MessageSquare,
+  DollarSign,
+  Tag,
+  Star,
+  TrendingUp,
+  Key,
+  LifeBuoy,
+  UsersRound,
+  FileText,
+  BookOpen,
+  CalendarCheck,
+  MapPin,
+  Utensils,
+  Building2,
+  Route,
 } from "lucide-react";
 import type { LoginResponse } from "../types";
 import { logoutSupplier } from "../services/supplierAuthService";
 import { useTheme } from "../hooks/useTheme";
 import { useLanguage } from "../hooks/useLanguage";
 
+// Navigation menu items with badges
 const sidebarMenuItems = [
-  { icon: Globe, label: "Trang chủ", to: "/supplier" },
-  { icon: Settings, label: "Cài đặt", to: "/supplier/settings" },
+  {
+    icon: BarChart3,
+    label: "dashboard",
+    to: "/provider/:id/dashboard",
+    badge: null,
+  },
+  {
+    icon: Package,
+    label: "services",
+    to: "/provider/:id/services",
+    badge: null,
+    isDropdown: true,
+    dropdownItems: [
+      { labelKey: "tour", icon: Route, to: "/provider/:id/services/tour" },
+      {
+        labelKey: "hotel",
+        icon: Building2,
+        to: "/provider/:id/services/hotel",
+      },
+      {
+        labelKey: "restaurant",
+        icon: Utensils,
+        to: "/provider/:id/services/restaurant",
+      },
+      {
+        labelKey: "attraction",
+        icon: MapPin,
+        to: "/provider/:id/services/attraction",
+      },
+    ],
+  },
+  {
+    icon: Package,
+    label: "listings",
+    to: "/provider/:id/listings",
+    badge: "totalPublishedListings",
+  },
+  {
+    icon: Calendar,
+    label: "calendar_availability",
+    to: "/provider/:id/calendar",
+    badge: null,
+  },
+  {
+    icon: Inbox,
+    label: "bookings_inbox",
+    to: "/provider/:id/bookings",
+    badge: "pendingBookings",
+  },
+  {
+    icon: CalendarCheck,
+    label: "scheduler_resources",
+    to: "/provider/:id/scheduler",
+    badge: null,
+  },
+  {
+    icon: MessageSquare,
+    label: "messages_inbox",
+    to: "/provider/:id/messages",
+    badge: "unreadMessages",
+  },
+  {
+    icon: DollarSign,
+    label: "finance",
+    to: "/provider/:id/finance",
+    badge: null,
+  },
+  {
+    icon: Tag,
+    label: "promotions_coupons",
+    to: "/provider/:id/promotions",
+    badge: null,
+  },
+  {
+    icon: Star,
+    label: "reviews",
+    to: "/provider/:id/reviews",
+    badge: "newReviews",
+  },
+  {
+    icon: TrendingUp,
+    label: "reports_analytics",
+    to: "/provider/:id/reports",
+    badge: null,
+  },
+  {
+    icon: Key,
+    label: "integrations_api",
+    to: "/provider/:id/integrations",
+    badge: null,
+  },
+  {
+    icon: LifeBuoy,
+    label: "support_tickets",
+    to: "/provider/:id/support",
+    badge: "openTickets",
+  },
+  {
+    icon: UsersRound,
+    label: "team_access",
+    to: "/provider/:id/team",
+    badge: null,
+  },
+  {
+    icon: FileText,
+    label: "documents_kyc",
+    to: "/provider/:id/documents",
+    badge: null,
+  },
+  {
+    icon: Settings,
+    label: "settings",
+    to: "/provider/:id/settings",
+    badge: null,
+  },
+  {
+    icon: BookOpen,
+    label: "help_kb",
+    to: "/provider/:id/help",
+    badge: null,
+  },
 ];
+
+// Mock badge data - this would come from your state management/API
+const mockBadgeData = {
+  totalPublishedListings: 24,
+  pendingBookings: 5,
+  unreadMessages: 3,
+  newReviews: 2,
+  openTickets: 1,
+};
 
 const SidebarMenuItem = ({
   icon: Icon,
@@ -34,26 +181,91 @@ const SidebarMenuItem = ({
   to,
   active,
   collapsed,
+  badge,
+  badgeCount,
+  isDropdown,
+  dropdownItems,
+  onDropdownToggle,
+  dropdownOpen,
+  t,
 }: {
   icon: React.ElementType;
   label: string;
   to: string;
   active?: boolean;
   collapsed?: boolean;
-}) => (
-  <a
-    href={to}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
-      active
-        ? "theme-bg-primary theme-text-button font-semibold"
-        : "hover:theme-bg-secondary theme-text-secondary hover:theme-text-primary"
-    } ${collapsed ? "justify-center" : ""}`}
-    title={collapsed ? label : undefined}
-  >
-    <Icon className="w-5 h-5 flex-shrink-0" />
-    {!collapsed && <span className="flex-1">{label}</span>}
-  </a>
-);
+  badge?: string | null;
+  badgeCount?: number;
+  isDropdown?: boolean;
+  dropdownItems?: { labelKey: string; icon: React.ElementType; to: string }[];
+  onDropdownToggle?: () => void;
+  dropdownOpen?: boolean;
+  t: (key: string) => string;
+}) => {
+  const handleClick = (e: React.MouseEvent) => {
+    if (isDropdown) {
+      e.preventDefault();
+      onDropdownToggle?.();
+    }
+  };
+
+  return (
+    <div>
+      <a
+        href={to}
+        onClick={handleClick}
+        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
+          active
+            ? "theme-bg-primary theme-text-button font-semibold"
+            : "hover:theme-bg-secondary theme-text-secondary hover:theme-text-primary"
+        } ${collapsed ? "justify-center" : ""}`}
+        title={collapsed ? t(label) : undefined}
+      >
+        <Icon className="w-5 h-5 flex-shrink-0" />
+        {!collapsed && (
+          <>
+            <span className="flex-1 text-body1-mobile md:text-body1-tablet lg:text-body1-desktop">
+              {t(label)}
+            </span>
+            {/* Badge */}
+            {badge && badgeCount && badgeCount > 0 && (
+              <span className="bg-red-500 text-white text-caption-mobile md:text-caption-tablet lg:text-caption-desktop rounded-full px-2 py-1 min-w-[20px] text-center">
+                {badgeCount > 99 ? "99+" : badgeCount}
+              </span>
+            )}
+            {/* Dropdown arrow */}
+            {isDropdown && (
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${
+                  dropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            )}
+          </>
+        )}
+      </a>
+
+      {/* Dropdown items */}
+      {isDropdown && dropdownOpen && !collapsed && dropdownItems && (
+        <div className="mt-1 ml-8 space-y-1">
+          {dropdownItems.map((item, index) => {
+            const ItemIcon = item.icon;
+            return (
+              <a
+                key={index}
+                href={item.to}
+                className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary rounded-lg transition-colors"
+              >
+                <ItemIcon className="w-4 h-4 flex-shrink-0" />
+                <span>{t(item.labelKey)}</span>
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -62,7 +274,7 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { dark, toggleTheme } = useTheme();
-  const { currentLanguageData, availableLanguages, changeLanguage } =
+  const { currentLanguageData, availableLanguages, changeLanguage, t } =
     useLanguage();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,6 +284,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
+  const [openDropdowns, setOpenDropdowns] = useState<Set<number>>(new Set());
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
 
   // Save sidebar collapsed state to localStorage
   useEffect(() => {
@@ -121,6 +335,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     if (!authUser) {
       setUserMenuOpen(false);
       setLanguageMenuOpen(false);
+      setQuickCreateOpen(false);
     }
   }, [authUser]);
 
@@ -145,6 +360,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       setAuthUser(null);
       setUserMenuOpen(false);
       setLanguageMenuOpen(false);
+      setQuickCreateOpen(false);
       navigate("/supplier/login", { replace: true });
     }
   };
@@ -152,6 +368,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Toggle sidebar collapse
   const toggleSidebarCollapse = () => {
     setSidebarCollapsed(!sidebarCollapsed);
+    // Close all dropdowns when collapsing
+    if (!sidebarCollapsed) {
+      setOpenDropdowns(new Set());
+    }
   };
 
   // Handle language change
@@ -160,12 +380,30 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     setLanguageMenuOpen(false);
   };
 
+  // Handle dropdown toggle
+  const handleDropdownToggle = (index: number) => {
+    const newOpenDropdowns = new Set(openDropdowns);
+    if (newOpenDropdowns.has(index)) {
+      newOpenDropdowns.delete(index);
+    } else {
+      newOpenDropdowns.add(index);
+    }
+    setOpenDropdowns(newOpenDropdowns);
+  };
+
+  // Handle quick create
+  const handleQuickCreate = () => {
+    // Check user permissions here
+    setQuickCreateOpen(!quickCreateOpen);
+  };
+
   // Don't render layout if not authenticated
   if (!authUser) {
     return null;
   }
 
   const sidebarWidth = sidebarCollapsed ? "w-16" : "w-64";
+  const currentPath = window.location.pathname;
 
   return (
     <div className="theme-bg-background min-h-screen flex">
@@ -173,7 +411,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <div
         className={`fixed inset-y-0 left-0 z-50 ${sidebarWidth} border-r theme-border transform transition-all duration-300 lg:translate-x-0 lg:static lg:inset-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } theme-bg-card`}
       >
         <div className="flex flex-col h-full">
           {/* Logo & Collapse Button */}
@@ -188,7 +426,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 <div
                   className={`${
                     sidebarCollapsed ? "w-8 h-8" : "w-10 h-10"
-                  }  bg-light-background rounded-lg flex items-center justify-center shadow-sm border border-gray-100 p-1`}
+                  } bg-light-background rounded-lg flex items-center justify-center shadow-sm border border-gray-100 p-1`}
                 >
                   <img
                     src="/logo.png"
@@ -197,7 +435,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       sidebarCollapsed ? "w-6 h-6" : "w-8 h-8"
                     } object-contain`}
                     onError={(e) => {
-                      // Fallback to Globe icon if image fails to load
                       e.currentTarget.style.display = "none";
                       e.currentTarget.parentElement?.classList.add("hidden");
                       e.currentTarget.parentElement?.nextElementSibling?.classList.remove(
@@ -212,9 +449,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </div>
               {!sidebarCollapsed && (
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl font-bold theme-text-primary truncate">
+                  <h1 className="text-h4-mobile md:text-h4-tablet lg:text-h4-desktop font-bold theme-text-primary truncate">
                     Tripfinity
                   </h1>
+                  <p className="text-caption-mobile md:text-caption-tablet lg:text-caption-desktop theme-text-secondary truncate">
+                    {t("provider_console")}
+                  </p>
                 </div>
               )}
             </div>
@@ -222,8 +462,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             {/* Collapse Button - Hidden on mobile */}
             <button
               onClick={toggleSidebarCollapse}
-              className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:theme-bg-secondary transition-colors theme-text-secondary "
-              title={sidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+              className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:theme-bg-secondary transition-colors theme-text-secondary"
+              title={
+                sidebarCollapsed ? t("expand_sidebar") : t("collapse_sidebar")
+              }
             >
               {sidebarCollapsed ? (
                 <ChevronRight className="w-5 h-5" />
@@ -233,9 +475,84 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </button>
           </div>
 
+          {/* Quick Create Button - Always Visible */}
+          <div
+            className={`p-4 border-b theme-border ${
+              sidebarCollapsed ? "px-2" : ""
+            }`}
+          >
+            <div className="relative">
+              <button
+                onClick={handleQuickCreate}
+                className={`w-full btn-primary flex items-center gap-2 px-4 py-3 text-button-mobile md:text-button-tablet lg:text-button-desktop ${
+                  sidebarCollapsed ? "justify-center" : ""
+                }`}
+                title={sidebarCollapsed ? t("quick_create") : undefined}
+              >
+                <Plus className="w-5 h-5" />
+                {!sidebarCollapsed && <span>{t("quick_create")}</span>}
+                {!sidebarCollapsed && (
+                  <ChevronDown className="w-4 h-4 ml-auto" />
+                )}
+              </button>
+
+              {/* Quick Create Dropdown */}
+              {quickCreateOpen && !sidebarCollapsed && (
+                <div className="absolute top-full left-0 right-0 mt-2 theme-bg-card border theme-border rounded-xl shadow-lg py-2 z-50">
+                  <a
+                    href="/provider/:id/create/tour"
+                    className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary"
+                  >
+                    <Route className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      {t("create")} {t("tour")}
+                    </span>
+                  </a>
+                  <a
+                    href="/provider/:id/create/hotel"
+                    className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary"
+                  >
+                    <Building2 className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      {t("create")} {t("hotel")}
+                    </span>
+                  </a>
+                  <a
+                    href="/provider/:id/create/restaurant"
+                    className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary"
+                  >
+                    <Utensils className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      {t("create")} {t("restaurant")}
+                    </span>
+                  </a>
+                  <a
+                    href="/provider/:id/create/attraction"
+                    className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary"
+                  >
+                    <MapPin className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      {t("create")} {t("attraction")}
+                    </span>
+                  </a>
+                  <hr className="my-2 theme-border" />
+                  <a
+                    href="/provider/:id/create/bulk-import"
+                    className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary"
+                  >
+                    <Plus className="w-4 h-4 flex-shrink-0" />
+                    <span>{t("bulk_import")}</span>
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Navigation */}
           <nav
-            className={`flex-1 p-4 space-y-2 ${sidebarCollapsed ? "px-2" : ""}`}
+            className={`flex-1 overflow-y-auto p-4 space-y-1 ${
+              sidebarCollapsed ? "px-2" : ""
+            }`}
           >
             {sidebarMenuItems.map((item, index) => (
               <SidebarMenuItem
@@ -243,8 +560,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 icon={item.icon}
                 label={item.label}
                 to={item.to}
-                active={window.location.pathname === item.to}
+                active={
+                  currentPath === item.to || currentPath.startsWith(item.to)
+                }
                 collapsed={sidebarCollapsed}
+                badge={item.badge}
+                badgeCount={
+                  item.badge
+                    ? mockBadgeData[item.badge as keyof typeof mockBadgeData]
+                    : undefined
+                }
+                isDropdown={item.isDropdown}
+                dropdownItems={item.dropdownItems}
+                onDropdownToggle={() => handleDropdownToggle(index)}
+                dropdownOpen={openDropdowns.has(index)}
+                t={t}
               />
             ))}
           </nav>
@@ -258,8 +588,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             {sidebarCollapsed ? (
               <div className="flex items-center justify-center">
                 <div
-                  className="w-10 h-10 theme-bg-primary rounded-full flex items-center justify-center theme-text-button font-semibold cursor-pointer"
-                  title={`${authUser.name || "Người dùng"} (${authUser.email})`}
+                  className="w-10 h-10 theme-bg-primary rounded-full flex items-center justify-center theme-text-button text-subtitle2-mobile md:text-subtitle2-tablet lg:text-subtitle2-desktop font-semibold cursor-pointer"
+                  title={`${authUser.name || t("user")} (${authUser.email})`}
                 >
                   {authUser.name?.[0]?.toUpperCase() ||
                     authUser.email?.[0]?.toUpperCase() ||
@@ -268,21 +598,59 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </div>
             ) : (
               <div className="flex items-center gap-3 p-3 theme-bg-secondary rounded-xl">
-                <div className="w-10 h-10 theme-bg-primary rounded-full flex items-center justify-center theme-text-button font-semibold">
+                <div className="w-10 h-10 theme-bg-primary rounded-full flex items-center justify-center theme-text-button text-subtitle2-mobile md:text-subtitle2-tablet lg:text-subtitle2-desktop font-semibold">
                   {authUser.name?.[0]?.toUpperCase() ||
                     authUser.email?.[0]?.toUpperCase() ||
                     "U"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="theme-text-primary font-semibold truncate">
-                    {authUser.name || "Người dùng"}
+                  <p className="theme-text-primary text-subtitle1-mobile md:text-subtitle1-tablet lg:text-subtitle1-desktop font-semibold truncate">
+                    {authUser.name || t("user")}
                   </p>
-                  <p className="theme-text-secondary text-sm truncate">
+                  <p className="theme-text-secondary text-body2-mobile md:text-body2-tablet lg:text-body2-desktop truncate">
                     {authUser.email}
                   </p>
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Logout / Switch View */}
+          <div
+            className={`p-4 border-t theme-border ${
+              sidebarCollapsed ? "px-2" : ""
+            }`}
+          >
+            <div className="space-y-2">
+              <button
+                onClick={() => navigate("/supplier")}
+                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:theme-bg-secondary theme-text-secondary hover:theme-text-primary transition-colors ${
+                  sidebarCollapsed ? "justify-center" : ""
+                }`}
+                title={sidebarCollapsed ? t("switch_view") : undefined}
+              >
+                <Globe className="w-4 h-4" />
+                {!sidebarCollapsed && (
+                  <span className="text-body2-mobile md:text-body2-tablet lg:text-body2-desktop">
+                    {t("switch_view")}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={handleLogout}
+                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:theme-bg-secondary theme-text-error transition-colors ${
+                  sidebarCollapsed ? "justify-center" : ""
+                }`}
+                title={sidebarCollapsed ? t("logout") : undefined}
+              >
+                <LogOut className="w-4 h-4" />
+                {!sidebarCollapsed && (
+                  <span className="text-body2-mobile md:text-body2-tablet lg:text-body2-desktop">
+                    {t("logout")}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -301,13 +669,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </button>
             </div>
             <div className="flex items-center gap-2">
-              {/* Theme Toggle Button - YouTube Style */}
+              {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}
                 className="relative p-2 rounded-full hover:theme-bg-secondary transition-colors theme-text-secondary hover:theme-text-primary focus-ring-primary"
-                title={
-                  dark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"
-                }
+                title={dark ? t("switch_to_light") : t("switch_to_dark")}
               >
                 {dark ? (
                   <Sun className="w-5 h-5" />
@@ -316,23 +682,23 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 )}
               </button>
 
-              {/* Language Toggle Button - YouTube Style */}
+              {/* Language Toggle Button */}
               <div className="relative">
                 <button
                   onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
                   className="flex items-center gap-2 p-2 rounded-full hover:theme-bg-secondary transition-colors theme-text-secondary hover:theme-text-primary focus-ring-primary"
-                  title="Chuyển đổi ngôn ngữ"
+                  title={t("switch_language")}
                 >
                   <Languages className="w-5 h-5" />
-                  <span className="text-sm font-medium hidden sm:block">
+                  <span className="text-body2-mobile md:text-body2-tablet lg:text-body2-desktop font-medium hidden sm:block">
                     {currentLanguageData.flag}
                   </span>
                 </button>
                 {languageMenuOpen && (
                   <div className="absolute right-0 top-full mt-2 min-w-48 theme-bg-card border theme-border rounded-2xl shadow-lg py-2 z-50">
                     <div className="px-4 py-2">
-                      <p className="theme-text-secondary text-sm font-medium">
-                        Chọn ngôn ngữ
+                      <p className="theme-text-secondary text-body2-mobile md:text-body2-tablet lg:text-body2-desktop font-medium">
+                        {t("select_language")}
                       </p>
                     </div>
                     <div className="border-t theme-border pt-2">
@@ -346,8 +712,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                               : "theme-text-secondary"
                           }`}
                         >
-                          <span className="text-lg">{language.flag}</span>
-                          <span className="flex-1 truncate">
+                          <span className="text-subtitle1-mobile md:text-subtitle1-tablet lg:text-subtitle1-desktop">
+                            {language.flag}
+                          </span>
+                          <span className="flex-1 truncate text-body1-mobile md:text-body1-tablet lg:text-body1-desktop">
                             {language.name}
                           </span>
                           {currentLanguageData.code === language.code && (
@@ -363,7 +731,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               {/* Notifications */}
               <button className="relative p-2 rounded-full hover:theme-bg-secondary transition-colors theme-text-secondary hover:theme-text-primary focus-ring-primary">
                 <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 theme-bg-error theme-text-error text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-5 h-5 theme-bg-error theme-text-error text-caption-mobile md:text-caption-tablet lg:text-caption-desktop rounded-full flex items-center justify-center">
                   3
                 </span>
               </button>
@@ -374,7 +742,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-3 p-2 rounded-xl hover:theme-bg-secondary transition-colors focus-ring-primary"
                 >
-                  <div className="w-8 h-8 theme-bg-primary rounded-full flex items-center justify-center theme-text-button font-semibold text-sm">
+                  <div className="w-8 h-8 theme-bg-primary rounded-full flex items-center justify-center theme-text-button text-body2-mobile md:text-body2-tablet lg:text-body2-desktop font-semibold">
                     {authUser.name?.[0]?.toUpperCase() ||
                       authUser.email?.[0]?.toUpperCase() ||
                       "U"}
@@ -384,25 +752,31 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 {userMenuOpen && (
                   <div className="absolute right-0 top-full mt-2 min-w-64 max-w-80 theme-bg-card border theme-border rounded-2xl shadow-lg py-2 z-50">
                     <div className="px-4 py-3 border-b theme-border">
-                      <p className="theme-text-primary font-semibold truncate">
-                        {authUser.name || "Người dùng"}
+                      <p className="theme-text-primary text-subtitle1-mobile md:text-subtitle1-tablet lg:text-subtitle1-desktop font-semibold truncate">
+                        {authUser.name || t("user")}
                       </p>
-                      <p className="theme-text-secondary text-sm break-all">
+                      <p className="theme-text-secondary text-body2-mobile md:text-body2-tablet lg:text-body2-desktop break-all">
                         {authUser.email}
                       </p>
                     </div>
                     <div className="py-2">
                       <button className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary transition-colors text-left">
                         <User className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">Thông tin tài khoản</span>
+                        <span className="truncate text-body1-mobile md:text-body1-tablet lg:text-body1-desktop">
+                          {t("account_info")}
+                        </span>
                       </button>
                       <button className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary transition-colors text-left">
                         <Settings className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">Cài đặt</span>
+                        <span className="truncate text-body1-mobile md:text-body1-tablet lg:text-body1-desktop">
+                          {t("settings")}
+                        </span>
                       </button>
                       <button className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary transition-colors text-left">
                         <HelpCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">Hỗ trợ</span>
+                        <span className="truncate text-body1-mobile md:text-body1-tablet lg:text-body1-desktop">
+                          {t("support")}
+                        </span>
                       </button>
                       <hr className="my-2 theme-border" />
                       <button
@@ -410,7 +784,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-error transition-colors text-left"
                       >
                         <LogOut className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">Đăng xuất</span>
+                        <span className="truncate text-body1-mobile md:text-body1-tablet lg:text-body1-desktop">
+                          {t("logout")}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -429,19 +805,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
               <div className="lg:col-span-2">
                 <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className={`${
-                      sidebarCollapsed ? "w-8 h-8" : "w-10 h-10"
-                    }  bg-light-card rounded-lg flex items-center justify-center shadow-sm border border-gray-100 p-1`}
-                  >
+                  <div className="w-10 h-10 bg-light-card rounded-lg flex items-center justify-center shadow-sm border border-gray-100 p-1">
                     <img
                       src="/logo.png"
                       alt="Tripfinity"
-                      className={`${
-                        sidebarCollapsed ? "w-6 h-6" : "w-8 h-8"
-                      } object-contain`}
+                      className="w-8 h-8 object-contain"
                       onError={(e) => {
-                        // Fallback to Globe icon if image fails to load
                         e.currentTarget.style.display = "none";
                         e.currentTarget.parentElement?.classList.add("hidden");
                         e.currentTarget.parentElement?.nextElementSibling?.classList.remove(
@@ -450,74 +819,57 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       }}
                     />
                   </div>
-                  <h1 className="text-xl font-bold theme-text-primary truncate">
-                    Tripfinity
+                  <h1 className="text-h4-mobile md:text-h4-tablet lg:text-h4-desktop font-bold theme-text-primary truncate">
+                    Tripfinity {t("provider_console")}
                   </h1>
                 </div>
-                <p className="theme-text-secondary text-sm leading-relaxed mb-4">
-                  Nền tảng booking du lịch hàng đầu Việt Nam cùng với những sản
-                  phẩm khuyến mại về các chương trình cộng với dịch vụ uy tín
-                  hàng cao. Tại nghiệp du lịch thính như là điểm tốt.
+                <p className="theme-text-secondary text-body1-mobile md:text-body1-tablet lg:text-body1-desktop leading-relaxed mb-4">
+                  {t("footer_description")}
                 </p>
               </div>
               <div>
-                <h4 className="font-semibold theme-text-primary mb-4">
-                  Dịch vụ
+                <h4 className="text-subtitle1-mobile md:text-subtitle1-tablet lg:text-subtitle1-desktop font-semibold theme-text-primary mb-4">
+                  {t("quick_links")}
                 </h4>
-                <div className="space-y-2 text-sm theme-text-secondary">
-                  <div>Đặt phòng</div>
-                  <div>Đặt vé máy bay</div>
-                  <div>Thuê xe</div>
-                  <div>Tour du lịch</div>
-                  <div>Khám phá</div>
+                <div className="space-y-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary">
+                  <div>{t("dashboard")}</div>
+                  <div>{t("create_service")}</div>
+                  <div>{t("manage_bookings")}</div>
+                  <div>{t("view_analytics")}</div>
                 </div>
               </div>
               <div>
-                <h4 className="font-semibold theme-text-primary mb-4">
-                  Hỗ trợ
+                <h4 className="text-subtitle1-mobile md:text-subtitle1-tablet lg:text-subtitle1-desktop font-semibold theme-text-primary mb-4">
+                  {t("support")}
                 </h4>
-                <div className="space-y-2 text-sm theme-text-secondary">
-                  <div>Liên hệ</div>
-                  <div>Câu hỏi thường gặp</div>
-                  <div>Chính sách</div>
-                  <div>Điều khoản sử dụng</div>
+                <div className="space-y-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary">
+                  <div>{t("help_center")}</div>
+                  <div>{t("documentation")}</div>
+                  <div>{t("api_reference")}</div>
+                  <div>{t("contact_support")}</div>
                 </div>
               </div>
               <div>
-                <h4 className="font-semibold theme-text-primary mb-4">
-                  Tải ứng dụng
+                <h4 className="text-subtitle1-mobile md:text-subtitle1-tablet lg:text-subtitle1-desktop font-semibold theme-text-primary mb-4">
+                  {t("resources")}
                 </h4>
-                <div className="space-y-3">
-                  <button className="flex items-center gap-3 p-3 border theme-border rounded-xl w-full hover:opacity-80 transition-all">
-                    <Smartphone className="w-5 h-5 theme-text-brand" />
-                    <div className="text-left">
-                      <div className="text-xs theme-text-secondary">Tải từ</div>
-                      <div className="text-sm font-semibold theme-text-primary">
-                        App Store
-                      </div>
-                    </div>
-                  </button>
-                  <button className="flex items-center gap-3 p-3 border theme-border rounded-xl w-full hover:opacity-80 transition-all">
-                    <Monitor className="w-5 h-5 theme-text-brand" />
-                    <div className="text-left">
-                      <div className="text-xs theme-text-secondary">Tải từ</div>
-                      <div className="text-sm font-semibold theme-text-primary">
-                        Google Play
-                      </div>
-                    </div>
-                  </button>
+                <div className="space-y-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary">
+                  <div>{t("best_practices")}</div>
+                  <div>{t("integration_guide")}</div>
+                  <div>{t("system_status")}</div>
+                  <div>{t("changelog")}</div>
                 </div>
               </div>
             </div>
             <div className="pt-6 border-t theme-border flex flex-col md:flex-row items-center justify-between gap-4">
-              <p className="theme-text-secondary text-sm">
-                © 2025 Tripfinity. Bản quyền thuộc về chúng tôi.
+              <p className="theme-text-secondary text-body2-mobile md:text-body2-tablet lg:text-body2-desktop">
+                © 2025 Tripfinity {t("provider_console")}.{" "}
+                {t("all_rights_reserved")}.
               </p>
-              <div className="flex items-center gap-6 text-sm theme-text-secondary">
-                <span>Chính sách</span>
-                <span>Điều khoản</span>
-                <span>Cookie</span>
-                <span>Bảo mật</span>
+              <div className="flex items-center gap-6 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary">
+                <span>{t("privacy_policy")}</span>
+                <span>{t("terms_of_service")}</span>
+                <span>{t("api_terms")}</span>
               </div>
             </div>
           </div>
@@ -533,12 +885,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       )}
 
       {/* Close dropdowns when clicking outside */}
-      {(userMenuOpen || languageMenuOpen) && (
+      {(userMenuOpen || languageMenuOpen || quickCreateOpen) && (
         <div
           className="fixed inset-0 z-30"
           onClick={() => {
             setUserMenuOpen(false);
             setLanguageMenuOpen(false);
+            setQuickCreateOpen(false);
           }}
         />
       )}

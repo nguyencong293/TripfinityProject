@@ -1089,6 +1089,391 @@ CREATE TABLE admin_actions (
     CONSTRAINT fk_admin_actions_admin FOREIGN KEY (admin_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ====== 1. ALTER existing listing tables: add slug, seo, publish, is_featured, booking settings, visibility ======
+ALTER TABLE tours
+  ADD COLUMN slug VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN seo_title VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN seo_description VARCHAR(512) DEFAULT NULL,
+  ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN booking_settings_json JSON DEFAULT NULL,
+  ADD COLUMN published_at DATETIME DEFAULT NULL,
+  ADD COLUMN visibility ENUM('public','private') NOT NULL DEFAULT 'public',
+  ADD UNIQUE KEY uq_tours_slug (slug),
+  ADD INDEX idx_tours_provider (provider_id),
+  ADD INDEX idx_tours_status (tour_status);
+
+ALTER TABLE hotels
+  ADD COLUMN slug VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN seo_title VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN seo_description VARCHAR(512) DEFAULT NULL,
+  ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN booking_settings_json JSON DEFAULT NULL,
+  ADD COLUMN published_at DATETIME DEFAULT NULL,
+  ADD COLUMN visibility ENUM('public','private') NOT NULL DEFAULT 'public',
+  ADD UNIQUE KEY uq_hotels_slug (slug),
+  ADD INDEX idx_hotels_provider (provider_id),
+  ADD INDEX idx_hotels_status (hotel_status);
+
+ALTER TABLE restaurants
+  ADD COLUMN slug VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN seo_title VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN seo_description VARCHAR(512) DEFAULT NULL,
+  ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN booking_settings_json JSON DEFAULT NULL,
+  ADD COLUMN published_at DATETIME DEFAULT NULL,
+  ADD COLUMN visibility ENUM('public','private') NOT NULL DEFAULT 'public',
+  ADD UNIQUE KEY uq_restaurants_slug (slug),
+  ADD INDEX idx_restaurants_provider (provider_id),
+  ADD INDEX idx_restaurants_status (restaurant_status);
+
+ALTER TABLE attractions
+  ADD COLUMN slug VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN seo_title VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN seo_description VARCHAR(512) DEFAULT NULL,
+  ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN booking_settings_json JSON DEFAULT NULL,
+  ADD COLUMN published_at DATETIME DEFAULT NULL,
+  ADD COLUMN visibility ENUM('public','private') NOT NULL DEFAULT 'public',
+  ADD UNIQUE KEY uq_attractions_slug (slug),
+  ADD INDEX idx_attractions_provider (provider_id),
+  ADD INDEX idx_attractions_status (attraction_status);
+
+
+-- ====== 2. ALTER booking tables: add provider_id, channel, hold_until, provider_seen, provider_notes ======
+-- provider_id duplicated for faster queries (denormalization); set NULLABLE for existing rows and backfill after.
+ALTER TABLE hotel_bookings
+  ADD COLUMN provider_id INT DEFAULT NULL,
+  ADD COLUMN channel VARCHAR(100) DEFAULT NULL,
+  ADD COLUMN hold_until DATETIME DEFAULT NULL,
+  ADD COLUMN provider_seen TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN provider_notes TEXT DEFAULT NULL,
+  ADD INDEX idx_hotel_bookings_provider (provider_id),
+  ADD INDEX idx_hotel_bookings_status (booking_status),
+  ADD CONSTRAINT fk_hotel_booking_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE SET NULL;
+
+ALTER TABLE restaurant_bookings
+  ADD COLUMN provider_id INT DEFAULT NULL,
+  ADD COLUMN channel VARCHAR(100) DEFAULT NULL,
+  ADD COLUMN hold_until DATETIME DEFAULT NULL,
+  ADD COLUMN provider_seen TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN provider_notes TEXT DEFAULT NULL,
+  ADD INDEX idx_rest_bookings_provider (provider_id),
+  ADD INDEX idx_rest_bookings_status (booking_status),
+  ADD CONSTRAINT fk_rest_booking_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE SET NULL;
+
+ALTER TABLE attraction_bookings
+  ADD COLUMN provider_id INT DEFAULT NULL,
+  ADD COLUMN channel VARCHAR(100) DEFAULT NULL,
+  ADD COLUMN hold_until DATETIME DEFAULT NULL,
+  ADD COLUMN provider_seen TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN provider_notes TEXT DEFAULT NULL,
+  ADD INDEX idx_attr_bookings_provider (provider_id),
+  ADD INDEX idx_attr_bookings_status (booking_status),
+  ADD CONSTRAINT fk_attr_booking_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE SET NULL;
+
+ALTER TABLE tour_bookings
+  ADD COLUMN provider_id INT DEFAULT NULL,
+  ADD COLUMN channel VARCHAR(100) DEFAULT NULL,
+  ADD COLUMN hold_until DATETIME DEFAULT NULL,
+  ADD COLUMN provider_seen TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN provider_notes TEXT DEFAULT NULL,
+  ADD INDEX idx_tour_bookings_provider (provider_id),
+  ADD INDEX idx_tour_bookings_status (booking_status),
+  ADD CONSTRAINT fk_tour_booking_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE SET NULL;
+
+
+-- ====== 3. provider_documents (KYC + permits) ======
+CREATE TABLE provider_documents (
+    document_id INT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    doc_type VARCHAR(100) NOT NULL, -- e.g., 'business_license','tax','insurance','identity'
+    file_url VARCHAR(512) NOT NULL,
+    file_name VARCHAR(255) DEFAULT NULL,
+    issued_by VARCHAR(255) DEFAULT NULL,
+    issue_date DATE DEFAULT NULL,
+    expiry_date DATE DEFAULT NULL,
+    status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+    reviewer_id INT DEFAULT NULL,
+    reviewer_notes TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_provider_documents_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE,
+    CONSTRAINT fk_provider_documents_reviewer FOREIGN KEY (reviewer_id) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ====== 4. provider_team_members (RBAC for provider console) ======
+CREATE TABLE provider_team_members (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    user_id INT NOT NULL,
+    role ENUM('owner','manager','finance','frontdesk','staff') NOT NULL DEFAULT 'staff',
+    permissions_json JSON DEFAULT NULL, -- granular permissions overrides
+    status ENUM('active','invited','suspended') NOT NULL DEFAULT 'active',
+    invited_by INT DEFAULT NULL,
+    invited_at DATETIME DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_provider_team_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE,
+    CONSTRAINT fk_provider_team_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_provider_team_inviter FOREIGN KEY (invited_by) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX idx_provider_team_provider ON provider_team_members(provider_id);
+
+
+-- ====== 5. resources & resource_assignments (guides/vehicles/rooms scheduling) ======
+CREATE TABLE resources (
+    resource_id INT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    resource_type ENUM('guide','vehicle','room','table','other') NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    capacity INT DEFAULT NULL,
+    status ENUM('active','maintenance','inactive') NOT NULL DEFAULT 'active',
+    meta_json JSON DEFAULT NULL, -- e.g., plate number, language skills, room attributes
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_resources_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE resource_assignments (
+    assignment_id INT AUTO_INCREMENT PRIMARY KEY,
+    resource_id INT NOT NULL,
+    booking_type ENUM('tour','hotel','restaurant','attraction') NOT NULL,
+    booking_id INT NOT NULL,
+    assigned_from DATETIME NOT NULL,
+    assigned_to DATETIME NOT NULL,
+    assigned_by INT DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_resource_assign_resource FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE,
+    CONSTRAINT fk_resource_assign_user FOREIGN KEY (assigned_by) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX idx_resource_assign_booking ON resource_assignments(booking_type, booking_id);
+
+
+-- ====== 6. inventory_slots (calendar day-by-day overrides & blocks) ======
+CREATE TABLE inventory_slots (
+    slot_id INT AUTO_INCREMENT PRIMARY KEY,
+    listing_type ENUM('tour','hotel','restaurant','attraction') NOT NULL,
+    listing_id INT NOT NULL,
+    slot_date DATE NOT NULL,
+    available_count INT DEFAULT NULL,
+    blocked TINYINT(1) NOT NULL DEFAULT 0,
+    price_override DECIMAL(12,2) DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_inventory_slot (listing_type, listing_id, slot_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX idx_inventory_listing ON inventory_slots(listing_type, listing_id);
+
+
+-- ====== 7. rate_rules (seasonal/conditional pricing rules) ======
+CREATE TABLE rate_rules (
+    rule_id INT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT DEFAULT NULL,
+    listing_type ENUM('tour','hotel','restaurant','attraction') DEFAULT NULL,
+    listing_id INT DEFAULT NULL,
+    name VARCHAR(255) DEFAULT NULL,
+    priority INT NOT NULL DEFAULT 100,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    condition_json JSON NOT NULL, -- condition definition (date ranges, weekdays, lead_time, min_stay, channels)
+    action_json JSON NOT NULL, -- set price/percent/available_count/etc
+    start_date DATE DEFAULT NULL,
+    end_date DATE DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rate_rules_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX idx_rate_rules_listing ON rate_rules(listing_type, listing_id);
+
+
+-- ====== 8. listing_import_jobs (bulk CSV/ICal imports) ======
+CREATE TABLE listing_import_jobs (
+    job_id INT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    listing_type ENUM('tour','hotel','restaurant','attraction') DEFAULT NULL,
+    file_url VARCHAR(512) NOT NULL,
+    status ENUM('pending','processing','completed','failed') NOT NULL DEFAULT 'pending',
+    total_rows INT DEFAULT NULL,
+    success_rows INT DEFAULT NULL,
+    failed_rows INT DEFAULT NULL,
+    result_json LONGTEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_listing_import_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ====== 9. provider_audit_logs (all provider actions) ======
+CREATE TABLE provider_audit_logs (
+    audit_id INT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT DEFAULT NULL,
+    user_id INT DEFAULT NULL,
+    action VARCHAR(150) NOT NULL, -- e.g., 'publish_listing','confirm_booking'
+    target_type VARCHAR(50) DEFAULT NULL, -- listing/booking/resource etc
+    target_id INT DEFAULT NULL,
+    details_json LONGTEXT DEFAULT NULL,
+    ip_address VARCHAR(45) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_audit_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE SET NULL,
+    CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ====== 10. provider_transactions (ledger) and provider_payouts ======
+CREATE TABLE provider_transactions (
+    transaction_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    booking_type ENUM('tour','hotel','restaurant','attraction','other') DEFAULT 'other',
+    booking_id INT DEFAULT NULL,
+    gross_amount DECIMAL(14,2) NOT NULL,
+    commission_amount DECIMAL(14,2) DEFAULT 0.00,
+    fees_amount DECIMAL(14,2) DEFAULT 0.00,
+    net_amount DECIMAL(14,2) NOT NULL, -- amount owed to provider after fees
+    currency_code CHAR(3) NOT NULL,
+    type ENUM('credit','debit','refund','fee','payout','hold') NOT NULL,
+    reference VARCHAR(255) DEFAULT NULL,
+    status ENUM('pending','settled','failed','reversed') NOT NULL DEFAULT 'pending',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_provider_trans_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX idx_provider_transactions_provider ON provider_transactions(provider_id);
+
+
+CREATE TABLE provider_payouts (
+    payout_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    amount DECIMAL(14,2) NOT NULL,
+    currency_code CHAR(3) NOT NULL,
+    method VARCHAR(50) DEFAULT NULL, -- bank_transfer, wallet, etc
+    details_json LONGTEXT DEFAULT NULL, -- payout details / bank details snapshot
+    status ENUM('requested','scheduled','processing','completed','failed') NOT NULL DEFAULT 'requested',
+    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_provider_payouts_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX idx_provider_payouts_provider ON provider_payouts(provider_id);
+
+
+-- ====== 11. api keys, webhooks, webhook_deliveries ======
+CREATE TABLE provider_api_keys (
+    api_key_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    label VARCHAR(255) DEFAULT NULL,
+    key_hash VARCHAR(255) NOT NULL, -- store only hash
+    scopes JSON DEFAULT NULL,
+    revoked TINYINT(1) NOT NULL DEFAULT 0,
+    last_used_at DATETIME DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_api_keys_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE provider_webhooks (
+    webhook_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    url VARCHAR(1024) NOT NULL,
+    events JSON NOT NULL,
+    secret_hash VARCHAR(255) DEFAULT NULL,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    last_delivery_at DATETIME DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_provider_webhook_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE webhook_deliveries (
+    delivery_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    webhook_id BIGINT NOT NULL,
+    payload LONGTEXT DEFAULT NULL,
+    http_status INT DEFAULT NULL,
+    response_text TEXT DEFAULT NULL,
+    attempt INT NOT NULL DEFAULT 1,
+    delivered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_webhook_delivery_webhook FOREIGN KEY (webhook_id) REFERENCES provider_webhooks(webhook_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ====== 12. promotions & promotion_redemptions ======
+CREATE TABLE promotions (
+    promotion_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    code VARCHAR(100) DEFAULT NULL,
+    title VARCHAR(255) DEFAULT NULL,
+    description TEXT DEFAULT NULL,
+    discount_type ENUM('percent','fixed') NOT NULL,
+    discount_value DECIMAL(12,2) NOT NULL,
+    applies_to_type ENUM('all','tour','hotel','restaurant','attraction') NOT NULL DEFAULT 'all',
+    applies_to_id INT DEFAULT NULL,
+    valid_from DATETIME DEFAULT NULL,
+    valid_until DATETIME DEFAULT NULL,
+    usage_limit INT DEFAULT NULL,
+    used_count INT DEFAULT 0,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_promotions_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE promotion_redemptions (
+    redemption_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    promotion_id BIGINT NOT NULL,
+    booking_type ENUM('tour','hotel','restaurant','attraction') DEFAULT NULL,
+    booking_id INT DEFAULT NULL,
+    user_id INT DEFAULT NULL,
+    amount_saved DECIMAL(12,2) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_promo_redemption_promo FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id) ON DELETE CASCADE,
+    CONSTRAINT fk_promo_redemption_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ====== 13. scheduled_reports ======
+CREATE TABLE scheduled_reports (
+    report_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    params_json LONGTEXT NOT NULL,
+    schedule_cron VARCHAR(100) NOT NULL,
+    recipients JSON DEFAULT NULL,
+    last_run_at DATETIME DEFAULT NULL,
+    next_run_at DATETIME DEFAULT NULL,
+    status ENUM('active','disabled') NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_scheduled_reports_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ====== 14. provider_settings (default booking settings, notification templates, etc) ======
+CREATE TABLE provider_settings (
+    provider_id INT PRIMARY KEY,
+    settings_json LONGTEXT DEFAULT NULL, -- default booking_settings_json, notification templates summary, branding
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_provider_settings_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ====== 15. optional: provider_team_invites table for tracking invites ======
+CREATE TABLE provider_team_invites (
+    invite_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    role ENUM('owner','manager','finance','frontdesk','staff') NOT NULL DEFAULT 'staff',
+    token VARCHAR(255) NOT NULL,
+    status ENUM('pending','accepted','cancelled') NOT NULL DEFAULT 'pending',
+    invited_by INT DEFAULT NULL,
+    invited_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    accepted_at DATETIME DEFAULT NULL,
+    CONSTRAINT fk_team_invite_provider FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE CASCADE,
+    CONSTRAINT fk_team_invite_by FOREIGN KEY (invited_by) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO users (email, password_hash, full_name, phone_number, avatar_url, account_role, account_status, date_of_birth, gender, reset_otp, otp_expiry_time) VALUES 
 ('congnt.21kit.fpt.vku@gmail.com', 'cong12', 'cong nguyen', NULL, NULL, 'provider', 'active', NULL, NULL, NULL, NULL);
 
