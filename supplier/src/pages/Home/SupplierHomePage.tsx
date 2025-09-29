@@ -16,8 +16,12 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useTheme } from "../../hooks/useTheme";
+import { useLanguage } from "../../hooks/useLanguage";
 
 const SupplierHomePage: React.FC = () => {
+  const { dark } = useTheme();
+  const { t } = useLanguage();
   const [selectedPeriod, setSelectedPeriod] = useState("30days");
 
   // Sample data
@@ -57,37 +61,35 @@ const SupplierHomePage: React.FC = () => {
   const quickActions = [
     {
       icon: Plus,
-      title: "Tạo dịch vụ mới",
-      description:
-        "Thêm sản phẩm du lịch hoặc dịch vụ mới cho khách hàng đặt bạn với ưu điểm nhanh booking",
-      color: "bg-green-100 dark:bg-green-900/20",
-      iconColor: "text-green-600 dark:text-green-400",
+      titleKey: "create_new_service",
+      descriptionKey: "create_new_service_desc",
+      color: "theme-bg-success",
+      iconColor: "theme-text-success",
     },
     {
       icon: Star,
-      title: "Xem và đánh giá",
-      description:
-        "Xem lại feedback và đánh giá về sản phẩm và dịch vụ bạn cung cấp",
-      color: "bg-orange-100 dark:bg-orange-900/20",
-      iconColor: "text-orange-600 dark:text-orange-400",
+      titleKey: "view_reviews",
+      descriptionKey: "view_reviews_desc",
+      color: "theme-bg-warning",
+      iconColor: "theme-text-warning",
     },
     {
       icon: CreditCard,
-      title: "Quản lý E-Ticket",
-      description: "Theo dõi vé điện tử và các đơn đặt phòng hoàn thành",
-      color: "bg-blue-100 dark:bg-blue-900/20",
-      iconColor: "text-blue-600 dark:text-blue-400",
+      titleKey: "manage_etickets",
+      descriptionKey: "manage_etickets_desc",
+      color: "theme-bg-info",
+      iconColor: "theme-text-info",
     },
   ];
 
   const StatCard = ({
-    title,
+    titleKey,
     value,
     change,
     icon: Icon,
     color,
   }: {
-    title: string;
+    titleKey: string;
     value: string | number;
     change: string;
     icon: React.ElementType;
@@ -104,71 +106,79 @@ const SupplierHomePage: React.FC = () => {
         </div>
       </div>
       <h3 className="theme-text-primary text-2xl font-bold mb-1">{value}</h3>
-      <p className="theme-text-secondary text-sm">{title}</p>
+      <p className="theme-text-secondary text-sm">{t(titleKey)}</p>
     </div>
   );
+
+  // Dynamic tooltip content based on theme
+  const customTooltipStyle = {
+    backgroundColor: dark ? "#1f2937" : "#ffffff",
+    border: `1px solid ${dark ? "#374151" : "#e5e7eb"}`,
+    borderRadius: "12px",
+    color: dark ? "#f9fafb" : "#111827",
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       {/* Page Title */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold theme-text-primary">Trang chủ</h1>
-          <p className="theme-text-secondary mt-1">
-            Quản lý và theo dõi hoạt động kinh doanh của bạn
-          </p>
+          <h1 className="text-3xl font-bold theme-text-primary">{t("home")}</h1>
+          <p className="theme-text-secondary mt-1">{t("home_subtitle")}</p>
         </div>
         <div className="flex items-center gap-3">
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="px-4 py-2 rounded-xl theme-bg-secondary theme-text-primary border theme-border"
+            className="px-4 py-2 rounded-xl theme-bg-card theme-text-primary border theme-border"
           >
-            <option value="today">Hôm nay</option>
-            <option value="7days">7 ngày</option>
-            <option value="30days">30 ngày gần đây</option>
-            <option value="month">Tháng này</option>
+            <option value="today">{t("today")}</option>
+            <option value="7days">{t("7days")}</option>
+            <option value="30days">{t("30days")}</option>
+            <option value="month">{t("month")}</option>
           </select>
-          <button className="btn-primary px-4 py-2">
-            <Plus className="w-4 h-4 mr-2" />
-            Thêm mới
+          <button className="btn-primary px-8 py-2 flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            {t("add_new")}
           </button>
         </div>
       </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
-          title="Dịch vụ đang hoạt động"
+          titleKey="active_services"
           value="24"
           change="7.9%"
           icon={Package}
-          color="bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400"
+          color="theme-bg-success"
         />
         <StatCard
-          title="Booking mới hôm nay"
+          titleKey="new_bookings_today"
           value="24"
           change="18.2%"
           icon={Calendar}
-          color="bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+          color="theme-bg-info"
         />
         <StatCard
-          title="Doanh thu tháng này"
+          titleKey="monthly_revenue"
           value="45.2M"
           change="12.5%"
           icon={DollarSign}
-          color="bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400"
+          color="theme-bg-warning"
         />
       </div>
+
       {/* Revenue Chart */}
       <div className="theme-bg-card p-6 rounded-2xl border theme-border">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold theme-text-primary">
-            Doanh thu 30 ngày gần đây
+            {t("revenue_chart_title")}
           </h2>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 text-sm theme-text-secondary">
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span>Doanh thu</span>
+              <div className="w-3 h-3 rounded-full theme-bg-success"></div>
+              <span>{t("revenue")}</span>
             </div>
           </div>
         </div>
@@ -176,60 +186,74 @@ const SupplierHomePage: React.FC = () => {
           <AreaChart data={revenueData}>
             <defs>
               <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                <stop
+                  offset="5%"
+                  stopColor={dark ? "#10B981" : "#059669"}
+                  stopOpacity={0.3}
+                />
+                <stop
+                  offset="95%"
+                  stopColor={dark ? "#10B981" : "#059669"}
+                  stopOpacity={0}
+                />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={dark ? "#374151" : "#e5e7eb"}
+              className="opacity-30"
+            />
             <XAxis
               dataKey="day"
               className="theme-text-secondary"
               axisLine={false}
               tickLine={false}
+              tick={{ fill: dark ? "#9ca3af" : "#6b7280" }}
             />
             <YAxis
               className="theme-text-secondary"
               axisLine={false}
               tickLine={false}
+              tick={{ fill: dark ? "#9ca3af" : "#6b7280" }}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--bg-card)",
-                border: "1px solid var(--border)",
-                borderRadius: "12px",
-              }}
+              contentStyle={customTooltipStyle}
+              labelStyle={{ color: dark ? "#f9fafb" : "#111827" }}
             />
             <Area
               type="monotone"
               dataKey="revenue"
-              stroke="#10B981"
+              stroke={dark ? "#10B981" : "#059669"}
               strokeWidth={2}
               fill="url(#revenueGradient)"
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
+
       {/* Quick Actions Section */}
       <div>
         <h2 className="text-xl font-semibold theme-text-primary mb-6">
-          Thao tác nhanh
+          {t("quick_actions")}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {quickActions.map((action, index) => (
             <div
               key={index}
-              className="theme-bg-card p-6 rounded-2xl border theme-border hover:shadow-lg transition-all duration-300 cursor-pointer"
+              className="theme-bg-card p-6 rounded-2xl border theme-border hover:shadow-lg transition-all duration-300 cursor-pointer group"
             >
               <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-xl ${action.color}`}>
+                <div
+                  className={`p-3 rounded-xl ${action.color} group-hover:scale-110 transition-transform duration-200`}
+                >
                   <action.icon className={`w-6 h-6 ${action.iconColor}`} />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold theme-text-primary mb-2">
-                    {action.title}
+                    {t(action.titleKey)}
                   </h3>
                   <p className="theme-text-secondary text-sm leading-relaxed">
-                    {action.description}
+                    {t(action.descriptionKey)}
                   </p>
                 </div>
               </div>

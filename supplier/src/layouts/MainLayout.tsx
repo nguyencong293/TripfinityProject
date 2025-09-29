@@ -363,7 +363,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               {/* Notifications */}
               <button className="relative p-2 rounded-full hover:theme-bg-secondary transition-colors theme-text-secondary hover:theme-text-primary focus-ring-primary">
                 <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 theme-bg-error theme-text-button text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-5 h-5 theme-bg-error theme-text-error text-xs rounded-full flex items-center justify-center">
                   3
                 </span>
               </button>
@@ -426,15 +426,33 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {/* Footer */}
         <footer className="theme-bg-card border-t theme-border p-6">
           <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
+              <div className="lg:col-span-2">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 theme-bg-primary rounded-lg flex items-center justify-center">
-                    <Globe className="w-5 h-5 theme-text-button" />
+                  <div
+                    className={`${
+                      sidebarCollapsed ? "w-8 h-8" : "w-10 h-10"
+                    }  bg-light-card rounded-lg flex items-center justify-center shadow-sm border border-gray-100 p-1`}
+                  >
+                    <img
+                      src="/logo.png"
+                      alt="Tripfinity"
+                      className={`${
+                        sidebarCollapsed ? "w-6 h-6" : "w-8 h-8"
+                      } object-contain`}
+                      onError={(e) => {
+                        // Fallback to Globe icon if image fails to load
+                        e.currentTarget.style.display = "none";
+                        e.currentTarget.parentElement?.classList.add("hidden");
+                        e.currentTarget.parentElement?.nextElementSibling?.classList.remove(
+                          "hidden"
+                        );
+                      }}
+                    />
                   </div>
-                  <h3 className="text-lg font-bold theme-text-primary">
-                    TRIPFINITY
-                  </h3>
+                  <h1 className="text-xl font-bold theme-text-primary truncate">
+                    Tripfinity
+                  </h1>
                 </div>
                 <p className="theme-text-secondary text-sm leading-relaxed mb-4">
                   Nền tảng booking du lịch hàng đầu Việt Nam cùng với những sản
@@ -470,7 +488,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   Tải ứng dụng
                 </h4>
                 <div className="space-y-3">
-                  <button className="flex items-center gap-3 p-3 theme-bg-secondary rounded-xl w-full hover:opacity-80 transition-all">
+                  <button className="flex items-center gap-3 p-3 border theme-border rounded-xl w-full hover:opacity-80 transition-all">
                     <Smartphone className="w-5 h-5 theme-text-brand" />
                     <div className="text-left">
                       <div className="text-xs theme-text-secondary">Tải từ</div>
@@ -479,7 +497,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       </div>
                     </div>
                   </button>
-                  <button className="flex items-center gap-3 p-3 theme-bg-secondary rounded-xl w-full hover:opacity-80 transition-all">
+                  <button className="flex items-center gap-3 p-3 border theme-border rounded-xl w-full hover:opacity-80 transition-all">
                     <Monitor className="w-5 h-5 theme-text-brand" />
                     <div className="text-left">
                       <div className="text-xs theme-text-secondary">Tải từ</div>
