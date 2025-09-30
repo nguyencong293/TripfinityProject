@@ -52,25 +52,25 @@ const sidebarMenuItems = [
   {
     icon: Package,
     label: "services",
-    to: "/provider/:id/services",
+    to: "#",
     badge: null,
     isDropdown: true,
     dropdownItems: [
-      { labelKey: "tour", icon: Route, to: "/provider/:id/services/tour" },
+      { labelKey: "tour", icon: Route, to: "/supplier/service/tour" },
       {
         labelKey: "hotel",
         icon: Building2,
-        to: "/provider/:id/services/hotel",
+        to: "/supplier/service/hotel",
       },
       {
         labelKey: "restaurant",
         icon: Utensils,
-        to: "/provider/:id/services/restaurant",
+        to: "/supplier/service/restaurant",
       },
       {
         labelKey: "attraction",
         icon: MapPin,
-        to: "/provider/:id/services/attraction",
+        to: "/supplier/service/attraction",
       },
     ],
   },
