@@ -77,7 +77,7 @@ const sidebarMenuItems = [
   {
     icon: Package,
     label: "listings",
-    to: "/provider/:id/listings",
+    to: "/supplier/listings",
     badge: "totalPublishedListings",
   },
   {
