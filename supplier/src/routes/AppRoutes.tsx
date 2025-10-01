@@ -10,6 +10,8 @@ import DashboardTourPage from "../pages/Service/Tour/DashboardTourPage";
 import DashboardHotelPage from "../pages/Service/Hotel/DashboardHotelPage";
 import DashboardRestaurantPage from "../pages/Service/Restaurant/DashboardRestaurantPage";
 import DashboardAttractionPage from "../pages/Service/Attraction/DashboardAttractionPage";
+import HotelCreatePage from "../pages/Service/Hotel/HotelCreatePage";
+import HotelEditPage from "../pages/Service/Hotel/HotelEditPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -21,6 +23,8 @@ const AppRoutes: React.FC = () => {
           <Route path="listings" element={<ListingsPage />} />
           <Route path="service/tour" element={<DashboardTourPage />} />
           <Route path="service/hotel" element={<DashboardHotelPage />} />
+          <Route path="service/hotel/create" element={<HotelCreatePage />} />
+          <Route path="service/hotel/edit" element={<HotelEditPage />} />
           <Route
             path="service/attraction"
             element={<DashboardAttractionPage />}

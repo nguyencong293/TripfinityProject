@@ -90,6 +90,7 @@ interface HotelDraft {
   seo: SeoConfig;
 }
 
+/* ================= Steps ================= */
 export const Step = {
   TYPE: 0,
   GENERAL: 1,
@@ -100,7 +101,6 @@ export const Step = {
   SEO: 6,
   CONFIRM: 7,
 } as const;
-
 export type Step = (typeof Step)[keyof typeof Step];
 
 /* ================ Initial draft ================ */
@@ -130,12 +130,33 @@ const initialDraft: HotelDraft = {
 };
 
 /* ================= Helpers ================= */
-const smallInput =
-  "border rounded px-2 py-1 text-xs focus:ring-1 ring-blue-500 outline-none";
-const sectionCard = "border rounded-lg p-4 bg-white shadow-sm";
+const baseInput =
+  "border theme-border rounded px-3 py-2 bg-white dark:bg-dark-card theme-text-primary focus-ring-primary text-body2-mobile sm:text-body2-tablet lg:text-body2-desktop placeholder:theme-text-secondary";
+const baseTextarea =
+  "border theme-border rounded px-3 py-2 bg-white dark:bg-dark-card theme-text-primary focus-ring-primary resize-y text-body2-mobile sm:text-body2-tablet lg:text-body2-desktop placeholder:theme-text-secondary";
+const baseChipInputWrapper =
+  "border theme-border rounded px-2 py-1 flex flex-wrap gap-1 bg-white dark:bg-dark-card focus-within:ring-2 ring-light-focus dark:ring-dark-focus";
+const baseCard =
+  "theme-bg-card border theme-border rounded-lg p-4 shadow-sm flex flex-col gap-3";
+const subtleText =
+  "theme-text-secondary text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop";
+const sectionTitle =
+  "font-semibold theme-text-primary text-h3-mobile sm:text-h3-tablet lg:text-h3-desktop";
+const pageTitle =
+  "font-bold theme-text-primary text-h1-mobile sm:text-h1-tablet lg:text-h1-desktop";
+const sectionSubtitle =
+  "theme-text-secondary text-body2-mobile sm:text-body2-tablet lg:text-body2-desktop";
+const labelCls =
+  "font-medium theme-text-primary text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop";
+const errorText =
+  "theme-text-error text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop";
+const smallHelper =
+  "theme-text-secondary text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop";
 
 const randomImg = () =>
-  `https://picsum.photos/seed/hotel-${Math.random() * 9999}/320/220`;
+  `https://picsum.photos/seed/hotel-${Math.floor(
+    Math.random() * 9999
+  )}/320/220`;
 
 function slugify(v: string) {
   return v
@@ -156,14 +177,14 @@ const HotelCreatePage: React.FC = () => {
 
   const stepsMeta = useMemo(
     () => [
-      { key: Step.TYPE, label: "Type" },
-      { key: Step.GENERAL, label: "General" },
-      { key: Step.MEDIA, label: "Media" },
-      { key: Step.PRICING, label: "Pricing" },
-      { key: Step.ROOMS, label: "Rooms" },
-      { key: Step.POLICIES, label: "Policies" },
-      { key: Step.SEO, label: "SEO & Publish" },
-      { key: Step.CONFIRM, label: "Confirmation" },
+      { key: Step.TYPE, label: "Loại dịch vụ" },
+      { key: Step.GENERAL, label: "Tổng quan" },
+      { key: Step.MEDIA, label: "Thư viện" },
+      { key: Step.PRICING, label: "Giá" },
+      { key: Step.ROOMS, label: "Phòng" },
+      { key: Step.POLICIES, label: "Chính sách" },
+      { key: Step.SEO, label: "SEO & Xuất bản" },
+      { key: Step.CONFIRM, label: "Hoàn tất" },
     ],
     []
   );
@@ -177,22 +198,22 @@ const HotelCreatePage: React.FC = () => {
     setErrors({});
   };
 
-  /* ===== Validation (simple) ===== */
+  /* ===== Validation ===== */
   const validateCurrent = (): boolean => {
     const e: Record<string, string> = {};
     if (step === Step.GENERAL) {
-      if (!draft.title) e.title = "Required";
-      if (!draft.short_description) e.short_description = "Required";
-      if (!draft.service_description) e.service_description = "Required";
-      if (!draft.area_id) e.area_id = "Required";
+      if (!draft.title) e.title = "Bắt buộc";
+      if (!draft.short_description) e.short_description = "Bắt buộc";
+      if (!draft.service_description) e.service_description = "Bắt buộc";
+      if (!draft.area_id) e.area_id = "Bắt buộc";
     }
     if (step === Step.MEDIA) {
       if (draft.image_gallery.length === 0)
-        e.image_gallery = "Need at least 1 image.";
+        e.image_gallery = "Cần ít nhất 1 hình ảnh.";
     }
     if (step === Step.PRICING) {
       if (!draft.base_price || draft.base_price <= 0)
-        e.base_price = "Base price > 0";
+        e.base_price = "Giá cơ bản phải > 0";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -211,13 +232,12 @@ const HotelCreatePage: React.FC = () => {
   const saveDraft = () => {
     setSaving(true);
     setTimeout(() => {
-      console.log("MOCK SAVE DRAFT", draft);
+      console.log("MOCK LƯU NHÁP", draft);
       setSaving(false);
     }, 500);
   };
 
   const publish = () => {
-    // Simple check
     if (
       !draft.title ||
       !draft.short_description ||
@@ -225,7 +245,7 @@ const HotelCreatePage: React.FC = () => {
       draft.image_gallery.length === 0 ||
       !draft.base_price
     ) {
-      alert("Chưa đủ dữ liệu để publish (mock).");
+      alert("Chưa đủ dữ liệu để xuất bản (mock).");
       return;
     }
     setSaving(true);
@@ -237,11 +257,11 @@ const HotelCreatePage: React.FC = () => {
         seo: { ...d.seo, publish_now: true },
       }));
       setSaving(false);
-      alert("Published (mock)!");
+      alert("Đã xuất bản (mock)!");
     }, 800);
   };
 
-  /* ===== Reusable small editors inside this file (để gọn) ===== */
+  /* ====== Mini Components ====== */
   const ChipInput: React.FC<{
     value: string[];
     onChange: (v: string[]) => void;
@@ -255,16 +275,16 @@ const HotelCreatePage: React.FC = () => {
       setTxt("");
     };
     return (
-      <div className="border rounded px-2 py-1 flex flex-wrap gap-1 bg-white focus-within:ring-1 ring-blue-500">
+      <div className={baseChipInputWrapper}>
         {value.map((c) => (
           <span
             key={c}
-            className="inline-flex items-center gap-1 text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 bg-light-secondary dark:bg-dark-secondary theme-text-primary text-caption-mobile sm:text-caption-tablet"
           >
             {c}
             <button
               onClick={() => onChange(value.filter((x) => x !== c))}
-              className="hover:text-red-600"
+              className="hover:opacity-70"
             >
               ×
             </button>
@@ -282,7 +302,7 @@ const HotelCreatePage: React.FC = () => {
             }
           }}
           placeholder={placeholder}
-          className="outline-none text-[11px] flex-1 min-w-[90px]"
+          className="outline-none bg-transparent flex-1 min-w-[90px] theme-text-primary text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop placeholder:theme-text-secondary"
         />
       </div>
     );
@@ -309,19 +329,19 @@ const HotelCreatePage: React.FC = () => {
       <div className="flex flex-col gap-3">
         <div
           onClick={add}
-          className="border-2 border-dashed rounded p-6 flex flex-col items-center gap-2 text-xs text-gray-500 cursor-pointer hover:bg-gray-50"
+          className="border-2 theme-border border-dashed rounded p-6 flex flex-col items-center gap-2 cursor-pointer theme-text-secondary hover:theme-bg-secondary text-body2-mobile sm:text-body2-tablet"
         >
-          <Upload className="w-5 h-5 text-gray-400" />
-          Thêm (mock) hình ảnh
+          <Upload className="w-5 h-5 icon-brand" />
+          Thêm hình ảnh (mock)
         </div>
         {errors.image_gallery && (
-          <div className="text-[11px] text-red-600">{errors.image_gallery}</div>
+          <div className={errorText}>{errors.image_gallery}</div>
         )}
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
           {draft.image_gallery.map((img) => (
             <div
               key={img.id}
-              className="relative group border rounded overflow-hidden bg-gray-100"
+              className="relative group border theme-border rounded overflow-hidden bg-light-card dark:bg-dark-card"
             >
               <img
                 src={img.url}
@@ -329,30 +349,31 @@ const HotelCreatePage: React.FC = () => {
                 className="object-cover w-full h-28"
                 loading="lazy"
               />
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition flex flex-col justify-between bg-black/35 p-1">
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition flex flex-col justify-between bg-black/40 p-1">
                 <div className="flex justify-end gap-1">
                   <button
                     onClick={() => remove(img.id)}
-                    className="p-1 bg-white/80 rounded hover:bg-white"
+                    className="p-1 bg-white/90 rounded hover:opacity-80"
                   >
-                    <Trash2 className="w-3 h-3 text-red-600" />
+                    <Trash2 className="w-3 h-3 theme-text-error" />
                   </button>
                 </div>
                 <div>
                   <button
                     onClick={() => setThumb(img.id)}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${
+                    className={[
+                      "flex items-center gap-1 px-2 py-0.5 rounded text-caption-mobile font-medium",
                       img.is_thumbnail
-                        ? "bg-yellow-400 text-black"
-                        : "bg-white/80 hover:bg-white"
-                    }`}
+                        ? "bg-light-success text-white"
+                        : "bg-white/90 hover:bg-white",
+                    ].join(" ")}
                   >
                     <Star
                       className={`w-3 h-3 ${
-                        img.is_thumbnail ? "fill-black" : "text-yellow-500"
+                        img.is_thumbnail ? "fill-white" : "text-light-warning"
                       }`}
                     />
-                    {img.is_thumbnail ? "Thumbnail" : "Set thumb"}
+                    {img.is_thumbnail ? "Ảnh đại diện" : "Đặt làm đại diện"}
                   </button>
                 </div>
               </div>
@@ -367,7 +388,7 @@ const HotelCreatePage: React.FC = () => {
     const addOpt = () => {
       const o: PriceOption = {
         id: Date.now().toString(),
-        option_name: "Default",
+        option_name: "Mặc định",
         price: draft.base_price || 0,
         currency_code: draft.currency_code,
         per_person: false,
@@ -387,24 +408,33 @@ const HotelCreatePage: React.FC = () => {
         price_options: draft.price_options.filter((o) => o.id !== id),
       });
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Price Options</h3>
+          <h3
+            className={
+              sectionTitle +
+              " !text-h5-mobile sm:!text-h5-tablet lg:!text-h5-desktop"
+            }
+          >
+            Tuỳ chọn giá
+          </h3>
           <button
             onClick={addOpt}
-            className="text-xs flex items-center gap-1 px-2 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700"
+            className="btn-primary btn-text-responsive px-4 py-2"
           >
-            <Plus className="w-3 h-3" /> Add Option
+            <span className="inline-flex items-center gap-1">
+              <Plus className="w-4 h-4" /> Thêm
+            </span>
           </button>
         </div>
         {draft.price_options.length === 0 && (
-          <div className="text-[11px] text-gray-500">Chưa có option.</div>
+          <div className={subtleText}>Chưa có tuỳ chọn.</div>
         )}
         <div className="flex flex-col gap-3">
           {draft.price_options.map((o) => (
             <div
               key={o.id}
-              className="border rounded p-3 bg-gray-50 flex flex-col gap-2"
+              className="border theme-border rounded p-3 theme-bg-card flex flex-col gap-2"
             >
               <div className="flex flex-wrap gap-2">
                 <input
@@ -412,15 +442,17 @@ const HotelCreatePage: React.FC = () => {
                   onChange={(e) =>
                     updateOpt(o.id, { option_name: e.target.value })
                   }
-                  className={smallInput + " flex-1 min-w-[120px]"}
+                  className={baseInput + " flex-1 min-w-[160px]"}
+                  placeholder="Tên option"
                 />
                 <input
                   type="number"
                   value={o.price}
                   onChange={(e) => updateOpt(o.id, { price: +e.target.value })}
-                  className={smallInput + " w-28"}
+                  className={baseInput + " w-32"}
+                  placeholder="Giá"
                 />
-                <label className="flex items-center gap-1 text-[11px]">
+                <label className="flex items-center gap-2 theme-text-primary text-body2-mobile sm:text-body2-tablet">
                   <input
                     type="checkbox"
                     checked={o.per_person}
@@ -428,13 +460,14 @@ const HotelCreatePage: React.FC = () => {
                       updateOpt(o.id, { per_person: e.target.checked })
                     }
                   />
-                  Per Person
+                  Tính theo người
                 </label>
                 <button
                   onClick={() => remove(o.id)}
-                  className="p-1 text-red-600 hover:bg-red-50 rounded"
+                  className="px-2 py-2 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary"
+                  title="Xoá"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4 theme-text-error" />
                 </button>
               </div>
               <textarea
@@ -443,8 +476,8 @@ const HotelCreatePage: React.FC = () => {
                   updateOpt(o.id, { description: e.target.value })
                 }
                 rows={2}
-                className="border rounded px-2 py-1 text-xs"
-                placeholder="Description"
+                className={baseTextarea}
+                placeholder="Mô tả (tuỳ chọn)"
               />
             </div>
           ))}
@@ -457,7 +490,7 @@ const HotelCreatePage: React.FC = () => {
     const addRoom = () => {
       const r: RoomType = {
         id: Date.now().toString(),
-        name: "Standard Room",
+        name: "Phòng Tiêu Chuẩn",
         capacity: 2,
         quantity_total: 10,
       };
@@ -474,37 +507,47 @@ const HotelCreatePage: React.FC = () => {
         room_types: draft.room_types.filter((r) => r.id !== id),
       });
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Room Types</h3>
+          <h3
+            className={
+              sectionTitle +
+              " !text-h5-mobile sm:!text-h5-tablet lg:!text-h5-desktop"
+            }
+          >
+            Loại phòng
+          </h3>
           <button
             onClick={addRoom}
-            className="text-xs flex items-center gap-1 px-2 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700"
+            className="btn-primary btn-text-responsive px-4 py-2"
           >
-            <Plus className="w-3 h-3" /> Add Room
+            <span className="inline-flex items-center gap-1">
+              <Plus className="w-4 h-4" /> Thêm
+            </span>
           </button>
         </div>
         {draft.room_types.length === 0 && (
-          <div className="text-[11px] text-gray-500">Chưa có room type.</div>
+          <div className={subtleText}>Chưa có loại phòng.</div>
         )}
         <div className="flex flex-col gap-3">
           {draft.room_types.map((r) => (
             <div
               key={r.id}
-              className="border rounded p-3 bg-gray-50 flex flex-col gap-2"
+              className="border theme-border rounded p-3 theme-bg-card flex flex-col gap-2"
             >
               <div className="flex flex-wrap gap-2">
                 <input
                   value={r.name}
                   onChange={(e) => upd(r.id, { name: e.target.value })}
-                  className={smallInput + " flex-1 min-w-[120px]"}
+                  className={baseInput + " flex-1 min-w-[180px]"}
+                  placeholder="Tên phòng"
                 />
                 <input
                   type="number"
                   value={r.capacity}
                   onChange={(e) => upd(r.id, { capacity: +e.target.value })}
-                  className={smallInput + " w-24"}
-                  placeholder="Capacity"
+                  className={baseInput + " w-28"}
+                  placeholder="Số khách"
                 />
                 <input
                   type="number"
@@ -512,39 +555,39 @@ const HotelCreatePage: React.FC = () => {
                   onChange={(e) =>
                     upd(r.id, { quantity_total: +e.target.value })
                   }
-                  className={smallInput + " w-28"}
-                  placeholder="Quantity"
+                  className={baseInput + " w-32"}
+                  placeholder="Số lượng"
                 />
                 <button
                   onClick={() => remove(r.id)}
-                  className="p-1 text-red-600 hover:bg-red-50 rounded"
+                  className="px-2 py-2 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary"
+                  title="Xoá"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4 theme-text-error" />
                 </button>
               </div>
               <textarea
                 value={r.notes || ""}
                 onChange={(e) => upd(r.id, { notes: e.target.value })}
                 rows={2}
-                className="border rounded px-2 py-1 text-xs"
-                placeholder="Notes"
+                className={baseTextarea}
+                placeholder="Ghi chú"
               />
             </div>
           ))}
         </div>
-        <div className="mt-2 text-[11px] text-gray-500">
-          Calendar inventory phức tạp sẽ làm sau.
+        <div className={subtleText}>
+          Quản lý tồn kho theo lịch chi tiết sẽ được bổ sung sau.
         </div>
       </div>
     );
   };
 
   const PoliciesAddons: React.FC = () => {
-    // Đơn giản: chỉ addons & vài booking settings
     const addAddon = () => {
       const a: AddonItem = {
         id: Date.now().toString(),
-        name: "Breakfast",
+        name: "Bữa sáng",
         price: 100000,
         currency_code: draft.currency_code,
         per_person: false,
@@ -582,109 +625,132 @@ const HotelCreatePage: React.FC = () => {
       });
 
     return (
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-8">
+        {/* Cancellation Policy */}
+        <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Cancellation Policy</h3>
+            <h3
+              className={
+                sectionTitle +
+                " !text-h5-mobile sm:!text-h5-tablet lg:!text-h5-desktop"
+              }
+            >
+              Chính sách huỷ
+            </h3>
             <button
               onClick={addPolicyTier}
-              className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
+              className="btn-outline btn-text-responsive px-4 py-2"
             >
-              <Plus className="w-3 h-3" /> Add Tier
+              <span className="inline-flex items-center gap-1">
+                <Plus className="w-4 h-4" /> Thêm mốc
+              </span>
             </button>
           </div>
           {draft.cancellation_policy.length === 0 && (
-            <div className="text-[11px] text-gray-500">Chưa có tier.</div>
+            <div className={subtleText}>Chưa có mốc.</div>
           )}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {draft.cancellation_policy.map((t) => (
               <div
                 key={t.id}
-                className="border rounded p-2 bg-gray-50 flex flex-col gap-2"
+                className="border theme-border rounded p-3 theme-bg-card flex flex-col gap-2"
               >
                 <div className="flex flex-wrap gap-2">
                   <input
                     type="number"
-                    className={smallInput + " w-20"}
+                    className={baseInput + " w-28"}
                     value={t.from_days}
                     onChange={(e) =>
                       updTier(t.id, { from_days: +e.target.value })
                     }
-                    placeholder="From"
+                    placeholder="Từ ngày"
                   />
                   <input
                     type="number"
-                    className={smallInput + " w-20"}
+                    className={baseInput + " w-28"}
                     value={t.to_days}
                     onChange={(e) =>
                       updTier(t.id, { to_days: +e.target.value })
                     }
-                    placeholder="To"
+                    placeholder="Đến ngày"
                   />
                   <input
                     type="number"
-                    className={smallInput + " w-24"}
+                    className={baseInput + " w-32"}
                     value={t.refund_percent ?? ""}
                     onChange={(e) =>
                       updTier(t.id, { refund_percent: +e.target.value })
                     }
-                    placeholder="%"
+                    placeholder="% hoàn"
                   />
                   <input
-                    className={smallInput + " flex-1 min-w-[140px]"}
+                    className={baseInput + " flex-1 min-w-[180px]"}
                     value={t.penalty_description || ""}
                     onChange={(e) =>
                       updTier(t.id, { penalty_description: e.target.value })
                     }
-                    placeholder="Penalty desc"
+                    placeholder="Mô tả phạt"
                   />
                   <button
                     onClick={() => removeTier(t.id)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    className="px-2 py-2 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary"
+                    title="Xoá"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 theme-text-error" />
                   </button>
                 </div>
-                <div className="text-[10px] text-gray-500">
-                  Không để khoảng ngày bị overlap (chưa validate).
+                <div className={subtleText}>
+                  Tránh khoảng ngày bị chồng lấn (chưa kiểm tra tự động).
                 </div>
               </div>
             ))}
           </div>
         </div>
 
+        {/* Addons */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Add-ons</h3>
+            <h3
+              className={
+                sectionTitle +
+                " !text-h5-mobile sm:!text-h5-tablet lg:!text-h5-desktop"
+              }
+            >
+              Dịch vụ bổ sung (Add-ons)
+            </h3>
             <button
               onClick={addAddon}
-              className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
+              className="btn-outline btn-text-responsive px-4 py-2"
             >
-              <Plus className="w-3 h-3" /> Add Addon
+              <span className="inline-flex items-center gap-1">
+                <Plus className="w-4 h-4" /> Thêm
+              </span>
             </button>
           </div>
           {draft.addons.length === 0 && (
-            <div className="text-[11px] text-gray-500">Chưa có addon.</div>
+            <div className={subtleText}>Chưa có addon.</div>
           )}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {draft.addons.map((a) => (
               <div
                 key={a.id}
-                className="border rounded p-2 bg-gray-50 flex flex-col gap-2"
+                className="border theme-border rounded p-3 theme-bg-card flex flex-col gap-2"
               >
                 <div className="flex flex-wrap gap-2">
                   <input
                     value={a.name}
                     onChange={(e) => updAddon(a.id, { name: e.target.value })}
-                    className={smallInput + " flex-1 min-w-[120px]"}
+                    className={baseInput + " flex-1 min-w-[160px]"}
+                    placeholder="Tên dịch vụ"
                   />
                   <input
                     type="number"
                     value={a.price}
                     onChange={(e) => updAddon(a.id, { price: +e.target.value })}
-                    className={smallInput + " w-24"}
+                    className={baseInput + " w-32"}
+                    placeholder="Giá"
                   />
-                  <label className="flex items-center gap-1 text-[11px]">
+                  <label className="flex items-center gap-2 theme-text-primary text-body2-mobile sm:text-body2-tablet">
                     <input
                       type="checkbox"
                       checked={a.per_person}
@@ -692,13 +758,14 @@ const HotelCreatePage: React.FC = () => {
                         updAddon(a.id, { per_person: e.target.checked })
                       }
                     />
-                    Per Person
+                    Theo khách
                   </label>
                   <button
                     onClick={() => remove(a.id)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    className="px-2 py-2 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary"
+                    title="Xoá"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 theme-text-error" />
                   </button>
                 </div>
                 <textarea
@@ -707,18 +774,21 @@ const HotelCreatePage: React.FC = () => {
                     updAddon(a.id, { description: e.target.value })
                   }
                   rows={2}
-                  className="border rounded px-2 py-1 text-xs"
-                  placeholder="Description"
+                  className={baseTextarea}
+                  placeholder="Mô tả (tuỳ chọn)"
                 />
               </div>
             ))}
           </div>
         </div>
 
-        <div className="border rounded p-3 flex flex-col gap-2">
-          <h4 className="text-xs font-semibold">Booking Settings</h4>
-          <div className="flex gap-4 flex-wrap text-[11px]">
-            <label className="flex items-center gap-1">
+        {/* Booking Settings */}
+        <div className="border theme-border rounded p-4 flex flex-col gap-3 theme-bg-card">
+          <h4 className="font-semibold theme-text-primary text-h5-mobile sm:text-h5-tablet lg:text-h5-desktop">
+            Cài đặt đặt phòng
+          </h4>
+          <div className="flex gap-6 flex-wrap text-body2-mobile sm:text-body2-tablet theme-text-primary">
+            <label className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={draft.booking_settings.auto_accept}
@@ -731,9 +801,9 @@ const HotelCreatePage: React.FC = () => {
                   })
                 }
               />
-              Auto Accept
+              Tự động chấp nhận
             </label>
-            <label className="flex items-center gap-1">
+            <label className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={
@@ -748,9 +818,9 @@ const HotelCreatePage: React.FC = () => {
                   })
                 }
               />
-              Cancel Needs Approval
+              Huỷ cần duyệt
             </label>
-            <label className="flex items-center gap-1">
+            <label className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={draft.booking_settings.require_passport_scan || false}
@@ -763,7 +833,7 @@ const HotelCreatePage: React.FC = () => {
                   })
                 }
               />
-              Require Passport
+              Yêu cầu quét hộ chiếu
             </label>
           </div>
           <textarea
@@ -777,8 +847,8 @@ const HotelCreatePage: React.FC = () => {
               })
             }
             rows={3}
-            className="border rounded px-2 py-1 text-xs"
-            placeholder="Terms & Conditions..."
+            className={baseTextarea}
+            placeholder="Điều khoản & điều kiện..."
           />
         </div>
       </div>
@@ -789,34 +859,36 @@ const HotelCreatePage: React.FC = () => {
     const setSeo = (patch: Partial<SeoConfig>) =>
       update({ seo: { ...draft.seo, ...patch } });
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-8">
         <div>
-          <h2 className="text-lg font-semibold mb-1">SEO & Publish</h2>
-          <p className="text-xs text-gray-500">
-            Cấu hình SEO và hành động xuất bản.
+          <h2 className={sectionTitle}>SEO & Xuất bản</h2>
+          <p className={sectionSubtitle}>
+            Thiết lập thông tin SEO và lịch xuất bản hiển thị.
           </p>
         </div>
-        <div className="grid md:grid-cols-2 gap-5">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium">SEO Title</label>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Tiêu đề SEO</label>
             <input
               value={draft.seo.seo_title || ""}
               onChange={(e) => setSeo({ seo_title: e.target.value })}
-              className={smallInput}
+              className={baseInput}
               maxLength={255}
+              placeholder="Tiêu đề ngắn gọn hấp dẫn"
             />
           </div>
-          <div className="flex flex-col gap-1 md:col-span-2">
-            <label className="text-xs font-medium">Meta Description</label>
+          <div className="flex flex-col gap-2 md:col-span-2">
+            <label className={labelCls}>Mô tả Meta</label>
             <textarea
               value={draft.seo.seo_description || ""}
               onChange={(e) => setSeo({ seo_description: e.target.value })}
               rows={3}
-              className="border rounded px-2 py-1 text-xs resize-y"
+              className={baseTextarea}
+              placeholder="Mô tả dùng cho công cụ tìm kiếm..."
             />
           </div>
-          <div className="flex flex-col gap-1 md:col-span-2">
-            <label className="text-xs font-medium">Meta Keywords (CSV)</label>
+          <div className="flex flex-col gap-2 md:col-span-2">
+            <label className={labelCls}>Từ khoá Meta (CSV)</label>
             <input
               value={(draft.seo.seo_keywords || []).join(",")}
               onChange={(e) =>
@@ -827,57 +899,59 @@ const HotelCreatePage: React.FC = () => {
                     .filter(Boolean),
                 })
               }
-              className={smallInput}
-              placeholder="hotel,resort,beach"
+              className={baseInput}
+              placeholder="khach-san,nghi-duong,bien"
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium">Visibility</label>
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Chế độ hiển thị</label>
             <select
               value={draft.seo.visibility}
               onChange={(e) =>
                 setSeo({ visibility: e.target.value as "public" | "private" })
               }
-              className={smallInput}
+              className={baseInput}
             >
-              <option value="public">Public</option>
-              <option value="private">Private</option>
+              <option value="public">Công khai</option>
+              <option value="private">Riêng tư</option>
             </select>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium">Publish Now?</label>
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Xuất bản ngay?</label>
             <select
               value={draft.seo.publish_now ? "yes" : "no"}
               onChange={(e) =>
                 setSeo({ publish_now: e.target.value === "yes" })
               }
-              className={smallInput}
+              className={baseInput}
             >
-              <option value="yes">Yes (Immediate)</option>
-              <option value="no">No (Schedule)</option>
+              <option value="yes">Có (ngay lập tức)</option>
+              <option value="no">Không (Đặt lịch)</option>
             </select>
           </div>
           {!draft.seo.publish_now && (
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium">Publish At</label>
+            <div className="flex flex-col gap-2">
+              <label className={labelCls}>Thời điểm xuất bản</label>
               <input
                 type="datetime-local"
                 value={draft.seo.publish_at || ""}
                 onChange={(e) => setSeo({ publish_at: e.target.value })}
-                className={smallInput}
+                className={baseInput}
               />
             </div>
           )}
         </div>
-        <div className="border rounded p-4">
-          <h3 className="text-sm font-semibold mb-2">Checklist</h3>
-          <ul className="text-[11px] text-gray-600 list-disc ml-4 space-y-1">
-            <li>{draft.title ? "✅" : "❌"} Title</li>
-            <li>{draft.short_description ? "✅" : "❌"} Short description</li>
+        <div className="border theme-border rounded p-4 theme-bg-card">
+          <h3 className="font-semibold theme-text-primary text-h5-mobile sm:text-h5-tablet lg:text-h5-desktop mb-2">
+            Danh sách kiểm tra
+          </h3>
+          <ul className="list-disc ml-5 space-y-1 text-body2-mobile sm:text-body2-tablet theme-text-primary">
+            <li>{draft.title ? "✅" : "❌"} Tiêu đề</li>
+            <li>{draft.short_description ? "✅" : "❌"} Mô tả ngắn</li>
             <li>
-              {draft.image_gallery.length > 0 ? "✅" : "❌"} At least 1 image
+              {draft.image_gallery.length > 0 ? "✅" : "❌"} Ít nhất 1 hình ảnh
             </li>
-            <li>{draft.base_price ? "✅" : "❌"} Base price</li>
+            <li>{draft.base_price ? "✅" : "❌"} Giá cơ bản</li>
           </ul>
         </div>
       </div>
@@ -885,55 +959,62 @@ const HotelCreatePage: React.FC = () => {
   };
 
   const Confirmation: React.FC = () => (
-    <div className="flex flex-col gap-6">
-      <h2 className="text-lg font-semibold">
-        Hoàn tất (Mock) – {draft.status === "published" ? "Published" : "Draft"}
+    <div className="flex flex-col gap-8">
+      <h2 className={sectionTitle}>
+        Hoàn tất (Mock) –{" "}
+        {draft.status === "published" ? "ĐÃ XUẤT BẢN" : "NHÁP"}
       </h2>
-      <div className="grid sm:grid-cols-2 gap-4 text-xs">
-        <div className={sectionCard}>
-          <h3 className="font-semibold mb-2 text-sm">Summary</h3>
+      <div className="grid sm:grid-cols-2 gap-6 text-body2-mobile sm:text-body2-tablet theme-text-primary">
+        <div className={baseCard}>
+          <h3 className="font-semibold text-h5-mobile sm:text-h5-tablet lg:text-h5-desktop">
+            Tóm tắt
+          </h3>
           <div className="flex flex-col gap-1">
             <div>
-              <strong>Title:</strong> {draft.title || "(empty)"}
+              <strong>Tiêu đề:</strong> {draft.title || "(trống)"}
             </div>
             <div>
-              <strong>Slug:</strong> {draft.slug || "(auto)"}
+              <strong>Slug:</strong> {draft.slug || "(tự sinh)"}
             </div>
             <div>
-              <strong>Images:</strong> {draft.image_gallery.length}
+              <strong>Số ảnh:</strong> {draft.image_gallery.length}
             </div>
             <div>
-              <strong>Room types:</strong> {draft.room_types.length}
+              <strong>Loại phòng:</strong> {draft.room_types.length}
             </div>
             <div>
-              <strong>Price options:</strong> {draft.price_options.length}
+              <strong>Tuỳ chọn giá:</strong> {draft.price_options.length}
             </div>
             <div>
-              <strong>SEO publish now:</strong>{" "}
-              {draft.seo.publish_now ? "Yes" : "No"}
+              <strong>Xuất bản ngay:</strong>{" "}
+              {draft.seo.publish_now ? "Có" : "Không"}
             </div>
           </div>
         </div>
-        <div className={sectionCard}>
-          <h3 className="font-semibold mb-2 text-sm">Next Steps</h3>
-          <ul className="list-disc ml-4 space-y-1">
-            <li className="text-[11px]">Thêm nội dung mô tả chi tiết hơn.</li>
-            <li className="text-[11px]">
+        <div className={baseCard}>
+          <h3 className="font-semibold text-h5-mobile sm:text-h5-tablet lg:text-h5-desktop">
+            Bước tiếp theo
+          </h3>
+          <ul className="list-disc ml-5 space-y-1">
+            <li className="text-caption-mobile sm:text-caption-tablet">
+              Bổ sung nội dung mô tả chi tiết hơn.
+            </li>
+            <li className="text-caption-mobile sm:text-caption-tablet">
               Kiểm tra lại chính sách huỷ & addons.
             </li>
-            <li className="text-[11px]">
-              Đồng bộ lên server khi API sẵn sàng.
+            <li className="text-caption-mobile sm:text-caption-tablet">
+              Đồng bộ lên máy chủ khi API sẵn sàng.
             </li>
           </ul>
         </div>
       </div>
-      <div className="text-[11px] text-gray-500">
-        Bạn có thể quay lại các bước để chỉnh sửa (tĩnh).
+      <div className={subtleText}>
+        Bạn có thể quay lại các bước trước để chỉnh sửa.
       </div>
     </div>
   );
 
-  /* ===== Auto slug (simple) ===== */
+  /* ===== Auto slug ===== */
   const handleTitleChange = (v: string) => {
     const patch: Partial<HotelDraft> = { title: v };
     if (!draft.slug) patch.slug = slugify(v);
@@ -945,28 +1026,30 @@ const HotelCreatePage: React.FC = () => {
     switch (step) {
       case Step.TYPE:
         return (
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-1">Select Type</h2>
-              <p className="text-xs text-gray-500">
-                Hiện tại cố định là Hotel. (Các service khác làm sau)
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <h2 className={sectionTitle}>Chọn loại dịch vụ</h2>
+              <p className={sectionSubtitle}>
+                Hiện tại chỉ hỗ trợ Khách sạn. (Các loại khác sẽ bổ sung sau)
               </p>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="border-2 border-blue-500 rounded-lg p-4 bg-blue-50 flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-medium text-sm">Hotel</h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="border-2 border-light-primary dark:border-dark-primary rounded-lg p-5 bg-light-secondary dark:bg-dark-secondary flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <Building2 className="w-6 h-6 icon-brand" />
+                  <h3 className="font-semibold theme-text-primary text-h5-mobile sm:text-h5-tablet lg:text-h5-desktop">
+                    Khách sạn
+                  </h3>
                 </div>
-                <ul className="text-[11px] text-gray-600 list-disc ml-4 space-y-1">
-                  <li>Room types & inventory</li>
-                  <li>Nhiều mức giá / options</li>
-                  <li>SEO & scheduling</li>
+                <ul className="list-disc ml-5 space-y-1 theme-text-secondary text-caption-mobile sm:text-caption-tablet">
+                  <li>Nhiều loại phòng & quản lý tồn kho</li>
+                  <li>Nhiều tuỳ chọn giá</li>
+                  <li>SEO & lịch xuất bản</li>
                 </ul>
                 <div className="mt-auto">
                   <button
                     onClick={next}
-                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700"
+                    className="btn-primary btn-text-responsive px-6 py-3"
                   >
                     Tiếp tục
                   </button>
@@ -977,51 +1060,48 @@ const HotelCreatePage: React.FC = () => {
         );
       case Step.GENERAL:
         return (
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-1">General</h2>
-              <p className="text-xs text-gray-500">
-                Thông tin mô tả cơ bản của khách sạn.
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <h2 className={sectionTitle}>Thông tin tổng quan</h2>
+              <p className={sectionSubtitle}>
+                Cung cấp mô tả cơ bản về khách sạn của bạn.
               </p>
             </div>
-            <div className="grid md:grid-cols-2 gap-5">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium">
-                  Title <span className="text-red-500">*</span>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className={labelCls}>
+                  Tiêu đề <span className="theme-text-error">*</span>
                 </label>
                 <input
                   value={draft.title || ""}
                   onChange={(e) => handleTitleChange(e.target.value)}
-                  className={smallInput}
-                  placeholder="Ví dụ: Blue Ocean Hotel"
+                  className={baseInput}
+                  placeholder="VD: Khách sạn Biển Xanh"
                 />
                 {errors.title && (
-                  <span className="text-[10px] text-red-600">
-                    {errors.title}
-                  </span>
+                  <span className={errorText}>{errors.title}</span>
                 )}
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium">
-                  Short Description <span className="text-red-500">*</span>
+              <div className="flex flex-col gap-2">
+                <label className={labelCls}>
+                  Mô tả ngắn <span className="theme-text-error">*</span>
                 </label>
                 <input
                   value={draft.short_description || ""}
                   onChange={(e) =>
                     update({ short_description: e.target.value })
                   }
-                  className={smallInput}
+                  className={baseInput}
                   maxLength={255}
+                  placeholder="Tóm tắt ngắn gọn..."
                 />
                 {errors.short_description && (
-                  <span className="text-[10px] text-red-600">
-                    {errors.short_description}
-                  </span>
+                  <span className={errorText}>{errors.short_description}</span>
                 )}
               </div>
-              <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-xs font-medium">
-                  Service Description <span className="text-red-500">*</span>
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <label className={labelCls}>
+                  Mô tả chi tiết <span className="theme-text-error">*</span>
                 </label>
                 <textarea
                   value={draft.service_description || ""}
@@ -1029,50 +1109,49 @@ const HotelCreatePage: React.FC = () => {
                     update({ service_description: e.target.value })
                   }
                   rows={6}
-                  className="border rounded px-2 py-1 text-xs resize-y focus:ring-1 ring-blue-500 outline-none"
+                  className={baseTextarea}
                   placeholder="Mô tả chi tiết (mock rich text)"
                 />
                 {errors.service_description && (
-                  <span className="text-[10px] text-red-600">
+                  <span className={errorText}>
                     {errors.service_description}
                   </span>
                 )}
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium">
-                  Area <span className="text-red-500">*</span>
+              <div className="flex flex-col gap-2">
+                <label className={labelCls}>
+                  Khu vực <span className="theme-text-error">*</span>
                 </label>
                 <select
                   value={draft.area_id || ""}
                   onChange={(e) => update({ area_id: e.target.value })}
-                  className={smallInput}
+                  className={baseInput}
                 >
                   <option value="">-- Chọn --</option>
                   <option value="hn">Hà Nội</option>
-                  <option value="hcm">TP.HCM</option>
+                  <option value="hcm">TP. Hồ Chí Minh</option>
                   <option value="dn">Đà Nẵng</option>
                   <option value="qn">Quảng Ninh</option>
-                  <option value="th">Thanh Hóa</option>
+                  <option value="th">Thanh Hoá</option>
                 </select>
                 {errors.area_id && (
-                  <span className="text-[10px] text-red-600">
-                    {errors.area_id}
-                  </span>
+                  <span className={errorText}>{errors.area_id}</span>
                 )}
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium">Slug</label>
+              <div className="flex flex-col gap-2">
+                <label className={labelCls}>Slug</label>
                 <input
                   value={draft.slug || ""}
                   onChange={(e) => update({ slug: e.target.value })}
-                  className={smallInput}
+                  className={baseInput}
+                  placeholder="slug-tu-dong"
                 />
-                <span className="text-[10px] text-gray-500">
-                  Tự sinh từ title (có thể sửa).
+                <span className={smallHelper}>
+                  Tự sinh từ tiêu đề (có thể sửa).
                 </span>
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium">Visibility</label>
+              <div className="flex flex-col gap-2">
+                <label className={labelCls}>Hiển thị</label>
                 <select
                   value={draft.visibility}
                   onChange={(e) =>
@@ -1080,39 +1159,40 @@ const HotelCreatePage: React.FC = () => {
                       visibility: e.target.value as "public" | "private",
                     })
                   }
-                  className={smallInput}
+                  className={baseInput}
                 >
-                  <option value="public">Public</option>
-                  <option value="private">Private</option>
+                  <option value="public">Công khai</option>
+                  <option value="private">Riêng tư</option>
                 </select>
               </div>
-              <div className="flex items-center gap-2 mt-6">
+              <div className="flex items-center gap-3 mt-8">
                 <input
                   id="featured"
                   type="checkbox"
                   checked={draft.is_featured}
                   onChange={(e) => update({ is_featured: e.target.checked })}
                 />
-                <label htmlFor="featured" className="text-xs">
-                  Featured
+                <label
+                  htmlFor="featured"
+                  className="theme-text-primary text-body2-mobile sm:text-body2-tablet"
+                >
+                  Nổi bật
                 </label>
               </div>
-              <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-xs font-medium">
-                  Languages Supported
-                </label>
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <label className={labelCls}>Ngôn ngữ hỗ trợ</label>
                 <ChipInput
                   value={draft.languages_supported}
                   onChange={(v) => update({ languages_supported: v })}
-                  placeholder="Enter language (Enter)"
+                  placeholder="Nhập ngôn ngữ (Enter)"
                 />
               </div>
-              <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-xs font-medium">Tags</label>
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <label className={labelCls}>Thẻ (Tags)</label>
                 <ChipInput
                   value={draft.tags}
                   onChange={(v) => update({ tags: v })}
-                  placeholder="Add tag"
+                  placeholder="Nhập thẻ (Enter)"
                 />
               </div>
             </div>
@@ -1120,17 +1200,17 @@ const HotelCreatePage: React.FC = () => {
         );
       case Step.MEDIA:
         return (
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-1">Media</h2>
-              <p className="text-xs text-gray-500">
-                Ảnh gallery, video, virtual tour (mock).
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <h2 className={sectionTitle}>Thư viện</h2>
+              <p className={sectionSubtitle}>
+                Quản lý hình ảnh, video và virtual tour (mock).
               </p>
             </div>
             <Gallery />
-            <div className="grid md:grid-cols-2 gap-5">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium">Video URLs (CSV)</label>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className={labelCls}>Video URLs (CSV)</label>
                 <input
                   value={draft.video_urls.join(",")}
                   onChange={(e) =>
@@ -1141,14 +1221,12 @@ const HotelCreatePage: React.FC = () => {
                         .filter(Boolean),
                     })
                   }
-                  className={smallInput}
+                  className={baseInput}
                   placeholder="https://youtu.be/..."
                 />
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium">
-                  Virtual Tours (CSV)
-                </label>
+              <div className="flex flex-col gap-2">
+                <label className={labelCls}>Virtual Tours (CSV)</label>
                 <input
                   value={draft.virtual_tours.join(",")}
                   onChange={(e) =>
@@ -1159,7 +1237,7 @@ const HotelCreatePage: React.FC = () => {
                         .filter(Boolean),
                     })
                   }
-                  className={smallInput}
+                  className={baseInput}
                   placeholder="https://example.com/360..."
                 />
               </div>
@@ -1168,17 +1246,17 @@ const HotelCreatePage: React.FC = () => {
         );
       case Step.PRICING:
         return (
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-1">Pricing</h2>
-              <p className="text-xs text-gray-500">
-                Giá cơ bản & nhiều price options.
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <h2 className={sectionTitle}>Giá</h2>
+              <p className={sectionSubtitle}>
+                Thiết lập giá cơ bản và nhiều tuỳ chọn giá.
               </p>
             </div>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium">
-                  Base Price (VND) <span className="text-red-500">*</span>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className={labelCls}>
+                  Giá cơ bản (VND) <span className="theme-text-error">*</span>
                 </label>
                 <input
                   type="number"
@@ -1190,27 +1268,26 @@ const HotelCreatePage: React.FC = () => {
                         : undefined,
                     })
                   }
-                  className={smallInput}
+                  className={baseInput}
+                  placeholder="0"
                 />
                 {errors.base_price && (
-                  <span className="text-[10px] text-red-600">
-                    {errors.base_price}
-                  </span>
+                  <span className={errorText}>{errors.base_price}</span>
                 )}
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium">Currency</label>
+              <div className="flex flex-col gap-2">
+                <label className={labelCls}>Đơn vị tiền tệ</label>
                 <select
                   value={draft.currency_code}
                   onChange={(e) => update({ currency_code: e.target.value })}
-                  className={smallInput}
+                  className={baseInput}
                 >
                   <option value="VND">VND</option>
                   <option value="USD">USD</option>
                 </select>
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium">Pricing Model</label>
+              <div className="flex flex-col gap-2">
+                <label className={labelCls}>Mô hình giá</label>
                 <select
                   value={draft.pricing_model}
                   onChange={(e) =>
@@ -1220,10 +1297,10 @@ const HotelCreatePage: React.FC = () => {
                         | "per_booking",
                     })
                   }
-                  className={smallInput}
+                  className={baseInput}
                 >
-                  <option value="per_booking">Per Booking</option>
-                  <option value="per_person">Per Person</option>
+                  <option value="per_booking">Theo đặt phòng</option>
+                  <option value="per_person">Theo khách</option>
                 </select>
               </div>
             </div>
@@ -1232,23 +1309,21 @@ const HotelCreatePage: React.FC = () => {
         );
       case Step.ROOMS:
         return (
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-1">Rooms</h2>
-              <p className="text-xs text-gray-500">
-                Quản lý các loại phòng (mock).
-              </p>
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <h2 className={sectionTitle}>Phòng</h2>
+              <p className={sectionSubtitle}>Quản lý các loại phòng (mock).</p>
             </div>
             <RoomTypesEditor />
           </div>
         );
       case Step.POLICIES:
         return (
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-1">Policies & Add-ons</h2>
-              <p className="text-xs text-gray-500">
-                Chính sách huỷ và addon bổ sung.
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <h2 className={sectionTitle}>Chính sách & Add-ons</h2>
+              <p className={sectionSubtitle}>
+                Thiết lập chính sách huỷ và dịch vụ bổ sung.
               </p>
             </div>
             <PoliciesAddons />
@@ -1266,12 +1341,12 @@ const HotelCreatePage: React.FC = () => {
   const finalStep = step === Step.CONFIRM;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">Create Hotel Listing</h1>
+    <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-8 theme-text-primary">
+      <h1 className={pageTitle}>Tạo listing khách sạn</h1>
 
       {/* Stepper */}
-      <div className="flex flex-col gap-3">
-        <div className="flex overflow-x-auto gap-2 no-scrollbar">
+      <div className="flex flex-col gap-4">
+        <div className="flex overflow-x-auto gap-3 no-scrollbar pb-1">
           {stepsMeta.map((s, i) => {
             const active = s.key === step;
             const visited = s.key <= maxVisited;
@@ -1281,15 +1356,20 @@ const HotelCreatePage: React.FC = () => {
                 disabled={!visited}
                 onClick={() => goStep(s.key)}
                 className={[
-                  "flex items-center gap-2 px-3 py-2 rounded border text-xs font-medium shrink-0",
+                  "flex items-center gap-2 px-4 py-2 rounded-full border theme-border text-caption-mobile sm:text-caption-tablet font-medium shrink-0 transition-colors",
                   active
-                    ? "bg-blue-600 text-white border-blue-600"
+                    ? "bg-light-primary dark:bg-dark-primary text-light-buttonText dark:text-dark-buttonText"
                     : visited
-                    ? "bg-white hover:bg-blue-50 border-gray-300 text-gray-700"
-                    : "bg-gray-100 text-gray-400 border-gray-200",
+                    ? "theme-bg-card hover:bg-light-secondary dark:hover:bg-dark-secondary"
+                    : "opacity-50 cursor-not-allowed",
                 ].join(" ")}
               >
-                <span className="w-5 h-5 rounded-full border flex items-center justify-center text-[10px] font-semibold">
+                <span
+                  className={[
+                    "w-6 h-6 rounded-full border flex items-center justify-center font-semibold",
+                    active ? "border-white" : "theme-border theme-text-primary",
+                  ].join(" ")}
+                >
                   {i + 1}
                 </span>
                 {s.label}
@@ -1297,9 +1377,9 @@ const HotelCreatePage: React.FC = () => {
             );
           })}
         </div>
-        <div className="h-1 bg-gray-200 rounded">
+        <div className="h-2 rounded bg-light-secondary dark:bg-dark-secondary">
           <div
-            className="h-full bg-blue-600 rounded transition-all"
+            className="h-full bg-light-primary dark:bg-dark-primary rounded transition-all"
             style={{
               width: `${
                 ((step - stepsMeta[0].key) /
@@ -1313,59 +1393,54 @@ const HotelCreatePage: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="bg-white border rounded-lg p-5 shadow-sm">
+      <div className="border theme-border rounded-xl p-6 theme-bg-card shadow-sm">
         {renderStep()}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex gap-3 flex-wrap">
           {step > Step.TYPE && (
             <button
               onClick={prev}
-              className="px-4 py-2 text-sm border rounded hover:bg-gray-50 flex items-center gap-1"
+              className="btn-outline btn-text-responsive px-6 py-3 flex items-center gap-2"
             >
               <ChevronLeft className="w-4 h-4" />
-              Back
+              Quay lại
             </button>
           )}
           <button
             onClick={saveDraft}
             disabled={saving}
-            className="px-4 py-2 text-sm border rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+            className="btn-secondary btn-text-responsive px-6 py-3 disabled:opacity-60 flex items-center gap-2"
           >
-            {saving ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Saving...
-              </span>
-            ) : (
-              "Save Draft"
-            )}
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            Lưu nháp
           </button>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3 flex-wrap">
           {finalStep && (
             <button
               onClick={publish}
               disabled={saving}
-              className="px-4 py-2 text-sm rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
+              className="btn-primary btn-text-responsive px-6 py-3 flex items-center gap-2 disabled:opacity-60"
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Publish
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              Xuất bản
             </button>
           )}
           {!finalStep && (
             <button
               onClick={next}
               disabled={saving}
-              className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+              className="btn-primary btn-text-responsive px-6 py-3 flex items-center gap-2 disabled:opacity-60"
             >
               {saving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <ChevronRight className="w-4 h-4" />
               )}
-              Next
+              Tiếp theo
             </button>
           )}
         </div>

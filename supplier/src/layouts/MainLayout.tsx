@@ -46,7 +46,7 @@ const sidebarMenuItems = [
   {
     icon: BarChart3,
     label: "dashboard",
-    to: "/provider/:id/dashboard",
+    to: "/supplier",
     badge: null,
   },
   {
@@ -411,12 +411,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <div
         className={`fixed inset-y-0 left-0 z-50 ${sidebarWidth} border-r theme-border transform transition-all duration-300 lg:translate-x-0 lg:static lg:inset-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } theme-bg-card`}
+        } theme-bg-background`}
       >
         <div className="flex flex-col h-full">
           {/* Logo & Collapse Button */}
           <div
-            className={`flex items-center gap-3 p-5 border-b theme-border ${
+            className={`flex items-center gap-3 p-3.5 border-b theme-border ${
               sidebarCollapsed ? "justify-center" : ""
             }`}
           >

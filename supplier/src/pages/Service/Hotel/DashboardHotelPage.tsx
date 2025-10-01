@@ -30,6 +30,7 @@ import {
   Sparkles,
   Layers3,
 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 /* ===================== Mock Types ===================== */
 type HotelStatus = "draft" | "published" | "archived" | "disabled";
@@ -348,6 +349,7 @@ const cx = (...c: Array<string | false | null | undefined>) =>
 
 /* ===================== Main Component ===================== */
 const DashboardHotelPage: React.FC = () => {
+  const navigate = useNavigate();
   /* Seeds */
   const [hotels] = useState<Hotel[]>(() => genHotels());
   const [reservations] = useState<Reservation[]>(() => genReservations(hotels));
@@ -379,16 +381,16 @@ const DashboardHotelPage: React.FC = () => {
     const all = ids.every((i) => selectedIds.has(i));
     setSelectedIds(all ? new Set() : new Set(ids));
   };
-const toggleSelectOne = (id: number) =>
-  setSelectedIds((prev) => {
-    const next = new Set(prev);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    return next;
-  });
+  const toggleSelectOne = (id: number) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
 
   /* Filtered hotels */
   const filteredHotels = useMemo(() => {
@@ -623,7 +625,7 @@ const toggleSelectOne = (id: number) =>
           <div className="ml-auto flex gap-2">
             <button className="btn-primary btn-text-responsive flex items-center gap-2">
               <Plus className="w-4 h-4" />
-              Tạo khách sạn
+              <Link to="/supplier/service/hotel/create">Tạo khách sạn</Link>
             </button>
             <button className="btn-outline btn-text-responsive flex items-center gap-2">
               <BedDouble className="w-4 h-4" />
@@ -930,7 +932,12 @@ const toggleSelectOne = (id: number) =>
                           <div className="flex flex-wrap gap-1">
                             {[
                               { ic: Eye, t: "Xem" },
-                              { ic: Pencil, t: "Sửa" },
+                              {
+                                ic: Pencil,
+                                t: "Sửa",
+                                action: () =>
+                                  navigate("/supplier/service/hotel/edit"),
+                              },
                               { ic: CalendarDays, t: "Lịch" },
                               { ic: BookOpen, t: "Bookings" },
                               { ic: Video, t: "Virtual" },
@@ -942,8 +949,11 @@ const toggleSelectOne = (id: number) =>
                               return (
                                 <button
                                   key={i}
+                                  type="button"
+                                  onClick={a.action}
                                   className="p-1 hover:text-blue-600 dark:hover:text-blue-400"
                                   title={a.t}
+                                  disabled={!a.action}
                                 >
                                   <Icon className="w-4 h-4" />
                                 </button>
