@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import logo from "../../assets/images/logo.png";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Mail, Eye, EyeOff, X, Loader2 } from "lucide-react";
-import googleLogo from "../../assets/images/7123025_logo_google_g_icon.png";
 import { useSupplierLogin } from "../../hooks/useLogin";
 import type { LoginRequest } from "../../types";
 import { useGoogleLogin } from "../../hooks/useGoogleLogin";
@@ -18,39 +17,60 @@ const SupplierLoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { isLoading, error, data, handleLogin } = useSupplierLogin();
+
+  const { isLoading, error, data, needsProviderInfo, handleLogin } =
+    useSupplierLogin();
   const {
     isReady,
     isLoading: isGoogleLoading,
     error: googleError,
     data: googleData,
+    needsProviderInfo: googleNeedsProviderInfo,
     renderButton,
-    promptOneTap,
   } = useGoogleLogin();
+
   const googleBtnRef = useRef<HTMLDivElement | null>(null);
   const setGoogleBtnRef = useCallback(
     (node: HTMLDivElement | null) => {
       googleBtnRef.current = node;
       if (node && isReady) {
-        // Ensure clean container to avoid duplicate buttons
-        node.innerHTML = "";
-        renderButton(node);
+        // Wait for next tick to ensure container has full width
+        requestAnimationFrame(() => {
+          if (node) {
+            node.innerHTML = "";
+            renderButton(node, {
+              size: "large",
+              width: node.clientWidth,
+              theme: "outline",
+            });
+          }
+        });
       }
     },
     [isReady, renderButton]
   );
 
+  // Handle email/password login redirect
   useEffect(() => {
     if (data?.token) {
-      navigate("/supplier", { replace: true });
+      if (needsProviderInfo) {
+        navigate("/supplier/provider-info", { replace: true });
+      } else {
+        navigate("/supplier", { replace: true });
+      }
     }
-  }, [data, navigate]);
+  }, [data, needsProviderInfo, navigate]);
 
+  // Handle Google login redirect
   useEffect(() => {
     if (googleData?.token) {
-      navigate("/supplier", { replace: true });
+      if (googleNeedsProviderInfo) {
+        navigate("/supplier/provider-info", { replace: true });
+      } else {
+        navigate("/supplier", { replace: true });
+      }
     }
-  }, [googleData, navigate]);
+  }, [googleData, googleNeedsProviderInfo, navigate]);
 
   useEffect(() => {
     document.title = t("login");
@@ -64,15 +84,19 @@ const SupplierLoginPage: React.FC = () => {
   useEffect(() => {
     const node = googleBtnRef.current;
     if (isReady && node) {
-      // If ref was set before GIS readiness, render now
-      if (node.childElementCount === 0) {
-        node.innerHTML = "";
-        renderButton(node);
-      }
-      // Optionally show One Tap
-      // promptOneTap();
+      // Re-render with correct width after layout is complete
+      requestAnimationFrame(() => {
+        if (node && node.childElementCount === 0) {
+          node.innerHTML = "";
+          renderButton(node, {
+            size: "large",
+            width: node.clientWidth,
+            theme: "outline",
+          });
+        }
+      });
     }
-  }, [isReady, renderButton, promptOneTap]);
+  }, [isReady, renderButton]);
 
   const submit = useCallback(
     async (e: React.FormEvent) => {
@@ -85,6 +109,7 @@ const SupplierLoginPage: React.FC = () => {
 
   return (
     <main className="relative overflow-hidden min-h-screen w-full flex items-center justify-center px-4 py-10 sm:py-12">
+      {/* Background decorations */}
       <div
         className="pointer-events-none absolute inset-0 -z-10"
         aria-hidden="true"
@@ -99,6 +124,7 @@ const SupplierLoginPage: React.FC = () => {
 
       <div className="w-full max-w-md sm:max-w-md md:max-w-lg relative">
         <div className="w-full rounded-2xl theme-bg-card/95 backdrop-blur theme-border theme-text-primary p-6 sm:p-8 shadow-xl ring-1 ring-black/5">
+          {/* Close button */}
           <Link
             to="/supplier"
             className="theme-dibutton absolute top-4 right-4"
@@ -107,6 +133,7 @@ const SupplierLoginPage: React.FC = () => {
             <X className="h-5 w-5" aria-hidden="true" />
           </Link>
 
+          {/* Logo */}
           <div className="flex justify-center mb-4">
             <div className="p-2 rounded-full border theme-border bg-white">
               <img
@@ -118,6 +145,7 @@ const SupplierLoginPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Title */}
           <h1
             id="login-title"
             className="text-h4-mobile sm:text-h3-tablet lg:text-h2-desktop text-center font-semibold"
@@ -128,32 +156,38 @@ const SupplierLoginPage: React.FC = () => {
             {t("login_account")}
           </p>
 
+          {/* Form Area */}
           <div className="mt-6 sm:mt-8 flex flex-col gap-3 sm:gap-4">
             {!showEmailForm ? (
               <>
-                <div className="w-full max-w-[400px] mx-auto">
-                  <div
-                    ref={setGoogleBtnRef}
-                    className="w-full flex justify-center"
-                  />
-                  {!isReady && (
-                    <button
-                      ref={firstActionRef}
-                      type="button"
-                      className="btn-outline w-full max-w-[400px] mx-auto flex items-center justify-center gap-3 h-10 sm:h-10"
-                      disabled
-                    >
-                      <img className="h-5 w-5" src={googleLogo} alt="Google" />
-                      <span className="btn-text-responsive font-semibold">
-                        {t("login_with_google")}
-                      </span>
-                    </button>
-                  )}
+                {/* Google Login Button - Full Width Container with CSS Override */}
+                <div
+                  ref={setGoogleBtnRef}
+                  className="w-full"
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                />
+
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t theme-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="px-2 theme-bg-card theme-text-secondary">
+                      {t("or")}
+                    </span>
+                  </div>
                 </div>
 
+                {/* Email Login Button */}
                 <button
+                  ref={firstActionRef}
                   type="button"
-                  className="btn-outline w-full max-w-[400px] mx-auto flex items-center justify-center gap-3 h-10 sm:h-10"
+                  className="btn-outline w-full flex items-center justify-center gap-2 py-2 sm:py-2"
                   onClick={() => setShowEmailForm(true)}
                 >
                   <Mail
@@ -167,91 +201,103 @@ const SupplierLoginPage: React.FC = () => {
                 </button>
               </>
             ) : (
-              <form
-                onSubmit={submit}
-                className="flex flex-col gap-3 sm:gap-4"
-                noValidate
-                aria-labelledby="login-title"
-              >
-                <label className="text-body1-mobile font-medium theme-text-secondary">
-                  {t("email_account")}
-                  <input
-                    ref={emailRef}
-                    id="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t("ent_email_account")}
-                    autoComplete="email"
-                    className="w-full mt-1 rounded-lg border theme-border bg-transparent px-3 py-3"
-                  />
-                </label>
-
-                <label className="text-body1-mobile font-medium theme-text-secondary">
-                  {t("passw_account")}
-                  <div className="relative mt-1">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={t("ent_passw_account")}
-                      autoComplete="current-password"
-                      className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((s) => !s)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5" />
-                      ) : (
-                        <Eye className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </label>
-
-                <div className="flex justify-end">
-                  <Link
-                    to="/supplier/forget-account"
-                    className="link-brand text-caption-mobile"
-                  >
-                    {t("forg_account_txt")}
-                  </Link>
-                </div>
-
-                {(error || googleError) && (
-                  <div
-                    className="text-red-500 text-center text-sm py-2"
-                    role="alert"
-                    aria-live="assertive"
-                  >
-                    {error || googleError}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="btn-primary w-full h-12 rounded-full font-semibold mt-5 flex items-center justify-center disabled:opacity-50"
-                  disabled={!email || !password || isLoading}
-                  aria-disabled={!email || !password || isLoading}
+              <>
+                {/* Email/Password Form */}
+                <form
+                  onSubmit={submit}
+                  className="flex flex-col gap-3 sm:gap-4"
+                  noValidate
+                  aria-labelledby="login-title"
                 >
-                  {isLoading || isGoogleLoading ? (
-                    <>
-                      <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                      {t("login")}
-                    </>
-                  ) : (
-                    t("login")
+                  {/* Email Field */}
+                  <label className="text-body1-mobile font-medium theme-text-secondary">
+                    {t("email_account")}
+                    <input
+                      ref={emailRef}
+                      id="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder={t("ent_email_account")}
+                      autoComplete="email"
+                      className="w-full mt-1 rounded-lg border theme-border bg-transparent px-3 py-3"
+                    />
+                  </label>
+
+                  {/* Password Field */}
+                  <label className="text-body1-mobile font-medium theme-text-secondary">
+                    {t("passw_account")}
+                    <div className="relative mt-1">
+                      <input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={t("ent_passw_account")}
+                        autoComplete="current-password"
+                        className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((s) => !s)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2"
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </label>
+
+                  {/* Forgot Password Link */}
+                  <div className="flex justify-end">
+                    <Link
+                      to="/supplier/forget-account"
+                      className="link-brand text-caption-mobile"
+                    >
+                      {t("forg_account_txt")}
+                    </Link>
+                  </div>
+
+                  {/* Error Messages */}
+                  {(error || googleError) && (
+                    <div
+                      className="text-red-500 text-center text-sm py-2"
+                      role="alert"
+                      aria-live="assertive"
+                    >
+                      {error || googleError}
+                    </div>
                   )}
-                </button>
-              </form>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    className="btn-primary w-full h-12 rounded-full font-semibold mt-5 flex items-center justify-center disabled:opacity-50"
+                    disabled={!email || !password || isLoading}
+                    aria-disabled={!email || !password || isLoading}
+                  >
+                    {isLoading || isGoogleLoading ? (
+                      <>
+                        <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                        {t("login")}
+                      </>
+                    ) : (
+                      t("login")
+                    )}
+                  </button>
+                </form>
+              </>
             )}
 
+            {/* Register Link */}
             <p className="text-center text-caption-mobile mt-2 theme-text-secondary">
               {t("dont_have_an_account")}{" "}
               <Link to="/supplier/register" className="link-brand">

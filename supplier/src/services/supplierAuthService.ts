@@ -7,6 +7,7 @@ import type {
   RawLoginResponse,
 } from "../types";
 import axios from "axios";
+import { getProviderByUserId } from "./providerService";
 
 export const registerSupplier = async (
   userData: UserDTO
@@ -105,10 +106,16 @@ export const loginSupplierWithGoogle = async (
     const data = resp.data as GoogleLoginResponse;
 
     // Normalize possible shapes
-    const tokenValue = data.token ?? data.jwt ?? data.access_token ?? data.accessToken;
+    const tokenValue =
+      data.token ?? data.jwt ?? data.access_token ?? data.accessToken;
 
     const userId = data.userId ?? data.user?.id ?? data.user?.userId;
-    const name = data.name ?? data.fullName ?? data.user?.name ?? data.user?.fullName ?? "";
+    const name =
+      data.name ??
+      data.fullName ??
+      data.user?.name ??
+      data.user?.fullName ??
+      "";
     const email = data.email ?? data.user?.email ?? "";
 
     if (!tokenValue || !userId || !email) {
@@ -217,5 +224,14 @@ export const resetPassword = async (
     throw new Error(
       extractErrorMessage(error, "Cập nhật mật khẩu thất bại, vui lòng thử lại")
     );
+  }
+};
+
+export const checkProviderStatus = async (userId: number): Promise<boolean> => {
+  try {
+    const provider = await getProviderByUserId(userId);
+    return provider !== null;
+  } catch {
+    return false;
   }
 };

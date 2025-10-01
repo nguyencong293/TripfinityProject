@@ -53,3 +53,34 @@ export interface ResetPasswordRequest {
   newPassword: string;
   newConfirmPassword: string;
 }
+
+export interface ProviderDTO {
+  providerId?: number;
+  userId: number;
+  companyName: string;
+  taxCode: string;
+  address: string;
+  contactEmail: string;
+  contactPhone: string;
+  bankAccountNumber?: string;
+  bankName?: string;
+  logoUrl?: string;
+  providerDescription?: string;
+  ratingOverall?: number;
+  providerStatus?: "pending" | "approved" | "rejected";
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateProviderRequest {
+  userId: number;
+  companyName: string;
+  taxCode: string;
+  address: string;
+  contactEmail: string;
+  contactPhone: string;
+  bankAccountNumber?: string;
+  bankName?: string;
+  logoUrl?: string;
+  providerDescription?: string;
+}

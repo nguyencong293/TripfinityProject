@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loginSupplierWithGoogle } from "../services/supplierAuthService";
+import { getProviderByUserId } from "../services/providerService";
 import type { ApiResponse, LoginResponse } from "../types";
 
 const GOOGLE_CLIENT_ID =
@@ -12,6 +13,7 @@ export const useGoogleLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<LoginResponse | null>(null);
+  const [needsProviderInfo, setNeedsProviderInfo] = useState(false);
   const scriptLoaded = useRef(false);
 
   useEffect(() => {
@@ -42,12 +44,27 @@ export const useGoogleLogin = () => {
   const handleCredential = useCallback(async (credential: string) => {
     setIsLoading(true);
     setError(null);
+    setNeedsProviderInfo(false);
+
     try {
       const resp: ApiResponse<LoginResponse> = await loginSupplierWithGoogle(
         credential
       );
-      setData(resp.data);
-      return resp.data;
+
+      if (resp && resp.success && resp.data) {
+        // Check if user has provider info
+        const provider = await getProviderByUserId(resp.data.userId);
+
+        if (!provider) {
+          // User doesn't have provider info yet
+          setNeedsProviderInfo(true);
+        }
+
+        setData(resp.data);
+        return resp.data;
+      } else {
+        throw new Error(resp?.message || "Đăng nhập Google thất bại");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Đăng nhập Google thất bại");
       throw e;
@@ -99,7 +116,15 @@ export const useGoogleLogin = () => {
     g?.accounts.id.prompt();
   }, [isReady, handleCredential]);
 
-  return { isReady, isLoading, error, data, renderButton, promptOneTap };
+  return {
+    isReady,
+    isLoading,
+    error,
+    data,
+    needsProviderInfo,
+    renderButton,
+    promptOneTap,
+  };
 };
 
 export default useGoogleLogin;

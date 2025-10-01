@@ -12,34 +12,41 @@ import DashboardRestaurantPage from "../pages/Service/Restaurant/DashboardRestau
 import DashboardAttractionPage from "../pages/Service/Attraction/DashboardAttractionPage";
 import HotelCreatePage from "../pages/Service/Hotel/HotelCreatePage";
 import HotelEditPage from "../pages/Service/Hotel/HotelEditPage";
+import ProviderInfoPage from "../pages/Auth/ProviderInfoPage";
+import ProtectedRoute from "./ProtectedRoute";
 
 const AppRoutes: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* supplier routes */}
-        <Route path="/supplier" element={<App />}>
-          <Route index element={<SupplierHomePage />} />
-          <Route path="listings" element={<ListingsPage />} />
-          <Route path="service/tour" element={<DashboardTourPage />} />
-          <Route path="service/hotel" element={<DashboardHotelPage />} />
-          <Route path="service/hotel/create" element={<HotelCreatePage />} />
-          <Route path="service/hotel/edit" element={<HotelEditPage />} />
-          <Route
-            path="service/attraction"
-            element={<DashboardAttractionPage />}
-          />
-          <Route
-            path="service/restaurant"
-            element={<DashboardRestaurantPage />}
-          />
-        </Route>
+        {/* Public routes */}
         <Route path="/supplier/login" element={<SupplierLoginPage />} />
         <Route path="/supplier/register" element={<SupplierRegisterPage />} />
+        <Route path="/supplier/provider-info" element={<ProviderInfoPage />} />
         <Route
           path="/supplier/forget-account"
           element={<SupplierForgetAccountPage />}
         />
+
+        {/* Protected routes - requires provider info */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/supplier" element={<App />}>
+            <Route index element={<SupplierHomePage />} />
+            <Route path="listings" element={<ListingsPage />} />
+            <Route path="service/tour" element={<DashboardTourPage />} />
+            <Route path="service/hotel" element={<DashboardHotelPage />} />
+            <Route path="service/hotel/create" element={<HotelCreatePage />} />
+            <Route path="service/hotel/edit" element={<HotelEditPage />} />
+            <Route
+              path="service/attraction"
+              element={<DashboardAttractionPage />}
+            />
+            <Route
+              path="service/restaurant"
+              element={<DashboardRestaurantPage />}
+            />
+          </Route>
+        </Route>
       </Routes>
     </BrowserRouter>
   );
