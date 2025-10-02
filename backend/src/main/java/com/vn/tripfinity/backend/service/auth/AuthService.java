@@ -111,12 +111,16 @@ public class AuthService {
 
     private User findOrCreateProvider(String email,
             String name,
-            String avatar) {
+            String googleAvatarUrl) {
         return userRepository.findByEmail(email).orElseGet(() -> {
             User newUser = new User();
             newUser.setEmail(email);
             newUser.setFullName(name);
-            newUser.setAvatarUrl(avatar);
+
+            // Upload ảnh Google lên Cloudinary
+            String cloudinaryAvatarUrl = userService.uploadAvatarFromUrl(googleAvatarUrl);
+            newUser.setAvatarUrl(cloudinaryAvatarUrl);
+
             newUser.setAccountStatus(User.AccountStatus.active);
             newUser.setAccountRole(User.AccountRole.provider);
             newUser.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
@@ -186,12 +190,16 @@ public class AuthService {
 
     private User findOrCreateUser(String email,
             String name,
-            String avatar) {
+            String googleAvatarUrl) {
         return userRepository.findByEmail(email).orElseGet(() -> {
             User newUser = new User();
             newUser.setEmail(email);
             newUser.setFullName(name);
-            newUser.setAvatarUrl(avatar);
+
+            // Upload ảnh Google lên Cloudinary
+            String cloudinaryAvatarUrl = userService.uploadAvatarFromUrl(googleAvatarUrl);
+            newUser.setAvatarUrl(cloudinaryAvatarUrl);
+
             newUser.setAccountStatus(User.AccountStatus.active);
             newUser.setAccountRole(User.AccountRole.tourist);
             newUser.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));

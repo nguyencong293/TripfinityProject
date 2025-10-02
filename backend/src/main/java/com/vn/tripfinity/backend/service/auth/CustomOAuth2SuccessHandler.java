@@ -42,24 +42,31 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
         String email = oauth2User.getAttribute("email");
         String name = oauth2User.getAttribute("name");
-        String avatar = oauth2User.getAttribute("picture");
+        String googleAvatarUrl = oauth2User.getAttribute("picture");
+
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
             String randomPassword = UUID.randomUUID().toString();
             user = new User();
             user.setEmail(email);
             user.setFullName(name);
-            user.setAvatarUrl(avatar);
+
+            // Upload ảnh Google lên Cloudinary
+            String cloudinaryAvatarUrl = userService.uploadAvatarFromUrl(googleAvatarUrl);
+            user.setAvatarUrl(cloudinaryAvatarUrl);
+
             user.setAccountRole(User.AccountRole.tourist);
             user.setAccountStatus(User.AccountStatus.active);
             user.setPasswordHash(passwordEncoder.encode(randomPassword));
             userRepository.save(user);
             userService.sendWelcomeEmail(user);
         }
+
         UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPasswordHash(),
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getAccountRole().name())));
+
         // Sinh token JWT
         String jwt = tokenProvider.generateToken(userDetails);
 

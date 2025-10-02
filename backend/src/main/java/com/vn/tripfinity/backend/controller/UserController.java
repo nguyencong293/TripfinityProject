@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -30,6 +31,13 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    @GetMapping("/{userId}")
+    public ResponseEntity<UserDTO> getUserById(@PathVariable Integer userId) {
+        log.info("Get /api/users/{} - Getting user by ID", userId);
+        UserDTO user = userService.getUserById(userId);
+        return ResponseEntity.ok(user);
+    }
+
     @PostMapping("/provider")
     public ResponseEntity<UserDTO> creatUserProvider(@Valid @RequestBody UserDTO userDTO) {
         UserDTO createUserProvider = userService.creatUserProvider(userDTO);
@@ -41,6 +49,41 @@ public class UserController {
         log.info("Create /api/users - Creating user {}", userDTO);
         UserDTO createUser = userService.createUser(userDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createUser);
+    }
+
+    @PutMapping("/{userId}")
+    public ResponseEntity<UserDTO> updateUser(
+            @PathVariable Integer userId,
+            @Valid @RequestBody UserDTO userDTO) {
+        log.info("Put /api/users/{} - Updating user", userId);
+        UserDTO updatedUser = userService.updateUser(userId, userDTO);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PostMapping("/{userId}/avatar")
+    public ResponseEntity<UserDTO> uploadAvatar(
+            @PathVariable Integer userId,
+            @RequestParam("file") MultipartFile file) {
+        log.info("Post /api/users/{}/avatar - Uploading avatar", userId);
+        try {
+            UserDTO updatedUser = userService.uploadAvatar(userId, file);
+            return ResponseEntity.ok(updatedUser);
+        } catch (Exception e) {
+            log.error("Error uploading avatar for user {}: {}", userId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @DeleteMapping("/{userId}/avatar")
+    public ResponseEntity<UserDTO> deleteAvatar(@PathVariable Integer userId) {
+        log.info("Delete /api/users/{}/avatar - Deleting avatar", userId);
+        try {
+            UserDTO updatedUser = userService.deleteAvatar(userId);
+            return ResponseEntity.ok(updatedUser);
+        } catch (Exception e) {
+            log.error("Error deleting avatar for user {}: {}", userId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PostMapping("/forgot-password")

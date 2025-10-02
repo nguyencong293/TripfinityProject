@@ -6,14 +6,20 @@ import com.vn.tripfinity.backend.exception.PasswordMismatchException;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.UserRepository;
+import com.vn.tripfinity.backend.service.cloudinary.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -25,10 +31,18 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailTemplateService emailTemplateService;
+    private final CloudinaryService cloudinaryService;
 
     public List<UserDTO> getAllUsers() {
         log.debug("Lấy toàn bộ người dùng");
         return userRepository.findAll().stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
+
+    public UserDTO getUserById(Integer userId) {
+        log.debug("Lấy user theo ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + userId));
+        return convertToDTO(user);
     }
 
     public UserDTO creatUserProvider(UserDTO userDTO) {
@@ -71,6 +85,152 @@ public class UserService {
         sendWelcomeEmail(savedUser);
 
         return convertToDTO(savedUser);
+    }
+
+    public UserDTO updateUser(Integer userId, UserDTO userDTO) {
+        log.debug("Cập nhật User ID: {}", userId);
+        User existingUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + userId));
+
+        // Cập nhật các trường được phép
+        if (userDTO.getFullName() != null) {
+            existingUser.setFullName(userDTO.getFullName());
+        }
+        if (userDTO.getPhoneNumber() != null) {
+            existingUser.setPhoneNumber(userDTO.getPhoneNumber());
+        }
+        if (userDTO.getDateOfBirth() != null) {
+            existingUser.setDateOfBirth(userDTO.getDateOfBirth());
+        }
+        if (userDTO.getGender() != null) {
+            existingUser.setGender(User.Gender.valueOf(userDTO.getGender()));
+        }
+
+        User updatedUser = userRepository.save(existingUser);
+        log.info("Đã cập nhật User ID: {}", updatedUser.getUserId());
+
+        return convertToDTO(updatedUser);
+    }
+
+    public UserDTO uploadAvatar(Integer userId, MultipartFile file) throws IOException {
+        log.debug("Upload avatar cho User ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + userId));
+
+        // Xóa avatar cũ nếu có
+        if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImageByUrl(user.getAvatarUrl());
+                log.info("Đã xóa avatar cũ: {}", user.getAvatarUrl());
+            } catch (Exception e) {
+                log.warn("Không thể xóa avatar cũ: {}", e.getMessage());
+            }
+        }
+
+        // Upload avatar mới
+        Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
+        String avatarUrl = (String) uploadResult.get("secure_url");
+
+        user.setAvatarUrl(avatarUrl);
+        User savedUser = userRepository.save(user);
+        log.info("Đã upload avatar mới cho User ID: {}", savedUser.getUserId());
+
+        return convertToDTO(savedUser);
+    }
+
+    public UserDTO deleteAvatar(Integer userId) throws IOException {
+        log.debug("Xóa avatar cho User ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + userId));
+
+        // Xóa avatar trên Cloudinary
+        if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImageByUrl(user.getAvatarUrl());
+                log.info("Đã xóa avatar: {}", user.getAvatarUrl());
+            } catch (Exception e) {
+                log.warn("Không thể xóa avatar: {}", e.getMessage());
+            }
+        }
+
+        user.setAvatarUrl(null);
+        User savedUser = userRepository.save(user);
+        log.info("Đã xóa avatar cho User ID: {}", savedUser.getUserId());
+
+        return convertToDTO(savedUser);
+    }
+
+    /**
+     * Upload ảnh từ URL (dùng cho Google OAuth) lên Cloudinary
+     */
+    public String uploadAvatarFromUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return null;
+        }
+
+        try {
+            log.info("Đang tải ảnh từ URL: {}", imageUrl);
+            URL url = new URL(imageUrl);
+
+            // Tải ảnh từ URL
+            try (InputStream inputStream = url.openStream()) {
+                // Tạo MultipartFile từ InputStream
+                MultipartFile multipartFile = new MultipartFile() {
+                    @Override
+                    public String getName() {
+                        return "avatar";
+                    }
+
+                    @Override
+                    public String getOriginalFilename() {
+                        return "google-avatar.jpg";
+                    }
+
+                    @Override
+                    public String getContentType() {
+                        return "image/jpeg";
+                    }
+
+                    @Override
+                    public boolean isEmpty() {
+                        return false;
+                    }
+
+                    @Override
+                    public long getSize() {
+                        try {
+                            return inputStream.available();
+                        } catch (IOException e) {
+                            return 0;
+                        }
+                    }
+
+                    @Override
+                    public byte[] getBytes() throws IOException {
+                        return inputStream.readAllBytes();
+                    }
+
+                    @Override
+                    public InputStream getInputStream() throws IOException {
+                        return inputStream;
+                    }
+
+                    @Override
+                    public void transferTo(java.io.File dest) throws IOException, IllegalStateException {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+
+                // Upload lên Cloudinary
+                Map<String, Object> uploadResult = cloudinaryService.uploadImage(multipartFile);
+                String cloudinaryUrl = (String) uploadResult.get("secure_url");
+                log.info("Đã upload ảnh Google lên Cloudinary: {}", cloudinaryUrl);
+                return cloudinaryUrl;
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi upload ảnh từ URL: {}", e.getMessage());
+            return imageUrl; // Trả về URL gốc nếu upload thất bại
+        }
     }
 
     public String forgotPassword(String email) {

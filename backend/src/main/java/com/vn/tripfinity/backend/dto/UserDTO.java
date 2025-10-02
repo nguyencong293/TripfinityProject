@@ -27,10 +27,12 @@ public class UserDTO {
 
     @NotBlank(message = "Mật khẩu không được để trống")
     @Size(min = 6, max = 64, message = "Mật khẩu phải từ 6–64 ký tự")
-//    @Pattern(
-//            regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$",
-//            message = "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt"
-//    )
+    // @Pattern(
+    // regexp =
+    // "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$",
+    // message = "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký
+    // tự đặc biệt"
+    // )
     private String passwordHash;
     private String confirmPassword;
 
@@ -49,11 +51,11 @@ public class UserDTO {
 
     @NotNull(message = "Trạng thái tài khoản không được để trống")
     @Builder.Default
-    private String accountStatus = User.AccountStatus.active.name();  // ACTIVE, BANNED
+    private String accountStatus = User.AccountStatus.active.name(); // ACTIVE, BANNED
 
     private LocalDate dateOfBirth;
 
-    private String gender;         // MALE, FEMALE, OTHER
+    private String gender; // MALE, FEMALE, OTHER
 
     private String resetOtp;
     private LocalDateTime otpExpiryTime;
