@@ -1,131 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
 import { X, Loader2, Building2 } from "lucide-react";
-import {
-  getProviderByUserId,
-  createProvider,
-} from "../../services/providerService";
-import type { CreateProviderRequest } from "../../types";
+import { useProviderInfo } from "../../hooks/useProviderInfo";
 
 const ProviderInfoPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [successMessage, setSuccessMessage] = useState<string>("");
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
-
-  const [formData, setFormData] = useState<CreateProviderRequest>({
-    userId: 0,
-    companyName: "",
-    taxCode: "",
-    address: "",
-    contactEmail: "",
-    contactPhone: "",
-    bankAccountNumber: "",
-    bankName: "",
-    logoUrl: "",
-    providerDescription: "",
-  });
-
-  useEffect(() => {
-    checkExistingProvider();
-  }, []);
-
-  const checkExistingProvider = async () => {
-    try {
-      const userStr = localStorage.getItem("user");
-      if (!userStr) {
-        navigate("/supplier/login");
-        return;
-      }
-
-      const user = JSON.parse(userStr);
-      const userId = user.userId;
-
-      setFormData((prev) => ({ ...prev, userId }));
-
-      const provider = await getProviderByUserId(userId);
-      if (provider) {
-        // Nếu đã có provider, chuyển về trang chủ
-        navigate("/supplier");
-      }
-    } catch (err) {
-      console.error("Error checking provider:", err);
-    }
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setError("");
-  };
-
-  const validateForm = (): boolean => {
-    if (!formData.companyName.trim()) {
-      setError("Vui lòng nhập tên công ty");
-      return false;
-    }
-    if (!formData.taxCode.trim()) {
-      setError("Vui lòng nhập mã số thuế");
-      return false;
-    }
-    if (!formData.address.trim()) {
-      setError("Vui lòng nhập địa chỉ");
-      return false;
-    }
-    if (!formData.contactEmail.trim()) {
-      setError("Vui lòng nhập email liên hệ");
-      return false;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.contactEmail)) {
-      setError("Email không hợp lệ");
-      return false;
-    }
-    if (!formData.contactPhone.trim()) {
-      setError("Vui lòng nhập số điện thoại");
-      return false;
-    }
-    const phoneRegex = /^[0-9]{10,11}$/;
-    if (!phoneRegex.test(formData.contactPhone.replace(/\s/g, ""))) {
-      setError("Số điện thoại không hợp lệ");
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const result = await createProvider(formData);
-      if (result.success) {
-        setSuccessMessage("Tạo hồ sơ nhà cung cấp thành công!");
-        setShowSuccessToast(true);
-        setTimeout(() => {
-          setShowSuccessToast(false);
-          navigate("/supplier");
-        }, 2000);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Đã có lỗi xảy ra");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    navigate("/supplier/login");
-  };
+  const {
+    formData,
+    loading,
+    error,
+    successMessage,
+    showSuccessToast,
+    handleChange,
+    handleSubmit,
+    handleCancel,
+  } = useProviderInfo();
 
   return (
     <main className="relative overflow-hidden min-h-screen w-full flex items-center justify-center px-4 py-10 sm:py-12">
@@ -144,7 +31,6 @@ const ProviderInfoPage: React.FC = () => {
 
       <div className="w-full max-w-2xl relative">
         <div className="w-full rounded-2xl theme-bg-card/95 backdrop-blur theme-border theme-text-primary p-6 sm:p-8 shadow-xl ring-1 ring-black/5">
-          {/* Close button */}
           <button
             className="theme-dibutton absolute top-4 right-4"
             onClick={handleCancel}
@@ -152,14 +38,12 @@ const ProviderInfoPage: React.FC = () => {
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
 
-          {/* Logo */}
           <div className="flex justify-center mb-4">
             <div className="p-2 rounded-full border theme-border bg-white">
               <Building2 className="h-12 sm:h-14 w-12 sm:w-14 text-emerald-600" />
             </div>
           </div>
 
-          {/* Title */}
           <h1 className="text-h4-mobile sm:text-h3-tablet lg:text-h2-desktop text-center font-semibold">
             Tạo Hồ Sơ Nhà Cung Cấp
           </h1>
@@ -167,7 +51,6 @@ const ProviderInfoPage: React.FC = () => {
             Vui lòng hoàn thành thông tin để tiếp tục sử dụng dịch vụ
           </p>
 
-          {/* Error message */}
           {error && (
             <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}
