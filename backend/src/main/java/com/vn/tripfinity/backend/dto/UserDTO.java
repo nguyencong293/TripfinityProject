@@ -25,7 +25,7 @@ public class UserDTO {
     @Size(max = 255)
     private String email;
 
-    @NotBlank(message = "Mật khẩu không được để trống")
+    // @NotBlank(message = "Mật khẩu không được để trống")
     @Size(min = 6, max = 64, message = "Mật khẩu phải từ 6–64 ký tự")
     // @Pattern(
     // regexp =

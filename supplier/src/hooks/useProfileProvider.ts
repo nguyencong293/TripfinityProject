@@ -60,6 +60,13 @@ export const useProfileProvider = (): UseProfileProviderReturn => {
   const [providerForm, setProviderForm] = useState<Partial<ProviderDTO>>({});
   const [userForm, setUserForm] = useState<Partial<UserDTO>>({});
 
+  // Helper function để loại bỏ password fields khỏi user data
+  const sanitizeUserData = (userData: UserDTO): Partial<UserDTO> => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, confirmPassword, ...sanitized } = userData;
+    return sanitized;
+  };
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -81,10 +88,10 @@ export const useProfileProvider = (): UseProfileProviderReturn => {
       setProvider(providerData);
       setProviderForm(providerData);
 
-      // Load user data
+      // Load user data và loại bỏ password fields
       const userDataFull = await getUserById(userId);
       setUser(userDataFull);
-      setUserForm(userDataFull);
+      setUserForm(sanitizeUserData(userDataFull));
 
       setLoading(false);
     } catch (err) {
@@ -156,12 +163,13 @@ export const useProfileProvider = (): UseProfileProviderReturn => {
 
   const handleEditUser = () => {
     setIsEditingUser(true);
-    setUserForm(user || {});
+    // Đảm bảo không có password fields trong form
+    setUserForm(user ? sanitizeUserData(user) : {});
   };
 
   const handleCancelEditUser = () => {
     setIsEditingUser(false);
-    setUserForm(user || {});
+    setUserForm(user ? sanitizeUserData(user) : {});
     setError("");
   };
 
@@ -170,10 +178,15 @@ export const useProfileProvider = (): UseProfileProviderReturn => {
       if (!user?.userId) return;
 
       setLoading(true);
-      const result = await updateUser(user.userId, userForm);
+
+      // Tạo payload, đảm bảo KHÔNG có passwordHash và confirmPassword
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { passwordHash, confirmPassword, ...cleanPayload } = userForm;
+
+      const result = await updateUser(user.userId, cleanPayload);
       if (result.success && result.data) {
         setUser(result.data);
-        setUserForm(result.data);
+        setUserForm(sanitizeUserData(result.data));
         setIsEditingUser(false);
         showSuccess("Cập nhật thông tin người dùng thành công!");
 
@@ -236,7 +249,7 @@ export const useProfileProvider = (): UseProfileProviderReturn => {
       setLoading(true);
       const updatedUser = await uploadUserAvatar(user.userId, file);
       setUser(updatedUser);
-      setUserForm(updatedUser);
+      setUserForm(sanitizeUserData(updatedUser));
       showSuccess("Upload avatar thành công!");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload avatar thất bại");
@@ -252,7 +265,7 @@ export const useProfileProvider = (): UseProfileProviderReturn => {
       setLoading(true);
       const updatedUser = await deleteUserAvatar(user.userId);
       setUser(updatedUser);
-      setUserForm(updatedUser);
+      setUserForm(sanitizeUserData(updatedUser));
       showSuccess("Xóa avatar thành công!");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Xóa avatar thất bại");
