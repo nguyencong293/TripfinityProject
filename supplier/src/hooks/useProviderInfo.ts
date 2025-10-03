@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   getProviderByUserId,
   createProvider,
+  uploadProviderLogo,
 } from "../services/providerService";
 import type { CreateProviderRequest } from "../types";
 
@@ -12,9 +13,12 @@ interface UseProviderInfoReturn {
   error: string;
   successMessage: string;
   showSuccessToast: boolean;
+  logoFile: File | null;
+  logoPreview: string | null;
   handleChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => void;
+  handleLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   handleCancel: () => void;
 }
@@ -25,6 +29,8 @@ export const useProviderInfo = (): UseProviderInfoReturn => {
   const [error, setError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<CreateProviderRequest>({
     userId: 0,
@@ -35,7 +41,6 @@ export const useProviderInfo = (): UseProviderInfoReturn => {
     contactPhone: "",
     bankAccountNumber: "",
     bankName: "",
-    logoUrl: "",
     providerDescription: "",
   });
 
@@ -74,6 +79,33 @@ export const useProviderInfo = (): UseProviderInfoReturn => {
     setError("");
   };
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setError("Kích thước file không được vượt quá 10MB");
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setError("Vui lòng chọn file ảnh");
+        return;
+      }
+
+      setLogoFile(file);
+      setError("");
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const validateForm = (): boolean => {
     if (!formData.companyName.trim()) {
       setError("Vui lòng nhập tên công ty");
@@ -91,18 +123,8 @@ export const useProviderInfo = (): UseProviderInfoReturn => {
       setError("Vui lòng nhập email liên hệ");
       return false;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.contactEmail)) {
-      setError("Email không hợp lệ");
-      return false;
-    }
     if (!formData.contactPhone.trim()) {
       setError("Vui lòng nhập số điện thoại");
-      return false;
-    }
-    const phoneRegex = /^[0-9]{10,11}$/;
-    if (!phoneRegex.test(formData.contactPhone.replace(/\s/g, ""))) {
-      setError("Số điện thoại không hợp lệ");
       return false;
     }
     return true;
@@ -119,8 +141,21 @@ export const useProviderInfo = (): UseProviderInfoReturn => {
     setLoading(true);
 
     try {
+      // Tạo provider trước
       const result = await createProvider(formData);
-      if (result.success) {
+      if (result.success && result.data) {
+        const providerId = result.data.providerId;
+
+        // Nếu có logo, upload logo
+        if (logoFile && providerId) {
+          try {
+            await uploadProviderLogo(providerId, logoFile);
+          } catch (logoError) {
+            console.error("Error uploading logo:", logoError);
+            // Không dừng quá trình, chỉ log lỗi
+          }
+        }
+
         setSuccessMessage("Tạo hồ sơ nhà cung cấp thành công!");
         setShowSuccessToast(true);
         setTimeout(() => {
@@ -145,7 +180,10 @@ export const useProviderInfo = (): UseProviderInfoReturn => {
     error,
     successMessage,
     showSuccessToast,
+    logoFile,
+    logoPreview,
     handleChange,
+    handleLogoChange,
     handleSubmit,
     handleCancel,
   };

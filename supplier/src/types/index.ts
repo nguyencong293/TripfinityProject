@@ -81,6 +81,5 @@ export interface CreateProviderRequest {
   contactPhone: string;
   bankAccountNumber?: string;
   bankName?: string;
-  logoUrl?: string;
   providerDescription?: string;
 }

@@ -1,5 +1,11 @@
 import React from "react";
-import { X, Loader2, Building2 } from "lucide-react";
+import {
+  X,
+  Loader2,
+  Building2,
+  Upload,
+  Image as ImageIcon,
+} from "lucide-react";
 import { useProviderInfo } from "../../hooks/useProviderInfo";
 
 const ProviderInfoPage: React.FC = () => {
@@ -9,7 +15,10 @@ const ProviderInfoPage: React.FC = () => {
     error,
     successMessage,
     showSuccessToast,
+    logoFile,
+    logoPreview,
     handleChange,
+    handleLogoChange,
     handleSubmit,
     handleCancel,
   } = useProviderInfo();
@@ -164,19 +173,55 @@ const ProviderInfoPage: React.FC = () => {
               />
             </div>
 
-            {/* Logo URL */}
+            {/* Logo Upload */}
             <div>
               <label className="block text-body1-mobile font-medium theme-text-secondary mb-1">
-                URL Logo
+                Logo công ty
               </label>
-              <input
-                type="url"
-                name="logoUrl"
-                value={formData.logoUrl}
-                onChange={handleChange}
-                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Nhập URL logo công ty (tùy chọn)"
-              />
+              <div className="mt-2">
+                <div className="flex items-center gap-4">
+                  {/* Preview */}
+                  <div className="flex-shrink-0">
+                    {logoPreview ? (
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        className="h-20 w-20 rounded-lg object-cover border theme-border"
+                      />
+                    ) : (
+                      <div className="h-20 w-20 rounded-lg border-2 border-dashed theme-border flex items-center justify-center bg-gray-50 dark:bg-gray-800">
+                        <ImageIcon className="h-8 w-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Button */}
+                  <div className="flex-1">
+                    <label
+                      htmlFor="logo-upload"
+                      className="cursor-pointer inline-flex items-center px-4 py-2 border theme-border rounded-lg text-sm font-medium theme-text-primary hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {logoFile ? "Thay đổi logo" : "Chọn logo"}
+                    </label>
+                    <input
+                      id="logo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="hidden"
+                    />
+                    {logoFile && (
+                      <p className="mt-1 text-xs theme-text-secondary">
+                        {logoFile.name}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs theme-text-secondary">
+                      PNG, JPG, GIF tối đa 10MB
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Description */}

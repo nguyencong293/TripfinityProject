@@ -2,20 +2,20 @@ import api from "./api";
 import type { ProviderDTO, CreateProviderRequest, ApiResponse } from "../types";
 import axios from "axios";
 
-const extractErrorMessage = (error: unknown, fallback: string): string => {
-  let errorMessage = fallback;
+const extractErrorMessage = (
+  error: unknown,
+  defaultMessage: string
+): string => {
   if (axios.isAxiosError(error)) {
-    if (error.response) {
-      const respData = error.response.data as { message?: string } | string;
-      if (typeof respData === "string") errorMessage = respData;
-      else errorMessage = respData.message || fallback;
-    } else if (error.request) {
-      errorMessage = "Không kết nối được với máy chủ";
+    if (error.response?.data) {
+      const data = error.response.data;
+      if (typeof data === "string") return data;
+      if (data.message) return data.message;
     }
-  } else if (error instanceof Error) {
-    errorMessage = error.message;
+    if (error.message) return error.message;
   }
-  return errorMessage;
+  if (error instanceof Error) return error.message;
+  return defaultMessage;
 };
 
 export const getProviderByUserId = async (
@@ -81,6 +81,38 @@ export const updateProvider = async (
       error,
       "Cập nhật hồ sơ nhà cung cấp thất bại"
     );
+    throw new Error(errorMessage);
+  }
+};
+
+export const uploadProviderLogo = async (
+  providerId: number,
+  file: File
+): Promise<ProviderDTO> => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const resp = await api.post(`/providers/${providerId}/logo`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return resp.data as ProviderDTO;
+  } catch (error) {
+    const errorMessage = extractErrorMessage(error, "Upload logo thất bại");
+    throw new Error(errorMessage);
+  }
+};
+
+export const deleteProviderLogo = async (
+  providerId: number
+): Promise<ProviderDTO> => {
+  try {
+    const resp = await api.delete(`/providers/${providerId}/logo`);
+    return resp.data as ProviderDTO;
+  } catch (error) {
+    const errorMessage = extractErrorMessage(error, "Xóa logo thất bại");
     throw new Error(errorMessage);
   }
 };
