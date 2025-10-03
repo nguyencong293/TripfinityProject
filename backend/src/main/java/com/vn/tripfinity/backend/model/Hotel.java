@@ -26,6 +26,10 @@ public class Hotel {
         hotel, resort, apartment, villa, hostel, guesthouse, homestay
     }
 
+    public enum Visibility {
+        public_, private_
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "hotel_id")
@@ -43,7 +47,6 @@ public class Hotel {
     @EqualsAndHashCode.Exclude
     private Area area;
 
-    // Chung
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
@@ -78,9 +81,9 @@ public class Hotel {
     private String thumbnailUrl;
 
     @Column(name = "image_urls", columnDefinition = "TEXT")
-    private String imageUrls;
+    private String imageUrls; // JSON array string: ["url1", "url2", ...]
 
-    @Column(name = "rating_average", precision = 3, scale = 2)
+    @Column(name = "rating_average", precision = 3, scale = 2, nullable = false)
     private BigDecimal ratingAverage;
 
     @Column(name = "badges", length = 255)
@@ -115,6 +118,28 @@ public class Hotel {
     @Column(name = "policies_text", columnDefinition = "TEXT")
     private String policiesText;
 
+    @Column(name = "slug", length = 255, unique = true)
+    private String slug;
+
+    @Column(name = "seo_title", length = 255)
+    private String seoTitle;
+
+    @Column(name = "seo_description", length = 512)
+    private String seoDescription;
+
+    @Column(name = "is_featured", nullable = false)
+    private Boolean isFeatured;
+
+    @Column(name = "booking_settings_json", columnDefinition = "JSON")
+    private String bookingSettingsJson;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false, length = 32)
+    private Visibility visibility;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
@@ -131,5 +156,11 @@ public class Hotel {
             hotelStatus = HotelStatus.published;
         if (propertyType == null)
             propertyType = PropertyType.hotel;
+        if (isFeatured == null)
+            isFeatured = false;
+        if (visibility == null)
+            visibility = Visibility.public_;
+        if (currencyCode == null)
+            currencyCode = "VND";
     }
 }

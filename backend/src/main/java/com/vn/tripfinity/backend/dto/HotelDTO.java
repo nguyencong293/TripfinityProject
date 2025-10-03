@@ -1,7 +1,11 @@
 package com.vn.tripfinity.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,68 +22,117 @@ public class HotelDTO {
     private Integer hotelId;
 
     @NotNull(message = "providerId không được để trống")
+    @JsonAlias("provider_id")
     private Integer providerId;
 
     @NotNull(message = "areaId không được để trống")
+    @JsonAlias("area_id")
     private Integer areaId;
 
     @NotBlank(message = "title không được để trống")
     @Size(max = 255)
     private String title;
 
+    @Size(max = 5000)
+    @JsonAlias("service_description")
     private String serviceDescription;
 
     @Size(max = 255)
     private String location;
 
+    @JsonAlias("start_date")
     private LocalDate startDate;
+
+    @JsonAlias("end_date")
     private LocalDate endDate;
 
     @NotNull(message = "price không được để trống")
-    @DecimalMin(value = "0.00", inclusive = true, message = "price phải >= 0.00")
+    @DecimalMin(value = "0.00", message = "price phải >= 0")
     private BigDecimal price;
 
     @NotBlank(message = "currencyCode không được để trống")
-    @Size(min = 3, max = 3, message = "currencyCode phải là 3 ký tự")
+    @Size(max = 3)
+    @JsonAlias("currency_code")
     private String currencyCode;
 
     private Integer capacity;
+
+    @JsonAlias("min_participants")
     private Integer minParticipants;
+
+    @JsonAlias("max_participants")
     private Integer maxParticipants;
 
     @Size(max = 512)
+    @JsonAlias("thumbnail_url")
     private String thumbnailUrl;
 
-    private List<@Size(max = 1024) String> imageUrls;
+    @JsonAlias("image_urls")
+    private List<String> imageUrls; // List of image URLs
 
-    @DecimalMin(value = "0.00", inclusive = true, message = "ratingAverage phải >= 0.00")
-    @DecimalMax(value = "5.00", inclusive = true, message = "ratingAverage phải <= 5.00")
+    @DecimalMin(value = "0.00", message = "ratingAverage phải >= 0.00")
+    @DecimalMax(value = "5.00", message = "ratingAverage phải <= 5.00")
+    @JsonAlias("rating_average")
     private BigDecimal ratingAverage;
 
-    private List<@Size(max = 100) String> badges;
+    private List<String> badges;
 
-    @Size(max = 32)
-    private String hotelStatus;
+    @NotNull(message = "hotelStatus không được để trống")
+    @JsonAlias("hotel_status")
+    private String hotelStatus; // published, archived, disabled
 
-    @Min(value = 1, message = "starRating phải >= 1")
-    @Max(value = 5, message = "starRating phải <= 5")
+    @Min(value = 1, message = "starRating phải từ 1-5")
+    @Max(value = 5, message = "starRating phải từ 1-5")
+    @JsonAlias("star_rating")
     private Integer starRating;
 
-    // hotel, resort, apartment, villa, hostel, guesthouse, homestay
-    @Size(max = 32)
-    private String propertyType;
+    @JsonAlias("property_type")
+    private String propertyType; // hotel, resort, apartment, villa, hostel, guesthouse, homestay
 
     @Size(max = 255)
     private String address;
 
+    @JsonAlias("checkin_time")
     private LocalTime checkinTime;
+
+    @JsonAlias("checkout_time")
     private LocalTime checkoutTime;
 
-    // Store as JSON array in DB, accept array from client
-    private List<@Size(max = 200) String> highlightsJson;
-    private List<@Size(max = 200) String> amenitiesJson;
+    @JsonAlias("highlights_json")
+    private List<String> highlights; // JSON array
+
+    @JsonAlias("amenities_json")
+    private List<String> amenities; // JSON array
+
+    @JsonAlias("policies_text")
     private String policiesText;
 
+    @Size(max = 255)
+    private String slug;
+
+    @Size(max = 255)
+    @JsonAlias("seo_title")
+    private String seoTitle;
+
+    @Size(max = 512)
+    @JsonAlias("seo_description")
+    private String seoDescription;
+
+    @JsonAlias("is_featured")
+    private Boolean isFeatured;
+
+    @JsonAlias("booking_settings_json")
+    private String bookingSettingsJson; // JSON string
+
+    @JsonAlias("published_at")
+    private LocalDateTime publishedAt;
+
+    @NotNull(message = "visibility không được để trống")
+    private String visibility; // public, private
+
+    @JsonAlias("created_at")
     private LocalDateTime createdAt;
+
+    @JsonAlias("updated_at")
     private LocalDateTime updatedAt;
 }

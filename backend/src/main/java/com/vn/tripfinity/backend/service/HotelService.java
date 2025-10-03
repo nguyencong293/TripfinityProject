@@ -1,73 +1,123 @@
 package com.vn.tripfinity.backend.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vn.tripfinity.backend.dto.HotelDTO;
-import com.vn.tripfinity.backend.dto.HotelReviewDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
-import com.vn.tripfinity.backend.model.Hotel;
-import com.vn.tripfinity.backend.model.HotelReview;
-import com.vn.tripfinity.backend.model.HotelReviewAspects;
 import com.vn.tripfinity.backend.model.Area;
+import com.vn.tripfinity.backend.model.Hotel;
 import com.vn.tripfinity.backend.model.Provider;
-import com.vn.tripfinity.backend.model.User;
-import com.vn.tripfinity.backend.model.ReviewReply;
+import com.vn.tripfinity.backend.repository.AreaRepository;
 import com.vn.tripfinity.backend.repository.HotelRepository;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
-import com.vn.tripfinity.backend.repository.HotelReviewRepository;
-import com.vn.tripfinity.backend.repository.HotelReviewAspectsRepository;
-import com.vn.tripfinity.backend.repository.UserRepository;
-import com.vn.tripfinity.backend.repository.ReviewReplyRepository;
-import com.vn.tripfinity.backend.repository.AreaRepository;
+import com.vn.tripfinity.backend.service.cloudinary.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
 public class HotelService {
-
     private final HotelRepository hotelRepository;
     private final ProviderRepository providerRepository;
-    private final HotelReviewRepository hotelReviewRepository;
-    private final HotelReviewAspectsRepository hotelReviewAspectsRepository;
-    private final UserRepository userRepository;
-    private final ReviewReplyRepository reviewReplyRepository;
     private final AreaRepository areaRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CloudinaryService cloudinaryService;
+    private final ObjectMapper objectMapper;
 
     public List<HotelDTO> getAllHotels() {
-        return hotelRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
-    }
-
-    public HotelDTO getHotelById(Integer hotelId) {
-        Hotel h = hotelRepository.findById(hotelId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
-        return toDTO(h);
-    }
-
-    public List<HotelDTO> getHotelsByProviderId(Integer providerId) {
-        return hotelRepository.findByProvider_ProviderId(providerId).stream()
-                .map(this::toDTO)
+        log.debug("Lấy toàn bộ hotels");
+        return hotelRepository.findAll().stream()
+                .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
+    public HotelDTO getHotelById(Integer hotelId) {
+        log.debug("Lấy hotel theo ID: {}", hotelId);
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
+        return convertToDTO(hotel);
+    }
+
+    public List<HotelDTO> getHotelsByProvider(Integer providerId) {
+        log.debug("Lấy danh sách hotels của Provider ID: {}", providerId);
+
+        // Kiểm tra provider có tồn tại không
+        providerRepository.findById(providerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + providerId));
+
+        List<Hotel> hotels = hotelRepository.findByProvider_ProviderId(providerId);
+        log.info("Tìm thấy {} hotels của Provider ID: {}", hotels.size(), providerId);
+
+        return hotels.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<HotelDTO> getHotelsByProviderAndStatus(Integer providerId, String status) {
+        log.debug("Lấy danh sách hotels của Provider ID: {} với status: {}", providerId, status);
+
+        // Kiểm tra provider có tồn tại không
+        providerRepository.findById(providerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + providerId));
+
+        Hotel.HotelStatus hotelStatus = Hotel.HotelStatus.valueOf(status);
+        List<Hotel> hotels = hotelRepository.findByProvider_ProviderIdAndHotelStatus(providerId, hotelStatus);
+        log.info("Tìm thấy {} hotels của Provider ID: {} với status: {}", hotels.size(), providerId, status);
+
+        return hotels.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    // ==================== QUERY BY AREA ====================
+
+    public List<HotelDTO> getHotelsByArea(Integer areaId) {
+        log.debug("Lấy danh sách hotels ở Area ID: {}", areaId);
+
+        // Kiểm tra area có tồn tại không
+        areaRepository.findById(areaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + areaId));
+
+        List<Hotel> hotels = hotelRepository.findByArea_AreaId(areaId);
+        log.info("Tìm thấy {} hotels ở Area ID: {}", hotels.size(), areaId);
+
+        return hotels.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    // ==================== QUERY BY SLUG ====================
+
+    public HotelDTO getHotelBySlug(String slug) {
+        log.debug("Lấy hotel theo slug: {}", slug);
+        Hotel hotel = hotelRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel với slug: " + slug));
+
+        return convertToDTO(hotel);
+    }
+
     public HotelDTO createHotel(HotelDTO dto) {
+        log.debug("Tạo Hotel: {}", dto);
+
         Provider provider = providerRepository.findById(dto.getProviderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + dto.getProviderId()));
+
         Area area = areaRepository.findById(dto.getAreaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
 
-        Hotel entity = Hotel.builder()
-                .hotelId(null)
+        Hotel hotel = Hotel.builder()
                 .provider(provider)
                 .area(area)
                 .title(dto.getTitle())
@@ -80,308 +130,364 @@ public class HotelService {
                 .capacity(dto.getCapacity())
                 .minParticipants(dto.getMinParticipants())
                 .maxParticipants(dto.getMaxParticipants())
-                .thumbnailUrl(dto.getThumbnailUrl())
-                .imageUrls(joinList(dto.getImageUrls()))
                 .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
-                .badges(joinList(dto.getBadges()))
+                .badges(listToCommaString(dto.getBadges()))
                 .hotelStatus(dto.getHotelStatus() != null ? Hotel.HotelStatus.valueOf(dto.getHotelStatus())
                         : Hotel.HotelStatus.published)
                 .starRating(dto.getStarRating())
-                .propertyType(dto.getPropertyType() != null ? Hotel.PropertyType.valueOf(dto.getPropertyType())
-                        : Hotel.PropertyType.hotel)
+                .propertyType(dto.getPropertyType() != null ? Hotel.PropertyType.valueOf(dto.getPropertyType()) : null)
                 .address(dto.getAddress())
                 .checkinTime(dto.getCheckinTime())
                 .checkoutTime(dto.getCheckoutTime())
-                .highlightsJson(writeJson(dto.getHighlightsJson()))
-                .amenitiesJson(writeJson(dto.getAmenitiesJson()))
+                .highlightsJson(listToJson(dto.getHighlights()))
+                .amenitiesJson(listToJson(dto.getAmenities()))
                 .policiesText(dto.getPoliciesText())
+                .slug(dto.getSlug())
+                .seoTitle(dto.getSeoTitle())
+                .seoDescription(dto.getSeoDescription())
+                .isFeatured(dto.getIsFeatured() != null ? dto.getIsFeatured() : false)
+                .bookingSettingsJson(dto.getBookingSettingsJson())
+                .publishedAt(dto.getPublishedAt())
+                .visibility(dto.getVisibility() != null ? Hotel.Visibility.valueOf(dto.getVisibility())
+                        : Hotel.Visibility.public_)
                 .build();
 
-        Hotel saved = hotelRepository.save(entity);
-        log.info("Tạo Hotel ID: {}", saved.getHotelId());
-        return toDTO(saved);
+        Hotel savedHotel = hotelRepository.save(hotel);
+        log.info("Tạo Hotel ID: {}", savedHotel.getHotelId());
+
+        return convertToDTO(savedHotel);
     }
 
     public HotelDTO updateHotel(Integer hotelId, HotelDTO dto) {
-        Hotel existing = hotelRepository.findById(hotelId)
+        log.debug("Cập nhật Hotel ID: {}", hotelId);
+        Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
 
-        if (dto.getProviderId() != null &&
-                (existing.getProvider() == null
-                        || !existing.getProvider().getProviderId().equals(dto.getProviderId()))) {
+        // Update provider nếu có
+        if (dto.getProviderId() != null && !dto.getProviderId().equals(hotel.getProvider().getProviderId())) {
             Provider provider = providerRepository.findById(dto.getProviderId())
                     .orElseThrow(
                             () -> new ResourceNotFoundException("Không tìm thấy Provider id: " + dto.getProviderId()));
-            existing.setProvider(provider);
+            hotel.setProvider(provider);
         }
 
-        if (dto.getTitle() != null)
-            existing.setTitle(dto.getTitle());
-        if (dto.getAreaId() != null
-                && (existing.getArea() == null || !existing.getArea().getAreaId().equals(dto.getAreaId()))) {
+        // Update area nếu có
+        if (dto.getAreaId() != null && !dto.getAreaId().equals(hotel.getArea().getAreaId())) {
             Area area = areaRepository.findById(dto.getAreaId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
-            existing.setArea(area);
+            hotel.setArea(area);
         }
-        if (dto.getServiceDescription() != null)
-            existing.setServiceDescription(dto.getServiceDescription());
-        if (dto.getLocation() != null)
-            existing.setLocation(dto.getLocation());
-        if (dto.getStartDate() != null)
-            existing.setStartDate(dto.getStartDate());
-        if (dto.getEndDate() != null)
-            existing.setEndDate(dto.getEndDate());
-        if (dto.getPrice() != null)
-            existing.setPrice(dto.getPrice());
-        if (dto.getCurrencyCode() != null)
-            existing.setCurrencyCode(dto.getCurrencyCode());
-        if (dto.getCapacity() != null)
-            existing.setCapacity(dto.getCapacity());
-        if (dto.getMinParticipants() != null)
-            existing.setMinParticipants(dto.getMinParticipants());
-        if (dto.getMaxParticipants() != null)
-            existing.setMaxParticipants(dto.getMaxParticipants());
-        if (dto.getThumbnailUrl() != null)
-            existing.setThumbnailUrl(dto.getThumbnailUrl());
-        if (dto.getImageUrls() != null)
-            existing.setImageUrls(joinList(dto.getImageUrls()));
-        if (dto.getRatingAverage() != null)
-            existing.setRatingAverage(dto.getRatingAverage());
-        if (dto.getBadges() != null)
-            existing.setBadges(joinList(dto.getBadges()));
-        if (dto.getHotelStatus() != null)
-            existing.setHotelStatus(Hotel.HotelStatus.valueOf(dto.getHotelStatus()));
-        if (dto.getStarRating() != null)
-            existing.setStarRating(dto.getStarRating());
-        if (dto.getPropertyType() != null)
-            existing.setPropertyType(Hotel.PropertyType.valueOf(dto.getPropertyType()));
-        if (dto.getAddress() != null)
-            existing.setAddress(dto.getAddress());
-        if (dto.getCheckinTime() != null)
-            existing.setCheckinTime(dto.getCheckinTime());
-        if (dto.getCheckoutTime() != null)
-            existing.setCheckoutTime(dto.getCheckoutTime());
-        if (dto.getHighlightsJson() != null)
-            existing.setHighlightsJson(writeJson(dto.getHighlightsJson()));
-        if (dto.getAmenitiesJson() != null)
-            existing.setAmenitiesJson(writeJson(dto.getAmenitiesJson()));
-        if (dto.getPoliciesText() != null)
-            existing.setPoliciesText(dto.getPoliciesText());
 
-        Hotel saved = hotelRepository.save(existing);
-        return toDTO(saved);
+        // Update các field khác
+        if (dto.getTitle() != null)
+            hotel.setTitle(dto.getTitle());
+        if (dto.getServiceDescription() != null)
+            hotel.setServiceDescription(dto.getServiceDescription());
+        if (dto.getLocation() != null)
+            hotel.setLocation(dto.getLocation());
+        if (dto.getStartDate() != null)
+            hotel.setStartDate(dto.getStartDate());
+        if (dto.getEndDate() != null)
+            hotel.setEndDate(dto.getEndDate());
+        if (dto.getPrice() != null)
+            hotel.setPrice(dto.getPrice());
+        if (dto.getCurrencyCode() != null)
+            hotel.setCurrencyCode(dto.getCurrencyCode());
+        if (dto.getCapacity() != null)
+            hotel.setCapacity(dto.getCapacity());
+        if (dto.getMinParticipants() != null)
+            hotel.setMinParticipants(dto.getMinParticipants());
+        if (dto.getMaxParticipants() != null)
+            hotel.setMaxParticipants(dto.getMaxParticipants());
+        if (dto.getRatingAverage() != null)
+            hotel.setRatingAverage(dto.getRatingAverage());
+        if (dto.getBadges() != null)
+            hotel.setBadges(listToCommaString(dto.getBadges()));
+        if (dto.getHotelStatus() != null)
+            hotel.setHotelStatus(Hotel.HotelStatus.valueOf(dto.getHotelStatus()));
+        if (dto.getStarRating() != null)
+            hotel.setStarRating(dto.getStarRating());
+        if (dto.getPropertyType() != null)
+            hotel.setPropertyType(Hotel.PropertyType.valueOf(dto.getPropertyType()));
+        if (dto.getAddress() != null)
+            hotel.setAddress(dto.getAddress());
+        if (dto.getCheckinTime() != null)
+            hotel.setCheckinTime(dto.getCheckinTime());
+        if (dto.getCheckoutTime() != null)
+            hotel.setCheckoutTime(dto.getCheckoutTime());
+        if (dto.getHighlights() != null)
+            hotel.setHighlightsJson(listToJson(dto.getHighlights()));
+        if (dto.getAmenities() != null)
+            hotel.setAmenitiesJson(listToJson(dto.getAmenities()));
+        if (dto.getPoliciesText() != null)
+            hotel.setPoliciesText(dto.getPoliciesText());
+        if (dto.getSlug() != null)
+            hotel.setSlug(dto.getSlug());
+        if (dto.getSeoTitle() != null)
+            hotel.setSeoTitle(dto.getSeoTitle());
+        if (dto.getSeoDescription() != null)
+            hotel.setSeoDescription(dto.getSeoDescription());
+        if (dto.getIsFeatured() != null)
+            hotel.setIsFeatured(dto.getIsFeatured());
+        if (dto.getBookingSettingsJson() != null)
+            hotel.setBookingSettingsJson(dto.getBookingSettingsJson());
+        if (dto.getPublishedAt() != null)
+            hotel.setPublishedAt(dto.getPublishedAt());
+        if (dto.getVisibility() != null)
+            hotel.setVisibility(Hotel.Visibility.valueOf(dto.getVisibility()));
+
+        Hotel updatedHotel = hotelRepository.save(hotel);
+        log.info("Đã cập nhật Hotel ID: {}", updatedHotel.getHotelId());
+
+        return convertToDTO(updatedHotel);
     }
 
     public void deleteHotel(Integer hotelId) {
-        Hotel existing = hotelRepository.findById(hotelId)
+        log.debug("Xóa Hotel ID: {}", hotelId);
+        Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
-        hotelRepository.delete(existing);
-        log.info("Đã xóa Hotel id: {}", hotelId);
-    }
 
-    // ============ Reviews ============
-    public HotelReviewDTO createHotelReview(HotelReviewDTO dto) {
-        Hotel hotel = hotelRepository.findById(dto.getHotelId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + dto.getHotelId()));
-        User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getUserId()));
-
-        HotelReview review = HotelReview.builder()
-                .reviewId(null)
-                .hotel(hotel)
-                .user(user)
-                .rating(dto.getRating())
-                .title(dto.getTitle())
-                .content(dto.getContent())
-                .imageUrls(joinList(dto.getImageUrls()))
-                .likesCount(dto.getLikesCount() != null ? dto.getLikesCount() : 0)
-                .replyCount(dto.getReplyCount() != null ? dto.getReplyCount() : 0)
-                .reviewStatus(dto.getReviewStatus() != null ? HotelReview.ReviewStatus.valueOf(dto.getReviewStatus())
-                        : HotelReview.ReviewStatus.approved)
-                .build();
-
-        HotelReview saved = hotelReviewRepository.save(review);
-
-        if (dto.getAspects() != null) {
-            HotelReviewAspects aspects = HotelReviewAspects.builder()
-                    .review(saved)
-                    .cleanliness(dto.getAspects().getCleanliness())
-                    .service(dto.getAspects().getService())
-                    .valueForMoney(dto.getAspects().getValueForMoney())
-                    .location(dto.getAspects().getLocation())
-                    .facilities(dto.getAspects().getFacilities())
-                    .build();
-            hotelReviewAspectsRepository.save(aspects);
-        }
-
-        return toReviewDTO(saved, true);
-    }
-
-    public List<HotelReviewDTO> getHotelReviews(Integer hotelId, String status) {
-        // if status provided, filter; otherwise list all
-        List<HotelReview> list;
-        if (status != null && !status.isBlank()) {
-            HotelReview.ReviewStatus st = HotelReview.ReviewStatus.valueOf(status);
-            list = hotelReviewRepository.findByHotelAndStatus(hotelId, st);
-        } else {
-            list = hotelReviewRepository.findByHotel_HotelId(hotelId);
-        }
-        return list.stream().map(r -> toReviewDTO(r, true)).collect(Collectors.toList());
-    }
-
-    // ===== Review Replies (Hotel) =====
-    public com.vn.tripfinity.backend.dto.HotelReviewReplyDTO createHotelReviewReply(Integer reviewId,
-            com.vn.tripfinity.backend.dto.HotelReviewReplyDTO dto) {
-        // ensure review exists and belongs to a hotel
-        HotelReview review = hotelReviewRepository.findById(reviewId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy HotelReview id: " + reviewId));
-
-        User replier = userRepository.findById(dto.getReplierId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getReplierId()));
-
-        ReviewReply reply = ReviewReply.builder()
-                .replyId(null)
-                .reviewType(ReviewReply.ReviewType.hotel)
-                .reviewId(review.getReviewId())
-                .replier(replier)
-                .content(dto.getContent())
-                .isPublic(dto.getIsPublic() != null ? dto.getIsPublic() : Boolean.TRUE)
-                .build();
-
-        ReviewReply saved = reviewReplyRepository.save(reply);
-
-        // increment reply count on parent review
-        review.setReplyCount(review.getReplyCount() == null ? 1 : review.getReplyCount() + 1);
-        hotelReviewRepository.save(review);
-
-        return toHotelReviewReplyDTO(saved);
-    }
-
-    public java.util.List<com.vn.tripfinity.backend.dto.HotelReviewReplyDTO> getHotelReviewReplies(Integer reviewId) {
-        // verify review exists
-        HotelReview review = hotelReviewRepository.findById(reviewId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy HotelReview id: " + reviewId));
-        List<ReviewReply> replies = reviewReplyRepository
-                .findByReviewTypeAndReviewIdOrderByCreatedAtAsc(ReviewReply.ReviewType.hotel, review.getReviewId());
-        return replies.stream().map(this::toHotelReviewReplyDTO).collect(java.util.stream.Collectors.toList());
-    }
-
-    private com.vn.tripfinity.backend.dto.HotelReviewReplyDTO toHotelReviewReplyDTO(ReviewReply r) {
-        return com.vn.tripfinity.backend.dto.HotelReviewReplyDTO.builder()
-                .replyId(r.getReplyId())
-                .reviewId(r.getReviewId())
-                .replierId(r.getReplier() != null ? r.getReplier().getUserId() : null)
-                .content(r.getContent())
-                .isPublic(r.getIsPublic())
-                .createdAt(r.getCreatedAt())
-                .updatedAt(r.getUpdatedAt())
-                .build();
-    }
-
-    private HotelReviewDTO toReviewDTO(HotelReview r, boolean fetchAspects) {
-        HotelReviewDTO.HotelReviewAspectsDTO aspectsDTO = null;
-        if (fetchAspects && r.getReviewId() != null) {
-            var opt = hotelReviewAspectsRepository.findById(r.getReviewId());
-            if (opt.isPresent()) {
-                var a = opt.get();
-                aspectsDTO = HotelReviewDTO.HotelReviewAspectsDTO.builder()
-                        .cleanliness(a.getCleanliness())
-                        .service(a.getService())
-                        .valueForMoney(a.getValueForMoney())
-                        .location(a.getLocation())
-                        .facilities(a.getFacilities())
-                        .build();
+        // Xóa thumbnail nếu có
+        if (hotel.getThumbnailUrl() != null && !hotel.getThumbnailUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImageByUrl(hotel.getThumbnailUrl());
+            } catch (Exception e) {
+                log.warn("Không thể xóa thumbnail: {}", e.getMessage());
             }
         }
 
-        return HotelReviewDTO.builder()
-                .reviewId(r.getReviewId())
-                .hotelId(r.getHotel() != null ? r.getHotel().getHotelId() : null)
-                .userId(r.getUser() != null ? r.getUser().getUserId() : null)
-                .rating(r.getRating())
-                .title(r.getTitle())
-                .content(r.getContent())
-                .imageUrls(splitList(r.getImageUrls()))
-                .likesCount(r.getLikesCount())
-                .replyCount(r.getReplyCount())
-                .reviewStatus(r.getReviewStatus() != null ? r.getReviewStatus().name() : null)
-                .aspects(aspectsDTO)
-                .createdAt(r.getCreatedAt())
-                .updatedAt(r.getUpdatedAt())
-                .build();
+        // Xóa tất cả images nếu có
+        if (hotel.getImageUrls() != null && !hotel.getImageUrls().isEmpty()) {
+            try {
+                List<String> imageUrls = jsonToList(hotel.getImageUrls());
+                for (String imageUrl : imageUrls) {
+                    try {
+                        cloudinaryService.deleteImageByUrl(imageUrl);
+                    } catch (Exception e) {
+                        log.warn("Không thể xóa image: {}", e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Lỗi khi xóa images: {}", e.getMessage());
+            }
+        }
+
+        hotelRepository.delete(hotel);
+        log.info("Đã xóa Hotel ID: {}", hotelId);
     }
 
-    private HotelDTO toDTO(Hotel h) {
+    // ==================== THUMBNAIL MANAGEMENT ====================
+
+    public HotelDTO uploadThumbnail(Integer hotelId, MultipartFile file) throws IOException {
+        log.debug("Upload thumbnail cho Hotel ID: {}", hotelId);
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
+
+        // Xóa thumbnail cũ nếu có
+        if (hotel.getThumbnailUrl() != null && !hotel.getThumbnailUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImageByUrl(hotel.getThumbnailUrl());
+                log.info("Đã xóa thumbnail cũ: {}", hotel.getThumbnailUrl());
+            } catch (Exception e) {
+                log.warn("Không thể xóa thumbnail cũ: {}", e.getMessage());
+            }
+        }
+
+        // Upload thumbnail mới
+        Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
+        String thumbnailUrl = (String) uploadResult.get("secure_url");
+
+        hotel.setThumbnailUrl(thumbnailUrl);
+        Hotel savedHotel = hotelRepository.save(hotel);
+        log.info("Đã upload thumbnail mới cho Hotel ID: {}", savedHotel.getHotelId());
+
+        return convertToDTO(savedHotel);
+    }
+
+    public HotelDTO deleteThumbnail(Integer hotelId) throws IOException {
+        log.debug("Xóa thumbnail cho Hotel ID: {}", hotelId);
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
+
+        // Xóa thumbnail trên Cloudinary
+        if (hotel.getThumbnailUrl() != null && !hotel.getThumbnailUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImageByUrl(hotel.getThumbnailUrl());
+                log.info("Đã xóa thumbnail: {}", hotel.getThumbnailUrl());
+            } catch (Exception e) {
+                log.warn("Không thể xóa thumbnail: {}", e.getMessage());
+            }
+        }
+
+        hotel.setThumbnailUrl(null);
+        Hotel savedHotel = hotelRepository.save(hotel);
+        log.info("Đã xóa thumbnail cho Hotel ID: {}", savedHotel.getHotelId());
+
+        return convertToDTO(savedHotel);
+    }
+
+    // ==================== IMAGES MANAGEMENT ====================
+
+    public HotelDTO addImages(Integer hotelId, List<MultipartFile> files) throws IOException {
+        log.debug("Thêm {} ảnh cho Hotel ID: {}", files.size(), hotelId);
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
+
+        // Lấy danh sách URL hiện tại
+        List<String> currentImageUrls = new ArrayList<>();
+        if (hotel.getImageUrls() != null && !hotel.getImageUrls().isEmpty()) {
+            currentImageUrls = jsonToList(hotel.getImageUrls());
+        }
+
+        // Upload từng file và thêm vào list
+        for (MultipartFile file : files) {
+            Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
+            String imageUrl = (String) uploadResult.get("secure_url");
+            currentImageUrls.add(imageUrl);
+            log.info("Đã upload ảnh: {}", imageUrl);
+        }
+
+        // Lưu lại danh sách URL
+        hotel.setImageUrls(listToJson(currentImageUrls));
+        Hotel savedHotel = hotelRepository.save(hotel);
+        log.info("Đã thêm {} ảnh cho Hotel ID: {}", files.size(), savedHotel.getHotelId());
+
+        return convertToDTO(savedHotel);
+    }
+
+    public HotelDTO deleteImage(Integer hotelId, String imageUrl) throws IOException {
+        log.debug("Xóa ảnh {} cho Hotel ID: {}", imageUrl, hotelId);
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
+
+        if (hotel.getImageUrls() == null || hotel.getImageUrls().isEmpty()) {
+            throw new IllegalArgumentException("Hotel không có ảnh nào");
+        }
+
+        List<String> imageUrls = jsonToList(hotel.getImageUrls());
+
+        if (!imageUrls.contains(imageUrl)) {
+            throw new IllegalArgumentException("Ảnh không tồn tại trong danh sách");
+        }
+
+        // Xóa ảnh trên Cloudinary
+        try {
+            cloudinaryService.deleteImageByUrl(imageUrl);
+            log.info("Đã xóa ảnh trên Cloudinary: {}", imageUrl);
+        } catch (Exception e) {
+            log.warn("Không thể xóa ảnh trên Cloudinary: {}", e.getMessage());
+        }
+
+        // Xóa khỏi danh sách
+        imageUrls.remove(imageUrl);
+        hotel.setImageUrls(imageUrls.isEmpty() ? null : listToJson(imageUrls));
+
+        Hotel savedHotel = hotelRepository.save(hotel);
+        log.info("Đã xóa ảnh cho Hotel ID: {}", savedHotel.getHotelId());
+
+        return convertToDTO(savedHotel);
+    }
+
+    public HotelDTO deleteAllImages(Integer hotelId) throws IOException {
+        log.debug("Xóa tất cả ảnh cho Hotel ID: {}", hotelId);
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
+
+        if (hotel.getImageUrls() != null && !hotel.getImageUrls().isEmpty()) {
+            List<String> imageUrls = jsonToList(hotel.getImageUrls());
+
+            // Xóa từng ảnh trên Cloudinary
+            for (String imageUrl : imageUrls) {
+                try {
+                    cloudinaryService.deleteImageByUrl(imageUrl);
+                    log.info("Đã xóa ảnh: {}", imageUrl);
+                } catch (Exception e) {
+                    log.warn("Không thể xóa ảnh: {}", e.getMessage());
+                }
+            }
+        }
+
+        hotel.setImageUrls(null);
+        Hotel savedHotel = hotelRepository.save(hotel);
+        log.info("Đã xóa tất cả ảnh cho Hotel ID: {}", savedHotel.getHotelId());
+
+        return convertToDTO(savedHotel);
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    private HotelDTO convertToDTO(Hotel hotel) {
         return HotelDTO.builder()
-                .hotelId(h.getHotelId())
-                .providerId(h.getProvider() != null ? h.getProvider().getProviderId() : null)
-                .areaId(h.getArea() != null ? h.getArea().getAreaId() : null)
-                .title(h.getTitle())
-                .serviceDescription(h.getServiceDescription())
-                .location(h.getLocation())
-                .startDate(h.getStartDate())
-                .endDate(h.getEndDate())
-                .price(h.getPrice())
-                .currencyCode(h.getCurrencyCode())
-                .capacity(h.getCapacity())
-                .minParticipants(h.getMinParticipants())
-                .maxParticipants(h.getMaxParticipants())
-                .thumbnailUrl(h.getThumbnailUrl())
-                .imageUrls(splitList(h.getImageUrls()))
-                .ratingAverage(h.getRatingAverage())
-                .badges(splitList(h.getBadges()))
-                .hotelStatus(h.getHotelStatus() != null ? h.getHotelStatus().name() : null)
-                .starRating(h.getStarRating())
-                .propertyType(h.getPropertyType() != null ? h.getPropertyType().name() : null)
-                .address(h.getAddress())
-                .checkinTime(h.getCheckinTime())
-                .checkoutTime(h.getCheckoutTime())
-                .highlightsJson(readJsonList(h.getHighlightsJson()))
-                .amenitiesJson(readJsonList(h.getAmenitiesJson()))
-                .policiesText(h.getPoliciesText())
-                .createdAt(h.getCreatedAt())
-                .updatedAt(h.getUpdatedAt())
+                .hotelId(hotel.getHotelId())
+                .providerId(hotel.getProvider() != null ? hotel.getProvider().getProviderId() : null)
+                .areaId(hotel.getArea() != null ? hotel.getArea().getAreaId() : null)
+                .title(hotel.getTitle())
+                .serviceDescription(hotel.getServiceDescription())
+                .location(hotel.getLocation())
+                .startDate(hotel.getStartDate())
+                .endDate(hotel.getEndDate())
+                .price(hotel.getPrice())
+                .currencyCode(hotel.getCurrencyCode())
+                .capacity(hotel.getCapacity())
+                .minParticipants(hotel.getMinParticipants())
+                .maxParticipants(hotel.getMaxParticipants())
+                .thumbnailUrl(hotel.getThumbnailUrl())
+                .imageUrls(jsonToList(hotel.getImageUrls()))
+                .ratingAverage(hotel.getRatingAverage())
+                .badges(commaStringToList(hotel.getBadges()))
+                .hotelStatus(hotel.getHotelStatus() != null ? hotel.getHotelStatus().name() : null)
+                .starRating(hotel.getStarRating())
+                .propertyType(hotel.getPropertyType() != null ? hotel.getPropertyType().name() : null)
+                .address(hotel.getAddress())
+                .checkinTime(hotel.getCheckinTime())
+                .checkoutTime(hotel.getCheckoutTime())
+                .highlights(jsonToList(hotel.getHighlightsJson()))
+                .amenities(jsonToList(hotel.getAmenitiesJson()))
+                .policiesText(hotel.getPoliciesText())
+                .slug(hotel.getSlug())
+                .seoTitle(hotel.getSeoTitle())
+                .seoDescription(hotel.getSeoDescription())
+                .isFeatured(hotel.getIsFeatured())
+                .bookingSettingsJson(hotel.getBookingSettingsJson())
+                .publishedAt(hotel.getPublishedAt())
+                .visibility(hotel.getVisibility() != null ? hotel.getVisibility().name().replace("_", "") : null)
+                .createdAt(hotel.getCreatedAt())
+                .updatedAt(hotel.getUpdatedAt())
                 .build();
     }
 
-    private String joinList(List<String> list) {
+    private String listToJson(List<String> list) {
+        if (list == null || list.isEmpty())
+            return null;
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (JsonProcessingException e) {
+            log.error("Error converting list to JSON", e);
+            return null;
+        }
+    }
+
+    private List<String> jsonToList(String json) {
+        if (json == null || json.isEmpty())
+            return new ArrayList<>();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {
+            });
+        } catch (JsonProcessingException e) {
+            log.error("Error converting JSON to list", e);
+            return new ArrayList<>();
+        }
+    }
+
+    private String listToCommaString(List<String> list) {
         if (list == null || list.isEmpty())
             return null;
         return String.join(",", list);
     }
 
-    private List<String> splitList(String csv) {
-        if (csv == null || csv.trim().isEmpty())
+    private List<String> commaStringToList(String str) {
+        if (str == null || str.isEmpty())
             return new ArrayList<>();
-        String[] arr = csv.split(",");
-        List<String> out = new ArrayList<>();
-        for (String s : arr) {
-            String v = s.trim();
-            if (!v.isEmpty())
-                out.add(v);
-        }
-        return out;
-    }
-
-    private String writeJson(Object obj) {
-        if (obj == null)
-            return null;
-        try {
-            return objectMapper.writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Không thể chuyển dữ liệu sang JSON", e);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<String> readJsonList(String json) {
-        if (json == null || json.isEmpty())
-            return null;
-        try {
-            return objectMapper.readValue(json, List.class);
-        } catch (Exception e) {
-            log.warn("Không thể parse JSON list: {}", json, e);
-            return null;
-        }
+        return List.of(str.split(","));
     }
 }
