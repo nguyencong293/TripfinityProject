@@ -12,6 +12,12 @@ export interface UserDTO {
   fullName: string;
   phoneNumber?: string;
   avatarUrl?: string;
+  accountRole?: string;
+  accountStatus?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 export interface LoginRequest {
   email: string;

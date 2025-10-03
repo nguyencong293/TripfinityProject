@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Bell,
   User,
@@ -760,12 +760,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       </p>
                     </div>
                     <div className="py-2">
-                      <button className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary transition-colors text-left">
+                      <Link
+                        className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary transition-colors text-left"
+                        to={"/supplier/profile"}
+                      >
                         <User className="w-4 h-4 flex-shrink-0" />
                         <span className="truncate text-body1-mobile md:text-body1-tablet lg:text-body1-desktop">
                           {t("account_info")}
                         </span>
-                      </button>
+                      </Link>
                       <button className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary transition-colors text-left">
                         <Settings className="w-4 h-4 flex-shrink-0" />
                         <span className="truncate text-body1-mobile md:text-body1-tablet lg:text-body1-desktop">

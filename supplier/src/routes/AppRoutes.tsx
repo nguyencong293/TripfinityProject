@@ -14,6 +14,7 @@ import HotelCreatePage from "../pages/Service/Hotel/HotelCreatePage";
 import HotelEditPage from "../pages/Service/Hotel/HotelEditPage";
 import ProviderInfoPage from "../pages/Auth/ProviderInfoPage";
 import ProtectedRoute from "./ProtectedRoute";
+import ProfileProviderPage from "../pages/ProfileProviderPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -32,6 +33,7 @@ const AppRoutes: React.FC = () => {
         <Route element={<ProtectedRoute />}>
           <Route path="/supplier" element={<App />}>
             <Route index element={<SupplierHomePage />} />
+            <Route path="profile" element={<ProfileProviderPage />} />
             <Route path="listings" element={<ListingsPage />} />
             <Route path="service/tour" element={<DashboardTourPage />} />
             <Route path="service/hotel" element={<DashboardHotelPage />} />

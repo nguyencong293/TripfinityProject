@@ -1,5 +1,10 @@
 import api from "./api";
-import type { ProviderDTO, CreateProviderRequest, ApiResponse } from "../types";
+import type {
+  ProviderDTO,
+  CreateProviderRequest,
+  ApiResponse,
+  UserDTO,
+} from "../types";
 import axios from "axios";
 
 const extractErrorMessage = (
@@ -113,6 +118,66 @@ export const deleteProviderLogo = async (
     return resp.data as ProviderDTO;
   } catch (error) {
     const errorMessage = extractErrorMessage(error, "Xóa logo thất bại");
+    throw new Error(errorMessage);
+  }
+};
+
+export const getUserById = async (userId: number): Promise<UserDTO> => {
+  try {
+    const resp = await api.get(`/users/${userId}`);
+    return resp.data as UserDTO;
+  } catch (error) {
+    throw new Error(
+      extractErrorMessage(error, "Không thể lấy thông tin người dùng")
+    );
+  }
+};
+
+export const updateUser = async (
+  userId: number,
+  data: Partial<UserDTO>
+): Promise<ApiResponse<UserDTO>> => {
+  try {
+    const resp = await api.put(`/users/${userId}`, data);
+    return {
+      success: true,
+      data: resp.data as UserDTO,
+    };
+  } catch (error) {
+    const errorMessage = extractErrorMessage(
+      error,
+      "Cập nhật thông tin người dùng thất bại"
+    );
+    throw new Error(errorMessage);
+  }
+};
+
+export const uploadUserAvatar = async (
+  userId: number,
+  file: File
+): Promise<UserDTO> => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const resp = await api.post(`/users/${userId}/avatar`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return resp.data as UserDTO;
+  } catch (error) {
+    const errorMessage = extractErrorMessage(error, "Upload avatar thất bại");
+    throw new Error(errorMessage);
+  }
+};
+
+export const deleteUserAvatar = async (userId: number): Promise<UserDTO> => {
+  try {
+    const resp = await api.delete(`/users/${userId}/avatar`);
+    return resp.data as UserDTO;
+  } catch (error) {
+    const errorMessage = extractErrorMessage(error, "Xóa avatar thất bại");
     throw new Error(errorMessage);
   }
 };
