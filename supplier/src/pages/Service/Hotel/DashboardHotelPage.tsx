@@ -1,39 +1,38 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useMemo, type JSX } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  Building2,
+  Hotel,
   Plus,
   Search,
-  Filter,
-  Star,
-  Eye,
-  Pencil,
-  CalendarDays,
-  Copy,
-  Power,
-  Archive,
+  RefreshCw,
+  X,
+  CheckSquare,
+  Square,
   ChevronDown,
   ChevronUp,
-  RefreshCw,
-  Loader2,
-  AlertCircle,
-  Clock,
-  Tag,
-  History,
+  MapPin,
+  Star,
   DollarSign,
-  Video,
-  Wrench,
-  ShieldAlert,
-  XCircle,
-  TriangleAlert,
-  DoorClosed,
-  Sparkles,
+  Calendar,
+  TrendingUp,
+  AlertCircle,
+  Loader2,
+  Clock,
+  Bell,
+  Activity,
+  MessageSquare,
+  Settings,
+  Image as ImageIcon,
+  Eye,
+  Edit,
+  Trash2,
+  Archive,
+  Upload,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
 import { useHotels } from "../../../hooks/useHotels";
 import type { HotelDTO } from "../../../types";
 
 /* ===================== Mock Types cho các phần tĩnh ===================== */
-type HotelStatus = "draft" | "published" | "archived" | "disabled";
 interface Reservation {
   id: number;
   hotel_id: number;
@@ -107,14 +106,17 @@ interface ActivityLog {
     | "media_upload"
     | "virtual_tour_add";
   hotel_id?: number;
-  meta?: Record<string, unknown>;
+  meta?: {
+    title?: string;
+    [key: string]: string | number | boolean | undefined;
+  };
   created_at: string;
 }
 
 /* ===================== Mock Generators ===================== */
-const roomTypes = ["Standard", "Deluxe", "Suite", "Family", "Studio"];
+const roomTypes = ["Standard", "Deluxe", "Suite", "Family", "Studio"] as const;
 
-function rand<T>(arr: T[]): T {
+function rand<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
@@ -123,7 +125,7 @@ function genReservations(hotels: HotelDTO[]): Reservation[] {
   const now = Date.now();
   for (let i = 1; i <= 30; i++) {
     const h = hotels[Math.floor(Math.random() * hotels.length)];
-    if (!h) continue;
+    if (!h || !h.hotelId) continue;
     const offset = Math.floor(Math.random() * 3);
     const ci = new Date(now + offset * 86400000).toISOString().substring(0, 10);
     const co = new Date(
@@ -131,15 +133,23 @@ function genReservations(hotels: HotelDTO[]): Reservation[] {
     )
       .toISOString()
       .substring(0, 10);
+    const bookingStatuses: Array<
+      "pending" | "confirmed" | "cancelled" | "checked_in"
+    > = ["pending", "confirmed", "cancelled"];
+    const paymentStatuses: Array<"pending" | "paid" | "partial"> = [
+      "pending",
+      "paid",
+      "partial",
+    ];
     arr.push({
       id: 5000 + i,
-      hotel_id: h.hotelId!,
+      hotel_id: h.hotelId,
       guest_name: `Guest ${i}`,
       room_type: rand(roomTypes),
       check_in: ci,
       check_out: co,
-      booking_status: rand(["pending", "confirmed", "cancelled"]),
-      payment_status: rand(["pending", "paid", "partial"]),
+      booking_status: rand(bookingStatuses),
+      payment_status: rand(paymentStatuses),
     });
   }
   return arr;
@@ -148,28 +158,28 @@ function genReservations(hotels: HotelDTO[]): Reservation[] {
 function genInventory(hotels: HotelDTO[]): InventorySlot[] {
   const now = Date.now();
   const arr: InventorySlot[] = [];
-  hotels.slice(0, 5).forEach((h) => {
-    roomTypes.slice(0, 3).forEach((rt) => {
-      for (let d = 0; d < 30; d++) {
-        if (Math.random() > 0.8) continue;
-        const date = new Date(now + d * 86400000)
-          .toISOString()
-          .substring(0, 10);
-        const base = 10 + (d % 4) * 2;
-        const occ = Math.floor(base * Math.random());
-        arr.push({
-          date,
-          hotel_id: h.hotelId!,
-          room_type: rt,
-          available_count: base - occ,
-          occupied: occ,
-          blocked: Math.random() > 0.95,
-          price_override:
-            Math.random() > 0.9 ? h.price * (1 + Math.random() * 0.2) : null,
-        });
-      }
+  hotels
+    .filter((h) => h.hotelId !== undefined)
+    .slice(0, 5)
+    .forEach((h) => {
+      roomTypes.slice(0, 3).forEach((rt) => {
+        for (let d = 0; d < 30; d++) {
+          const date = new Date(now + d * 86400000)
+            .toISOString()
+            .substring(0, 10);
+          const total = 5 + Math.floor(Math.random() * 10);
+          const occ = Math.floor(Math.random() * total);
+          arr.push({
+            date,
+            hotel_id: h.hotelId!,
+            room_type: rt,
+            available_count: total - occ,
+            occupied: occ,
+            blocked: Math.random() > 0.9,
+          });
+        }
+      });
     });
-  });
   return arr;
 }
 
@@ -177,6 +187,7 @@ function genRatePlans(hotels: HotelDTO[]): RatePlan[] {
   const arr: RatePlan[] = [];
   let id = 1;
   hotels.slice(0, 6).forEach((h) => {
+    if (!h.hotelId) return;
     roomTypes.slice(0, 3).forEach((rt, idx) => {
       arr.push({
         id: id++,
@@ -198,11 +209,12 @@ function genReviews(hotels: HotelDTO[]): Review[] {
   const arr: Review[] = [];
   let id = 1;
   hotels.slice(0, 6).forEach((h) => {
+    if (!h.hotelId) return;
     const n = 1 + ((h.hotelId || 0) % 3);
     for (let i = 0; i < n; i++) {
       arr.push({
         id: id++,
-        hotel_id: h.hotelId!,
+        hotel_id: h.hotelId,
         guest: `Reviewer ${id}`,
         rating: parseFloat((3 + Math.random() * 2).toFixed(1)),
         aspects: {
@@ -228,11 +240,12 @@ function genHousekeeping(): HousekeepingItem[] {
 }
 
 function genAlerts(hotels: HotelDTO[]): AlertItem[] {
+  const firstHotelTitle = hotels[0]?.title || "Hotel";
   return [
     {
       id: 1,
       type: "overbook_risk",
-      message: `Nguy cơ overbook tại ${hotels[0]?.title || "Hotel"}`,
+      message: `Nguy cơ overbook tại ${firstHotelTitle}`,
       severity: "warn",
       created_at: new Date().toISOString(),
     },
@@ -254,7 +267,7 @@ function genAlerts(hotels: HotelDTO[]): AlertItem[] {
 }
 
 function genActivities(hotels: HotelDTO[]): ActivityLog[] {
-  const actions: ActivityLog["action"][] = [
+  const actions: Array<ActivityLog["action"]> = [
     "publish",
     "unpublish",
     "price_update",
@@ -267,7 +280,7 @@ function genActivities(hotels: HotelDTO[]): ActivityLog[] {
   const arr: ActivityLog[] = [];
   for (let i = 0; i < 22; i++) {
     const h = hotels[Math.floor(Math.random() * hotels.length)];
-    if (!h) continue;
+    if (!h || !h.hotelId) continue;
     arr.push({
       id: i + 1,
       action: rand(actions),
@@ -280,14 +293,14 @@ function genActivities(hotels: HotelDTO[]): ActivityLog[] {
 }
 
 /* ===================== Helpers ===================== */
-const fmtCurrency = (v: number) =>
+const fmtCurrency = (v: number): string =>
   new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
     minimumFractionDigits: 0,
   }).format(v);
 
-const cx = (...c: Array<string | false | null | undefined>) =>
+const cx = (...c: Array<string | false | null | undefined>): string =>
   c.filter(Boolean).join(" ");
 
 /* ===================== Main Component ===================== */
@@ -298,7 +311,6 @@ const DashboardHotelPage: React.FC = () => {
     filteredHotels,
     loading,
     error,
-    providerId,
     filters,
     setFilters,
     refetch,
@@ -316,16 +328,16 @@ const DashboardHotelPage: React.FC = () => {
 
   /* Collapsible sections */
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const toggleCollapse = (k: string) =>
+  const toggleCollapse = (k: string): void =>
     setCollapsed((prev) => ({ ...prev, [k]: !prev[k] }));
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const toggleSelectAll = () => {
-    const ids = filteredHotels.map((h) => h.hotelId!);
+  const toggleSelectAll = (): void => {
+    const ids = filteredHotels.map((h) => h.hotelId!).filter(Boolean);
     const all = ids.every((i) => selectedIds.has(i));
     setSelectedIds(all ? new Set() : new Set(ids));
   };
-  const toggleSelectOne = (id: number) =>
+  const toggleSelectOne = (id: number): void =>
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -342,8 +354,8 @@ const DashboardHotelPage: React.FC = () => {
     const published = filteredHotels.filter(
       (h) => h.hotelStatus === "published"
     ).length;
-    const draft = filteredHotels.filter(
-      (h) => h.hotelStatus === "draft"
+    const archived = filteredHotels.filter(
+      (h) => h.hotelStatus === "archived"
     ).length;
     const avgRating =
       filteredHotels.length > 0
@@ -356,7 +368,7 @@ const DashboardHotelPage: React.FC = () => {
           filteredHotels.length
         : 0;
 
-    return { total, published, draft, avgRating, avgPrice };
+    return { total, published, archived, avgRating, avgPrice };
   }, [filteredHotels]);
 
   /* Derived upcoming arrivals */
@@ -372,7 +384,7 @@ const DashboardHotelPage: React.FC = () => {
 
   /* Availability heatmap */
   const [availabilityHotelId, setAvailabilityHotelId] = useState<number>(() =>
-    hotels.length ? hotels[0].hotelId! : 0
+    hotels.length && hotels[0].hotelId ? hotels[0].hotelId : 0
   );
   const availabilityHeat = useMemo(() => {
     const roomSet = new Set<string>();
@@ -413,39 +425,64 @@ const DashboardHotelPage: React.FC = () => {
   const activityRecent = useMemo(() => activities.slice(0, 10), [activities]);
 
   /* Bulk actions (mock) */
-  const bulkPublish = () => {
+  const bulkPublish = (): void => {
     console.log("Bulk publish hotels:", Array.from(selectedIds));
     alert(`Publishing ${selectedIds.size} hotels (mock)`);
   };
-  const bulkArchive = () => {
+  const bulkArchive = (): void => {
     console.log("Bulk archive hotels:", Array.from(selectedIds));
     alert(`Archiving ${selectedIds.size} hotels (mock)`);
   };
 
   /* Status badge */
-  const statusBadge = (status: HotelStatus) => {
-    const map: Record<HotelStatus, string> = {
+  const statusBadge = (status: HotelDTO["hotelStatus"]): JSX.Element => {
+    const map: Record<HotelDTO["hotelStatus"], string> = {
       published:
         "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-      draft:
+      archived:
         "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-      archived: "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
       disabled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
     };
-    const label: Record<HotelStatus, string> = {
+    const label: Record<HotelDTO["hotelStatus"], string> = {
       published: "Đang xuất bản",
-      draft: "Nháp",
       archived: "Lưu trữ",
       disabled: "Ngưng",
     };
     return (
       <span
         className={cx(
-          "caption-mobile sm:caption-tablet lg:caption-desktop px-2 py-0.5 rounded font-medium inline-block",
+          "text-xs px-2 py-0.5 rounded font-medium inline-block",
           map[status]
         )}
       >
         {label[status]}
+      </span>
+    );
+  };
+
+  /* Visibility badge */
+  const visibilityBadge = (
+    visibility?: HotelDTO["visibility"]
+  ): JSX.Element | null => {
+    if (!visibility) return null;
+    const map: Record<HotelDTO["visibility"], string> = {
+      public_:
+        "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+      private_:
+        "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+    };
+    const label: Record<HotelDTO["visibility"], string> = {
+      public_: "Công khai",
+      private_: "Riêng tư",
+    };
+    return (
+      <span
+        className={cx(
+          "text-xs px-2 py-0.5 rounded font-medium inline-block",
+          map[visibility]
+        )}
+      >
+        {label[visibility]}
       </span>
     );
   };
@@ -455,27 +492,23 @@ const DashboardHotelPage: React.FC = () => {
     key: string,
     icon?: React.ReactNode,
     extra?: React.ReactNode
-  ) => {
+  ): JSX.Element => {
     const col = collapsed[key];
     return (
       <div className="flex items-center gap-2 mb-3">
         <button
           onClick={() => toggleCollapse(key)}
-          className="flex items-center gap-2 group"
+          className="flex items-center gap-2 flex-1 text-left group"
         >
-          <span className="w-6 h-6 inline-flex items-center justify-center rounded theme-bg-secondary icon-brand">
-            {icon || <Building2 className="w-4 h-4" />}
-          </span>
-          <h3 className="h5-mobile sm:h5-tablet lg:h5-desktop font-semibold">
-            {title}
-          </h3>
+          {icon}
+          <h2 className="text-xl font-bold theme-text-primary">{title}</h2>
           {col ? (
-            <ChevronDown className="w-4 h-4 theme-text-secondary group-hover:icon-brand" />
+            <ChevronDown className="w-5 h-5 icon-secondary group-hover:icon-brand transition-colors" />
           ) : (
-            <ChevronUp className="w-4 h-4 theme-text-secondary group-hover:icon-brand" />
+            <ChevronUp className="w-5 h-5 icon-secondary group-hover:icon-brand transition-colors" />
           )}
         </button>
-        <div className="ml-auto flex items-center gap-2">{extra}</div>
+        {extra}
       </div>
     );
   };
@@ -485,24 +518,18 @@ const DashboardHotelPage: React.FC = () => {
     value: React.ReactNode,
     icon: React.ReactNode,
     sub?: React.ReactNode
-  ) => (
+  ): JSX.Element => (
     <div className="theme-border rounded-lg p-4 theme-bg-card flex flex-col gap-2 shadow-sm">
       <div className="flex items-center gap-2">
-        <div className="w-9 h-9 rounded-full theme-bg-secondary flex items-center justify-center icon-brand">
+        <div className="p-2 rounded-lg bg-light-secondary dark:bg-dark-secondary">
           {icon}
         </div>
-        <span className="overline-mobile sm:overline-tablet lg:overline-desktop font-medium theme-text-secondary">
+        <span className="text-sm theme-text-secondary font-medium">
           {label}
         </span>
       </div>
-      <div className="h4-mobile sm:h4-tablet lg:h4-desktop font-bold">
-        {value}
-      </div>
-      {sub && (
-        <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-          {sub}
-        </div>
-      )}
+      <div className="text-2xl font-bold">{value}</div>
+      {sub && <div className="text-xs theme-text-secondary">{sub}</div>}
     </div>
   );
 
@@ -511,179 +538,173 @@ const DashboardHotelPage: React.FC = () => {
     <div className="p-6 max-w-[1900px] mx-auto flex flex-col gap-10 theme-text-primary">
       {/* Header & Filters */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="h3-mobile sm:h3-tablet lg:h3-desktop font-bold flex items-center gap-2">
-            <Building2 className="w-7 h-7 icon-brand" />
-            Dashboard Khách Sạn
-          </h1>
-          {providerId && (
-            <span className="body2-mobile sm:body2-tablet lg:body2-desktop theme-text-secondary">
-              Provider ID: <strong>{providerId}</strong>
-            </span>
-          )}
-          <div className="ml-auto flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg">
+              <Hotel className="w-7 h-7" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Quản lý Khách sạn</h1>
+              <p className="text-sm theme-text-secondary mt-0.5">
+                Tổng quan và quản lý toàn bộ khách sạn
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
             <button
               onClick={() => refetch()}
+              className="btn-outline px-4 py-2 flex items-center gap-2"
               disabled={loading}
-              className="btn-outline btn-text-responsive flex items-center gap-2"
             >
               <RefreshCw className={cx("w-4 h-4", loading && "animate-spin")} />
-              Làm mới
+              <span className="hidden sm:inline">Làm mới</span>
             </button>
-            <Link
-              to="/supplier/service/hotel/create"
-              className="btn-primary btn-text-responsive flex items-center gap-2"
+            <button
+              onClick={() => navigate("/supplier/service/hotel/create")}
+              className="btn-primary px-4 py-2 flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Tạo khách sạn
-            </Link>
+              Tạo khách sạn mới
+            </button>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex items-center gap-2 theme-border rounded px-2 py-1 theme-bg-card body2-mobile sm:body2-tablet lg:body2-desktop">
-            <Search className="w-4 h-4 icon-disabled" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 icon-secondary" />
             <input
-              value={filters.search}
+              value={filters.search || ""}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, search: e.target.value }))
               }
-              placeholder="Tìm tiêu đề / slug / ID"
-              className="outline-none bg-transparent body2-mobile sm:body2-tablet lg:body2-desktop placeholder:theme-text-secondary"
+              placeholder="Tìm theo tên, ID..."
+              className="w-full pl-10 pr-3 py-2 border theme-border rounded-lg bg-white dark:bg-dark-card theme-text-primary focus-ring-primary text-sm"
             />
           </div>
 
-          <div className="flex flex-col">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Loại hình
-            </label>
-            <select
-              value={filters.propertyType || ""}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  propertyType: e.target.value,
-                }))
-              }
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-            >
-              <option value="">Tất cả</option>
-              <option value="hotel">Hotel</option>
-              <option value="resort">Resort</option>
-              <option value="apartment">Apartment</option>
-              <option value="villa">Villa</option>
-              <option value="hostel">Hostel</option>
-              <option value="guesthouse">Guesthouse</option>
-              <option value="homestay">Homestay</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Sao ≥
-            </label>
-            <select
-              value={filters.starRating || ""}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  starRating: e.target.value
-                    ? parseInt(e.target.value)
-                    : undefined,
-                }))
-              }
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-            >
-              <option value="">Bất kỳ</option>
-              {[1, 2, 3, 4, 5].map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Trạng thái
-            </label>
-            <select
-              value={filters.status || ""}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  status: e.target.value as
-                    | ""
-                    | "published"
-                    | "draft"
-                    | "archived"
-                    | "disabled",
-                }))
-              }
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-            >
-              <option value="">Tất cả</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-              <option value="archived">Archived</option>
-              <option value="disabled">Disabled</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col w-28">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Giá ≥
-            </label>
-            <input
-              type="number"
-              value={filters.priceMin || ""}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  priceMin: e.target.value
-                    ? parseFloat(e.target.value)
-                    : undefined,
-                }))
-              }
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-              placeholder="Min"
-            />
-          </div>
-          <div className="flex flex-col w-28">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Giá ≤
-            </label>
-            <input
-              type="number"
-              value={filters.priceMax || ""}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  priceMax: e.target.value
-                    ? parseFloat(e.target.value)
-                    : undefined,
-                }))
-              }
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-              placeholder="Max"
-            />
-          </div>
-
-          <button
-            onClick={clearFilters}
-            className="caption-mobile sm:caption-tablet lg:caption-desktop theme-border rounded px-3 py-1 theme-bg-card hover:opacity-80"
+          <select
+            value={filters.status || ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFilters((prev) => ({
+                ...prev,
+                status: value === "" ? "" : (value as HotelDTO["hotelStatus"]),
+              }));
+            }}
+            className="px-3 py-2 border theme-border rounded-lg bg-white dark:bg-dark-card theme-text-primary focus-ring-primary text-sm"
           >
-            Đặt lại
-          </button>
+            <option value="">Tất cả trạng thái</option>
+            <option value="published">Đang xuất bản</option>
+            <option value="archived">Lưu trữ</option>
+            <option value="disabled">Ngưng</option>
+          </select>
+
+          <select
+            value={filters.visibility || ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFilters((prev) => ({
+                ...prev,
+                visibility:
+                  value === "" ? "" : (value as HotelDTO["visibility"]),
+              }));
+            }}
+            className="px-3 py-2 border theme-border rounded-lg bg-white dark:bg-dark-card theme-text-primary focus-ring-primary text-sm"
+          >
+            <option value="">Tất cả hiển thị</option>
+            <option value="public_">Công khai</option>
+            <option value="private_">Riêng tư</option>
+          </select>
+
+          <select
+            value={filters.propertyType || ""}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, propertyType: e.target.value }))
+            }
+            className="px-3 py-2 border theme-border rounded-lg bg-white dark:bg-dark-card theme-text-primary focus-ring-primary text-sm"
+          >
+            <option value="">Tất cả loại hình</option>
+            <option value="hotel">Khách sạn</option>
+            <option value="resort">Resort</option>
+            <option value="apartment">Căn hộ</option>
+            <option value="villa">Biệt thự</option>
+            <option value="hostel">Hostel</option>
+            <option value="guesthouse">Nhà khách</option>
+            <option value="homestay">Homestay</option>
+          </select>
         </div>
+
+        {/* Active Filters */}
+        {(filters.search ||
+          filters.status ||
+          filters.visibility ||
+          filters.propertyType) && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm theme-text-secondary">Bộ lọc:</span>
+            {filters.search && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-light-secondary dark:bg-dark-secondary rounded text-sm">
+                Tìm: &quot;{filters.search}&quot;
+                <button
+                  onClick={() =>
+                    setFilters((prev) => ({ ...prev, search: "" }))
+                  }
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.status && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-light-secondary dark:bg-dark-secondary rounded text-sm">
+                Trạng thái: {filters.status}
+                <button
+                  onClick={() =>
+                    setFilters((prev) => ({ ...prev, status: "" }))
+                  }
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.visibility && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-light-secondary dark:bg-dark-secondary rounded text-sm">
+                Hiển thị: {filters.visibility}
+                <button
+                  onClick={() =>
+                    setFilters((prev) => ({ ...prev, visibility: "" }))
+                  }
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.propertyType && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-light-secondary dark:bg-dark-secondary rounded text-sm">
+                Loại: {filters.propertyType}
+                <button
+                  onClick={() =>
+                    setFilters((prev) => ({ ...prev, propertyType: "" }))
+                  }
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            <button
+              onClick={clearFilters}
+              className="text-sm text-red-600 hover:underline"
+            >
+              Xóa tất cả
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Error State */}
       {error && (
         <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
           <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-          <span className="body2-mobile sm:body2-tablet lg:body2-desktop text-red-700 dark:text-red-300">
+          <span className="text-sm text-red-700 dark:text-red-300">
             {error}
           </span>
         </div>
@@ -693,213 +714,287 @@ const DashboardHotelPage: React.FC = () => {
       {loading && (
         <div className="flex items-center justify-center gap-3 py-12">
           <Loader2 className="w-6 h-6 animate-spin icon-brand" />
-          <span className="body1-mobile sm:body1-tablet lg:body1-desktop">
-            Đang tải dữ liệu...
-          </span>
+          <span className="theme-text-secondary">Đang tải dữ liệu...</span>
         </div>
       )}
 
       {/* Content */}
       {!loading && (
         <>
-          {/* KPI Cards */}
-          <div>
-            {sectionHeader(
-              "Chỉ số (KPI)",
-              "kpi",
-              <Filter className="w-4 h-4" />
+          {/* KPIs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {renderKPI(
+              "Tổng khách sạn",
+              kpis.total,
+              <Hotel className="w-5 h-5 icon-brand" />,
+              `${filteredHotels.length} đang hiển thị`
             )}
-            {!collapsed["kpi"] && (
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-                {renderKPI(
-                  "Tổng khách sạn",
-                  kpis.total,
-                  <Building2 className="w-4 h-4" />
-                )}
-                {renderKPI(
-                  "Đã xuất bản",
-                  kpis.published,
-                  <Power className="w-4 h-4" />
-                )}
-                {renderKPI("Nháp", kpis.draft, <Pencil className="w-4 h-4" />)}
-                {renderKPI(
-                  "Đánh giá TB",
-                  kpis.avgRating.toFixed(1),
-                  <Star className="w-4 h-4" />
-                )}
-                {renderKPI(
-                  "Giá TB",
-                  fmtCurrency(Math.round(kpis.avgPrice)),
-                  <DollarSign className="w-4 h-4" />
-                )}
-              </div>
+            {renderKPI(
+              "Đang hoạt động",
+              kpis.published,
+              <TrendingUp className="w-5 h-5 text-green-600" />,
+              `${((kpis.published / (kpis.total || 1)) * 100).toFixed(
+                0
+              )}% tổng số`
+            )}
+            {renderKPI(
+              "Lưu trữ",
+              kpis.archived,
+              <Archive className="w-5 h-5 text-amber-600" />
+            )}
+            {renderKPI(
+              "Đánh giá TB",
+              kpis.avgRating.toFixed(1),
+              <Star className="w-5 h-5 text-yellow-500" />,
+              "⭐".repeat(Math.round(kpis.avgRating))
+            )}
+            {renderKPI(
+              "Giá TB",
+              fmtCurrency(kpis.avgPrice),
+              <DollarSign className="w-5 h-5 text-blue-600" />
             )}
           </div>
 
-          {/* Listing Hotels */}
-          <div>
+          {/* Hotels List */}
+          <div className="flex flex-col gap-4">
             {sectionHeader(
-              "Danh sách Khách sạn",
-              "hotels",
-              <Building2 className="w-4 h-4" />,
-              <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                {filteredHotels.length} kết quả
-              </span>
-            )}
-            {!collapsed["hotels"] && (
-              <div className="flex flex-col gap-3">
+              `Danh sách khách sạn (${filteredHotels.length})`,
+              "hotels-list",
+              <Hotel className="w-6 h-6 icon-brand" />,
+              <div className="flex gap-2">
                 {selectedIds.size > 0 && (
-                  <div className="theme-border rounded theme-bg-card p-2 flex flex-wrap gap-2 items-center caption-mobile sm:caption-tablet lg:caption-desktop">
-                    <span className="font-medium">
-                      {selectedIds.size} đã chọn
-                    </span>
+                  <>
                     <button
                       onClick={bulkPublish}
-                      className="px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700"
+                      className="btn-secondary px-3 py-1 text-sm flex items-center gap-1"
                     >
-                      Xuất bản
+                      <Upload className="w-3 h-3" />
+                      Xuất bản ({selectedIds.size})
                     </button>
                     <button
                       onClick={bulkArchive}
-                      className="px-2 py-1 rounded bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-white"
+                      className="btn-outline px-3 py-1 text-sm flex items-center gap-1"
                     >
-                      Lưu trữ
+                      <Archive className="w-3 h-3" />
+                      Lưu trữ ({selectedIds.size})
                     </button>
-                    <button
-                      onClick={() => setSelectedIds(new Set())}
-                      className="px-2 py-1 rounded theme-border hover:opacity-80"
-                    >
-                      Bỏ chọn
-                    </button>
-                  </div>
+                  </>
                 )}
-                <div className="overflow-auto theme-border rounded theme-bg-card">
-                  <table className="w-full border-collapse body2-mobile sm:body2-tablet lg:body2-desktop">
-                    <thead className="bg-gray-50 dark:bg-gray-800/60">
-                      <tr className="text-left theme-text-secondary caption-mobile sm:caption-tablet lg:caption-desktop">
-                        <th className="p-2">
-                          <input
-                            type="checkbox"
-                            checked={
-                              filteredHotels.length > 0 &&
-                              filteredHotels.every((h) =>
-                                selectedIds.has(h.hotelId!)
-                              )
-                            }
-                            onChange={toggleSelectAll}
-                          />
+              </div>
+            )}
+
+            {!collapsed["hotels-list"] && (
+              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm">
+                {/* Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-light-secondary dark:bg-dark-secondary">
+                      <tr>
+                        <th className="p-3 text-left">
+                          <button onClick={toggleSelectAll}>
+                            {filteredHotels.length > 0 &&
+                            filteredHotels.every((h) =>
+                              h.hotelId ? selectedIds.has(h.hotelId) : false
+                            ) ? (
+                              <CheckSquare className="w-4 h-4 icon-brand" />
+                            ) : (
+                              <Square className="w-4 h-4 icon-secondary" />
+                            )}
+                          </button>
                         </th>
-                        <th className="p-2">Ảnh</th>
-                        <th className="p-2">Tiêu đề / Slug</th>
-                        <th className="p-2">Sao / Loại</th>
-                        <th className="p-2">Giá</th>
-                        <th className="p-2">Rating</th>
-                        <th className="p-2">Trạng thái</th>
-                        <th className="p-2">Hành động</th>
+                        <th className="p-3 text-left font-semibold">ID</th>
+                        <th className="p-3 text-left font-semibold">
+                          Khách sạn
+                        </th>
+                        <th className="p-3 text-left font-semibold">
+                          Loại hình
+                        </th>
+                        <th className="p-3 text-left font-semibold">Vị trí</th>
+                        <th className="p-3 text-left font-semibold">Giá</th>
+                        <th className="p-3 text-left font-semibold">
+                          Đánh giá
+                        </th>
+                        <th className="p-3 text-left font-semibold">
+                          Trạng thái
+                        </th>
+                        <th className="p-3 text-left font-semibold">
+                          Hiển thị
+                        </th>
+                        <th className="p-3 text-left font-semibold">
+                          Hành động
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredHotels.map((h) => (
-                        <tr
-                          key={h.hotelId}
-                          className="border-t theme-border hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
-                        >
-                          <td className="p-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.has(h.hotelId!)}
-                              onChange={() => toggleSelectOne(h.hotelId!)}
-                            />
-                          </td>
-                          <td className="p-2">
-                            <div className="w-20 h-14 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden flex items-center justify-center">
-                              {h.thumbnailUrl ? (
-                                <img
-                                  src={h.thumbnailUrl}
-                                  alt={h.title}
-                                  className="object-cover w-full h-full"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                                  Không ảnh
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-2 align-top">
-                            <div className="flex flex-col gap-0.5">
-                              <button className="text-blue-600 dark:text-blue-400 hover:underline font-medium caption-mobile sm:caption-tablet lg:caption-desktop text-left">
-                                {h.title}
-                              </button>
-                              <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                                {h.slug || "-"}
-                              </span>
-                              {statusBadge(h.hotelStatus)}
-                            </div>
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            <div className="flex items-center gap-1">
-                              <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                              {h.starRating || 0}★
-                            </div>
-                            <div className="overline-mobile sm:overline-tablet lg:overline-desktop">
-                              {h.propertyType || "-"}
-                            </div>
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop whitespace-nowrap">
-                            {fmtCurrency(h.price)}
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            {h.ratingAverage?.toFixed(1) || "0.0"}
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            {h.visibility === "public" ? "Public" : "Private"}
-                          </td>
-                          <td className="p-2 align-top">
-                            <div className="flex flex-wrap gap-1">
-                              {[
-                                { ic: Eye, t: "Xem" },
-                                {
-                                  ic: Pencil,
-                                  t: "Sửa",
-                                  action: () =>
-                                    navigate(
-                                      `/supplier/service/hotel/edit/${h.hotelId}`
-                                    ),
-                                },
-                                { ic: CalendarDays, t: "Lịch" },
-                                { ic: Copy, t: "Clone" },
-                                { ic: Archive, t: "Archive" },
-                              ].map((a, i) => {
-                                const Icon = a.ic;
-                                return (
-                                  <button
-                                    key={i}
-                                    type="button"
-                                    onClick={a.action}
-                                    className="p-1 hover:text-blue-600 dark:hover:text-blue-400"
-                                    title={a.t}
-                                    disabled={!a.action}
-                                  >
-                                    <Icon className="w-4 h-4" />
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
                       {filteredHotels.length === 0 && (
                         <tr>
                           <td
-                            className="p-4 text-center caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary"
-                            colSpan={8}
+                            colSpan={10}
+                            className="p-8 text-center theme-text-secondary"
                           >
-                            Không tìm thấy khách sạn
+                            Không có khách sạn nào
                           </td>
                         </tr>
                       )}
+                      {filteredHotels.map((hotel) => {
+                        if (!hotel.hotelId) return null;
+                        return (
+                          <tr
+                            key={hotel.hotelId}
+                            className="border-t theme-border hover:bg-light-secondary dark:hover:bg-dark-secondary/50 transition-colors"
+                          >
+                            {/* Checkbox */}
+                            <td className="p-3">
+                              <button
+                                onClick={() => toggleSelectOne(hotel.hotelId!)}
+                              >
+                                {selectedIds.has(hotel.hotelId) ? (
+                                  <CheckSquare className="w-4 h-4 icon-brand" />
+                                ) : (
+                                  <Square className="w-4 h-4 icon-secondary" />
+                                )}
+                              </button>
+                            </td>
+
+                            {/* ID */}
+                            <td className="p-3">
+                              <span className="font-mono text-xs theme-text-secondary">
+                                #{hotel.hotelId}
+                              </span>
+                            </td>
+
+                            {/* Hotel Info */}
+                            <td className="p-3">
+                              <div className="flex items-center gap-3">
+                                {hotel.thumbnailUrl ? (
+                                  <img
+                                    src={hotel.thumbnailUrl}
+                                    alt={hotel.title}
+                                    className="w-12 h-12 rounded object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded bg-light-secondary dark:bg-dark-secondary flex items-center justify-center">
+                                    <ImageIcon className="w-5 h-5 icon-secondary" />
+                                  </div>
+                                )}
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {hotel.title}
+                                  </span>
+                                  {hotel.slug && (
+                                    <span className="text-xs theme-text-secondary">
+                                      {hotel.slug}
+                                    </span>
+                                  )}
+                                  {hotel.isFeatured && (
+                                    <span className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-0.5">
+                                      <Star className="w-3 h-3 fill-current" />
+                                      Nổi bật
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Property Type */}
+                            <td className="p-3">
+                              <span className="capitalize">
+                                {hotel.propertyType || "hotel"}
+                              </span>
+                            </td>
+
+                            {/* Location */}
+                            <td className="p-3">
+                              <div className="flex items-start gap-1">
+                                <MapPin className="w-3 h-3 icon-secondary mt-0.5 flex-shrink-0" />
+                                <span className="text-xs">
+                                  {hotel.location || hotel.address || "—"}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Price */}
+                            <td className="p-3">
+                              <span className="font-semibold">
+                                {fmtCurrency(hotel.price)}
+                              </span>
+                            </td>
+
+                            {/* Rating */}
+                            <td className="p-3">
+                              {hotel.ratingAverage ? (
+                                <div className="flex items-center gap-1">
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="font-medium">
+                                    {hotel.ratingAverage.toFixed(1)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs theme-text-secondary">
+                                  Chưa có
+                                </span>
+                              )}
+                              {hotel.starRating && (
+                                <div className="text-xs theme-text-secondary mt-0.5">
+                                  {hotel.starRating} sao
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Status */}
+                            <td className="p-3">
+                              {statusBadge(hotel.hotelStatus)}
+                            </td>
+
+                            {/* Visibility */}
+                            <td className="p-3">
+                              {visibilityBadge(hotel.visibility)}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="p-3">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() =>
+                                    navigate(`/hotels/${hotel.hotelId}`)
+                                  }
+                                  className="p-1.5 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors"
+                                  title="Xem chi tiết"
+                                >
+                                  <Eye className="w-4 h-4 icon-secondary" />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    navigate(`/hotels/${hotel.hotelId}/edit`)
+                                  }
+                                  className="p-1.5 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors"
+                                  title="Chỉnh sửa"
+                                >
+                                  <Edit className="w-4 h-4 icon-secondary" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        `Bạn có chắc muốn xóa "${hotel.title}"?`
+                                      )
+                                    ) {
+                                      console.log(
+                                        "Delete hotel",
+                                        hotel.hotelId
+                                      );
+                                    }
+                                  }}
+                                  className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                  title="Xóa"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -907,320 +1002,281 @@ const DashboardHotelPage: React.FC = () => {
             )}
           </div>
 
-          {/* Reservations Snapshot */}
-          <div>
+          {/* Các phần tĩnh khác - giữ nguyên UI mock */}
+          {/* Upcoming Arrivals (Mock) */}
+          <div className="flex flex-col gap-4">
             {sectionHeader(
-              "Booking đến (3 ngày)",
-              "reservations",
-              <Clock className="w-4 h-4" />,
-              <button className="caption-mobile sm:caption-tablet lg:caption-desktop flex items-center gap-1 px-2 py-1 rounded theme-border hover:opacity-80">
-                <RefreshCw className="w-3 h-3" />
-                Làm mới
-              </button>
+              `Check-in sắp tới (${upcomingArrivals.length})`,
+              "arrivals",
+              <Calendar className="w-6 h-6 icon-brand" />
             )}
-            {!collapsed["reservations"] && (
-              <div className="theme-border rounded theme-bg-card p-3 overflow-auto">
-                <table className="w-full border-collapse body2-mobile sm:body2-tablet lg:body2-desktop">
-                  <thead className="bg-gray-50 dark:bg-gray-800/60">
-                    <tr className="text-left theme-text-secondary caption-mobile sm:caption-tablet lg:caption-desktop">
-                      <th className="p-2">ID</th>
-                      <th className="p-2">Khách</th>
-                      <th className="p-2">Khách sạn</th>
-                      <th className="p-2">Room Type</th>
-                      <th className="p-2">Check-in</th>
-                      <th className="p-2">Check-out</th>
-                      <th className="p-2">Trạng thái</th>
-                      <th className="p-2">Thanh toán</th>
-                      <th className="p-2">Hành động</th>
+            {!collapsed["arrivals"] && (
+              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-light-secondary dark:bg-dark-secondary">
+                      <tr>
+                        <th className="p-3 text-left font-semibold">Khách</th>
+                        <th className="p-3 text-left font-semibold">
+                          Loại phòng
+                        </th>
+                        <th className="p-3 text-left font-semibold">
+                          Check-in
+                        </th>
+                        <th className="p-3 text-left font-semibold">
+                          Check-out
+                        </th>
+                        <th className="p-3 text-left font-semibold">
+                          Trạng thái
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {upcomingArrivals.map((res) => (
+                        <tr
+                          key={res.id}
+                          className="border-t theme-border hover:bg-light-secondary dark:hover:bg-dark-secondary/50"
+                        >
+                          <td className="p-3">{res.guest_name}</td>
+                          <td className="p-3">{res.room_type}</td>
+                          <td className="p-3">{res.check_in}</td>
+                          <td className="p-3">{res.check_out}</td>
+                          <td className="p-3">
+                            <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                              {res.booking_status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Availability Heatmap (Mock) */}
+          <div className="flex flex-col gap-4">
+            {sectionHeader(
+              "Lịch phòng trống (30 ngày tới)",
+              "availability",
+              <Calendar className="w-6 h-6 icon-brand" />,
+              <select
+                value={availabilityHotelId}
+                onChange={(e) => setAvailabilityHotelId(Number(e.target.value))}
+                className="px-2 py-1 text-sm border theme-border rounded"
+              >
+                {hotels.slice(0, 5).map((h) => (
+                  <option key={h.hotelId} value={h.hotelId}>
+                    {h.title}
+                  </option>
+                ))}
+              </select>
+            )}
+            {!collapsed["availability"] && (
+              <div className="border theme-border rounded-xl p-4 theme-bg-card shadow-sm overflow-x-auto">
+                <div className="min-w-[800px]">
+                  <div className="grid grid-cols-[120px_1fr] gap-2">
+                    <div className="font-semibold text-sm">Loại phòng</div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {availabilityHeat.days.slice(0, 7).map((d) => (
+                        <div key={d} className="text-xs text-center">
+                          {new Date(d).getDate()}
+                        </div>
+                      ))}
+                    </div>
+                    {availabilityHeat.roomList.map((rt, ri) => (
+                      <React.Fragment key={rt}>
+                        <div className="text-sm font-medium">{rt}</div>
+                        <div className="grid grid-cols-7 gap-1">
+                          {availabilityHeat.matrix[ri]
+                            ?.slice(0, 7)
+                            .map((slot, di) => {
+                              const pct = slot
+                                ? (slot.available_count /
+                                    (slot.available_count + slot.occupied)) *
+                                  100
+                                : 0;
+                              const color =
+                                pct > 70
+                                  ? "bg-green-200 dark:bg-green-800"
+                                  : pct > 30
+                                  ? "bg-yellow-200 dark:bg-yellow-800"
+                                  : "bg-red-200 dark:bg-red-800";
+                              return (
+                                <div
+                                  key={di}
+                                  className={cx(
+                                    "h-8 rounded text-xs flex items-center justify-center",
+                                    color
+                                  )}
+                                  title={`${slot?.available_count || 0} trống`}
+                                >
+                                  {slot?.available_count || 0}
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Rate Plans (Mock) */}
+          <div className="flex flex-col gap-4">
+            {sectionHeader(
+              `Rate Plans (${ratePlansPreview.length})`,
+              "rate-plans",
+              <DollarSign className="w-6 h-6 icon-brand" />
+            )}
+            {!collapsed["rate-plans"] && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {ratePlansPreview.map((rp) => (
+                  <div
+                    key={rp.id}
+                    className="border theme-border rounded-lg p-4 theme-bg-card shadow-sm flex flex-col gap-2"
+                  >
+                    <div className="font-semibold">{rp.name}</div>
+                    <div className="text-sm theme-text-secondary">
+                      {rp.room_type}
+                    </div>
+                    <div className="text-lg font-bold">
+                      {fmtCurrency(rp.base_price)}
+                    </div>
+                    <div className="flex gap-2 flex-wrap text-xs">
+                      {rp.refundable && (
+                        <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded">
+                          Hoàn tiền
+                        </span>
+                      )}
+                      {rp.meal_plan && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded">
+                          {rp.meal_plan}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Reviews (Mock) */}
+          <div className="flex flex-col gap-4">
+            {sectionHeader(
+              `Đánh giá gần đây (${reviewPreview.length})`,
+              "reviews",
+              <MessageSquare className="w-6 h-6 icon-brand" />
+            )}
+            {!collapsed["reviews"] && (
+              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm">
+                <div className="divide-y theme-border">
+                  {reviewPreview.map((rev) => (
+                    <div key={rev.id} className="p-4 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">{rev.guest}</span>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <span className="font-medium">{rev.rating}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm theme-text-secondary">
+                        {rev.content}
+                      </p>
+                      <div className="flex gap-3 text-xs theme-text-secondary">
+                        <span>Sạch sẽ: {rev.aspects.cleanliness}</span>
+                        <span>Dịch vụ: {rev.aspects.service}</span>
+                        <span>Tiện nghi: {rev.aspects.facilities}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Housekeeping (Mock) */}
+          <div className="flex flex-col gap-4">
+            {sectionHeader(
+              `Vấn đề buồng phòng (${housekeepingProblems.length})`,
+              "housekeeping",
+              <Settings className="w-6 h-6 icon-brand" />
+            )}
+            {!collapsed["housekeeping"] && (
+              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm">
+                <table className="w-full text-sm">
+                  <thead className="bg-light-secondary dark:bg-dark-secondary">
+                    <tr>
+                      <th className="p-3 text-left font-semibold">Phòng</th>
+                      <th className="p-3 text-left font-semibold">
+                        Trạng thái
+                      </th>
+                      <th className="p-3 text-left font-semibold">Lý do</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {upcomingArrivals.map((r) => {
-                      const hotel = hotels.find(
-                        (h) => h.hotelId === r.hotel_id
-                      );
-                      return (
-                        <tr
-                          key={r.id}
-                          className="border-t theme-border hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
-                        >
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            {r.id}
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            {r.guest_name}
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            <span className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
-                              {hotel?.title || "N/A"}
-                            </span>
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            {r.room_type}
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            {r.check_in}
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            {r.check_out}
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            {r.booking_status}
-                          </td>
-                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                            {r.payment_status}
-                          </td>
-                          <td className="p-2">
-                            <div className="flex flex-wrap gap-1">
-                              <button className="px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700 caption-mobile sm:caption-tablet lg:caption-desktop">
-                                Check-in
-                              </button>
-                              <button className="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 caption-mobile sm:caption-tablet lg:caption-desktop">
-                                Gán
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {upcomingArrivals.length === 0 && (
-                      <tr>
-                        <td
-                          className="p-4 text-center caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary"
-                          colSpan={9}
-                        >
-                          Không có booking sắp đến
+                    {housekeepingProblems.map((hk) => (
+                      <tr
+                        key={hk.id}
+                        className="border-t theme-border hover:bg-light-secondary dark:hover:bg-dark-secondary/50"
+                      >
+                        <td className="p-3 font-mono">{hk.room_label}</td>
+                        <td className="p-3">
+                          <span
+                            className={cx(
+                              "text-xs px-2 py-0.5 rounded",
+                              hk.status === "maintenance"
+                                ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                                : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
+                            )}
+                          >
+                            {hk.status}
+                          </span>
+                        </td>
+                        <td className="p-3 theme-text-secondary">
+                          {hk.reason || "—"}
                         </td>
                       </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
             )}
           </div>
 
-          {/* Availability Heatmap */}
-          <div>
+          {/* Alerts (Mock) */}
+          <div className="flex flex-col gap-4">
             {sectionHeader(
-              "Tồn phòng (30 ngày)",
-              "availability",
-              <CalendarDays className="w-4 h-4" />,
-              <select
-                value={availabilityHotelId}
-                onChange={(e) => setAvailabilityHotelId(Number(e.target.value))}
-                className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-              >
-                {hotels.slice(0, 10).map((h) => (
-                  <option key={h.hotelId} value={h.hotelId}>
-                    #{h.hotelId} {h.title.slice(0, 24)}
-                  </option>
-                ))}
-              </select>
+              `Cảnh báo (${alertsRecent.length})`,
+              "alerts",
+              <Bell className="w-6 h-6 icon-brand" />
             )}
-            {!collapsed["availability"] && (
-              <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-4 overflow-auto">
-                <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                  Màu: Xanh tốt • Vàng thấp • Đỏ block • Xám full
-                </div>
-                <div className="min-w-[900px]">
-                  <table className="w-full border-collapse caption-mobile sm:caption-tablet lg:caption-desktop">
-                    <thead>
-                      <tr>
-                        <th className="p-2 text-left theme-text-secondary">
-                          Room Type
-                        </th>
-                        {availabilityHeat.days.map((d) => (
-                          <th
-                            key={d}
-                            className="p-1 theme-text-secondary overline-mobile sm:overline-tablet lg:overline-desktop"
-                          >
-                            {d.slice(5)}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {availabilityHeat.roomList.map((rt, rIdx) => (
-                        <tr key={rt} className="border-t theme-border">
-                          <td className="p-2 font-semibold">{rt}</td>
-                          {availabilityHeat.matrix[rIdx].map((slot, cIdx) => {
-                            const remaining = slot ? slot.available_count : 0;
-                            const blocked = slot?.blocked;
-                            let color =
-                              "bg-green-200 text-green-800 dark:bg-green-900/40 dark:text-green-300";
-                            if (blocked)
-                              color =
-                                "bg-red-200 text-red-800 dark:bg-red-900/40 dark:text-red-300";
-                            else if (!slot)
-                              color =
-                                "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-                            else if (remaining <= 0)
-                              color =
-                                "bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300";
-                            else if (remaining < 3)
-                              color =
-                                "bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300";
-                            return (
-                              <td
-                                key={cIdx}
-                                title={availabilityHeat.days[cIdx]}
-                                className="p-0.5"
-                              >
-                                <div
-                                  className={cx(
-                                    "h-8 rounded flex flex-col items-center justify-center relative cursor-pointer hover:ring-2 ring-light-focus dark:ring-dark-focus transition",
-                                    color
-                                  )}
-                                >
-                                  <span className="overline-mobile sm:overline-tablet lg:overline-desktop">
-                                    {blocked
-                                      ? "B"
-                                      : slot
-                                      ? `${remaining}`
-                                      : "-"}
-                                  </span>
-                                </div>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Housekeeping & Maintenance */}
-          <div>
-            {sectionHeader(
-              "Bảo trì & Housekeeping",
-              "housekeeping",
-              <Wrench className="w-4 h-4" />
-            )}
-            {!collapsed["housekeeping"] && (
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3 md:col-span-2">
-                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                    Trạng thái phòng
-                  </h4>
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {housekeepingProblems.map((r) => {
-                      const mapColor =
-                        r.status === "maintenance"
-                          ? "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300"
-                          : "bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300";
-                      return (
-                        <div
-                          key={r.id}
-                          className={cx(
-                            "theme-border rounded p-3 flex flex-col gap-1 caption-mobile sm:caption-tablet lg:caption-desktop border",
-                            mapColor
-                          )}
-                        >
-                          <span className="font-semibold">
-                            Phòng {r.room_label}
-                          </span>
-                          <span>Trạng thái: {r.status}</span>
-                          {r.reason && <span>Lý do: {r.reason}</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                    Ghi chú nhanh
-                  </h4>
-                  <div className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                    <button className="px-3 py-2 rounded theme-border hover:opacity-80 flex items-center gap-2">
-                      <Wrench className="w-4 h-4" /> Tạo bảo trì
-                    </button>
-                    <button className="px-3 py-2 rounded theme-border hover:opacity-80 flex items-center gap-2">
-                      <DoorClosed className="w-4 h-4" /> Chặn phòng
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Pricing & Rate Plans */}
-          <div>
-            {sectionHeader(
-              "Rate Plans & Giá",
-              "pricing",
-              <Tag className="w-4 h-4" />
-            )}
-            {!collapsed["pricing"] && (
-              <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-4">
-                <div className="flex flex-wrap gap-2">
-                  <button className="btn-primary btn-text-responsive flex items-center gap-2">
-                    <Plus className="w-4 h-4" /> Thêm Rate Plan
-                  </button>
-                  <button className="btn-outline btn-text-responsive flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" /> Thêm Rate Rule
-                  </button>
-                </div>
-                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {ratePlansPreview.map((rp) => {
-                    const h = hotels.find((x) => x.hotelId === rp.hotel_id);
-                    return (
-                      <div
-                        key={rp.id}
-                        className="theme-border rounded p-3 bg-gray-50 dark:bg-gray-800/40 flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold line-clamp-1">
-                            {h?.title || "N/A"}
-                          </span>
-                          <span className="overline-mobile sm:overline-tablet lg:overline-desktop">
-                            #{rp.id}
-                          </span>
-                        </div>
-                        <div>Room: {rp.room_type}</div>
-                        <div>
-                          Plan: <strong>{rp.name}</strong>
-                        </div>
-                        <div>
-                          Giá: <strong>{fmtCurrency(rp.base_price)}</strong>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Reviews Snapshot */}
-          <div>
-            {sectionHeader(
-              "Đánh giá gần đây",
-              "reviews",
-              <Star className="w-4 h-4" />
-            )}
-            {!collapsed["reviews"] && (
-              <div className="theme-border rounded theme-bg-card p-4 grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {reviewPreview.map((r) => {
-                  const h = hotels.find((x) => x.hotelId === r.hotel_id);
+            {!collapsed["alerts"] && (
+              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm divide-y theme-border">
+                {alertsRecent.map((alert) => {
+                  const severityClass =
+                    alert.severity === "critical"
+                      ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+                      : alert.severity === "warn"
+                      ? "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800"
+                      : "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800";
                   return (
                     <div
-                      key={r.id}
-                      className="theme-border rounded p-3 flex flex-col gap-2 bg-gray-50 dark:bg-gray-800/40"
+                      key={alert.id}
+                      className={cx(
+                        "p-4 flex items-start gap-3",
+                        severityClass
+                      )}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="caption-mobile sm:caption-tablet lg:caption-desktop font-semibold line-clamp-1">
-                          {h?.title || "N/A"}
-                        </span>
-                        <span className="flex items-center gap-1 caption-mobile sm:caption-tablet lg:caption-desktop">
-                          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                          {r.rating.toFixed(1)}
-                        </span>
-                      </div>
-                      <div className="body2-mobile sm:body2-tablet lg:body2-desktop theme-text-secondary line-clamp-3">
-                        {r.content}
+                      <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <div className="font-medium">{alert.message}</div>
+                        <div className="text-xs theme-text-secondary mt-1">
+                          {new Date(alert.created_at).toLocaleString("vi-VN")}
+                        </div>
                       </div>
                     </div>
                   );
@@ -1229,123 +1285,39 @@ const DashboardHotelPage: React.FC = () => {
             )}
           </div>
 
-          {/* Media & Virtual Tours */}
-          <div>
+          {/* Activity Log (Mock) */}
+          <div className="flex flex-col gap-4">
             {sectionHeader(
-              "Media & Virtual Tours",
-              "mediaVirtual",
-              <Video className="w-4 h-4" />
+              `Nhật ký hoạt động (${activityRecent.length})`,
+              "activity",
+              <Activity className="w-6 h-6 icon-brand" />
             )}
-            {!collapsed["mediaVirtual"] && (
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                    Virtual Tours
-                  </h4>
-                  <div className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                    <div className="theme-border rounded p-3 bg-gray-50 dark:bg-gray-800/40 flex items-center justify-between">
-                      <span>Tour sảnh chính</span>
-                      <button className="px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700">
-                        Xem
-                      </button>
+            {!collapsed["activity"] && (
+              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm">
+                <div className="divide-y theme-border">
+                  {activityRecent.map((act) => (
+                    <div
+                      key={act.id}
+                      className="p-3 flex items-center gap-3 hover:bg-light-secondary dark:hover:bg-dark-secondary/50"
+                    >
+                      <Clock className="w-4 h-4 icon-secondary flex-shrink-0" />
+                      <div className="flex-1 text-sm">
+                        <span className="font-medium">{act.action}</span>
+                        {act.meta?.title && (
+                          <span className="theme-text-secondary">
+                            {" "}
+                            - {act.meta.title}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs theme-text-secondary">
+                        {new Date(act.created_at).toLocaleString("vi-VN")}
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                    SEO & Checklist
-                  </h4>
-                  <ul className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                    <li className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
-                      Ảnh đại diện đầy đủ
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-amber-500" />
-                      Meta description (thiếu)
-                    </li>
-                  </ul>
+                  ))}
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Alerts & Activity */}
-          <div>
-            {sectionHeader(
-              "Cảnh báo & Hoạt động",
-              "alertsActivity",
-              <ShieldAlert className="w-4 h-4" />
-            )}
-            {!collapsed["alertsActivity"] && (
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                    Cảnh báo
-                  </h4>
-                  <div className="flex flex-col gap-1 caption-mobile sm:caption-tablet lg:caption-desktop">
-                    {alertsRecent.map((a) => {
-                      const cls =
-                        a.severity === "critical"
-                          ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300"
-                          : a.severity === "warn"
-                          ? "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300"
-                          : "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300";
-                      return (
-                        <div
-                          key={a.id}
-                          className={cx(
-                            "theme-border rounded px-2 py-1 flex items-center gap-2",
-                            cls
-                          )}
-                        >
-                          {a.severity === "critical" ? (
-                            <XCircle className="w-3 h-3" />
-                          ) : a.severity === "warn" ? (
-                            <TriangleAlert className="w-3 h-3" />
-                          ) : (
-                            <ShieldAlert className="w-3 h-3" />
-                          )}
-                          <span className="flex-1 line-clamp-1">
-                            {a.message}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                    Hoạt động
-                  </h4>
-                  <div className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                    {activityRecent.map((act) => {
-                      const h = hotels.find((x) => x.hotelId === act.hotel_id);
-                      return (
-                        <div
-                          key={act.id}
-                          className="theme-border rounded px-2 py-1 bg-gray-50 dark:bg-gray-800/40 flex items-center gap-2"
-                        >
-                          <History className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                          <span className="flex-1 line-clamp-1">
-                            {act.action} {h ? `(${h.title})` : ""}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary flex flex-wrap gap-4">
-            <span>
-              Dữ liệu thực từ API • Provider ID: {providerId || "N/A"}
-            </span>
-            <span>Tổng {filteredHotels.length} khách sạn</span>
-            <span>UI tĩnh: Reservations, Availability, Housekeeping, etc.</span>
           </div>
         </>
       )}

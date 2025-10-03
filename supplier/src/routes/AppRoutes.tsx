@@ -1,5 +1,5 @@
 import type React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import App from "../App";
 import SupplierLoginPage from "../pages/Auth/SupplierLoginPage";
 import SupplierRegisterPage from "../pages/Auth/SupplierRegisterPage";
@@ -14,20 +14,25 @@ import HotelCreatePage from "../pages/Service/Hotel/HotelCreatePage";
 import HotelEditPage from "../pages/Service/Hotel/HotelEditPage";
 import ProviderInfoPage from "../pages/Auth/ProviderInfoPage";
 import ProtectedRoute from "./ProtectedRoute";
+import PublicRoute from "./PublicRoute";
 import ProfileProviderPage from "../pages/ProfileProviderPage";
 
 const AppRoutes: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public routes */}
-        <Route path="/supplier/login" element={<SupplierLoginPage />} />
-        <Route path="/supplier/register" element={<SupplierRegisterPage />} />
+        {/* Public routes - chỉ cho phép truy cập khi chưa đăng nhập */}
+        <Route element={<PublicRoute />}>
+          <Route path="/supplier/login" element={<SupplierLoginPage />} />
+          <Route path="/supplier/register" element={<SupplierRegisterPage />} />
+          <Route
+            path="/supplier/forget-account"
+            element={<SupplierForgetAccountPage />}
+          />
+        </Route>
+
+        {/* Provider Info Page - đặc biệt, cần đăng nhập nhưng chưa có provider */}
         <Route path="/supplier/provider-info" element={<ProviderInfoPage />} />
-        <Route
-          path="/supplier/forget-account"
-          element={<SupplierForgetAccountPage />}
-        />
 
         {/* Protected routes - requires provider info */}
         <Route element={<ProtectedRoute />}>
@@ -49,6 +54,9 @@ const AppRoutes: React.FC = () => {
             />
           </Route>
         </Route>
+
+        {/* Catch-all route - redirect mọi đường dẫn không hợp lệ về trang chủ */}
+        <Route path="*" element={<Navigate to="/supplier" replace />} />
       </Routes>
     </BrowserRouter>
   );

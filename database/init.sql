@@ -1474,6 +1474,37 @@ CREATE TABLE provider_team_invites (
     CONSTRAINT fk_team_invite_by FOREIGN KEY (invited_by) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+-- Tắt safe update mode
+SET SQL_SAFE_UPDATES = 0;
+
+-- UPDATE dữ liệu cũ
+-- UPDATE hotels SET visibility = 'public_' WHERE visibility = 'public';
+-- UPDATE hotels SET visibility = 'private_' WHERE visibility = 'private';
+
+-- ALTER TABLE
+ALTER TABLE hotels 
+MODIFY COLUMN visibility ENUM('public_', 'private_') NOT NULL DEFAULT 'public_';
+
+-- Tương tự cho các bảng khác
+UPDATE tours SET visibility = 'public_' WHERE visibility = 'public';
+UPDATE tours SET visibility = 'private_' WHERE visibility = 'private';
+ALTER TABLE tours 
+MODIFY COLUMN visibility ENUM('public_', 'private_') NOT NULL DEFAULT 'public_';
+
+UPDATE restaurants SET visibility = 'public_' WHERE visibility = 'public';
+UPDATE restaurants SET visibility = 'private_' WHERE visibility = 'private';
+ALTER TABLE restaurants 
+MODIFY COLUMN visibility ENUM('public_', 'private_') NOT NULL DEFAULT 'public_';
+
+UPDATE tickets SET visibility = 'public_' WHERE visibility = 'public';
+UPDATE tickets SET visibility = 'private_' WHERE visibility = 'private';
+ALTER TABLE tickets 
+MODIFY COLUMN visibility ENUM('public_', 'private_') NOT NULL DEFAULT 'public_';
+
+-- Bật lại safe update mode
+SET SQL_SAFE_UPDATES = 1;
+
 INSERT INTO users (email, password_hash, full_name, phone_number, avatar_url, account_role, account_status, date_of_birth, gender, reset_otp, otp_expiry_time) VALUES 
 ('congnt.21kit.fpt.vku@gmail.com', 'cong12', 'cong nguyen', NULL, NULL, 'provider', 'active', NULL, NULL, NULL, NULL);
 

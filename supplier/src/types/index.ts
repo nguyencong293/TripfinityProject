@@ -92,40 +92,58 @@ export interface CreateProviderRequest {
 
 export interface HotelDTO {
   hotelId?: number;
+
+  // Required (backend: @NotNull / @NotBlank)
   providerId: number;
   areaId: number;
   title: string;
-  serviceDescription?: string;
-  location?: string;
-  startDate?: string;
-  endDate?: string;
   price: number;
   currencyCode: string;
+  hotelStatus: "published" | "archived" | "disabled";
+  visibility: "public_" | "private_";
+
+  // Optional fields
+  serviceDescription?: string;
+  location?: string;
+  startDate?: string; // ISO date (yyyy-MM-dd)
+  endDate?: string; // ISO date
   capacity?: number;
   minParticipants?: number;
   maxParticipants?: number;
   thumbnailUrl?: string;
   imageUrls?: string[];
-  ratingAverage?: number;
+  ratingAverage?: number; // 0.00 - 5.00
   badges?: string[];
-  hotelStatus: "published" | "draft" | "archived" | "disabled";
-  starRating?: number;
-  propertyType?: string; // hotel, resort, apartment, villa, hostel, guesthouse, homestay
+  starRating?: number; // 1 - 5
+  propertyType?:
+    | "hotel"
+    | "resort"
+    | "apartment"
+    | "villa"
+    | "hostel"
+    | "guesthouse"
+    | "homestay";
   address?: string;
-  checkinTime?: string;
-  checkoutTime?: string;
-  highlights?: string[];
-  amenities?: string[];
+  checkinTime?: string; // HH:mm:ss
+  checkoutTime?: string; // HH:mm:ss
+
+  // Renamed to match backend & test data (IDs referencing separate dictionaries)
+  highlightsJson?: number[]; // was highlights
+  amenitiesJson?: number[]; // was amenities
+
   policiesText?: string;
   slug?: string;
   seoTitle?: string;
   seoDescription?: string;
   isFeatured?: boolean;
+
+  // Raw JSON string from backend (you can parse into bookingSettings if needed)
   bookingSettingsJson?: string;
-  publishedAt?: string;
-  visibility: "public" | "private";
-  createdAt?: string;
-  updatedAt?: string;
+
+  // Timestamps
+  publishedAt?: string; // ISO datetime
+  createdAt?: string; // ISO datetime
+  updatedAt?: string; // ISO datetime;
 }
 
 export interface HotelFilters {

@@ -1,1446 +1,976 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
   Loader2,
   Upload,
-  Star,
   Trash2,
-  Plus,
-  Building2,
 } from "lucide-react";
+import { useHotelCreate } from "../../../hooks/useHotels";
 
-/* ================= Types ================= */
-type ListingStatus = "draft" | "published";
-interface MediaImage {
-  id: string;
-  url: string;
-  alt?: string;
-  is_thumbnail?: boolean;
-}
-interface PriceOption {
-  id: string;
-  option_name: string;
-  price: number;
-  currency_code: string;
-  per_person: boolean;
-  description?: string;
-  includes_json: string[];
-  is_addon: boolean;
-}
-interface CancellationPolicyTier {
-  id: string;
-  from_days: number;
-  to_days: number;
-  refund_percent?: number;
-  penalty_description?: string;
-}
-interface AddonItem {
-  id: string;
-  name: string;
-  price: number;
-  currency_code: string;
-  per_person: boolean;
-  available_all_dates: boolean;
-  description?: string;
-}
-interface RoomType {
-  id: string;
-  name: string;
-  capacity: number;
-  quantity_total: number;
-  notes?: string;
-}
-interface BookingSettings {
-  auto_accept: boolean;
-  cancellation_requires_admin_approval: boolean;
-  require_passport_scan?: boolean;
-  terms_text?: string;
-}
-interface SeoConfig {
-  seo_title?: string;
-  seo_description?: string;
-  seo_keywords?: string[];
-  visibility: "public" | "private";
-  publish_now: boolean;
-  publish_at?: string | null;
-}
-interface HotelDraft {
-  status: ListingStatus;
-  title?: string;
-  short_description?: string;
-  service_description?: string;
-  area_id?: string;
-  slug?: string;
-  visibility: "public" | "private";
-  is_featured: boolean;
-  languages_supported: string[];
-  tags: string[];
-  image_gallery: MediaImage[];
-  video_urls: string[];
-  virtual_tours: string[];
-  base_price?: number;
-  currency_code: string;
-  pricing_model: "per_person" | "per_booking";
-  price_options: PriceOption[];
-  cancellation_policy: CancellationPolicyTier[];
-  addons: AddonItem[];
-  room_types: RoomType[];
-  booking_settings: BookingSettings;
-  seo: SeoConfig;
-}
+/* ================= Constants ================= */
+const PROPERTY_TYPES = [
+  { value: "hotel", label: "Khách sạn" },
+  { value: "resort", label: "Resort" },
+  { value: "apartment", label: "Căn hộ" },
+  { value: "villa", label: "Biệt thự" },
+  { value: "hostel", label: "Hostel" },
+  { value: "guesthouse", label: "Nhà khách" },
+  { value: "homestay", label: "Homestay" },
+] as const;
 
-/* ================= Steps ================= */
-export const Step = {
-  TYPE: 0,
-  GENERAL: 1,
-  MEDIA: 2,
-  PRICING: 3,
-  ROOMS: 4,
-  POLICIES: 5,
-  SEO: 6,
-  CONFIRM: 7,
-} as const;
-export type Step = (typeof Step)[keyof typeof Step];
+const AREAS = [
+  { id: 1, name: "Hà Nội" },
+  { id: 2, name: "TP. Hồ Chí Minh" },
+  { id: 3, name: "Đà Nẵng" },
+  { id: 4, name: "Quảng Ninh" },
+  { id: 5, name: "Khánh Hòa" },
+];
 
-/* ================ Initial draft ================ */
-const initialDraft: HotelDraft = {
-  status: "draft",
-  visibility: "public",
-  is_featured: false,
-  languages_supported: [],
-  tags: [],
-  image_gallery: [],
-  video_urls: [],
-  virtual_tours: [],
-  currency_code: "VND",
-  pricing_model: "per_booking",
-  price_options: [],
-  cancellation_policy: [],
-  addons: [],
-  room_types: [],
-  booking_settings: {
-    auto_accept: false,
-    cancellation_requires_admin_approval: false,
-  },
-  seo: {
-    visibility: "public",
-    publish_now: false,
-  },
-};
+const STAR_RATINGS = [1, 2, 3, 4, 5];
 
-/* ================= Helpers ================= */
+// Highlights Dictionary (ID-based)
+const HIGHLIGHTS_OPTIONS = [
+  { id: 1, label: "View biển" },
+  { id: 2, label: "View núi" },
+  { id: 3, label: "Trung tâm thành phố" },
+  { id: 4, label: "Gần sân bay" },
+  { id: 5, label: "Hồ bơi ngoài trời" },
+  { id: 6, label: "Hồ bơi trong nhà" },
+  { id: 7, label: "Spa & Massage" },
+  { id: 8, label: "Phòng gym" },
+  { id: 9, label: "Nhà hàng cao cấp" },
+  { id: 10, label: "Bar & Lounge" },
+];
+
+// Amenities Dictionary (ID-based)
+const AMENITIES_OPTIONS = [
+  { id: 1, label: "WiFi miễn phí" },
+  { id: 2, label: "Điều hòa" },
+  { id: 3, label: "Tivi màn hình phẳng" },
+  { id: 4, label: "Minibar" },
+  { id: 5, label: "Két an toàn" },
+  { id: 6, label: "Máy sấy tóc" },
+  { id: 7, label: "Dịch vụ phòng 24/7" },
+  { id: 8, label: "Bãi đậu xe miễn phí" },
+  { id: 9, label: "Đưa đón sân bay" },
+  { id: 10, label: "Cho phép thú cưng" },
+];
+
+// Badges Options (string-based for selection)
+const BADGES_OPTIONS = [
+  { value: "Bestseller", label: "Bestseller" },
+  { value: "New", label: "Mới" },
+  { value: "Hot Deal", label: "Hot Deal" },
+  { value: "Recommended", label: "Được đề xuất" },
+  { value: "Popular", label: "Phổ biến" },
+  { value: "Luxury", label: "Cao cấp" },
+  { value: "Budget-Friendly", label: "Giá tốt" },
+  { value: "Family-Friendly", label: "Thân thiện gia đình" },
+  { value: "Pet-Friendly", label: "Cho phép thú cưng" },
+  { value: "Eco-Friendly", label: "Thân thiện môi trường" },
+];
+
+/* ================= Styles ================= */
 const baseInput =
   "border theme-border rounded px-3 py-2 bg-white dark:bg-dark-card theme-text-primary focus-ring-primary text-body2-mobile sm:text-body2-tablet lg:text-body2-desktop placeholder:theme-text-secondary";
 const baseTextarea =
   "border theme-border rounded px-3 py-2 bg-white dark:bg-dark-card theme-text-primary focus-ring-primary resize-y text-body2-mobile sm:text-body2-tablet lg:text-body2-desktop placeholder:theme-text-secondary";
-const baseChipInputWrapper =
-  "border theme-border rounded px-2 py-1 flex flex-wrap gap-1 bg-white dark:bg-dark-card focus-within:ring-2 ring-light-focus dark:ring-dark-focus";
-const baseCard =
-  "theme-bg-card border theme-border rounded-lg p-4 shadow-sm flex flex-col gap-3";
-const subtleText =
-  "theme-text-secondary text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop";
+const labelCls =
+  "font-medium theme-text-primary text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop";
+const errorText =
+  "theme-text-error text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop mt-1";
 const sectionTitle =
   "font-semibold theme-text-primary text-h3-mobile sm:text-h3-tablet lg:text-h3-desktop";
 const pageTitle =
   "font-bold theme-text-primary text-h1-mobile sm:text-h1-tablet lg:text-h1-desktop";
-const sectionSubtitle =
-  "theme-text-secondary text-body2-mobile sm:text-body2-tablet lg:text-body2-desktop";
-const labelCls =
-  "font-medium theme-text-primary text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop";
-const errorText =
-  "theme-text-error text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop";
-const smallHelper =
-  "theme-text-secondary text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop";
 
-const randomImg = () =>
-  `https://picsum.photos/seed/hotel-${Math.floor(
-    Math.random() * 9999
-  )}/320/220`;
+/* ================= Multi-Select Checkbox Component (for number[] - IDs) ================= */
+const MultiSelectCheckbox: React.FC<{
+  options: { id: number; label: string }[];
+  selectedIds: number[];
+  onChange: (selectedIds: number[]) => void;
+  fieldName: string;
+}> = React.memo(({ options, selectedIds, onChange, fieldName }) => {
+  const handleToggle = (id: number) => {
+    const newSelectedIds = selectedIds.includes(id)
+      ? selectedIds.filter((i) => i !== id)
+      : [...selectedIds, id];
 
-function slugify(v: string) {
-  return v
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .slice(0, 60);
-}
+    console.log(
+      `🔄 MultiSelect [${fieldName}] toggled ID ${id}, new array:`,
+      newSelectedIds
+    );
+    onChange(newSelectedIds);
+  };
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {options.map((option) => (
+        <label
+          key={option.id}
+          className="flex items-center gap-2 p-2 rounded border theme-border hover:bg-light-secondary dark:hover:bg-dark-secondary cursor-pointer transition-colors"
+        >
+          <input
+            type="checkbox"
+            checked={selectedIds.includes(option.id)}
+            onChange={() => handleToggle(option.id)}
+            className="w-4 h-4 accent-light-primary dark:accent-dark-primary"
+          />
+          <span className="theme-text-primary text-body2-mobile sm:text-body2-tablet">
+            {option.label}
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+});
+
+MultiSelectCheckbox.displayName = "MultiSelectCheckbox";
+
+/* ================= Multi-Select Checkbox Component for Strings (for string[] - Badges) ================= */
+const MultiSelectCheckboxString: React.FC<{
+  options: { value: string; label: string }[];
+  selectedValues: string[];
+  onChange: (selectedValues: string[]) => void;
+  fieldName: string;
+}> = React.memo(({ options, selectedValues, onChange, fieldName }) => {
+  const handleToggle = (value: string) => {
+    const newSelectedValues = selectedValues.includes(value)
+      ? selectedValues.filter((v) => v !== value)
+      : [...selectedValues, value];
+
+    console.log(
+      `🔄 MultiSelectString [${fieldName}] toggled "${value}", new array:`,
+      newSelectedValues
+    );
+    onChange(newSelectedValues);
+  };
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {options.map((option) => (
+        <label
+          key={option.value}
+          className="flex items-center gap-2 p-2 rounded border theme-border hover:bg-light-secondary dark:hover:bg-dark-secondary cursor-pointer transition-colors"
+        >
+          <input
+            type="checkbox"
+            checked={selectedValues.includes(option.value)}
+            onChange={() => handleToggle(option.value)}
+            className="w-4 h-4 accent-light-primary dark:accent-dark-primary"
+          />
+          <span className="theme-text-primary text-body2-mobile sm:text-body2-tablet">
+            {option.label}
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+});
+
+MultiSelectCheckboxString.displayName = "MultiSelectCheckboxString";
 
 /* ================= Component ================= */
 const HotelCreatePage: React.FC = () => {
-  const [step, setStep] = useState<Step>(Step.TYPE);
-  const [maxVisited, setMaxVisited] = useState<Step>(Step.TYPE);
-  const [saving, setSaving] = useState(false);
-  const [draft, setDraft] = useState<HotelDraft>(initialDraft);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [currentStep, setCurrentStep] = useState(1);
+  const {
+    formData,
+    errors,
+    loading,
+    submitting,
+    imageFiles,
+    thumbnailPreview,
+    imagePreviews,
+    updateField,
+    updateArrayField,
+    setThumbnailFile,
+    setImageFiles,
+    removeImageFile,
+    handleSubmit,
+  } = useHotelCreate();
 
-  const stepsMeta = useMemo(
-    () => [
-      { key: Step.TYPE, label: "Loại dịch vụ" },
-      { key: Step.GENERAL, label: "Tổng quan" },
-      { key: Step.MEDIA, label: "Thư viện" },
-      { key: Step.PRICING, label: "Giá" },
-      { key: Step.ROOMS, label: "Phòng" },
-      { key: Step.POLICIES, label: "Chính sách" },
-      { key: Step.SEO, label: "SEO & Xuất bản" },
-      { key: Step.CONFIRM, label: "Hoàn tất" },
-    ],
-    []
-  );
-
-  const goStep = (s: Step) => {
-    if (s <= maxVisited) setStep(s);
-  };
-
-  const update = (patch: Partial<HotelDraft>) => {
-    setDraft((d) => ({ ...d, ...patch }));
-    setErrors({});
-  };
-
-  /* ===== Validation ===== */
-  const validateCurrent = (): boolean => {
-    const e: Record<string, string> = {};
-    if (step === Step.GENERAL) {
-      if (!draft.title) e.title = "Bắt buộc";
-      if (!draft.short_description) e.short_description = "Bắt buộc";
-      if (!draft.service_description) e.service_description = "Bắt buộc";
-      if (!draft.area_id) e.area_id = "Bắt buộc";
-    }
-    if (step === Step.MEDIA) {
-      if (draft.image_gallery.length === 0)
-        e.image_gallery = "Cần ít nhất 1 hình ảnh.";
-    }
-    if (step === Step.PRICING) {
-      if (!draft.base_price || draft.base_price <= 0)
-        e.base_price = "Giá cơ bản phải > 0";
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const next = () => {
-    if (!validateCurrent()) return;
-    setStep((s) => {
-      const n = (s + 1) as Step;
-      if (n > maxVisited) setMaxVisited(n);
-      return n;
+  // 🔍 DEBUG: Log formData chi tiết
+  useEffect(() => {
+    console.log("📋 Current formData detailed:", {
+      title: formData.title,
+      highlightsJson: formData.highlightsJson,
+      highlightsJson_length: formData.highlightsJson?.length,
+      amenitiesJson: formData.amenitiesJson,
+      amenitiesJson_length: formData.amenitiesJson?.length,
+      badges: formData.badges,
+      badges_length: formData.badges?.length,
+      policiesText: formData.policiesText,
+      serviceDescription: formData.serviceDescription,
+      location: formData.location,
+      address: formData.address,
     });
-  };
-  const prev = () => setStep((s) => (s > 0 ? ((s - 1) as Step) : s));
+  }, [formData]);
 
-  const saveDraft = () => {
-    setSaving(true);
-    setTimeout(() => {
-      console.log("MOCK LƯU NHÁP", draft);
-      setSaving(false);
-    }, 500);
-  };
-
-  const publish = () => {
-    if (
-      !draft.title ||
-      !draft.short_description ||
-      !draft.service_description ||
-      draft.image_gallery.length === 0 ||
-      !draft.base_price
-    ) {
-      alert("Chưa đủ dữ liệu để xuất bản (mock).");
-      return;
-    }
-    setSaving(true);
-    setTimeout(() => {
-      console.log("MOCK PUBLISH", draft);
-      setDraft((d) => ({
-        ...d,
-        status: "published",
-        seo: { ...d.seo, publish_now: true },
-      }));
-      setSaving(false);
-      alert("Đã xuất bản (mock)!");
-    }, 800);
-  };
-
-  /* ====== Mini Components ====== */
-  const ChipInput: React.FC<{
-    value: string[];
-    onChange: (v: string[]) => void;
-    placeholder?: string;
-  }> = ({ value, onChange, placeholder }) => {
-    const [txt, setTxt] = useState("");
-    const add = () => {
-      const v = txt.trim();
-      if (!v || value.includes(v)) return;
-      onChange([...value, v]);
-      setTxt("");
+  /* ================= Image Upload Component ================= */
+  const ImageUpload: React.FC<{
+    label: string;
+    multiple?: boolean;
+    onSelect: (files: File[]) => void;
+    preview?: string | string[] | null;
+    onRemove?: () => void;
+    onRemoveMultiple?: (index: number) => void;
+  }> = ({ label, multiple, onSelect, preview, onRemove, onRemoveMultiple }) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length > 0) {
+        onSelect(files);
+      }
     };
-    return (
-      <div className={baseChipInputWrapper}>
-        {value.map((c) => (
-          <span
-            key={c}
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 bg-light-secondary dark:bg-dark-secondary theme-text-primary text-caption-mobile sm:text-caption-tablet"
-          >
-            {c}
-            <button
-              onClick={() => onChange(value.filter((x) => x !== c))}
-              className="hover:opacity-70"
-            >
-              ×
-            </button>
-          </span>
-        ))}
-        <input
-          value={txt}
-          onChange={(e) => setTxt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              add();
-            } else if (e.key === "Backspace" && !txt && value.length) {
-              onChange(value.slice(0, -1));
-            }
-          }}
-          placeholder={placeholder}
-          className="outline-none bg-transparent flex-1 min-w-[90px] theme-text-primary text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop placeholder:theme-text-secondary"
-        />
-      </div>
-    );
-  };
 
-  const Gallery: React.FC = () => {
-    const setGallery = (imgs: MediaImage[]) =>
-      update({ image_gallery: imgs.slice() });
-    const setThumb = (id: string) =>
-      setGallery(
-        draft.image_gallery.map((i) => ({ ...i, is_thumbnail: i.id === id }))
-      );
-    const remove = (id: string) =>
-      setGallery(draft.image_gallery.filter((i) => i.id !== id));
-    const add = () => {
-      const img: MediaImage = {
-        id: Date.now().toString(),
-        url: randomImg(),
-        is_thumbnail: draft.image_gallery.length === 0,
-      };
-      setGallery([...draft.image_gallery, img]);
-    };
     return (
-      <div className="flex flex-col gap-3">
-        <div
-          onClick={add}
-          className="border-2 theme-border border-dashed rounded p-6 flex flex-col items-center gap-2 cursor-pointer theme-text-secondary hover:theme-bg-secondary text-body2-mobile sm:text-body2-tablet"
-        >
+      <div className="flex flex-col gap-2">
+        <label className={labelCls}>{label}</label>
+        <div className="border-2 theme-border border-dashed rounded p-4 flex flex-col items-center gap-2 cursor-pointer hover:bg-light-secondary dark:hover:bg-dark-secondary">
           <Upload className="w-5 h-5 icon-brand" />
-          Thêm hình ảnh (mock)
+          <input
+            type="file"
+            accept="image/*"
+            multiple={multiple}
+            onChange={handleFileChange}
+            className="hidden"
+            id={`file-upload-${label}`}
+          />
+          <label
+            htmlFor={`file-upload-${label}`}
+            className="cursor-pointer theme-text-secondary text-body2-mobile sm:text-body2-tablet"
+          >
+            {label}
+          </label>
         </div>
-        {errors.image_gallery && (
-          <div className={errorText}>{errors.image_gallery}</div>
-        )}
-        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-          {draft.image_gallery.map((img) => (
-            <div
-              key={img.id}
-              className="relative group border theme-border rounded overflow-hidden bg-light-card dark:bg-dark-card"
-            >
-              <img
-                src={img.url}
-                alt=""
-                className="object-cover w-full h-28"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition flex flex-col justify-between bg-black/40 p-1">
-                <div className="flex justify-end gap-1">
+
+        {preview && (
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 mt-2">
+            {Array.isArray(preview) ? (
+              preview.map((url, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={url}
+                    alt={`Preview ${index}`}
+                    className="w-full h-28 object-cover rounded border theme-border"
+                  />
+                  {onRemoveMultiple && (
+                    <button
+                      onClick={() => onRemoveMultiple(index)}
+                      className="absolute top-1 right-1 p-1 bg-white/90 rounded hover:bg-white"
+                      type="button"
+                    >
+                      <Trash2 className="w-3 h-3 theme-text-error" />
+                    </button>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="relative group">
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="w-full h-28 object-cover rounded border theme-border"
+                />
+                {onRemove && (
                   <button
-                    onClick={() => remove(img.id)}
-                    className="p-1 bg-white/90 rounded hover:opacity-80"
+                    onClick={() => onRemove()}
+                    className="absolute top-1 right-1 p-1 bg-white/90 rounded hover:bg-white"
+                    type="button"
                   >
                     <Trash2 className="w-3 h-3 theme-text-error" />
                   </button>
-                </div>
-                <div>
-                  <button
-                    onClick={() => setThumb(img.id)}
-                    className={[
-                      "flex items-center gap-1 px-2 py-0.5 rounded text-caption-mobile font-medium",
-                      img.is_thumbnail
-                        ? "bg-light-success text-white"
-                        : "bg-white/90 hover:bg-white",
-                    ].join(" ")}
-                  >
-                    <Star
-                      className={`w-3 h-3 ${
-                        img.is_thumbnail ? "fill-white" : "text-light-warning"
-                      }`}
-                    />
-                    {img.is_thumbnail ? "Ảnh đại diện" : "Đặt làm đại diện"}
-                  </button>
-                </div>
+                )}
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const PriceOptionsEditor: React.FC = () => {
-    const addOpt = () => {
-      const o: PriceOption = {
-        id: Date.now().toString(),
-        option_name: "Mặc định",
-        price: draft.base_price || 0,
-        currency_code: draft.currency_code,
-        per_person: false,
-        includes_json: [],
-        is_addon: false,
-      };
-      update({ price_options: [...draft.price_options, o] });
-    };
-    const updateOpt = (id: string, patch: Partial<PriceOption>) =>
-      update({
-        price_options: draft.price_options.map((o) =>
-          o.id === id ? { ...o, ...patch } : o
-        ),
-      });
-    const remove = (id: string) =>
-      update({
-        price_options: draft.price_options.filter((o) => o.id !== id),
-      });
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h3
-            className={
-              sectionTitle +
-              " !text-h5-mobile sm:!text-h5-tablet lg:!text-h5-desktop"
-            }
-          >
-            Tuỳ chọn giá
-          </h3>
-          <button
-            onClick={addOpt}
-            className="btn-primary btn-text-responsive px-4 py-2"
-          >
-            <span className="inline-flex items-center gap-1">
-              <Plus className="w-4 h-4" /> Thêm
-            </span>
-          </button>
-        </div>
-        {draft.price_options.length === 0 && (
-          <div className={subtleText}>Chưa có tuỳ chọn.</div>
+            )}
+          </div>
         )}
-        <div className="flex flex-col gap-3">
-          {draft.price_options.map((o) => (
-            <div
-              key={o.id}
-              className="border theme-border rounded p-3 theme-bg-card flex flex-col gap-2"
-            >
-              <div className="flex flex-wrap gap-2">
-                <input
-                  value={o.option_name}
-                  onChange={(e) =>
-                    updateOpt(o.id, { option_name: e.target.value })
-                  }
-                  className={baseInput + " flex-1 min-w-[160px]"}
-                  placeholder="Tên option"
-                />
-                <input
-                  type="number"
-                  value={o.price}
-                  onChange={(e) => updateOpt(o.id, { price: +e.target.value })}
-                  className={baseInput + " w-32"}
-                  placeholder="Giá"
-                />
-                <label className="flex items-center gap-2 theme-text-primary text-body2-mobile sm:text-body2-tablet">
-                  <input
-                    type="checkbox"
-                    checked={o.per_person}
-                    onChange={(e) =>
-                      updateOpt(o.id, { per_person: e.target.checked })
-                    }
-                  />
-                  Tính theo người
-                </label>
-                <button
-                  onClick={() => remove(o.id)}
-                  className="px-2 py-2 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary"
-                  title="Xoá"
-                >
-                  <Trash2 className="w-4 h-4 theme-text-error" />
-                </button>
-              </div>
-              <textarea
-                value={o.description || ""}
-                onChange={(e) =>
-                  updateOpt(o.id, { description: e.target.value })
-                }
-                rows={2}
-                className={baseTextarea}
-                placeholder="Mô tả (tuỳ chọn)"
-              />
-            </div>
-          ))}
-        </div>
       </div>
     );
   };
 
-  const RoomTypesEditor: React.FC = () => {
-    const addRoom = () => {
-      const r: RoomType = {
-        id: Date.now().toString(),
-        name: "Phòng Tiêu Chuẩn",
-        capacity: 2,
-        quantity_total: 10,
-      };
-      update({ room_types: [...draft.room_types, r] });
-    };
-    const upd = (id: string, patch: Partial<RoomType>) =>
-      update({
-        room_types: draft.room_types.map((r) =>
-          r.id === id ? { ...r, ...patch } : r
-        ),
-      });
-    const remove = (id: string) =>
-      update({
-        room_types: draft.room_types.filter((r) => r.id !== id),
-      });
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h3
-            className={
-              sectionTitle +
-              " !text-h5-mobile sm:!text-h5-tablet lg:!text-h5-desktop"
-            }
-          >
-            Loại phòng
-          </h3>
-          <button
-            onClick={addRoom}
-            className="btn-primary btn-text-responsive px-4 py-2"
-          >
-            <span className="inline-flex items-center gap-1">
-              <Plus className="w-4 h-4" /> Thêm
-            </span>
-          </button>
-        </div>
-        {draft.room_types.length === 0 && (
-          <div className={subtleText}>Chưa có loại phòng.</div>
-        )}
-        <div className="flex flex-col gap-3">
-          {draft.room_types.map((r) => (
-            <div
-              key={r.id}
-              className="border theme-border rounded p-3 theme-bg-card flex flex-col gap-2"
-            >
-              <div className="flex flex-wrap gap-2">
-                <input
-                  value={r.name}
-                  onChange={(e) => upd(r.id, { name: e.target.value })}
-                  className={baseInput + " flex-1 min-w-[180px]"}
-                  placeholder="Tên phòng"
-                />
-                <input
-                  type="number"
-                  value={r.capacity}
-                  onChange={(e) => upd(r.id, { capacity: +e.target.value })}
-                  className={baseInput + " w-28"}
-                  placeholder="Số khách"
-                />
-                <input
-                  type="number"
-                  value={r.quantity_total}
-                  onChange={(e) =>
-                    upd(r.id, { quantity_total: +e.target.value })
-                  }
-                  className={baseInput + " w-32"}
-                  placeholder="Số lượng"
-                />
-                <button
-                  onClick={() => remove(r.id)}
-                  className="px-2 py-2 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary"
-                  title="Xoá"
-                >
-                  <Trash2 className="w-4 h-4 theme-text-error" />
-                </button>
-              </div>
-              <textarea
-                value={r.notes || ""}
-                onChange={(e) => upd(r.id, { notes: e.target.value })}
-                rows={2}
-                className={baseTextarea}
-                placeholder="Ghi chú"
-              />
-            </div>
-          ))}
-        </div>
-        <div className={subtleText}>
-          Quản lý tồn kho theo lịch chi tiết sẽ được bổ sung sau.
-        </div>
-      </div>
-    );
-  };
-
-  const PoliciesAddons: React.FC = () => {
-    const addAddon = () => {
-      const a: AddonItem = {
-        id: Date.now().toString(),
-        name: "Bữa sáng",
-        price: 100000,
-        currency_code: draft.currency_code,
-        per_person: false,
-        available_all_dates: true,
-      };
-      update({ addons: [...draft.addons, a] });
-    };
-    const updAddon = (id: string, patch: Partial<AddonItem>) =>
-      update({
-        addons: draft.addons.map((a) => (a.id === id ? { ...a, ...patch } : a)),
-      });
-    const remove = (id: string) =>
-      update({ addons: draft.addons.filter((a) => a.id !== id) });
-
-    const addPolicyTier = () => {
-      const t: CancellationPolicyTier = {
-        id: Date.now().toString(),
-        from_days: 30,
-        to_days: 9999,
-        refund_percent: 100,
-      };
-      update({ cancellation_policy: [...draft.cancellation_policy, t] });
-    };
-    const updTier = (id: string, patch: Partial<CancellationPolicyTier>) =>
-      update({
-        cancellation_policy: draft.cancellation_policy.map((t) =>
-          t.id === id ? { ...t, ...patch } : t
-        ),
-      });
-    const removeTier = (id: string) =>
-      update({
-        cancellation_policy: draft.cancellation_policy.filter(
-          (t) => t.id !== id
-        ),
-      });
-
-    return (
-      <div className="flex flex-col gap-8">
-        {/* Cancellation Policy */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h3
-              className={
-                sectionTitle +
-                " !text-h5-mobile sm:!text-h5-tablet lg:!text-h5-desktop"
-              }
-            >
-              Chính sách huỷ
-            </h3>
-            <button
-              onClick={addPolicyTier}
-              className="btn-outline btn-text-responsive px-4 py-2"
-            >
-              <span className="inline-flex items-center gap-1">
-                <Plus className="w-4 h-4" /> Thêm mốc
-              </span>
-            </button>
-          </div>
-          {draft.cancellation_policy.length === 0 && (
-            <div className={subtleText}>Chưa có mốc.</div>
-          )}
-          <div className="flex flex-col gap-3">
-            {draft.cancellation_policy.map((t) => (
-              <div
-                key={t.id}
-                className="border theme-border rounded p-3 theme-bg-card flex flex-col gap-2"
-              >
-                <div className="flex flex-wrap gap-2">
-                  <input
-                    type="number"
-                    className={baseInput + " w-28"}
-                    value={t.from_days}
-                    onChange={(e) =>
-                      updTier(t.id, { from_days: +e.target.value })
-                    }
-                    placeholder="Từ ngày"
-                  />
-                  <input
-                    type="number"
-                    className={baseInput + " w-28"}
-                    value={t.to_days}
-                    onChange={(e) =>
-                      updTier(t.id, { to_days: +e.target.value })
-                    }
-                    placeholder="Đến ngày"
-                  />
-                  <input
-                    type="number"
-                    className={baseInput + " w-32"}
-                    value={t.refund_percent ?? ""}
-                    onChange={(e) =>
-                      updTier(t.id, { refund_percent: +e.target.value })
-                    }
-                    placeholder="% hoàn"
-                  />
-                  <input
-                    className={baseInput + " flex-1 min-w-[180px]"}
-                    value={t.penalty_description || ""}
-                    onChange={(e) =>
-                      updTier(t.id, { penalty_description: e.target.value })
-                    }
-                    placeholder="Mô tả phạt"
-                  />
-                  <button
-                    onClick={() => removeTier(t.id)}
-                    className="px-2 py-2 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary"
-                    title="Xoá"
-                  >
-                    <Trash2 className="w-4 h-4 theme-text-error" />
-                  </button>
-                </div>
-                <div className={subtleText}>
-                  Tránh khoảng ngày bị chồng lấn (chưa kiểm tra tự động).
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Addons */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h3
-              className={
-                sectionTitle +
-                " !text-h5-mobile sm:!text-h5-tablet lg:!text-h5-desktop"
-              }
-            >
-              Dịch vụ bổ sung (Add-ons)
-            </h3>
-            <button
-              onClick={addAddon}
-              className="btn-outline btn-text-responsive px-4 py-2"
-            >
-              <span className="inline-flex items-center gap-1">
-                <Plus className="w-4 h-4" /> Thêm
-              </span>
-            </button>
-          </div>
-          {draft.addons.length === 0 && (
-            <div className={subtleText}>Chưa có addon.</div>
-          )}
-          <div className="flex flex-col gap-3">
-            {draft.addons.map((a) => (
-              <div
-                key={a.id}
-                className="border theme-border rounded p-3 theme-bg-card flex flex-col gap-2"
-              >
-                <div className="flex flex-wrap gap-2">
-                  <input
-                    value={a.name}
-                    onChange={(e) => updAddon(a.id, { name: e.target.value })}
-                    className={baseInput + " flex-1 min-w-[160px]"}
-                    placeholder="Tên dịch vụ"
-                  />
-                  <input
-                    type="number"
-                    value={a.price}
-                    onChange={(e) => updAddon(a.id, { price: +e.target.value })}
-                    className={baseInput + " w-32"}
-                    placeholder="Giá"
-                  />
-                  <label className="flex items-center gap-2 theme-text-primary text-body2-mobile sm:text-body2-tablet">
-                    <input
-                      type="checkbox"
-                      checked={a.per_person}
-                      onChange={(e) =>
-                        updAddon(a.id, { per_person: e.target.checked })
-                      }
-                    />
-                    Theo khách
-                  </label>
-                  <button
-                    onClick={() => remove(a.id)}
-                    className="px-2 py-2 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary"
-                    title="Xoá"
-                  >
-                    <Trash2 className="w-4 h-4 theme-text-error" />
-                  </button>
-                </div>
-                <textarea
-                  value={a.description || ""}
-                  onChange={(e) =>
-                    updAddon(a.id, { description: e.target.value })
-                  }
-                  rows={2}
-                  className={baseTextarea}
-                  placeholder="Mô tả (tuỳ chọn)"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Booking Settings */}
-        <div className="border theme-border rounded p-4 flex flex-col gap-3 theme-bg-card">
-          <h4 className="font-semibold theme-text-primary text-h5-mobile sm:text-h5-tablet lg:text-h5-desktop">
-            Cài đặt đặt phòng
-          </h4>
-          <div className="flex gap-6 flex-wrap text-body2-mobile sm:text-body2-tablet theme-text-primary">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={draft.booking_settings.auto_accept}
-                onChange={(e) =>
-                  update({
-                    booking_settings: {
-                      ...draft.booking_settings,
-                      auto_accept: e.target.checked,
-                    },
-                  })
-                }
-              />
-              Tự động chấp nhận
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={
-                  draft.booking_settings.cancellation_requires_admin_approval
-                }
-                onChange={(e) =>
-                  update({
-                    booking_settings: {
-                      ...draft.booking_settings,
-                      cancellation_requires_admin_approval: e.target.checked,
-                    },
-                  })
-                }
-              />
-              Huỷ cần duyệt
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={draft.booking_settings.require_passport_scan || false}
-                onChange={(e) =>
-                  update({
-                    booking_settings: {
-                      ...draft.booking_settings,
-                      require_passport_scan: e.target.checked,
-                    },
-                  })
-                }
-              />
-              Yêu cầu quét hộ chiếu
-            </label>
-          </div>
-          <textarea
-            value={draft.booking_settings.terms_text || ""}
-            onChange={(e) =>
-              update({
-                booking_settings: {
-                  ...draft.booking_settings,
-                  terms_text: e.target.value,
-                },
-              })
-            }
-            rows={3}
-            className={baseTextarea}
-            placeholder="Điều khoản & điều kiện..."
-          />
-        </div>
-      </div>
-    );
-  };
-
-  const SeoPublish: React.FC = () => {
-    const setSeo = (patch: Partial<SeoConfig>) =>
-      update({ seo: { ...draft.seo, ...patch } });
-    return (
-      <div className="flex flex-col gap-8">
+  /* ================= STEP 1: Thông tin cơ bản ================= */
+  const renderBasicInfo = useMemo(
+    () => (
+      <div className="flex flex-col gap-6">
         <div>
-          <h2 className={sectionTitle}>SEO & Xuất bản</h2>
-          <p className={sectionSubtitle}>
-            Thiết lập thông tin SEO và lịch xuất bản hiển thị.
+          <h2 className={sectionTitle}>Thông tin cơ bản</h2>
+          <p className="theme-text-secondary text-body2-mobile sm:text-body2-tablet mt-1">
+            Nhập các thông tin bắt buộc và cơ bản về khách sạn
           </p>
         </div>
+
         <div className="grid md:grid-cols-2 gap-6">
+          {/* Title - REQUIRED */}
+          <div className="flex flex-col gap-2 md:col-span-2">
+            <label className={labelCls}>
+              Tên khách sạn <span className="theme-text-error">*</span>
+            </label>
+            <input
+              value={formData.title || ""}
+              onChange={(e) => {
+                const newTitle = e.target.value;
+                console.log(`🔄 Title changed to: "${newTitle}"`);
+                updateField("title", newTitle);
+
+                // Auto-generate slug from title
+                if (!formData.slug || formData.slug === "") {
+                  const slug = newTitle
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/đ/g, "d")
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/(^-|-$)/g, "");
+                  console.log(`🔄 Auto-generated slug: "${slug}"`);
+                  updateField("slug", slug);
+                }
+              }}
+              className={baseInput}
+              placeholder="VD: Khách sạn Biển Xanh"
+              maxLength={255}
+            />
+            {errors.title && <span className={errorText}>{errors.title}</span>}
+          </div>
+
+          {/* Area - REQUIRED */}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>
+              Khu vực <span className="theme-text-error">*</span>
+            </label>
+            <select
+              value={formData.areaId || ""}
+              onChange={(e) => {
+                const newAreaId = Number(e.target.value) || null;
+                console.log(`🔄 Area changed to: ${newAreaId}`);
+                updateField("areaId", newAreaId);
+              }}
+              className={baseInput}
+            >
+              <option value="">-- Chọn khu vực --</option>
+              {AREAS.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
+            {errors.areaId && (
+              <span className={errorText}>{errors.areaId}</span>
+            )}
+          </div>
+
+          {/* Price - REQUIRED */}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>
+              Giá (VND) <span className="theme-text-error">*</span>
+            </label>
+            <input
+              type="number"
+              value={formData.price || ""}
+              onChange={(e) => {
+                const newPrice = Number(e.target.value) || 0;
+                console.log(`🔄 Price changed to: ${newPrice}`);
+                updateField("price", newPrice);
+              }}
+              className={baseInput}
+              placeholder="0"
+              min="0"
+            />
+            {errors.price && <span className={errorText}>{errors.price}</span>}
+          </div>
+
+          {/* Property Type */}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Loại hình</label>
+            <select
+              value={formData.propertyType || "hotel"}
+              onChange={(e) => {
+                const value = e.target.value as
+                  | "hotel"
+                  | "resort"
+                  | "apartment"
+                  | "villa"
+                  | "hostel"
+                  | "guesthouse"
+                  | "homestay";
+                console.log(`🔄 Property type changed to: ${value}`);
+                updateField("propertyType", value);
+              }}
+              className={baseInput}
+            >
+              {PROPERTY_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+            <span className="theme-text-secondary text-caption-mobile">
+              Mặc định: Khách sạn
+            </span>
+          </div>
+
+          {/* Star Rating */}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Hạng sao</label>
+            <select
+              value={formData.starRating || ""}
+              onChange={(e) => {
+                const newStarRating = Number(e.target.value) || null;
+                console.log(`🔄 Star rating changed to: ${newStarRating}`);
+                updateField("starRating", newStarRating);
+              }}
+              className={baseInput}
+            >
+              <option value="">-- Chọn hạng sao --</option>
+              {STAR_RATINGS.map((star) => (
+                <option key={star} value={star}>
+                  {star} sao
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Location */}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Vị trí</label>
+            <input
+              value={formData.location || ""}
+              onChange={(e) => {
+                console.log(`🔄 Location changed to: "${e.target.value}"`);
+                updateField("location", e.target.value);
+              }}
+              className={baseInput}
+              placeholder="VD: Quận 1, TP.HCM"
+              maxLength={255}
+            />
+          </div>
+
+          {/* Address */}
+          <div className="flex flex-col gap-2 md:col-span-2">
+            <label className={labelCls}>Địa chỉ chi tiết</label>
+            <input
+              value={formData.address || ""}
+              onChange={(e) => {
+                console.log(`🔄 Address changed to: "${e.target.value}"`);
+                updateField("address", e.target.value);
+              }}
+              className={baseInput}
+              placeholder="Số nhà, tên đường..."
+              maxLength={255}
+            />
+          </div>
+
+          {/* Service Description */}
+          <div className="flex flex-col gap-2 md:col-span-2">
+            <label className={labelCls}>Mô tả dịch vụ</label>
+            <textarea
+              value={formData.serviceDescription || ""}
+              onChange={(e) => {
+                console.log(
+                  `🔄 Service description changed, length: ${e.target.value.length}`
+                );
+                updateField("serviceDescription", e.target.value);
+              }}
+              className={baseTextarea}
+              rows={6}
+              placeholder="Mô tả chi tiết về khách sạn..."
+              maxLength={5000}
+            />
+            <span className="theme-text-secondary text-caption-mobile ml-auto">
+              {(formData.serviceDescription || "").length}/5000
+            </span>
+          </div>
+        </div>
+      </div>
+    ),
+    [formData, errors, updateField]
+  );
+
+  /* ================= STEP 2: Chi tiết sức chứa & thời gian ================= */
+  const renderCapacityTime = useMemo(
+    () => (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h2 className={sectionTitle}>Sức chứa & Thời gian</h2>
+          <p className="theme-text-secondary text-body2-mobile sm:text-body2-tablet mt-1">
+            Thông tin về sức chứa, số lượng khách và thời gian hoạt động
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Sức chứa (số khách)</label>
+            <input
+              type="number"
+              value={formData.capacity || ""}
+              onChange={(e) => {
+                const newCapacity = Number(e.target.value) || null;
+                console.log(`🔄 Capacity changed to: ${newCapacity}`);
+                updateField("capacity", newCapacity);
+              }}
+              className={baseInput}
+              placeholder="VD: 100"
+              min="0"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Đơn vị tiền tệ</label>
+            <input
+              value={formData.currencyCode || "VND"}
+              className={baseInput}
+              disabled
+            />
+            <span className="theme-text-secondary text-caption-mobile">
+              Mặc định: VND
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Số lượng tối thiểu</label>
+            <input
+              type="number"
+              value={formData.minParticipants || ""}
+              onChange={(e) => {
+                const newMinParticipants = Number(e.target.value) || null;
+                console.log(
+                  `🔄 Min participants changed to: ${newMinParticipants}`
+                );
+                updateField("minParticipants", newMinParticipants);
+              }}
+              className={baseInput}
+              placeholder="VD: 1"
+              min="0"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Số lượng tối đa</label>
+            <input
+              type="number"
+              value={formData.maxParticipants || ""}
+              onChange={(e) => {
+                const newMaxParticipants = Number(e.target.value) || null;
+                console.log(
+                  `🔄 Max participants changed to: ${newMaxParticipants}`
+                );
+                updateField("maxParticipants", newMaxParticipants);
+              }}
+              className={baseInput}
+              placeholder="VD: 50"
+              min="0"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Ngày bắt đầu hoạt động</label>
+            <input
+              type="date"
+              value={formData.startDate || ""}
+              onChange={(e) => {
+                console.log(`🔄 Start date changed to: ${e.target.value}`);
+                updateField("startDate", e.target.value);
+              }}
+              className={baseInput}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Ngày kết thúc hoạt động</label>
+            <input
+              type="date"
+              value={formData.endDate || ""}
+              onChange={(e) => {
+                console.log(`🔄 End date changed to: ${e.target.value}`);
+                updateField("endDate", e.target.value);
+              }}
+              className={baseInput}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Giờ check-in</label>
+            <input
+              type="time"
+              value={formData.checkinTime || ""}
+              onChange={(e) => {
+                console.log(`🔄 Check-in time changed to: ${e.target.value}`);
+                updateField("checkinTime", e.target.value);
+              }}
+              className={baseInput}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Giờ check-out</label>
+            <input
+              type="time"
+              value={formData.checkoutTime || ""}
+              onChange={(e) => {
+                console.log(`🔄 Check-out time changed to: ${e.target.value}`);
+                updateField("checkoutTime", e.target.value);
+              }}
+              className={baseInput}
+            />
+          </div>
+        </div>
+      </div>
+    ),
+    [formData, updateField]
+  );
+
+  /* ================= STEP 3: Tiện nghi & Hình ảnh ================= */
+  const renderAmenitiesMedia = useMemo(
+    () => (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h2 className={sectionTitle}>Tiện nghi & Hình ảnh</h2>
+          <p className="theme-text-secondary text-body2-mobile sm:text-body2-tablet mt-1">
+            Các điểm nổi bật, tiện nghi, huy hiệu và hình ảnh của khách sạn
+          </p>
+        </div>
+
+        <div className="grid gap-6">
+          {/* Highlights - Multi-select (ID-based) */}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>
+              Điểm nổi bật
+              {formData.highlightsJson &&
+                formData.highlightsJson.length > 0 && (
+                  <span className="ml-2 text-green-600">
+                    ({formData.highlightsJson.length} mục)
+                  </span>
+                )}
+            </label>
+            <MultiSelectCheckbox
+              fieldName="highlightsJson"
+              options={HIGHLIGHTS_OPTIONS}
+              selectedIds={formData.highlightsJson || []}
+              onChange={(selectedIds) => {
+                console.log(`🔄 Highlights IDs changed to:`, selectedIds);
+                updateArrayField("highlightsJson", selectedIds);
+              }}
+            />
+            <span className="theme-text-secondary text-caption-mobile">
+              Chọn các điểm nổi bật của khách sạn. Đã chọn:{" "}
+              {formData.highlightsJson?.length || 0} mục
+            </span>
+          </div>
+
+          {/* Amenities - Multi-select (ID-based) */}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>
+              Tiện nghi
+              {formData.amenitiesJson && formData.amenitiesJson.length > 0 && (
+                <span className="ml-2 text-green-600">
+                  ({formData.amenitiesJson.length} mục)
+                </span>
+              )}
+            </label>
+            <MultiSelectCheckbox
+              fieldName="amenitiesJson"
+              options={AMENITIES_OPTIONS}
+              selectedIds={formData.amenitiesJson || []}
+              onChange={(selectedIds) => {
+                console.log(`🔄 Amenities IDs changed to:`, selectedIds);
+                updateArrayField("amenitiesJson", selectedIds);
+              }}
+            />
+            <span className="theme-text-secondary text-caption-mobile">
+              Chọn các tiện nghi có sẵn. Đã chọn:{" "}
+              {formData.amenitiesJson?.length || 0} mục
+            </span>
+          </div>
+
+          {/* Badges - Multi-select (String-based) */}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>
+              Huy hiệu (Badges)
+              {formData.badges && formData.badges.length > 0 && (
+                <span className="ml-2 text-green-600">
+                  ({formData.badges.length} mục)
+                </span>
+              )}
+            </label>
+            <MultiSelectCheckboxString
+              fieldName="badges"
+              options={BADGES_OPTIONS}
+              selectedValues={formData.badges || []}
+              onChange={(selectedValues) => {
+                console.log(`🔄 Badges changed to:`, selectedValues);
+                updateArrayField("badges", selectedValues);
+              }}
+            />
+            <span className="theme-text-secondary text-caption-mobile">
+              Chọn các huy hiệu cho khách sạn. Đã chọn:{" "}
+              {formData.badges?.length || 0} mục
+            </span>
+          </div>
+
+          <div>
+            <ImageUpload
+              label="Ảnh đại diện"
+              onSelect={(files) => {
+                console.log(`🔄 Thumbnail selected:`, files[0]?.name);
+                setThumbnailFile(files[0]);
+              }}
+              preview={thumbnailPreview}
+              onRemove={() => {
+                console.log(`🔄 Thumbnail removed`);
+                setThumbnailFile(null);
+              }}
+            />
+          </div>
+
+          <div>
+            <ImageUpload
+              label="Thư viện ảnh"
+              multiple
+              onSelect={(files) => {
+                console.log(
+                  `🔄 Images selected:`,
+                  files.map((f) => f.name)
+                );
+                setImageFiles([...imageFiles, ...files]);
+              }}
+              preview={imagePreviews}
+              onRemoveMultiple={(index) => {
+                console.log(`🔄 Image removed at index:`, index);
+                removeImageFile(index);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    ),
+    [
+      formData,
+      updateArrayField,
+      setThumbnailFile,
+      setImageFiles,
+      removeImageFile,
+      thumbnailPreview,
+      imagePreviews,
+      imageFiles,
+    ]
+  );
+
+  /* ================= STEP 4: Chính sách & SEO ================= */
+  const renderPoliciesSEO = useMemo(
+    () => (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h2 className={sectionTitle}>Chính sách & SEO</h2>
+          <p className="theme-text-secondary text-body2-mobile sm:text-body2-tablet mt-1">
+            Chính sách khách sạn và tối ưu hóa SEO
+          </p>
+        </div>
+
+        <div className="grid gap-6">
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Chính sách & Quy định</label>
+            <textarea
+              value={formData.policiesText || ""}
+              onChange={(e) => {
+                console.log(
+                  `🔄 Policies text changed, length: ${e.target.value.length}`
+                );
+                updateField("policiesText", e.target.value);
+              }}
+              className={baseTextarea}
+              rows={5}
+              placeholder="Các chính sách hủy đặt phòng, quy định về thời gian nhận/trả phòng..."
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Đường dẫn (Slug)</label>
+            <input
+              value={formData.slug || ""}
+              onChange={(e) => {
+                console.log(`🔄 Slug changed to: "${e.target.value}"`);
+                updateField("slug", e.target.value);
+              }}
+              className={baseInput}
+              placeholder="khach-san-bien-xanh"
+              maxLength={255}
+            />
+            <span className="theme-text-secondary text-caption-mobile">
+              Tự động tạo từ tên khách sạn
+            </span>
+          </div>
+
           <div className="flex flex-col gap-2">
             <label className={labelCls}>Tiêu đề SEO</label>
             <input
-              value={draft.seo.seo_title || ""}
-              onChange={(e) => setSeo({ seo_title: e.target.value })}
+              value={formData.seoTitle || ""}
+              onChange={(e) => {
+                console.log(`🔄 SEO title changed to: "${e.target.value}"`);
+                updateField("seoTitle", e.target.value);
+              }}
               className={baseInput}
+              placeholder="Tiêu đề tối ưu cho công cụ tìm kiếm"
               maxLength={255}
-              placeholder="Tiêu đề ngắn gọn hấp dẫn"
             />
           </div>
-          <div className="flex flex-col gap-2 md:col-span-2">
-            <label className={labelCls}>Mô tả Meta</label>
-            <textarea
-              value={draft.seo.seo_description || ""}
-              onChange={(e) => setSeo({ seo_description: e.target.value })}
-              rows={3}
-              className={baseTextarea}
-              placeholder="Mô tả dùng cho công cụ tìm kiếm..."
-            />
-          </div>
-          <div className="flex flex-col gap-2 md:col-span-2">
-            <label className={labelCls}>Từ khoá Meta (CSV)</label>
-            <input
-              value={(draft.seo.seo_keywords || []).join(",")}
-              onChange={(e) =>
-                setSeo({
-                  seo_keywords: e.target.value
-                    .split(",")
-                    .map((x) => x.trim())
-                    .filter(Boolean),
-                })
-              }
-              className={baseInput}
-              placeholder="khach-san,nghi-duong,bien"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className={labelCls}>Chế độ hiển thị</label>
-            <select
-              value={draft.seo.visibility}
-              onChange={(e) =>
-                setSeo({ visibility: e.target.value as "public" | "private" })
-              }
-              className={baseInput}
-            >
-              <option value="public">Công khai</option>
-              <option value="private">Riêng tư</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className={labelCls}>Xuất bản ngay?</label>
-            <select
-              value={draft.seo.publish_now ? "yes" : "no"}
-              onChange={(e) =>
-                setSeo({ publish_now: e.target.value === "yes" })
-              }
-              className={baseInput}
-            >
-              <option value="yes">Có (ngay lập tức)</option>
-              <option value="no">Không (Đặt lịch)</option>
-            </select>
-          </div>
-          {!draft.seo.publish_now && (
-            <div className="flex flex-col gap-2">
-              <label className={labelCls}>Thời điểm xuất bản</label>
-              <input
-                type="datetime-local"
-                value={draft.seo.publish_at || ""}
-                onChange={(e) => setSeo({ publish_at: e.target.value })}
-                className={baseInput}
-              />
-            </div>
-          )}
-        </div>
-        <div className="border theme-border rounded p-4 theme-bg-card">
-          <h3 className="font-semibold theme-text-primary text-h5-mobile sm:text-h5-tablet lg:text-h5-desktop mb-2">
-            Danh sách kiểm tra
-          </h3>
-          <ul className="list-disc ml-5 space-y-1 text-body2-mobile sm:text-body2-tablet theme-text-primary">
-            <li>{draft.title ? "✅" : "❌"} Tiêu đề</li>
-            <li>{draft.short_description ? "✅" : "❌"} Mô tả ngắn</li>
-            <li>
-              {draft.image_gallery.length > 0 ? "✅" : "❌"} Ít nhất 1 hình ảnh
-            </li>
-            <li>{draft.base_price ? "✅" : "❌"} Giá cơ bản</li>
-          </ul>
-        </div>
-      </div>
-    );
-  };
 
-  const Confirmation: React.FC = () => (
-    <div className="flex flex-col gap-8">
-      <h2 className={sectionTitle}>
-        Hoàn tất (Mock) –{" "}
-        {draft.status === "published" ? "ĐÃ XUẤT BẢN" : "NHÁP"}
-      </h2>
-      <div className="grid sm:grid-cols-2 gap-6 text-body2-mobile sm:text-body2-tablet theme-text-primary">
-        <div className={baseCard}>
-          <h3 className="font-semibold text-h5-mobile sm:text-h5-tablet lg:text-h5-desktop">
-            Tóm tắt
-          </h3>
-          <div className="flex flex-col gap-1">
-            <div>
-              <strong>Tiêu đề:</strong> {draft.title || "(trống)"}
-            </div>
-            <div>
-              <strong>Slug:</strong> {draft.slug || "(tự sinh)"}
-            </div>
-            <div>
-              <strong>Số ảnh:</strong> {draft.image_gallery.length}
-            </div>
-            <div>
-              <strong>Loại phòng:</strong> {draft.room_types.length}
-            </div>
-            <div>
-              <strong>Tuỳ chọn giá:</strong> {draft.price_options.length}
-            </div>
-            <div>
-              <strong>Xuất bản ngay:</strong>{" "}
-              {draft.seo.publish_now ? "Có" : "Không"}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Mô tả SEO</label>
+            <textarea
+              value={formData.seoDescription || ""}
+              onChange={(e) => {
+                console.log(
+                  `🔄 SEO description changed, length: ${e.target.value.length}`
+                );
+                updateField("seoDescription", e.target.value);
+              }}
+              className={baseTextarea}
+              rows={3}
+              placeholder="Mô tả ngắn gọn hiển thị trên kết quả tìm kiếm..."
+              maxLength={512}
+            />
+            <span className="theme-text-secondary text-caption-mobile ml-auto">
+              {(formData.seoDescription || "").length}/512
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-3 border theme-border rounded p-4">
+            <h3 className="font-semibold theme-text-primary">
+              Cài đặt hiển thị
+            </h3>
+
+            <label className="flex items-center gap-2 theme-text-primary cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isFeatured || false}
+                onChange={(e) => {
+                  console.log(`🔄 Is featured changed to: ${e.target.checked}`);
+                  updateField("isFeatured", e.target.checked);
+                }}
+                className="w-4 h-4"
+              />
+              <span>Nổi bật (Hiển thị ưu tiên trên trang chủ)</span>
+            </label>
+
+            <div className="flex items-center gap-3">
+              <label className={labelCls}>Chế độ hiển thị:</label>
+              <select
+                value={formData.visibility || "public_"}
+                onChange={(e) => {
+                  console.log(`🔄 Visibility changed to: ${e.target.value}`);
+                  updateField(
+                    "visibility",
+                    e.target.value as "public_" | "private_"
+                  );
+                }}
+                className={baseInput + " !py-1"}
+              >
+                <option value="public_">Công khai</option>
+                <option value="private_">Riêng tư</option>
+              </select>
             </div>
           </div>
         </div>
-        <div className={baseCard}>
-          <h3 className="font-semibold text-h5-mobile sm:text-h5-tablet lg:text-h5-desktop">
-            Bước tiếp theo
-          </h3>
-          <ul className="list-disc ml-5 space-y-1">
-            <li className="text-caption-mobile sm:text-caption-tablet">
-              Bổ sung nội dung mô tả chi tiết hơn.
-            </li>
-            <li className="text-caption-mobile sm:text-caption-tablet">
-              Kiểm tra lại chính sách huỷ & addons.
-            </li>
-            <li className="text-caption-mobile sm:text-caption-tablet">
-              Đồng bộ lên máy chủ khi API sẵn sàng.
-            </li>
-          </ul>
-        </div>
       </div>
-      <div className={subtleText}>
-        Bạn có thể quay lại các bước trước để chỉnh sửa.
-      </div>
-    </div>
+    ),
+    [formData, updateField]
   );
 
-  /* ===== Auto slug ===== */
-  const handleTitleChange = (v: string) => {
-    const patch: Partial<HotelDraft> = { title: v };
-    if (!draft.slug) patch.slug = slugify(v);
-    update(patch);
-  };
-
-  /* ===== Step content switch ===== */
-  const renderStep = useCallback(() => {
-    switch (step) {
-      case Step.TYPE:
-        return (
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-2">
-              <h2 className={sectionTitle}>Chọn loại dịch vụ</h2>
-              <p className={sectionSubtitle}>
-                Hiện tại chỉ hỗ trợ Khách sạn. (Các loại khác sẽ bổ sung sau)
-              </p>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="border-2 border-light-primary dark:border-dark-primary rounded-lg p-5 bg-light-secondary dark:bg-dark-secondary flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                  <Building2 className="w-6 h-6 icon-brand" />
-                  <h3 className="font-semibold theme-text-primary text-h5-mobile sm:text-h5-tablet lg:text-h5-desktop">
-                    Khách sạn
-                  </h3>
-                </div>
-                <ul className="list-disc ml-5 space-y-1 theme-text-secondary text-caption-mobile sm:text-caption-tablet">
-                  <li>Nhiều loại phòng & quản lý tồn kho</li>
-                  <li>Nhiều tuỳ chọn giá</li>
-                  <li>SEO & lịch xuất bản</li>
-                </ul>
-                <div className="mt-auto">
-                  <button
-                    onClick={next}
-                    className="btn-primary btn-text-responsive px-6 py-3"
-                  >
-                    Tiếp tục
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      case Step.GENERAL:
-        return (
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-2">
-              <h2 className={sectionTitle}>Thông tin tổng quan</h2>
-              <p className={sectionSubtitle}>
-                Cung cấp mô tả cơ bản về khách sạn của bạn.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className={labelCls}>
-                  Tiêu đề <span className="theme-text-error">*</span>
-                </label>
-                <input
-                  value={draft.title || ""}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  className={baseInput}
-                  placeholder="VD: Khách sạn Biển Xanh"
-                />
-                {errors.title && (
-                  <span className={errorText}>{errors.title}</span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className={labelCls}>
-                  Mô tả ngắn <span className="theme-text-error">*</span>
-                </label>
-                <input
-                  value={draft.short_description || ""}
-                  onChange={(e) =>
-                    update({ short_description: e.target.value })
-                  }
-                  className={baseInput}
-                  maxLength={255}
-                  placeholder="Tóm tắt ngắn gọn..."
-                />
-                {errors.short_description && (
-                  <span className={errorText}>{errors.short_description}</span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <label className={labelCls}>
-                  Mô tả chi tiết <span className="theme-text-error">*</span>
-                </label>
-                <textarea
-                  value={draft.service_description || ""}
-                  onChange={(e) =>
-                    update({ service_description: e.target.value })
-                  }
-                  rows={6}
-                  className={baseTextarea}
-                  placeholder="Mô tả chi tiết (mock rich text)"
-                />
-                {errors.service_description && (
-                  <span className={errorText}>
-                    {errors.service_description}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className={labelCls}>
-                  Khu vực <span className="theme-text-error">*</span>
-                </label>
-                <select
-                  value={draft.area_id || ""}
-                  onChange={(e) => update({ area_id: e.target.value })}
-                  className={baseInput}
-                >
-                  <option value="">-- Chọn --</option>
-                  <option value="hn">Hà Nội</option>
-                  <option value="hcm">TP. Hồ Chí Minh</option>
-                  <option value="dn">Đà Nẵng</option>
-                  <option value="qn">Quảng Ninh</option>
-                  <option value="th">Thanh Hoá</option>
-                </select>
-                {errors.area_id && (
-                  <span className={errorText}>{errors.area_id}</span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className={labelCls}>Slug</label>
-                <input
-                  value={draft.slug || ""}
-                  onChange={(e) => update({ slug: e.target.value })}
-                  className={baseInput}
-                  placeholder="slug-tu-dong"
-                />
-                <span className={smallHelper}>
-                  Tự sinh từ tiêu đề (có thể sửa).
-                </span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className={labelCls}>Hiển thị</label>
-                <select
-                  value={draft.visibility}
-                  onChange={(e) =>
-                    update({
-                      visibility: e.target.value as "public" | "private",
-                    })
-                  }
-                  className={baseInput}
-                >
-                  <option value="public">Công khai</option>
-                  <option value="private">Riêng tư</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-3 mt-8">
-                <input
-                  id="featured"
-                  type="checkbox"
-                  checked={draft.is_featured}
-                  onChange={(e) => update({ is_featured: e.target.checked })}
-                />
-                <label
-                  htmlFor="featured"
-                  className="theme-text-primary text-body2-mobile sm:text-body2-tablet"
-                >
-                  Nổi bật
-                </label>
-              </div>
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <label className={labelCls}>Ngôn ngữ hỗ trợ</label>
-                <ChipInput
-                  value={draft.languages_supported}
-                  onChange={(v) => update({ languages_supported: v })}
-                  placeholder="Nhập ngôn ngữ (Enter)"
-                />
-              </div>
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <label className={labelCls}>Thẻ (Tags)</label>
-                <ChipInput
-                  value={draft.tags}
-                  onChange={(v) => update({ tags: v })}
-                  placeholder="Nhập thẻ (Enter)"
-                />
-              </div>
-            </div>
-          </div>
-        );
-      case Step.MEDIA:
-        return (
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-2">
-              <h2 className={sectionTitle}>Thư viện</h2>
-              <p className={sectionSubtitle}>
-                Quản lý hình ảnh, video và virtual tour (mock).
-              </p>
-            </div>
-            <Gallery />
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className={labelCls}>Video URLs (CSV)</label>
-                <input
-                  value={draft.video_urls.join(",")}
-                  onChange={(e) =>
-                    update({
-                      video_urls: e.target.value
-                        .split(",")
-                        .map((x) => x.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                  className={baseInput}
-                  placeholder="https://youtu.be/..."
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className={labelCls}>Virtual Tours (CSV)</label>
-                <input
-                  value={draft.virtual_tours.join(",")}
-                  onChange={(e) =>
-                    update({
-                      virtual_tours: e.target.value
-                        .split(",")
-                        .map((x) => x.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                  className={baseInput}
-                  placeholder="https://example.com/360..."
-                />
-              </div>
-            </div>
-          </div>
-        );
-      case Step.PRICING:
-        return (
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-2">
-              <h2 className={sectionTitle}>Giá</h2>
-              <p className={sectionSubtitle}>
-                Thiết lập giá cơ bản và nhiều tuỳ chọn giá.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className={labelCls}>
-                  Giá cơ bản (VND) <span className="theme-text-error">*</span>
-                </label>
-                <input
-                  type="number"
-                  value={draft.base_price || ""}
-                  onChange={(e) =>
-                    update({
-                      base_price: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    })
-                  }
-                  className={baseInput}
-                  placeholder="0"
-                />
-                {errors.base_price && (
-                  <span className={errorText}>{errors.base_price}</span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className={labelCls}>Đơn vị tiền tệ</label>
-                <select
-                  value={draft.currency_code}
-                  onChange={(e) => update({ currency_code: e.target.value })}
-                  className={baseInput}
-                >
-                  <option value="VND">VND</option>
-                  <option value="USD">USD</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className={labelCls}>Mô hình giá</label>
-                <select
-                  value={draft.pricing_model}
-                  onChange={(e) =>
-                    update({
-                      pricing_model: e.target.value as
-                        | "per_person"
-                        | "per_booking",
-                    })
-                  }
-                  className={baseInput}
-                >
-                  <option value="per_booking">Theo đặt phòng</option>
-                  <option value="per_person">Theo khách</option>
-                </select>
-              </div>
-            </div>
-            <PriceOptionsEditor />
-          </div>
-        );
-      case Step.ROOMS:
-        return (
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-2">
-              <h2 className={sectionTitle}>Phòng</h2>
-              <p className={sectionSubtitle}>Quản lý các loại phòng (mock).</p>
-            </div>
-            <RoomTypesEditor />
-          </div>
-        );
-      case Step.POLICIES:
-        return (
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-2">
-              <h2 className={sectionTitle}>Chính sách & Add-ons</h2>
-              <p className={sectionSubtitle}>
-                Thiết lập chính sách huỷ và dịch vụ bổ sung.
-              </p>
-            </div>
-            <PoliciesAddons />
-          </div>
-        );
-      case Step.SEO:
-        return <SeoPublish />;
-      case Step.CONFIRM:
-        return <Confirmation />;
-      default:
-        return null;
-    }
-  }, [step, draft, errors]);
-
-  const finalStep = step === Step.CONFIRM;
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin icon-brand" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-8 theme-text-primary">
-      <h1 className={pageTitle}>Tạo listing khách sạn</h1>
-
-      {/* Stepper */}
-      <div className="flex flex-col gap-4">
-        <div className="flex overflow-x-auto gap-3 no-scrollbar pb-1">
-          {stepsMeta.map((s, i) => {
-            const active = s.key === step;
-            const visited = s.key <= maxVisited;
-            return (
-              <button
-                key={s.key}
-                disabled={!visited}
-                onClick={() => goStep(s.key)}
-                className={[
-                  "flex items-center gap-2 px-4 py-2 rounded-full border theme-border text-caption-mobile sm:text-caption-tablet font-medium shrink-0 transition-colors",
-                  active
-                    ? "bg-light-primary dark:bg-dark-primary text-light-buttonText dark:text-dark-buttonText"
-                    : visited
-                    ? "theme-bg-card hover:bg-light-secondary dark:hover:bg-dark-secondary"
-                    : "opacity-50 cursor-not-allowed",
-                ].join(" ")}
-              >
-                <span
-                  className={[
-                    "w-6 h-6 rounded-full border flex items-center justify-center font-semibold",
-                    active ? "border-white" : "theme-border theme-text-primary",
-                  ].join(" ")}
-                >
-                  {i + 1}
-                </span>
-                {s.label}
-              </button>
-            );
-          })}
-        </div>
-        <div className="h-2 rounded bg-light-secondary dark:bg-dark-secondary">
-          <div
-            className="h-full bg-light-primary dark:bg-dark-primary rounded transition-all"
-            style={{
-              width: `${
-                ((step - stepsMeta[0].key) /
-                  (stepsMeta[stepsMeta.length - 1].key - stepsMeta[0].key ||
-                    1)) *
-                100
-              }%`,
-            }}
-          />
-        </div>
+    <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col gap-8">
+      <div>
+        <h1 className={pageTitle}>Tạo khách sạn mới</h1>
+        <p className="theme-text-secondary text-body1-mobile sm:text-body1-tablet mt-2">
+          Các trường có dấu <span className="theme-text-error">*</span> là bắt
+          buộc
+        </p>
       </div>
 
-      {/* Content */}
-      <div className="border theme-border rounded-xl p-6 theme-bg-card shadow-sm">
-        {renderStep()}
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex gap-3 flex-wrap">
-          {step > Step.TYPE && (
-            <button
-              onClick={prev}
-              className="btn-outline btn-text-responsive px-6 py-3 flex items-center gap-2"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Quay lại
-            </button>
-          )}
+      <div className="flex items-center justify-between gap-2 pb-4 border-b theme-border">
+        {[
+          { step: 1, label: "Thông tin cơ bản" },
+          { step: 2, label: "Sức chứa & Thời gian" },
+          { step: 3, label: "Tiện nghi & Media" },
+          { step: 4, label: "Chính sách & SEO" },
+        ].map(({ step, label }) => (
           <button
-            onClick={saveDraft}
-            disabled={saving}
+            key={step}
+            onClick={() => setCurrentStep(step)}
+            className={`flex-1 px-2 py-2 rounded-lg font-medium transition-colors text-caption-mobile sm:text-body2-tablet ${
+              currentStep === step
+                ? "bg-light-primary dark:bg-dark-primary text-light-buttonText dark:text-dark-buttonText"
+                : "theme-bg-secondary theme-text-secondary hover:bg-light-secondary dark:hover:bg-dark-secondary"
+            }`}
+          >
+            {step}. {label}
+          </button>
+        ))}
+      </div>
+
+      {errors.general && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-4 theme-text-error">
+          {errors.general}
+        </div>
+      )}
+
+      <div className="border theme-border rounded-xl p-6 theme-bg-card shadow-sm">
+        {currentStep === 1 && renderBasicInfo}
+        {currentStep === 2 && renderCapacityTime}
+        {currentStep === 3 && renderAmenitiesMedia}
+        {currentStep === 4 && renderPoliciesSEO}
+      </div>
+
+      <div className="flex justify-between items-center gap-4">
+        <button
+          onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
+          disabled={currentStep === 1}
+          className="btn-outline btn-text-responsive px-6 py-3 disabled:opacity-50 flex items-center gap-2"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Quay lại
+        </button>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              console.log("🔄 Saving as draft...");
+              handleSubmit("archived");
+            }}
+            disabled={submitting}
             className="btn-secondary btn-text-responsive px-6 py-3 disabled:opacity-60 flex items-center gap-2"
           >
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
             Lưu nháp
           </button>
-        </div>
-        <div className="flex gap-3 flex-wrap">
-          {finalStep && (
+
+          {currentStep < 4 ? (
             <button
-              onClick={publish}
-              disabled={saving}
-              className="btn-primary btn-text-responsive px-6 py-3 flex items-center gap-2 disabled:opacity-60"
+              onClick={() => setCurrentStep((prev) => Math.min(4, prev + 1))}
+              className="btn-primary btn-text-responsive px-6 py-3 flex items-center gap-2"
             >
-              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              Xuất bản
-            </button>
-          )}
-          {!finalStep && (
-            <button
-              onClick={next}
-              disabled={saving}
-              className="btn-primary btn-text-responsive px-6 py-3 flex items-center gap-2 disabled:opacity-60"
-            >
-              {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
-              )}
               Tiếp theo
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                console.log("🔄 Publishing hotel...");
+                handleSubmit("published");
+              }}
+              disabled={submitting}
+              className="btn-primary btn-text-responsive px-6 py-3 disabled:opacity-60 flex items-center gap-2"
+            >
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              Xuất bản
             </button>
           )}
         </div>
