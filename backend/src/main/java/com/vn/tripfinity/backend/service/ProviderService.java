@@ -7,13 +7,18 @@ import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
+import com.vn.tripfinity.backend.service.cloudinary.CloudinaryService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +29,7 @@ public class ProviderService {
 
     private final ProviderRepository providerRepository;
     private final UserRepository userRepository;
+    private final CloudinaryService cloudinaryService;
 
     public List<ProviderDTO> getAllProviders() {
         return providerRepository.findAll().stream()
@@ -134,6 +140,54 @@ public class ProviderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + providerId));
         providerRepository.delete(existing);
         log.info("Đã xóa Provider id: {}", providerId);
+    }
+
+    public ProviderDTO uploadLogo(Integer providerId, MultipartFile file) throws IOException {
+        log.debug("Upload logo cho Provider ID: {}", providerId);
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + providerId));
+
+        // Xóa logo cũ nếu có
+        if (provider.getLogoUrl() != null && !provider.getLogoUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImageByUrl(provider.getLogoUrl());
+                log.info("Đã xóa logo cũ: {}", provider.getLogoUrl());
+            } catch (Exception e) {
+                log.warn("Không thể xóa logo cũ: {}", e.getMessage());
+            }
+        }
+
+        // Upload logo mới
+        Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
+        String logoUrl = (String) uploadResult.get("secure_url");
+
+        provider.setLogoUrl(logoUrl);
+        Provider savedProvider = providerRepository.save(provider);
+        log.info("Đã upload logo mới cho Provider ID: {}", savedProvider.getProviderId());
+
+        return toDTO(savedProvider);
+    }
+
+    public ProviderDTO deleteLogo(Integer providerId) throws IOException {
+        log.debug("Xóa logo cho Provider ID: {}", providerId);
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + providerId));
+
+        // Xóa logo trên Cloudinary
+        if (provider.getLogoUrl() != null && !provider.getLogoUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImageByUrl(provider.getLogoUrl());
+                log.info("Đã xóa logo: {}", provider.getLogoUrl());
+            } catch (Exception e) {
+                log.warn("Không thể xóa logo: {}", e.getMessage());
+            }
+        }
+
+        provider.setLogoUrl(null);
+        Provider savedProvider = providerRepository.save(provider);
+        log.info("Đã xóa logo cho Provider ID: {}", savedProvider.getProviderId());
+
+        return toDTO(savedProvider);
     }
 
     private ProviderDTO toDTO(Provider p) {

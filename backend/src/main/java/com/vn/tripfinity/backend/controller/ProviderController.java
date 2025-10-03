@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -76,5 +77,31 @@ public class ProviderController {
         requireBearer(authorization);
         providerService.deleteProvider(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{providerId}/logo")
+    public ResponseEntity<ProviderDTO> uploadLogo(
+            @PathVariable Integer providerId,
+            @RequestParam("file") MultipartFile file) {
+        log.info("Post /api/providers/{}/logo - Uploading logo", providerId);
+        try {
+            ProviderDTO updatedProvider = providerService.uploadLogo(providerId, file);
+            return ResponseEntity.ok(updatedProvider);
+        } catch (Exception e) {
+            log.error("Error uploading logo for provider {}: {}", providerId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @DeleteMapping("/{providerId}/logo")
+    public ResponseEntity<ProviderDTO> deleteLogo(@PathVariable Integer providerId) {
+        log.info("Delete /api/providers/{}/logo - Deleting logo", providerId);
+        try {
+            ProviderDTO updatedProvider = providerService.deleteLogo(providerId);
+            return ResponseEntity.ok(updatedProvider);
+        } catch (Exception e) {
+            log.error("Error deleting logo for provider {}: {}", providerId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
