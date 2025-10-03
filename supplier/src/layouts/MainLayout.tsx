@@ -554,29 +554,50 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               sidebarCollapsed ? "px-2" : ""
             }`}
           >
-            {sidebarMenuItems.map((item, index) => (
-              <SidebarMenuItem
-                key={index}
-                icon={item.icon}
-                label={item.label}
-                to={item.to}
-                active={
-                  currentPath === item.to || currentPath.startsWith(item.to)
-                }
-                collapsed={sidebarCollapsed}
-                badge={item.badge}
-                badgeCount={
-                  item.badge
-                    ? mockBadgeData[item.badge as keyof typeof mockBadgeData]
-                    : undefined
-                }
-                isDropdown={item.isDropdown}
-                dropdownItems={item.dropdownItems}
-                onDropdownToggle={() => handleDropdownToggle(index)}
-                dropdownOpen={openDropdowns.has(index)}
-                t={t}
-              />
-            ))}
+            {sidebarMenuItems.map((item, index) => {
+              // Logic kiểm tra active chính xác hơn
+              let isActive = false;
+
+              if (item.to === "/supplier") {
+                // Dashboard chỉ active khi path chính xác là /supplier
+                isActive = currentPath === "/supplier";
+              } else if (item.to === "#") {
+                // Dropdown: kiểm tra xem có dropdown item nào active không
+                isActive =
+                  item.dropdownItems?.some(
+                    (dropdownItem) =>
+                      currentPath === dropdownItem.to ||
+                      currentPath.startsWith(dropdownItem.to + "/")
+                  ) || false;
+              } else {
+                // Các menu item khác: exact match hoặc startsWith + "/"
+                isActive =
+                  currentPath === item.to ||
+                  currentPath.startsWith(item.to + "/");
+              }
+
+              return (
+                <SidebarMenuItem
+                  key={index}
+                  icon={item.icon}
+                  label={item.label}
+                  to={item.to}
+                  active={isActive}
+                  collapsed={sidebarCollapsed}
+                  badge={item.badge}
+                  badgeCount={
+                    item.badge
+                      ? mockBadgeData[item.badge as keyof typeof mockBadgeData]
+                      : undefined
+                  }
+                  isDropdown={item.isDropdown}
+                  dropdownItems={item.dropdownItems}
+                  onDropdownToggle={() => handleDropdownToggle(index)}
+                  dropdownOpen={openDropdowns.has(index)}
+                  t={t}
+                />
+              );
+            })}
           </nav>
 
           {/* User Profile */}
