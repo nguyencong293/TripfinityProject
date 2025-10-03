@@ -13,11 +13,11 @@ import {
   Archive,
   ChevronDown,
   ChevronUp,
-  Clock,
-  BedDouble,
-  BookOpen,
-  Tag,
   RefreshCw,
+  Loader2,
+  AlertCircle,
+  Clock,
+  Tag,
   History,
   DollarSign,
   Video,
@@ -26,33 +26,14 @@ import {
   XCircle,
   TriangleAlert,
   DoorClosed,
-  MessageCircle,
   Sparkles,
-  Layers3,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useHotels } from "../../../hooks/useHotels";
+import type { HotelDTO } from "../../../types";
 
-/* ===================== Mock Types ===================== */
+/* ===================== Mock Types cho các phần tĩnh ===================== */
 type HotelStatus = "draft" | "published" | "archived" | "disabled";
-interface Hotel {
-  id: number;
-  title: string;
-  slug: string;
-  area: string;
-  property_type: string;
-  star_rating: number;
-  status: HotelStatus;
-  visibility: "public" | "private";
-  thumbnail_url?: string | null;
-  price_from: number;
-  rating_average: number;
-  total_rooms: number;
-  occupied_rooms: number;
-  next_available_date?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 interface Reservation {
   id: number;
   hotel_id: number;
@@ -131,56 +112,19 @@ interface ActivityLog {
 }
 
 /* ===================== Mock Generators ===================== */
-const areas = ["Hà Nội", "TP.HCM", "Đà Nẵng", "Nha Trang", "Phú Quốc"];
-const propertyTypes = ["Hotel", "Resort", "Boutique", "Apartment", "Villa"];
 const roomTypes = ["Standard", "Deluxe", "Suite", "Family", "Studio"];
 
 function rand<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function genHotels(): Hotel[] {
-  const now = Date.now();
-  const arr: Hotel[] = [];
-  for (let i = 1; i <= 18; i++) {
-    const totalRooms = 40 + (i % 6) * 20;
-    const occupied = Math.floor(totalRooms * (0.3 + Math.random() * 0.6));
-    arr.push({
-      id: i,
-      title: `Hotel Property #${i}`,
-      slug: `hotel-property-${i}`,
-      area: rand(areas),
-      property_type: rand(propertyTypes),
-      star_rating: 3 + (i % 3),
-      status: rand(["published", "draft", "archived", "disabled"]),
-      visibility: Math.random() > 0.2 ? "public" : "private",
-      thumbnail_url:
-        Math.random() > 0.15
-          ? `https://picsum.photos/seed/hotel-${i}/200/140.webp`
-          : null,
-      price_from: 800000 + ((i * 173000) % 1500000),
-      rating_average: parseFloat((3 + Math.random() * 2).toFixed(1)),
-      total_rooms: totalRooms,
-      occupied_rooms: occupied,
-      next_available_date:
-        Math.random() > 0.3
-          ? new Date(now + Math.random() * 7 * 86400000)
-              .toISOString()
-              .substring(0, 10)
-          : null,
-      created_at: new Date(now - i * 86400000).toISOString(),
-      updated_at: new Date(now - i * 3600000).toISOString(),
-    });
-  }
-  return arr;
-}
-
-function genReservations(hotels: Hotel[]): Reservation[] {
+function genReservations(hotels: HotelDTO[]): Reservation[] {
   const arr: Reservation[] = [];
   const now = Date.now();
   for (let i = 1; i <= 30; i++) {
-    const h = rand(hotels);
-    const offset = Math.floor(Math.random() * 3); // within next 3 days
+    const h = hotels[Math.floor(Math.random() * hotels.length)];
+    if (!h) continue;
+    const offset = Math.floor(Math.random() * 3);
     const ci = new Date(now + offset * 86400000).toISOString().substring(0, 10);
     const co = new Date(
       new Date(ci).getTime() + (1 + Math.floor(Math.random() * 3)) * 86400000
@@ -189,7 +133,7 @@ function genReservations(hotels: Hotel[]): Reservation[] {
       .substring(0, 10);
     arr.push({
       id: 5000 + i,
-      hotel_id: h.id,
+      hotel_id: h.hotelId!,
       guest_name: `Guest ${i}`,
       room_type: rand(roomTypes),
       check_in: ci,
@@ -201,7 +145,7 @@ function genReservations(hotels: Hotel[]): Reservation[] {
   return arr;
 }
 
-function genInventory(hotels: Hotel[]): InventorySlot[] {
+function genInventory(hotels: HotelDTO[]): InventorySlot[] {
   const now = Date.now();
   const arr: InventorySlot[] = [];
   hotels.slice(0, 5).forEach((h) => {
@@ -215,15 +159,13 @@ function genInventory(hotels: Hotel[]): InventorySlot[] {
         const occ = Math.floor(base * Math.random());
         arr.push({
           date,
-          hotel_id: h.id,
+          hotel_id: h.hotelId!,
           room_type: rt,
           available_count: base - occ,
           occupied: occ,
           blocked: Math.random() > 0.95,
           price_override:
-            Math.random() > 0.9
-              ? h.price_from * (1 + Math.random() * 0.2)
-              : null,
+            Math.random() > 0.9 ? h.price * (1 + Math.random() * 0.2) : null,
         });
       }
     });
@@ -231,18 +173,18 @@ function genInventory(hotels: Hotel[]): InventorySlot[] {
   return arr;
 }
 
-function genRatePlans(hotels: Hotel[]): RatePlan[] {
+function genRatePlans(hotels: HotelDTO[]): RatePlan[] {
   const arr: RatePlan[] = [];
   let id = 1;
   hotels.slice(0, 6).forEach((h) => {
     roomTypes.slice(0, 3).forEach((rt, idx) => {
       arr.push({
         id: id++,
-        hotel_id: h.id,
+        hotel_id: h.hotelId!,
         room_type: rt,
         name:
           idx === 0 ? "Flexible" : idx === 1 ? "Non-Refundable" : "Early Bird",
-        base_price: h.price_from + idx * 150000,
+        base_price: h.price + idx * 150000,
         currency: "VND",
         refundable: idx !== 1,
         meal_plan: idx === 2 ? "Breakfast" : undefined,
@@ -252,15 +194,15 @@ function genRatePlans(hotels: Hotel[]): RatePlan[] {
   return arr;
 }
 
-function genReviews(hotels: Hotel[]): Review[] {
+function genReviews(hotels: HotelDTO[]): Review[] {
   const arr: Review[] = [];
   let id = 1;
   hotels.slice(0, 6).forEach((h) => {
-    const n = 1 + (h.id % 3);
+    const n = 1 + ((h.hotelId || 0) % 3);
     for (let i = 0; i < n; i++) {
       arr.push({
         id: id++,
-        hotel_id: h.id,
+        hotel_id: h.hotelId!,
         guest: `Reviewer ${id}`,
         rating: parseFloat((3 + Math.random() * 2).toFixed(1)),
         aspects: {
@@ -285,12 +227,12 @@ function genHousekeeping(): HousekeepingItem[] {
   ];
 }
 
-function genAlerts(hotels: Hotel[]): AlertItem[] {
+function genAlerts(hotels: HotelDTO[]): AlertItem[] {
   return [
     {
       id: 1,
       type: "overbook_risk",
-      message: `Nguy cơ overbook tại ${hotels[0].title}`,
+      message: `Nguy cơ overbook tại ${hotels[0]?.title || "Hotel"}`,
       severity: "warn",
       created_at: new Date().toISOString(),
     },
@@ -311,7 +253,7 @@ function genAlerts(hotels: Hotel[]): AlertItem[] {
   ];
 }
 
-function genActivities(hotels: Hotel[]): ActivityLog[] {
+function genActivities(hotels: HotelDTO[]): ActivityLog[] {
   const actions: ActivityLog["action"][] = [
     "publish",
     "unpublish",
@@ -324,11 +266,12 @@ function genActivities(hotels: Hotel[]): ActivityLog[] {
   ];
   const arr: ActivityLog[] = [];
   for (let i = 0; i < 22; i++) {
-    const h = rand(hotels);
+    const h = hotels[Math.floor(Math.random() * hotels.length)];
+    if (!h) continue;
     arr.push({
       id: i + 1,
       action: rand(actions),
-      hotel_id: h.id,
+      hotel_id: h.hotelId,
       meta: { title: h.title },
       created_at: new Date(Date.now() - i * 3600000).toISOString(),
     });
@@ -350,8 +293,19 @@ const cx = (...c: Array<string | false | null | undefined>) =>
 /* ===================== Main Component ===================== */
 const DashboardHotelPage: React.FC = () => {
   const navigate = useNavigate();
-  /* Seeds */
-  const [hotels] = useState<Hotel[]>(() => genHotels());
+  const {
+    hotels,
+    filteredHotels,
+    loading,
+    error,
+    providerId,
+    filters,
+    setFilters,
+    refetch,
+    clearFilters,
+  } = useHotels();
+
+  /* Mock data cho các phần tĩnh */
   const [reservations] = useState<Reservation[]>(() => genReservations(hotels));
   const [inventory] = useState<InventorySlot[]>(() => genInventory(hotels));
   const [ratePlans] = useState<RatePlan[]>(() => genRatePlans(hotels));
@@ -360,24 +314,14 @@ const DashboardHotelPage: React.FC = () => {
   const [alerts] = useState<AlertItem[]>(() => genAlerts(hotels));
   const [activities] = useState<ActivityLog[]>(() => genActivities(hotels));
 
-  /* Filters (UI only) */
-  const [search, setSearch] = useState("");
-  const [filterArea, setFilterArea] = useState("");
-  const [filterType, setFilterType] = useState("");
-  const [filterStar, setFilterStar] = useState("");
-  const [filterStatus, setFilterStatus] = useState<HotelStatus | "">("");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [filterRoomType, setFilterRoomType] = useState("");
-
   /* Collapsible sections */
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggleCollapse = (k: string) =>
     setCollapsed((prev) => ({ ...prev, [k]: !prev[k] }));
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const toggleSelectAll = (rows: Hotel[]) => {
-    const ids = rows.map((h) => h.id);
+  const toggleSelectAll = () => {
+    const ids = filteredHotels.map((h) => h.hotelId!);
     const all = ids.every((i) => selectedIds.has(i));
     setSelectedIds(all ? new Set() : new Set(ids));
   };
@@ -392,65 +336,30 @@ const DashboardHotelPage: React.FC = () => {
       return next;
     });
 
-  /* Filtered hotels */
-  const filteredHotels = useMemo(() => {
-    return hotels.filter((h) => {
-      if (search) {
-        const q = search.toLowerCase();
-        if (
-          !h.title.toLowerCase().includes(q) &&
-          !h.slug.toLowerCase().includes(q) &&
-          !String(h.id).includes(q)
-        )
-          return false;
-      }
-      if (filterArea && h.area !== filterArea) return false;
-      if (filterType && h.property_type !== filterType) return false;
-      if (filterStatus && h.status !== filterStatus) return false;
-      if (filterStar && h.star_rating < parseInt(filterStar, 10)) return false;
-      if (priceMin && h.price_from < parseInt(priceMin, 10)) return false;
-      if (priceMax && h.price_from > parseInt(priceMax, 10)) return false;
-      if (filterRoomType) {
-        // simple check: at least one rate plan with that room type
-        const has = ratePlans.some(
-          (rp) => rp.hotel_id === h.id && rp.room_type === filterRoomType
-        );
-        if (!has) return false;
-      }
-      return true;
-    });
-  }, [
-    hotels,
-    search,
-    filterArea,
-    filterType,
-    filterStatus,
-    filterStar,
-    priceMin,
-    priceMax,
-    filterRoomType,
-    ratePlans,
-  ]);
-
-  /* KPIs (mock formulas) */
+  /* KPIs */
   const kpis = useMemo(() => {
-    const total = hotels.length;
-    const totalRooms = hotels.reduce((s, h) => s + h.total_rooms, 0);
-    const occupied = hotels.reduce((s, h) => s + h.occupied_rooms, 0);
-    const occupancyRate = totalRooms ? (occupied / totalRooms) * 100 : 0;
-    const adr =
-      hotels.length > 0
-        ? hotels.reduce((s, h) => s + h.price_from, 0) / hotels.length
-        : 0;
-    // RevPAR = (ADR * Occupancy%)
-    const revPar = adr * (occupancyRate / 100);
-    const pendingRes = reservations.filter(
-      (r) => r.booking_status === "pending"
+    const total = filteredHotels.length;
+    const published = filteredHotels.filter(
+      (h) => h.hotelStatus === "published"
     ).length;
-    return { total, occupancyRate, adr, revPar, pendingRes };
-  }, [hotels, reservations]);
+    const draft = filteredHotels.filter(
+      (h) => h.hotelStatus === "draft"
+    ).length;
+    const avgRating =
+      filteredHotels.length > 0
+        ? filteredHotels.reduce((sum, h) => sum + (h.ratingAverage || 0), 0) /
+          filteredHotels.length
+        : 0;
+    const avgPrice =
+      filteredHotels.length > 0
+        ? filteredHotels.reduce((sum, h) => sum + h.price, 0) /
+          filteredHotels.length
+        : 0;
 
-  /* Derived upcoming arrivals (today + next 3 days) */
+    return { total, published, draft, avgRating, avgPrice };
+  }, [filteredHotels]);
+
+  /* Derived upcoming arrivals */
   const upcomingArrivals = useMemo(() => {
     const today = new Date().toISOString().substring(0, 10);
     const in3 = new Date(Date.now() + 3 * 86400000)
@@ -461,12 +370,11 @@ const DashboardHotelPage: React.FC = () => {
       .slice(0, 12);
   }, [reservations]);
 
-  /* Availability (select hotel) */
+  /* Availability heatmap */
   const [availabilityHotelId, setAvailabilityHotelId] = useState<number>(() =>
-    hotels.length ? hotels[0].id : 0
+    hotels.length ? hotels[0].hotelId! : 0
   );
   const availabilityHeat = useMemo(() => {
-    // map roomType -> array of 30 days
     const roomSet = new Set<string>();
     inventory
       .filter((s) => s.hotel_id === availabilityHotelId)
@@ -495,7 +403,6 @@ const DashboardHotelPage: React.FC = () => {
     };
   }, [availabilityHotelId, inventory]);
 
-  /* Recent subsets */
   const ratePlansPreview = useMemo(() => ratePlans.slice(0, 9), [ratePlans]);
   const reviewPreview = useMemo(() => reviews.slice(0, 5), [reviews]);
   const housekeepingProblems = useMemo(
@@ -505,27 +412,17 @@ const DashboardHotelPage: React.FC = () => {
   const alertsRecent = useMemo(() => alerts.slice(0, 6), [alerts]);
   const activityRecent = useMemo(() => activities.slice(0, 10), [activities]);
 
-  /* Bulk mock actions */
+  /* Bulk actions (mock) */
   const bulkPublish = () => {
     console.log("Bulk publish hotels:", Array.from(selectedIds));
-    alert("Bulk publish (mock)");
+    alert(`Publishing ${selectedIds.size} hotels (mock)`);
   };
   const bulkArchive = () => {
     console.log("Bulk archive hotels:", Array.from(selectedIds));
-    alert("Bulk archive (mock)");
-  };
-  const clearFilters = () => {
-    setSearch("");
-    setFilterArea("");
-    setFilterType("");
-    setFilterStatus("");
-    setFilterStar("");
-    setPriceMin("");
-    setPriceMax("");
-    setFilterRoomType("");
+    alert(`Archiving ${selectedIds.size} hotels (mock)`);
   };
 
-  /* Helpers UI */
+  /* Status badge */
   const statusBadge = (status: HotelStatus) => {
     const map: Record<HotelStatus, string> = {
       published:
@@ -619,88 +516,110 @@ const DashboardHotelPage: React.FC = () => {
             <Building2 className="w-7 h-7 icon-brand" />
             Dashboard Khách Sạn
           </h1>
-          <span className="body2-mobile sm:body2-tablet lg:body2-desktop theme-text-secondary">
-            Nhà cung cấp: <strong>Mock Provider Co.</strong>
-          </span>
+          {providerId && (
+            <span className="body2-mobile sm:body2-tablet lg:body2-desktop theme-text-secondary">
+              Provider ID: <strong>{providerId}</strong>
+            </span>
+          )}
           <div className="ml-auto flex gap-2">
-            <button className="btn-primary btn-text-responsive flex items-center gap-2">
+            <button
+              onClick={() => refetch()}
+              disabled={loading}
+              className="btn-outline btn-text-responsive flex items-center gap-2"
+            >
+              <RefreshCw className={cx("w-4 h-4", loading && "animate-spin")} />
+              Làm mới
+            </button>
+            <Link
+              to="/supplier/service/hotel/create"
+              className="btn-primary btn-text-responsive flex items-center gap-2"
+            >
               <Plus className="w-4 h-4" />
-              <Link to="/supplier/service/hotel/create">Tạo khách sạn</Link>
-            </button>
-            <button className="btn-outline btn-text-responsive flex items-center gap-2">
-              <BedDouble className="w-4 h-4" />
-              Tạo room-type nhanh
-            </button>
+              Tạo khách sạn
+            </Link>
           </div>
         </div>
 
+        {/* Filters */}
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex items-center gap-2 theme-border rounded px-2 py-1 theme-bg-card body2-mobile sm:body2-tablet lg:body2-desktop">
             <Search className="w-4 h-4 icon-disabled" />
             <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={filters.search}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
+              }
               placeholder="Tìm tiêu đề / slug / ID"
               className="outline-none bg-transparent body2-mobile sm:body2-tablet lg:body2-desktop placeholder:theme-text-secondary"
             />
           </div>
-          {/* Area */}
-          <div className="flex flex-col">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Khu vực
-            </label>
-            <select
-              value={filterArea}
-              onChange={(e) => setFilterArea(e.target.value)}
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-            >
-              <option value="">Tất cả</option>
-              {areas.map((a) => (
-                <option key={a}>{a}</option>
-              ))}
-            </select>
-          </div>
-          {/* Type */}
+
           <div className="flex flex-col">
             <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
               Loại hình
             </label>
             <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
+              value={filters.propertyType || ""}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  propertyType: e.target.value,
+                }))
+              }
               className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
             >
               <option value="">Tất cả</option>
-              {propertyTypes.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
+              <option value="hotel">Hotel</option>
+              <option value="resort">Resort</option>
+              <option value="apartment">Apartment</option>
+              <option value="villa">Villa</option>
+              <option value="hostel">Hostel</option>
+              <option value="guesthouse">Guesthouse</option>
+              <option value="homestay">Homestay</option>
             </select>
           </div>
-          {/* Star */}
+
           <div className="flex flex-col">
             <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
               Sao ≥
             </label>
             <select
-              value={filterStar}
-              onChange={(e) => setFilterStar(e.target.value)}
+              value={filters.starRating || ""}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  starRating: e.target.value
+                    ? parseInt(e.target.value)
+                    : undefined,
+                }))
+              }
               className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
             >
               <option value="">Bất kỳ</option>
-              {[3, 4, 5].map((s) => (
-                <option key={s}>{s}</option>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </select>
           </div>
-          {/* Status */}
+
           <div className="flex flex-col">
             <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
               Trạng thái
             </label>
             <select
-              value={filterStatus}
+              value={filters.status || ""}
               onChange={(e) =>
-                setFilterStatus(e.target.value as HotelStatus | "")
+                setFilters((prev) => ({
+                  ...prev,
+                  status: e.target.value as
+                    | ""
+                    | "published"
+                    | "draft"
+                    | "archived"
+                    | "disabled",
+                }))
               }
               className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
             >
@@ -711,30 +630,22 @@ const DashboardHotelPage: React.FC = () => {
               <option value="disabled">Disabled</option>
             </select>
           </div>
-          {/* Room Type */}
-          <div className="flex flex-col">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Room Type
-            </label>
-            <select
-              value={filterRoomType}
-              onChange={(e) => setFilterRoomType(e.target.value)}
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-            >
-              <option value="">Tất cả</option>
-              {roomTypes.map((r) => (
-                <option key={r}>{r}</option>
-              ))}
-            </select>
-          </div>
-          {/* Price range */}
+
           <div className="flex flex-col w-28">
             <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
               Giá ≥
             </label>
             <input
-              value={priceMin}
-              onChange={(e) => setPriceMin(e.target.value)}
+              type="number"
+              value={filters.priceMin || ""}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  priceMin: e.target.value
+                    ? parseFloat(e.target.value)
+                    : undefined,
+                }))
+              }
               className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
               placeholder="Min"
             />
@@ -744,12 +655,21 @@ const DashboardHotelPage: React.FC = () => {
               Giá ≤
             </label>
             <input
-              value={priceMax}
-              onChange={(e) => setPriceMax(e.target.value)}
+              type="number"
+              value={filters.priceMax || ""}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  priceMax: e.target.value
+                    ? parseFloat(e.target.value)
+                    : undefined,
+                }))
+              }
               className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
               placeholder="Max"
             />
           </div>
+
           <button
             onClick={clearFilters}
             className="caption-mobile sm:caption-tablet lg:caption-desktop theme-border rounded px-3 py-1 theme-bg-card hover:opacity-80"
@@ -759,781 +679,676 @@ const DashboardHotelPage: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div>
-        {sectionHeader("Chỉ số (KPI)", "kpi", <Filter className="w-4 h-4" />)}
-        {!collapsed["kpi"] && (
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-            {renderKPI(
-              "Tổng khách sạn",
-              kpis.total,
-              <Building2 className="w-4 h-4" />
-            )}
-            {renderKPI(
-              "Occupancy",
-              `${kpis.occupancyRate.toFixed(1)}%`,
-              <BedDouble className="w-4 h-4" />
-            )}
-            {renderKPI(
-              "ADR",
-              fmtCurrency(Math.round(kpis.adr)),
-              <DollarSign className="w-4 h-4" />
-            )}
-            {renderKPI(
-              "RevPAR",
-              fmtCurrency(Math.round(kpis.revPar)),
-              <Layers3 className="w-4 h-4" />
-            )}
-            {renderKPI(
-              "Pending res.",
-              kpis.pendingRes,
-              <Clock className="w-4 h-4" />
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Listing Hotels */}
-      <div>
-        {sectionHeader(
-          "Danh sách Khách sạn",
-          "hotels",
-          <Building2 className="w-4 h-4" />,
-          <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-            {filteredHotels.length} kết quả
+      {/* Error State */}
+      {error && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+          <span className="body2-mobile sm:body2-tablet lg:body2-desktop text-red-700 dark:text-red-300">
+            {error}
           </span>
-        )}
-        {!collapsed["hotels"] && (
-          <div className="flex flex-col gap-3">
-            {selectedIds.size > 0 && (
-              <div className="theme-border rounded theme-bg-card p-2 flex flex-wrap gap-2 items-center caption-mobile sm:caption-tablet lg:caption-desktop">
-                <span className="font-medium">{selectedIds.size} đã chọn</span>
-                <button
-                  onClick={bulkPublish}
-                  className="px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700"
-                >
-                  Xuất bản
-                </button>
-                <button
-                  onClick={bulkArchive}
-                  className="px-2 py-1 rounded bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-white"
-                >
-                  Lưu trữ
-                </button>
-                <button
-                  onClick={() => setSelectedIds(new Set())}
-                  className="px-2 py-1 rounded theme-border hover:opacity-80"
-                >
-                  Bỏ chọn
-                </button>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center gap-3 py-12">
+          <Loader2 className="w-6 h-6 animate-spin icon-brand" />
+          <span className="body1-mobile sm:body1-tablet lg:body1-desktop">
+            Đang tải dữ liệu...
+          </span>
+        </div>
+      )}
+
+      {/* Content */}
+      {!loading && (
+        <>
+          {/* KPI Cards */}
+          <div>
+            {sectionHeader(
+              "Chỉ số (KPI)",
+              "kpi",
+              <Filter className="w-4 h-4" />
+            )}
+            {!collapsed["kpi"] && (
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+                {renderKPI(
+                  "Tổng khách sạn",
+                  kpis.total,
+                  <Building2 className="w-4 h-4" />
+                )}
+                {renderKPI(
+                  "Đã xuất bản",
+                  kpis.published,
+                  <Power className="w-4 h-4" />
+                )}
+                {renderKPI("Nháp", kpis.draft, <Pencil className="w-4 h-4" />)}
+                {renderKPI(
+                  "Đánh giá TB",
+                  kpis.avgRating.toFixed(1),
+                  <Star className="w-4 h-4" />
+                )}
+                {renderKPI(
+                  "Giá TB",
+                  fmtCurrency(Math.round(kpis.avgPrice)),
+                  <DollarSign className="w-4 h-4" />
+                )}
               </div>
             )}
-            <div className="overflow-auto theme-border rounded theme-bg-card">
-              <table className="w-full border-collapse body2-mobile sm:body2-tablet lg:body2-desktop">
-                <thead className="bg-gray-50 dark:bg-gray-800/60">
-                  <tr className="text-left theme-text-secondary caption-mobile sm:caption-tablet lg:caption-desktop">
-                    <th className="p-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          filteredHotels.length > 0 &&
-                          filteredHotels.every((h) => selectedIds.has(h.id))
-                        }
-                        onChange={() => toggleSelectAll(filteredHotels)}
-                      />
-                    </th>
-                    <th className="p-2">Ảnh</th>
-                    <th className="p-2">Tiêu đề / Slug</th>
-                    <th className="p-2">Sao / Loại</th>
-                    <th className="p-2">Phòng / Occ%</th>
-                    <th className="p-2">Ngày trống</th>
-                    <th className="p-2">Giá từ</th>
-                    <th className="p-2">Rating</th>
-                    <th className="p-2">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredHotels.map((h) => {
-                    const occPct = h.total_rooms
-                      ? (h.occupied_rooms / h.total_rooms) * 100
-                      : 0;
-                    return (
-                      <tr
-                        key={h.id}
-                        className="border-t theme-border hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
-                      >
-                        <td className="p-2">
+          </div>
+
+          {/* Listing Hotels */}
+          <div>
+            {sectionHeader(
+              "Danh sách Khách sạn",
+              "hotels",
+              <Building2 className="w-4 h-4" />,
+              <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
+                {filteredHotels.length} kết quả
+              </span>
+            )}
+            {!collapsed["hotels"] && (
+              <div className="flex flex-col gap-3">
+                {selectedIds.size > 0 && (
+                  <div className="theme-border rounded theme-bg-card p-2 flex flex-wrap gap-2 items-center caption-mobile sm:caption-tablet lg:caption-desktop">
+                    <span className="font-medium">
+                      {selectedIds.size} đã chọn
+                    </span>
+                    <button
+                      onClick={bulkPublish}
+                      className="px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700"
+                    >
+                      Xuất bản
+                    </button>
+                    <button
+                      onClick={bulkArchive}
+                      className="px-2 py-1 rounded bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-white"
+                    >
+                      Lưu trữ
+                    </button>
+                    <button
+                      onClick={() => setSelectedIds(new Set())}
+                      className="px-2 py-1 rounded theme-border hover:opacity-80"
+                    >
+                      Bỏ chọn
+                    </button>
+                  </div>
+                )}
+                <div className="overflow-auto theme-border rounded theme-bg-card">
+                  <table className="w-full border-collapse body2-mobile sm:body2-tablet lg:body2-desktop">
+                    <thead className="bg-gray-50 dark:bg-gray-800/60">
+                      <tr className="text-left theme-text-secondary caption-mobile sm:caption-tablet lg:caption-desktop">
+                        <th className="p-2">
                           <input
                             type="checkbox"
-                            checked={selectedIds.has(h.id)}
-                            onChange={() => toggleSelectOne(h.id)}
-                          />
-                        </td>
-                        <td className="p-2">
-                          <div className="w-20 h-14 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden flex items-center justify-center">
-                            {h.thumbnail_url ? (
-                              <img
-                                src={h.thumbnail_url}
-                                alt={h.title}
-                                className="object-cover w-full h-full"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                                Không ảnh
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2 align-top">
-                          <div className="flex flex-col gap-0.5">
-                            <button className="text-blue-600 dark:text-blue-400 hover:underline font-medium caption-mobile sm:caption-tablet lg:caption-desktop text-left">
-                              {h.title}
-                            </button>
-                            <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                              {h.slug}
-                            </span>
-                            {statusBadge(h.status)}
-                          </div>
-                        </td>
-                        <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                          <div className="flex items-center gap-1">
-                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                            {h.star_rating}★
-                          </div>
-                          <div className="overline-mobile sm:overline-tablet lg:overline-desktop">
-                            {h.property_type}
-                          </div>
-                        </td>
-                        <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                          {h.total_rooms} /{" "}
-                          <span
-                            className={
-                              occPct > 85
-                                ? "text-red-600 dark:text-red-400 font-semibold"
-                                : occPct > 70
-                                ? "text-amber-600 dark:text-amber-400"
-                                : ""
+                            checked={
+                              filteredHotels.length > 0 &&
+                              filteredHotels.every((h) =>
+                                selectedIds.has(h.hotelId!)
+                              )
                             }
-                          >
-                            {occPct.toFixed(0)}%
-                          </span>
-                        </td>
-                        <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                          {h.next_available_date || "—"}
-                        </td>
-                        <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop whitespace-nowrap">
-                          {fmtCurrency(h.price_from)}
-                        </td>
-                        <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                          {h.rating_average.toFixed(1)}
-                        </td>
-                        <td className="p-2 align-top">
-                          <div className="flex flex-wrap gap-1">
-                            {[
-                              { ic: Eye, t: "Xem" },
-                              {
-                                ic: Pencil,
-                                t: "Sửa",
-                                action: () =>
-                                  navigate("/supplier/service/hotel/edit"),
-                              },
-                              { ic: CalendarDays, t: "Lịch" },
-                              { ic: BookOpen, t: "Bookings" },
-                              { ic: Video, t: "Virtual" },
-                              { ic: Power, t: "Publish" },
-                              { ic: Archive, t: "Archive" },
-                              { ic: Copy, t: "Clone" },
-                            ].map((a, i) => {
-                              const Icon = a.ic;
-                              return (
-                                <button
-                                  key={i}
-                                  type="button"
-                                  onClick={a.action}
-                                  className="p-1 hover:text-blue-600 dark:hover:text-blue-400"
-                                  title={a.t}
-                                  disabled={!a.action}
-                                >
-                                  <Icon className="w-4 h-4" />
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </td>
+                            onChange={toggleSelectAll}
+                          />
+                        </th>
+                        <th className="p-2">Ảnh</th>
+                        <th className="p-2">Tiêu đề / Slug</th>
+                        <th className="p-2">Sao / Loại</th>
+                        <th className="p-2">Giá</th>
+                        <th className="p-2">Rating</th>
+                        <th className="p-2">Trạng thái</th>
+                        <th className="p-2">Hành động</th>
                       </tr>
-                    );
-                  })}
-                  {filteredHotels.length === 0 && (
-                    <tr>
-                      <td
-                        className="p-4 text-center caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary"
-                        colSpan={9}
-                      >
-                        Không tìm thấy khách sạn
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Reservations Snapshot */}
-      <div>
-        {sectionHeader(
-          "Booking đến (3 ngày)",
-          "reservations",
-          <Clock className="w-4 h-4" />,
-          <button className="caption-mobile sm:caption-tablet lg:caption-desktop flex items-center gap-1 px-2 py-1 rounded theme-border hover:opacity-80">
-            <RefreshCw className="w-3 h-3" />
-            Làm mới
-          </button>
-        )}
-        {!collapsed["reservations"] && (
-          <div className="theme-border rounded theme-bg-card p-3 overflow-auto">
-            <table className="w-full border-collapse body2-mobile sm:body2-tablet lg:body2-desktop">
-              <thead className="bg-gray-50 dark:bg-gray-800/60">
-                <tr className="text-left theme-text-secondary caption-mobile sm:caption-tablet lg:caption-desktop">
-                  <th className="p-2">ID</th>
-                  <th className="p-2">Khách</th>
-                  <th className="p-2">Khách sạn</th>
-                  <th className="p-2">Room Type</th>
-                  <th className="p-2">Check-in</th>
-                  <th className="p-2">Check-out</th>
-                  <th className="p-2">Trạng thái</th>
-                  <th className="p-2">Thanh toán</th>
-                  <th className="p-2">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {upcomingArrivals.map((r) => {
-                  const hotel = hotels.find((h) => h.id === r.hotel_id)!;
-                  return (
-                    <tr
-                      key={r.id}
-                      className="border-t theme-border hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
-                    >
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {r.id}
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {r.guest_name}
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        <span className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
-                          {hotel.title}
-                        </span>
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {r.room_type}
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {r.check_in}
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {r.check_out}
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {r.booking_status}
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {r.payment_status}
-                      </td>
-                      <td className="p-2">
-                        <div className="flex flex-wrap gap-1">
-                          <button
-                            className="px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700 caption-mobile sm:caption-tablet lg:caption-desktop"
-                            title="Check-in"
-                          >
-                            Check-in
-                          </button>
-                          <button
-                            className="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 caption-mobile sm:caption-tablet lg:caption-desktop"
-                            title="Assign room"
-                          >
-                            Gán
-                          </button>
-                          <button
-                            className="px-2 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 caption-mobile sm:caption-tablet lg:caption-desktop"
-                            title="Tin nhắn"
-                          >
-                            <MessageCircle className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {upcomingArrivals.length === 0 && (
-                  <tr>
-                    <td
-                      className="p-4 text-center caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary"
-                      colSpan={9}
-                    >
-                      Không có booking sắp đến
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Availability Heatmap */}
-      <div>
-        {sectionHeader(
-          "Tồn phòng (30 ngày)",
-          "availability",
-          <CalendarDays className="w-4 h-4" />,
-          <select
-            value={availabilityHotelId}
-            onChange={(e) => setAvailabilityHotelId(Number(e.target.value))}
-            className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-          >
-            {hotels.slice(0, 10).map((h) => (
-              <option key={h.id} value={h.id}>
-                #{h.id} {h.title.slice(0, 24)}
-              </option>
-            ))}
-          </select>
-        )}
-        {!collapsed["availability"] && (
-          <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-4 overflow-auto">
-            <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-              Màu: Xanh tốt • Vàng thấp • Đỏ block • Xám full
-            </div>
-            <div className="min-w-[900px]">
-              <table className="w-full border-collapse caption-mobile sm:caption-tablet lg:caption-desktop">
-                <thead>
-                  <tr>
-                    <th className="p-2 text-left theme-text-secondary">
-                      Room Type
-                    </th>
-                    {availabilityHeat.days.map((d) => (
-                      <th
-                        key={d}
-                        className="p-1 theme-text-secondary overline-mobile sm:overline-tablet lg:overline-desktop"
-                      >
-                        {d.slice(5)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {availabilityHeat.roomList.map((rt, rIdx) => (
-                    <tr key={rt} className="border-t theme-border">
-                      <td className="p-2 font-semibold">{rt}</td>
-                      {availabilityHeat.matrix[rIdx].map((slot, cIdx) => {
-                        const remaining = slot ? slot.available_count : 0;
-                        const blocked = slot?.blocked;
-                        let color =
-                          "bg-green-200 text-green-800 dark:bg-green-900/40 dark:text-green-300";
-                        if (blocked)
-                          color =
-                            "bg-red-200 text-red-800 dark:bg-red-900/40 dark:text-red-300";
-                        else if (!slot)
-                          color =
-                            "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-                        else if (remaining <= 0)
-                          color =
-                            "bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300";
-                        else if (remaining < 3)
-                          color =
-                            "bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300";
-                        return (
-                          <td
-                            key={cIdx}
-                            title={availabilityHeat.days[cIdx]}
-                            className="p-0.5"
-                          >
-                            <div
-                              className={cx(
-                                "h-8 rounded flex flex-col items-center justify-center relative cursor-pointer hover:ring-2 ring-light-focus dark:ring-dark-focus transition",
-                                color
-                              )}
-                            >
-                              <span className="overline-mobile sm:overline-tablet lg:overline-desktop">
-                                {blocked ? "B" : slot ? `${remaining}` : "-"}
-                              </span>
-                              {slot?.price_override && (
-                                <span className="absolute top-0.5 right-0.5 overline-mobile sm:overline-tablet lg:overline-desktop bg-black/30 text-white px-1 rounded">
-                                  $
+                    </thead>
+                    <tbody>
+                      {filteredHotels.map((h) => (
+                        <tr
+                          key={h.hotelId}
+                          className="border-t theme-border hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                        >
+                          <td className="p-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(h.hotelId!)}
+                              onChange={() => toggleSelectOne(h.hotelId!)}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <div className="w-20 h-14 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden flex items-center justify-center">
+                              {h.thumbnailUrl ? (
+                                <img
+                                  src={h.thumbnailUrl}
+                                  alt={h.title}
+                                  className="object-cover w-full h-full"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
+                                  Không ảnh
                                 </span>
                               )}
                             </div>
                           </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                  {availabilityHeat.roomList.length === 0 && (
-                    <tr>
-                      <td
-                        className="p-4 caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary"
-                        colSpan={availabilityHeat.days.length + 1}
-                      >
-                        Không có dữ liệu tồn phòng
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-              (Giả lập) Click ô để chỉnh available / block / giá.
-            </div>
+                          <td className="p-2 align-top">
+                            <div className="flex flex-col gap-0.5">
+                              <button className="text-blue-600 dark:text-blue-400 hover:underline font-medium caption-mobile sm:caption-tablet lg:caption-desktop text-left">
+                                {h.title}
+                              </button>
+                              <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
+                                {h.slug || "-"}
+                              </span>
+                              {statusBadge(h.hotelStatus)}
+                            </div>
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            <div className="flex items-center gap-1">
+                              <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                              {h.starRating || 0}★
+                            </div>
+                            <div className="overline-mobile sm:overline-tablet lg:overline-desktop">
+                              {h.propertyType || "-"}
+                            </div>
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop whitespace-nowrap">
+                            {fmtCurrency(h.price)}
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            {h.ratingAverage?.toFixed(1) || "0.0"}
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            {h.visibility === "public" ? "Public" : "Private"}
+                          </td>
+                          <td className="p-2 align-top">
+                            <div className="flex flex-wrap gap-1">
+                              {[
+                                { ic: Eye, t: "Xem" },
+                                {
+                                  ic: Pencil,
+                                  t: "Sửa",
+                                  action: () =>
+                                    navigate(
+                                      `/supplier/service/hotel/edit/${h.hotelId}`
+                                    ),
+                                },
+                                { ic: CalendarDays, t: "Lịch" },
+                                { ic: Copy, t: "Clone" },
+                                { ic: Archive, t: "Archive" },
+                              ].map((a, i) => {
+                                const Icon = a.ic;
+                                return (
+                                  <button
+                                    key={i}
+                                    type="button"
+                                    onClick={a.action}
+                                    className="p-1 hover:text-blue-600 dark:hover:text-blue-400"
+                                    title={a.t}
+                                    disabled={!a.action}
+                                  >
+                                    <Icon className="w-4 h-4" />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {filteredHotels.length === 0 && (
+                        <tr>
+                          <td
+                            className="p-4 text-center caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary"
+                            colSpan={8}
+                          >
+                            Không tìm thấy khách sạn
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Housekeeping & Maintenance */}
-      <div>
-        {sectionHeader(
-          "Bảo trì & Housekeeping",
-          "housekeeping",
-          <Wrench className="w-4 h-4" />
-        )}
-        {!collapsed["housekeeping"] && (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3 md:col-span-2">
-              <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                Trạng thái phòng
-              </h4>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {housekeepingProblems.map((r) => {
-                  const mapColor =
-                    r.status === "maintenance"
-                      ? "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300"
-                      : r.status === "cleaning"
-                      ? "bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300"
-                      : "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300";
+          {/* Reservations Snapshot */}
+          <div>
+            {sectionHeader(
+              "Booking đến (3 ngày)",
+              "reservations",
+              <Clock className="w-4 h-4" />,
+              <button className="caption-mobile sm:caption-tablet lg:caption-desktop flex items-center gap-1 px-2 py-1 rounded theme-border hover:opacity-80">
+                <RefreshCw className="w-3 h-3" />
+                Làm mới
+              </button>
+            )}
+            {!collapsed["reservations"] && (
+              <div className="theme-border rounded theme-bg-card p-3 overflow-auto">
+                <table className="w-full border-collapse body2-mobile sm:body2-tablet lg:body2-desktop">
+                  <thead className="bg-gray-50 dark:bg-gray-800/60">
+                    <tr className="text-left theme-text-secondary caption-mobile sm:caption-tablet lg:caption-desktop">
+                      <th className="p-2">ID</th>
+                      <th className="p-2">Khách</th>
+                      <th className="p-2">Khách sạn</th>
+                      <th className="p-2">Room Type</th>
+                      <th className="p-2">Check-in</th>
+                      <th className="p-2">Check-out</th>
+                      <th className="p-2">Trạng thái</th>
+                      <th className="p-2">Thanh toán</th>
+                      <th className="p-2">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {upcomingArrivals.map((r) => {
+                      const hotel = hotels.find(
+                        (h) => h.hotelId === r.hotel_id
+                      );
+                      return (
+                        <tr
+                          key={r.id}
+                          className="border-t theme-border hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                        >
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            {r.id}
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            {r.guest_name}
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            <span className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+                              {hotel?.title || "N/A"}
+                            </span>
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            {r.room_type}
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            {r.check_in}
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            {r.check_out}
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            {r.booking_status}
+                          </td>
+                          <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                            {r.payment_status}
+                          </td>
+                          <td className="p-2">
+                            <div className="flex flex-wrap gap-1">
+                              <button className="px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700 caption-mobile sm:caption-tablet lg:caption-desktop">
+                                Check-in
+                              </button>
+                              <button className="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 caption-mobile sm:caption-tablet lg:caption-desktop">
+                                Gán
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {upcomingArrivals.length === 0 && (
+                      <tr>
+                        <td
+                          className="p-4 text-center caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary"
+                          colSpan={9}
+                        >
+                          Không có booking sắp đến
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Availability Heatmap */}
+          <div>
+            {sectionHeader(
+              "Tồn phòng (30 ngày)",
+              "availability",
+              <CalendarDays className="w-4 h-4" />,
+              <select
+                value={availabilityHotelId}
+                onChange={(e) => setAvailabilityHotelId(Number(e.target.value))}
+                className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
+              >
+                {hotels.slice(0, 10).map((h) => (
+                  <option key={h.hotelId} value={h.hotelId}>
+                    #{h.hotelId} {h.title.slice(0, 24)}
+                  </option>
+                ))}
+              </select>
+            )}
+            {!collapsed["availability"] && (
+              <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-4 overflow-auto">
+                <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
+                  Màu: Xanh tốt • Vàng thấp • Đỏ block • Xám full
+                </div>
+                <div className="min-w-[900px]">
+                  <table className="w-full border-collapse caption-mobile sm:caption-tablet lg:caption-desktop">
+                    <thead>
+                      <tr>
+                        <th className="p-2 text-left theme-text-secondary">
+                          Room Type
+                        </th>
+                        {availabilityHeat.days.map((d) => (
+                          <th
+                            key={d}
+                            className="p-1 theme-text-secondary overline-mobile sm:overline-tablet lg:overline-desktop"
+                          >
+                            {d.slice(5)}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {availabilityHeat.roomList.map((rt, rIdx) => (
+                        <tr key={rt} className="border-t theme-border">
+                          <td className="p-2 font-semibold">{rt}</td>
+                          {availabilityHeat.matrix[rIdx].map((slot, cIdx) => {
+                            const remaining = slot ? slot.available_count : 0;
+                            const blocked = slot?.blocked;
+                            let color =
+                              "bg-green-200 text-green-800 dark:bg-green-900/40 dark:text-green-300";
+                            if (blocked)
+                              color =
+                                "bg-red-200 text-red-800 dark:bg-red-900/40 dark:text-red-300";
+                            else if (!slot)
+                              color =
+                                "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
+                            else if (remaining <= 0)
+                              color =
+                                "bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300";
+                            else if (remaining < 3)
+                              color =
+                                "bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300";
+                            return (
+                              <td
+                                key={cIdx}
+                                title={availabilityHeat.days[cIdx]}
+                                className="p-0.5"
+                              >
+                                <div
+                                  className={cx(
+                                    "h-8 rounded flex flex-col items-center justify-center relative cursor-pointer hover:ring-2 ring-light-focus dark:ring-dark-focus transition",
+                                    color
+                                  )}
+                                >
+                                  <span className="overline-mobile sm:overline-tablet lg:overline-desktop">
+                                    {blocked
+                                      ? "B"
+                                      : slot
+                                      ? `${remaining}`
+                                      : "-"}
+                                  </span>
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Housekeeping & Maintenance */}
+          <div>
+            {sectionHeader(
+              "Bảo trì & Housekeeping",
+              "housekeeping",
+              <Wrench className="w-4 h-4" />
+            )}
+            {!collapsed["housekeeping"] && (
+              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3 md:col-span-2">
+                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
+                    Trạng thái phòng
+                  </h4>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {housekeepingProblems.map((r) => {
+                      const mapColor =
+                        r.status === "maintenance"
+                          ? "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300"
+                          : "bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300";
+                      return (
+                        <div
+                          key={r.id}
+                          className={cx(
+                            "theme-border rounded p-3 flex flex-col gap-1 caption-mobile sm:caption-tablet lg:caption-desktop border",
+                            mapColor
+                          )}
+                        >
+                          <span className="font-semibold">
+                            Phòng {r.room_label}
+                          </span>
+                          <span>Trạng thái: {r.status}</span>
+                          {r.reason && <span>Lý do: {r.reason}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
+                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
+                    Ghi chú nhanh
+                  </h4>
+                  <div className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                    <button className="px-3 py-2 rounded theme-border hover:opacity-80 flex items-center gap-2">
+                      <Wrench className="w-4 h-4" /> Tạo bảo trì
+                    </button>
+                    <button className="px-3 py-2 rounded theme-border hover:opacity-80 flex items-center gap-2">
+                      <DoorClosed className="w-4 h-4" /> Chặn phòng
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Pricing & Rate Plans */}
+          <div>
+            {sectionHeader(
+              "Rate Plans & Giá",
+              "pricing",
+              <Tag className="w-4 h-4" />
+            )}
+            {!collapsed["pricing"] && (
+              <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-4">
+                <div className="flex flex-wrap gap-2">
+                  <button className="btn-primary btn-text-responsive flex items-center gap-2">
+                    <Plus className="w-4 h-4" /> Thêm Rate Plan
+                  </button>
+                  <button className="btn-outline btn-text-responsive flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" /> Thêm Rate Rule
+                  </button>
+                </div>
+                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {ratePlansPreview.map((rp) => {
+                    const h = hotels.find((x) => x.hotelId === rp.hotel_id);
+                    return (
+                      <div
+                        key={rp.id}
+                        className="theme-border rounded p-3 bg-gray-50 dark:bg-gray-800/40 flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold line-clamp-1">
+                            {h?.title || "N/A"}
+                          </span>
+                          <span className="overline-mobile sm:overline-tablet lg:overline-desktop">
+                            #{rp.id}
+                          </span>
+                        </div>
+                        <div>Room: {rp.room_type}</div>
+                        <div>
+                          Plan: <strong>{rp.name}</strong>
+                        </div>
+                        <div>
+                          Giá: <strong>{fmtCurrency(rp.base_price)}</strong>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Reviews Snapshot */}
+          <div>
+            {sectionHeader(
+              "Đánh giá gần đây",
+              "reviews",
+              <Star className="w-4 h-4" />
+            )}
+            {!collapsed["reviews"] && (
+              <div className="theme-border rounded theme-bg-card p-4 grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {reviewPreview.map((r) => {
+                  const h = hotels.find((x) => x.hotelId === r.hotel_id);
                   return (
                     <div
                       key={r.id}
-                      className={cx(
-                        "theme-border rounded p-3 flex flex-col gap-1 caption-mobile sm:caption-tablet lg:caption-desktop border",
-                        mapColor
-                      )}
+                      className="theme-border rounded p-3 flex flex-col gap-2 bg-gray-50 dark:bg-gray-800/40"
                     >
-                      <span className="font-semibold">
-                        Phòng {r.room_label}
-                      </span>
-                      <span>Trạng thái: {r.status}</span>
-                      {r.reason && <span>Lý do: {r.reason}</span>}
-                      <div className="flex gap-2 pt-1">
-                        <button className="px-2 py-0.5 rounded bg-indigo-600 text-white hover:bg-indigo-700">
-                          Lịch bảo trì
-                        </button>
-                        <button className="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">
-                          Báo housekeeping
-                        </button>
+                      <div className="flex items-center justify-between">
+                        <span className="caption-mobile sm:caption-tablet lg:caption-desktop font-semibold line-clamp-1">
+                          {h?.title || "N/A"}
+                        </span>
+                        <span className="flex items-center gap-1 caption-mobile sm:caption-tablet lg:caption-desktop">
+                          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                          {r.rating.toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="body2-mobile sm:body2-tablet lg:body2-desktop theme-text-secondary line-clamp-3">
+                        {r.content}
                       </div>
                     </div>
                   );
                 })}
-                {housekeepingProblems.length === 0 && (
-                  <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                    Không có vấn đề
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-              <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                Ghi chú nhanh
-              </h4>
-              <div className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                <button className="px-3 py-2 rounded theme-border hover:opacity-80 flex items-center gap-2">
-                  <Wrench className="w-4 h-4" /> Tạo bảo trì
-                </button>
-                <button className="px-3 py-2 rounded theme-border hover:opacity-80 flex items-center gap-2">
-                  <DoorClosed className="w-4 h-4" /> Chặn phòng
-                </button>
-                <button className="px-3 py-2 rounded theme-border hover:opacity-80 flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4" /> Gửi thông báo
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Pricing & Rate Plans */}
-      <div>
-        {sectionHeader(
-          "Rate Plans & Giá",
-          "pricing",
-          <Tag className="w-4 h-4" />
-        )}
-        {!collapsed["pricing"] && (
-          <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-4">
-            <div className="flex flex-wrap gap-2">
-              <button className="btn-primary btn-text-responsive flex items-center gap-2">
-                <Plus className="w-4 h-4" /> Thêm Rate Plan
-              </button>
-              <button className="btn-outline btn-text-responsive flex items-center gap-2">
-                <Sparkles className="w-4 h-4" /> Thêm Rate Rule
-              </button>
-            </div>
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {ratePlansPreview.map((rp) => {
-                const h = hotels.find((x) => x.id === rp.hotel_id)!;
-                return (
-                  <div
-                    key={rp.id}
-                    className="theme-border rounded p-3 bg-gray-50 dark:bg-gray-800/40 flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold line-clamp-1">
-                        {h.title}
-                      </span>
-                      <span className="overline-mobile sm:overline-tablet lg:overline-desktop">
-                        #{rp.id}
-                      </span>
-                    </div>
-                    <div>Room: {rp.room_type}</div>
-                    <div>
-                      Plan: <strong>{rp.name}</strong>
-                    </div>
-                    <div>
-                      Giá: <strong>{fmtCurrency(rp.base_price)}</strong>
-                    </div>
-                    <div>
-                      Hoàn hủy: {rp.refundable ? "Có" : "Không"}{" "}
-                      {rp.meal_plan ? `• ${rp.meal_plan}` : ""}
-                    </div>
-                    <div className="flex gap-2 pt-1">
-                      <button className="flex-1 px-2 py-0.5 rounded theme-border hover:opacity-80">
-                        Sửa
-                      </button>
-                      <button className="flex-1 px-2 py-0.5 rounded theme-border hover:opacity-80">
-                        Giả lập
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              {ratePlansPreview.length === 0 && (
-                <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                  Không có rate plan
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Reviews Snapshot */}
-      <div>
-        {sectionHeader(
-          "Đánh giá gần đây",
-          "reviews",
-          <Star className="w-4 h-4" />
-        )}
-        {!collapsed["reviews"] && (
-          <div className="theme-border rounded theme-bg-card p-4 grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {reviewPreview.map((r) => {
-              const h = hotels.find((x) => x.id === r.hotel_id)!;
-              return (
-                <div
-                  key={r.id}
-                  className="theme-border rounded p-3 flex flex-col gap-2 bg-gray-50 dark:bg-gray-800/40"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="caption-mobile sm:caption-tablet lg:caption-desktop font-semibold line-clamp-1">
-                      {h.title}
-                    </span>
-                    <span className="flex items-center gap-1 caption-mobile sm:caption-tablet lg:caption-desktop">
-                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                      {r.rating.toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 overline-mobile sm:overline-tablet lg:overline-desktop">
-                    <span>Clean {r.aspects.cleanliness.toFixed(1)}</span>
-                    <span>Service {r.aspects.service.toFixed(1)}</span>
-                    <span>Facilities {r.aspects.facilities.toFixed(1)}</span>
-                  </div>
-                  <div className="body2-mobile sm:body2-tablet lg:body2-desktop theme-text-secondary line-clamp-3">
-                    {r.content}
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="flex-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-border rounded px-2 py-0.5 hover:opacity-80">
-                      Trả lời
-                    </button>
-                    <button className="flex-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-border rounded px-2 py-0.5 hover:opacity-80">
-                      Gắn cờ
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-            {reviewPreview.length === 0 && (
-              <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary col-span-full">
-                Không có đánh giá
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Media & Virtual Tours */}
-      <div>
-        {sectionHeader(
-          "Media & Virtual Tours",
-          "mediaVirtual",
-          <Video className="w-4 h-4" />
-        )}
-        {!collapsed["mediaVirtual"] && (
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-              <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                Virtual Tours
-              </h4>
-              <div className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                <div className="theme-border rounded p-3 bg-gray-50 dark:bg-gray-800/40 flex items-center justify-between">
-                  <span>Tour sảnh chính</span>
-                  <button className="px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700">
-                    Xem
-                  </button>
-                </div>
-                <div className="theme-border rounded p-3 bg-gray-50 dark:bg-gray-800/40 flex items-center justify-between">
-                  <span>Phòng mẫu Deluxe</span>
-                  <button className="px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700">
-                    Xem
-                  </button>
-                </div>
-                <button className="btn-outline btn-text-responsive flex items-center gap-2">
-                  <Plus className="w-4 h-4" /> Thêm virtual tour
-                </button>
-              </div>
-            </div>
-            <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-              <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                SEO & Checklist
-              </h4>
-              <ul className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                <li className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
-                  Ảnh đại diện đầy đủ
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
-                  Thẻ tiêu đề SEO
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  Meta description (thiếu)
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  Virtual tour (cần thêm phòng khác)
-                </li>
-              </ul>
-              <div className="flex gap-2 pt-1">
-                <button className="flex-1 px-3 py-2 rounded theme-border hover:opacity-80 caption-mobile sm:caption-tablet lg:caption-desktop">
-                  Cập nhật SEO
-                </button>
-                <button className="flex-1 px-3 py-2 rounded theme-border hover:opacity-80 caption-mobile sm:caption-tablet lg:caption-desktop">
-                  Thêm media
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Alerts & Activity */}
-      <div>
-        {sectionHeader(
-          "Cảnh báo & Hoạt động",
-          "alertsActivity",
-          <ShieldAlert className="w-4 h-4" />
-        )}
-        {!collapsed["alertsActivity"] && (
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-              <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                Cảnh báo
-              </h4>
-              <div className="flex flex-col gap-1 caption-mobile sm:caption-tablet lg:caption-desktop">
-                {alertsRecent.length === 0 && (
-                  <span className="theme-text-secondary">
-                    Không có cảnh báo
-                  </span>
-                )}
-                {alertsRecent.map((a) => {
-                  const cls =
-                    a.severity === "critical"
-                      ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300"
-                      : a.severity === "warn"
-                      ? "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300"
-                      : "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300";
-                  return (
-                    <div
-                      key={a.id}
-                      className={cx(
-                        "theme-border rounded px-2 py-1 flex items-center gap-2",
-                        cls
-                      )}
-                    >
-                      {a.severity === "critical" ? (
-                        <XCircle className="w-3 h-3" />
-                      ) : a.severity === "warn" ? (
-                        <TriangleAlert className="w-3 h-3" />
-                      ) : (
-                        <ShieldAlert className="w-3 h-3" />
-                      )}
-                      <span className="flex-1 line-clamp-1">{a.message}</span>
-                      <button className="px-2 py-0.5 rounded bg-white/70 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 border border-white/60 dark:border-white/20">
+          {/* Media & Virtual Tours */}
+          <div>
+            {sectionHeader(
+              "Media & Virtual Tours",
+              "mediaVirtual",
+              <Video className="w-4 h-4" />
+            )}
+            {!collapsed["mediaVirtual"] && (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
+                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
+                    Virtual Tours
+                  </h4>
+                  <div className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                    <div className="theme-border rounded p-3 bg-gray-50 dark:bg-gray-800/40 flex items-center justify-between">
+                      <span>Tour sảnh chính</span>
+                      <button className="px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700">
                         Xem
                       </button>
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
+                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
+                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
+                    SEO & Checklist
+                  </h4>
+                  <ul className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                    <li className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      Ảnh đại diện đầy đủ
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      Meta description (thiếu)
+                    </li>
+                  </ul>
+                </div>
               </div>
-            </div>
-            <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-              <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                Hoạt động
-              </h4>
-              <div className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                {activityRecent.map((act) => {
-                  const h = hotels.find((x) => x.id === act.hotel_id);
-                  return (
-                    <div
-                      key={act.id}
-                      className="theme-border rounded px-2 py-1 bg-gray-50 dark:bg-gray-800/40 flex items-center gap-2"
-                    >
-                      <History className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                      <span className="flex-1 line-clamp-1">
-                        {act.action} {h ? `(${h.title})` : ""}
-                      </span>
-                      <span className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-                        {act.created_at.slice(11, 16)}
-                      </span>
-                    </div>
-                  );
-                })}
-                {activityRecent.length === 0 && (
-                  <span className="theme-text-secondary">
-                    Không có hoạt động
-                  </span>
-                )}
-              </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Footer */}
-      <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary flex flex-wrap gap-4">
-        <span>UI tĩnh • dữ liệu giả lập • tích hợp API sau.</span>
-        <span>Heatmap: Xanh tốt • Vàng thấp • Xám hết / trống • Đỏ block.</span>
-      </div>
+          {/* Alerts & Activity */}
+          <div>
+            {sectionHeader(
+              "Cảnh báo & Hoạt động",
+              "alertsActivity",
+              <ShieldAlert className="w-4 h-4" />
+            )}
+            {!collapsed["alertsActivity"] && (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
+                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
+                    Cảnh báo
+                  </h4>
+                  <div className="flex flex-col gap-1 caption-mobile sm:caption-tablet lg:caption-desktop">
+                    {alertsRecent.map((a) => {
+                      const cls =
+                        a.severity === "critical"
+                          ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300"
+                          : a.severity === "warn"
+                          ? "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300"
+                          : "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300";
+                      return (
+                        <div
+                          key={a.id}
+                          className={cx(
+                            "theme-border rounded px-2 py-1 flex items-center gap-2",
+                            cls
+                          )}
+                        >
+                          {a.severity === "critical" ? (
+                            <XCircle className="w-3 h-3" />
+                          ) : a.severity === "warn" ? (
+                            <TriangleAlert className="w-3 h-3" />
+                          ) : (
+                            <ShieldAlert className="w-3 h-3" />
+                          )}
+                          <span className="flex-1 line-clamp-1">
+                            {a.message}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
+                  <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
+                    Hoạt động
+                  </h4>
+                  <div className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
+                    {activityRecent.map((act) => {
+                      const h = hotels.find((x) => x.hotelId === act.hotel_id);
+                      return (
+                        <div
+                          key={act.id}
+                          className="theme-border rounded px-2 py-1 bg-gray-50 dark:bg-gray-800/40 flex items-center gap-2"
+                        >
+                          <History className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                          <span className="flex-1 line-clamp-1">
+                            {act.action} {h ? `(${h.title})` : ""}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary flex flex-wrap gap-4">
+            <span>
+              Dữ liệu thực từ API • Provider ID: {providerId || "N/A"}
+            </span>
+            <span>Tổng {filteredHotels.length} khách sạn</span>
+            <span>UI tĩnh: Reservations, Availability, Housekeeping, etc.</span>
+          </div>
+        </>
+      )}
     </div>
   );
 };

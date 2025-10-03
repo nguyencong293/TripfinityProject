@@ -89,3 +89,61 @@ export interface CreateProviderRequest {
   bankName?: string;
   providerDescription?: string;
 }
+
+export interface HotelDTO {
+  hotelId?: number;
+  providerId: number;
+  areaId: number;
+  title: string;
+  serviceDescription?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  price: number;
+  currencyCode: string;
+  capacity?: number;
+  minParticipants?: number;
+  maxParticipants?: number;
+  thumbnailUrl?: string;
+  imageUrls?: string[];
+  ratingAverage?: number;
+  badges?: string[];
+  hotelStatus: "published" | "draft" | "archived" | "disabled";
+  starRating?: number;
+  propertyType?: string; // hotel, resort, apartment, villa, hostel, guesthouse, homestay
+  address?: string;
+  checkinTime?: string;
+  checkoutTime?: string;
+  highlights?: string[];
+  amenities?: string[];
+  policiesText?: string;
+  slug?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  isFeatured?: boolean;
+  bookingSettingsJson?: string;
+  publishedAt?: string;
+  visibility: "public" | "private";
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface HotelFilters {
+  search?: string;
+  area?: string;
+  propertyType?: string;
+  status?: HotelDTO["hotelStatus"] | "";
+  starRating?: number;
+  priceMin?: number;
+  priceMax?: number;
+  visibility?: HotelDTO["visibility"] | "";
+}
+
+export interface HotelStats {
+  totalHotels: number;
+  publishedCount: number;
+  draftCount: number;
+  averageRating: number;
+  totalRooms: number;
+  occupancyRate: number;
+}
