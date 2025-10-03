@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +54,6 @@ public class HotelService {
     public List<HotelDTO> getHotelsByProvider(Integer providerId) {
         log.debug("Lấy danh sách hotels của Provider ID: {}", providerId);
 
-        // Kiểm tra provider có tồn tại không
         providerRepository.findById(providerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + providerId));
 
@@ -68,7 +68,6 @@ public class HotelService {
     public List<HotelDTO> getHotelsByProviderAndStatus(Integer providerId, String status) {
         log.debug("Lấy danh sách hotels của Provider ID: {} với status: {}", providerId, status);
 
-        // Kiểm tra provider có tồn tại không
         providerRepository.findById(providerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + providerId));
 
@@ -81,12 +80,9 @@ public class HotelService {
                 .collect(Collectors.toList());
     }
 
-    // ==================== QUERY BY AREA ====================
-
     public List<HotelDTO> getHotelsByArea(Integer areaId) {
         log.debug("Lấy danh sách hotels ở Area ID: {}", areaId);
 
-        // Kiểm tra area có tồn tại không
         areaRepository.findById(areaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + areaId));
 
@@ -97,8 +93,6 @@ public class HotelService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
-
-    // ==================== QUERY BY SLUG ====================
 
     public HotelDTO getHotelBySlug(String slug) {
         log.debug("Lấy hotel theo slug: {}", slug);
@@ -111,11 +105,20 @@ public class HotelService {
     public HotelDTO createHotel(HotelDTO dto) {
         log.debug("Tạo Hotel: {}", dto);
 
+        log.info("📝 Creating hotel với data: title={}, highlightsJson={}, amenitiesJson={}",
+                dto.getTitle(), dto.getHighlightsJson(), dto.getAmenitiesJson());
+
         Provider provider = providerRepository.findById(dto.getProviderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Provider id: " + dto.getProviderId()));
 
         Area area = areaRepository.findById(dto.getAreaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
+
+        // Xác định hotelStatus và publishedAt
+        Hotel.HotelStatus hotelStatus = dto.getHotelStatus() != null ? Hotel.HotelStatus.valueOf(dto.getHotelStatus())
+                : Hotel.HotelStatus.published;
+
+        LocalDateTime publishedAt = determinePublishedAt(hotelStatus, null);
 
         Hotel hotel = Hotel.builder()
                 .provider(provider)
@@ -132,28 +135,31 @@ public class HotelService {
                 .maxParticipants(dto.getMaxParticipants())
                 .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
                 .badges(listToCommaString(dto.getBadges()))
-                .hotelStatus(dto.getHotelStatus() != null ? Hotel.HotelStatus.valueOf(dto.getHotelStatus())
-                        : Hotel.HotelStatus.published)
+                .hotelStatus(hotelStatus)
                 .starRating(dto.getStarRating())
                 .propertyType(dto.getPropertyType() != null ? Hotel.PropertyType.valueOf(dto.getPropertyType()) : null)
                 .address(dto.getAddress())
                 .checkinTime(dto.getCheckinTime())
                 .checkoutTime(dto.getCheckoutTime())
-                .highlightsJson(listToJson(dto.getHighlights()))
-                .amenitiesJson(listToJson(dto.getAmenities()))
+                .highlightsJson(integerListToJson(dto.getHighlightsJson()))
+                .amenitiesJson(integerListToJson(dto.getAmenitiesJson()))
                 .policiesText(dto.getPoliciesText())
                 .slug(dto.getSlug())
                 .seoTitle(dto.getSeoTitle())
                 .seoDescription(dto.getSeoDescription())
                 .isFeatured(dto.getIsFeatured() != null ? dto.getIsFeatured() : false)
                 .bookingSettingsJson(dto.getBookingSettingsJson())
-                .publishedAt(dto.getPublishedAt())
+                .publishedAt(publishedAt)
                 .visibility(dto.getVisibility() != null ? Hotel.Visibility.valueOf(dto.getVisibility())
                         : Hotel.Visibility.public_)
                 .build();
 
+        log.info("🔍 Hotel entity trước khi save: hotelStatus={}, publishedAt={}",
+                hotel.getHotelStatus(), hotel.getPublishedAt());
+
         Hotel savedHotel = hotelRepository.save(hotel);
-        log.info("Tạo Hotel ID: {}", savedHotel.getHotelId());
+        log.info("✅ Tạo Hotel ID: {} với hotelStatus={}, publishedAt={}",
+                savedHotel.getHotelId(), savedHotel.getHotelStatus(), savedHotel.getPublishedAt());
 
         return convertToDTO(savedHotel);
     }
@@ -162,6 +168,10 @@ public class HotelService {
         log.debug("Cập nhật Hotel ID: {}", hotelId);
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
+
+        // Lưu trạng thái cũ để so sánh
+        Hotel.HotelStatus oldStatus = hotel.getHotelStatus();
+        LocalDateTime oldPublishedAt = hotel.getPublishedAt();
 
         // Update provider nếu có
         if (dto.getProviderId() != null && !dto.getProviderId().equals(hotel.getProvider().getProviderId())) {
@@ -203,8 +213,20 @@ public class HotelService {
             hotel.setRatingAverage(dto.getRatingAverage());
         if (dto.getBadges() != null)
             hotel.setBadges(listToCommaString(dto.getBadges()));
-        if (dto.getHotelStatus() != null)
-            hotel.setHotelStatus(Hotel.HotelStatus.valueOf(dto.getHotelStatus()));
+
+        // Xử lý hotelStatus và publishedAt
+        if (dto.getHotelStatus() != null) {
+            Hotel.HotelStatus newStatus = Hotel.HotelStatus.valueOf(dto.getHotelStatus());
+            hotel.setHotelStatus(newStatus);
+
+            // Tự động cập nhật publishedAt dựa trên status
+            LocalDateTime newPublishedAt = determinePublishedAt(newStatus, oldPublishedAt);
+            hotel.setPublishedAt(newPublishedAt);
+
+            log.info("🔄 Status thay đổi từ {} -> {}, publishedAt: {} -> {}",
+                    oldStatus, newStatus, oldPublishedAt, newPublishedAt);
+        }
+
         if (dto.getStarRating() != null)
             hotel.setStarRating(dto.getStarRating());
         if (dto.getPropertyType() != null)
@@ -215,10 +237,10 @@ public class HotelService {
             hotel.setCheckinTime(dto.getCheckinTime());
         if (dto.getCheckoutTime() != null)
             hotel.setCheckoutTime(dto.getCheckoutTime());
-        if (dto.getHighlights() != null)
-            hotel.setHighlightsJson(listToJson(dto.getHighlights()));
-        if (dto.getAmenities() != null)
-            hotel.setAmenitiesJson(listToJson(dto.getAmenities()));
+        if (dto.getHighlightsJson() != null)
+            hotel.setHighlightsJson(integerListToJson(dto.getHighlightsJson()));
+        if (dto.getAmenitiesJson() != null)
+            hotel.setAmenitiesJson(integerListToJson(dto.getAmenitiesJson()));
         if (dto.getPoliciesText() != null)
             hotel.setPoliciesText(dto.getPoliciesText());
         if (dto.getSlug() != null)
@@ -231,8 +253,6 @@ public class HotelService {
             hotel.setIsFeatured(dto.getIsFeatured());
         if (dto.getBookingSettingsJson() != null)
             hotel.setBookingSettingsJson(dto.getBookingSettingsJson());
-        if (dto.getPublishedAt() != null)
-            hotel.setPublishedAt(dto.getPublishedAt());
         if (dto.getVisibility() != null)
             hotel.setVisibility(Hotel.Visibility.valueOf(dto.getVisibility()));
 
@@ -247,28 +267,26 @@ public class HotelService {
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
 
-        // Xóa thumbnail nếu có
+        // Xóa thumbnail trên Cloudinary
         if (hotel.getThumbnailUrl() != null && !hotel.getThumbnailUrl().isEmpty()) {
             try {
-                cloudinaryService.deleteImageByUrl(hotel.getThumbnailUrl());
+                cloudinaryService.deleteImage(hotel.getThumbnailUrl());
+                log.info("Đã xóa thumbnail trên Cloudinary cho Hotel ID: {}", hotelId);
             } catch (Exception e) {
-                log.warn("Không thể xóa thumbnail: {}", e.getMessage());
+                log.error("Lỗi khi xóa thumbnail trên Cloudinary: {}", e.getMessage());
             }
         }
 
-        // Xóa tất cả images nếu có
+        // Xóa các ảnh trên Cloudinary
         if (hotel.getImageUrls() != null && !hotel.getImageUrls().isEmpty()) {
             try {
-                List<String> imageUrls = jsonToList(hotel.getImageUrls());
+                List<String> imageUrls = jsonToStringList(hotel.getImageUrls());
                 for (String imageUrl : imageUrls) {
-                    try {
-                        cloudinaryService.deleteImageByUrl(imageUrl);
-                    } catch (Exception e) {
-                        log.warn("Không thể xóa image: {}", e.getMessage());
-                    }
+                    cloudinaryService.deleteImage(imageUrl);
                 }
+                log.info("Đã xóa {} ảnh trên Cloudinary cho Hotel ID: {}", imageUrls.size(), hotelId);
             } catch (Exception e) {
-                log.warn("Lỗi khi xóa images: {}", e.getMessage());
+                log.error("Lỗi khi xóa ảnh trên Cloudinary: {}", e.getMessage());
             }
         }
 
@@ -286,10 +304,10 @@ public class HotelService {
         // Xóa thumbnail cũ nếu có
         if (hotel.getThumbnailUrl() != null && !hotel.getThumbnailUrl().isEmpty()) {
             try {
-                cloudinaryService.deleteImageByUrl(hotel.getThumbnailUrl());
-                log.info("Đã xóa thumbnail cũ: {}", hotel.getThumbnailUrl());
+                cloudinaryService.deleteImage(hotel.getThumbnailUrl());
+                log.info("Đã xóa thumbnail cũ trên Cloudinary");
             } catch (Exception e) {
-                log.warn("Không thể xóa thumbnail cũ: {}", e.getMessage());
+                log.error("Lỗi khi xóa thumbnail cũ: {}", e.getMessage());
             }
         }
 
@@ -299,7 +317,7 @@ public class HotelService {
 
         hotel.setThumbnailUrl(thumbnailUrl);
         Hotel savedHotel = hotelRepository.save(hotel);
-        log.info("Đã upload thumbnail mới cho Hotel ID: {}", savedHotel.getHotelId());
+        log.info("Đã upload thumbnail cho Hotel ID: {}", savedHotel.getHotelId());
 
         return convertToDTO(savedHotel);
     }
@@ -309,13 +327,12 @@ public class HotelService {
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
 
-        // Xóa thumbnail trên Cloudinary
         if (hotel.getThumbnailUrl() != null && !hotel.getThumbnailUrl().isEmpty()) {
             try {
-                cloudinaryService.deleteImageByUrl(hotel.getThumbnailUrl());
-                log.info("Đã xóa thumbnail: {}", hotel.getThumbnailUrl());
+                cloudinaryService.deleteImage(hotel.getThumbnailUrl());
+                log.info("Đã xóa thumbnail trên Cloudinary");
             } catch (Exception e) {
-                log.warn("Không thể xóa thumbnail: {}", e.getMessage());
+                log.error("Lỗi khi xóa thumbnail trên Cloudinary: {}", e.getMessage());
             }
         }
 
@@ -333,22 +350,16 @@ public class HotelService {
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
 
-        // Lấy danh sách URL hiện tại
-        List<String> currentImageUrls = new ArrayList<>();
-        if (hotel.getImageUrls() != null && !hotel.getImageUrls().isEmpty()) {
-            currentImageUrls = jsonToList(hotel.getImageUrls());
-        }
+        List<String> currentImageUrls = jsonToStringList(hotel.getImageUrls());
+        List<String> newImageUrls = new ArrayList<>(currentImageUrls);
 
-        // Upload từng file và thêm vào list
         for (MultipartFile file : files) {
             Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
             String imageUrl = (String) uploadResult.get("secure_url");
-            currentImageUrls.add(imageUrl);
-            log.info("Đã upload ảnh: {}", imageUrl);
+            newImageUrls.add(imageUrl);
         }
 
-        // Lưu lại danh sách URL
-        hotel.setImageUrls(listToJson(currentImageUrls));
+        hotel.setImageUrls(stringListToJson(newImageUrls));
         Hotel savedHotel = hotelRepository.save(hotel);
         log.info("Đã thêm {} ảnh cho Hotel ID: {}", files.size(), savedHotel.getHotelId());
 
@@ -356,36 +367,29 @@ public class HotelService {
     }
 
     public HotelDTO deleteImage(Integer hotelId, String imageUrl) throws IOException {
-        log.debug("Xóa ảnh {} cho Hotel ID: {}", imageUrl, hotelId);
+        log.debug("Xóa ảnh cho Hotel ID: {}", hotelId);
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
 
-        if (hotel.getImageUrls() == null || hotel.getImageUrls().isEmpty()) {
-            throw new IllegalArgumentException("Hotel không có ảnh nào");
+        List<String> currentImageUrls = jsonToStringList(hotel.getImageUrls());
+
+        if (currentImageUrls.contains(imageUrl)) {
+            try {
+                cloudinaryService.deleteImage(imageUrl);
+                log.info("Đã xóa ảnh trên Cloudinary");
+            } catch (Exception e) {
+                log.error("Lỗi khi xóa ảnh trên Cloudinary: {}", e.getMessage());
+            }
+
+            currentImageUrls.remove(imageUrl);
+            hotel.setImageUrls(stringListToJson(currentImageUrls));
+            Hotel savedHotel = hotelRepository.save(hotel);
+            log.info("Đã xóa ảnh cho Hotel ID: {}", savedHotel.getHotelId());
+
+            return convertToDTO(savedHotel);
+        } else {
+            throw new ResourceNotFoundException("Không tìm thấy ảnh với URL: " + imageUrl);
         }
-
-        List<String> imageUrls = jsonToList(hotel.getImageUrls());
-
-        if (!imageUrls.contains(imageUrl)) {
-            throw new IllegalArgumentException("Ảnh không tồn tại trong danh sách");
-        }
-
-        // Xóa ảnh trên Cloudinary
-        try {
-            cloudinaryService.deleteImageByUrl(imageUrl);
-            log.info("Đã xóa ảnh trên Cloudinary: {}", imageUrl);
-        } catch (Exception e) {
-            log.warn("Không thể xóa ảnh trên Cloudinary: {}", e.getMessage());
-        }
-
-        // Xóa khỏi danh sách
-        imageUrls.remove(imageUrl);
-        hotel.setImageUrls(imageUrls.isEmpty() ? null : listToJson(imageUrls));
-
-        Hotel savedHotel = hotelRepository.save(hotel);
-        log.info("Đã xóa ảnh cho Hotel ID: {}", savedHotel.getHotelId());
-
-        return convertToDTO(savedHotel);
     }
 
     public HotelDTO deleteAllImages(Integer hotelId) throws IOException {
@@ -393,17 +397,13 @@ public class HotelService {
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + hotelId));
 
-        if (hotel.getImageUrls() != null && !hotel.getImageUrls().isEmpty()) {
-            List<String> imageUrls = jsonToList(hotel.getImageUrls());
+        List<String> currentImageUrls = jsonToStringList(hotel.getImageUrls());
 
-            // Xóa từng ảnh trên Cloudinary
-            for (String imageUrl : imageUrls) {
-                try {
-                    cloudinaryService.deleteImageByUrl(imageUrl);
-                    log.info("Đã xóa ảnh: {}", imageUrl);
-                } catch (Exception e) {
-                    log.warn("Không thể xóa ảnh: {}", e.getMessage());
-                }
+        for (String imageUrl : currentImageUrls) {
+            try {
+                cloudinaryService.deleteImage(imageUrl);
+            } catch (Exception e) {
+                log.error("Lỗi khi xóa ảnh trên Cloudinary: {}", e.getMessage());
             }
         }
 
@@ -415,6 +415,41 @@ public class HotelService {
     }
 
     // ==================== HELPER METHODS ====================
+
+    /**
+     * Xác định publishedAt dựa trên hotelStatus
+     * 
+     * @param status             Trạng thái hotel mới
+     * @param currentPublishedAt Thời gian published hiện tại (có thể null)
+     * @return LocalDateTime cho publishedAt
+     */
+    private LocalDateTime determinePublishedAt(Hotel.HotelStatus status, LocalDateTime currentPublishedAt) {
+        switch (status) {
+            case published:
+                // Nếu đang chuyển sang published và chưa có publishedAt thì set thời gian hiện
+                // tại
+                if (currentPublishedAt == null) {
+                    LocalDateTime now = LocalDateTime.now();
+                    log.info("🕐 Set publishedAt = {} vì status = published và chưa có publishedAt", now);
+                    return now;
+                }
+                // Nếu đã có publishedAt thì giữ nguyên
+                log.info("📅 Giữ nguyên publishedAt = {} vì đã có sẵn", currentPublishedAt);
+                return currentPublishedAt;
+
+            case archived:
+            case disabled:
+                // Nếu không phải published thì set publishedAt = null
+                if (currentPublishedAt != null) {
+                    log.info("🚫 Set publishedAt = null vì status = {}", status);
+                }
+                return null;
+
+            default:
+                log.warn("⚠️ Unknown hotel status: {}, set publishedAt = null", status);
+                return null;
+        }
+    }
 
     private HotelDTO convertToDTO(Hotel hotel) {
         return HotelDTO.builder()
@@ -432,7 +467,7 @@ public class HotelService {
                 .minParticipants(hotel.getMinParticipants())
                 .maxParticipants(hotel.getMaxParticipants())
                 .thumbnailUrl(hotel.getThumbnailUrl())
-                .imageUrls(jsonToList(hotel.getImageUrls()))
+                .imageUrls(jsonToStringList(hotel.getImageUrls()))
                 .ratingAverage(hotel.getRatingAverage())
                 .badges(commaStringToList(hotel.getBadges()))
                 .hotelStatus(hotel.getHotelStatus() != null ? hotel.getHotelStatus().name() : null)
@@ -441,8 +476,8 @@ public class HotelService {
                 .address(hotel.getAddress())
                 .checkinTime(hotel.getCheckinTime())
                 .checkoutTime(hotel.getCheckoutTime())
-                .highlights(jsonToList(hotel.getHighlightsJson()))
-                .amenities(jsonToList(hotel.getAmenitiesJson()))
+                .highlightsJson(jsonToIntegerList(hotel.getHighlightsJson()))
+                .amenitiesJson(jsonToIntegerList(hotel.getAmenitiesJson()))
                 .policiesText(hotel.getPoliciesText())
                 .slug(hotel.getSlug())
                 .seoTitle(hotel.getSeoTitle())
@@ -450,44 +485,88 @@ public class HotelService {
                 .isFeatured(hotel.getIsFeatured())
                 .bookingSettingsJson(hotel.getBookingSettingsJson())
                 .publishedAt(hotel.getPublishedAt())
-                .visibility(hotel.getVisibility() != null ? hotel.getVisibility().name().replace("_", "") : null)
+                .visibility(hotel.getVisibility() != null ? hotel.getVisibility().name() : null)
                 .createdAt(hotel.getCreatedAt())
                 .updatedAt(hotel.getUpdatedAt())
                 .build();
     }
 
-    private String listToJson(List<String> list) {
-        if (list == null || list.isEmpty())
+    /**
+     * Convert List<Integer> thành JSON string. Nếu list null hoặc empty thì return
+     * null.
+     */
+    private String integerListToJson(List<Integer> list) {
+        if (list == null || list.isEmpty()) {
+            log.debug("integerListToJson: list is null or empty, returning null");
             return null;
+        }
         try {
-            return objectMapper.writeValueAsString(list);
+            String json = objectMapper.writeValueAsString(list);
+            log.debug("integerListToJson: converted {} items to JSON: {}", list.size(), json);
+            return json;
         } catch (JsonProcessingException e) {
-            log.error("Error converting list to JSON", e);
+            log.error("Error converting integer list to JSON: {}", list, e);
             return null;
         }
     }
 
-    private List<String> jsonToList(String json) {
-        if (json == null || json.isEmpty())
+    /**
+     * Convert JSON string thành List<Integer>. Nếu json null hoặc empty thì return
+     * empty list.
+     */
+    private List<Integer> jsonToIntegerList(String json) {
+        if (json == null || json.trim().isEmpty()) {
+            log.debug("jsonToIntegerList: json is null or empty, returning empty list");
             return new ArrayList<>();
+        }
         try {
-            return objectMapper.readValue(json, new TypeReference<List<String>>() {
+            List<Integer> list = objectMapper.readValue(json, new TypeReference<List<Integer>>() {
             });
+            log.debug("jsonToIntegerList: converted JSON to {} items: {}", list != null ? list.size() : 0, list);
+            return list != null ? list : new ArrayList<>();
         } catch (JsonProcessingException e) {
-            log.error("Error converting JSON to list", e);
+            log.error("Error converting JSON to integer list: {}", json, e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Convert List<String> thành JSON string cho imageUrls
+     */
+    private String stringListToJson(List<String> list) {
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (JsonProcessingException e) {
+            log.error("Error converting string list to JSON: {}", list, e);
+            return null;
+        }
+    }
+
+    /**
+     * Convert JSON string thành List<String> cho imageUrls
+     */
+    private List<String> jsonToStringList(String json) {
+        if (json == null || json.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            List<String> list = objectMapper.readValue(json, new TypeReference<List<String>>() {
+            });
+            return list != null ? list : new ArrayList<>();
+        } catch (JsonProcessingException e) {
+            log.error("Error converting JSON to string list: {}", json, e);
             return new ArrayList<>();
         }
     }
 
     private String listToCommaString(List<String> list) {
-        if (list == null || list.isEmpty())
-            return null;
-        return String.join(",", list);
+        return list != null && !list.isEmpty() ? String.join(",", list) : null;
     }
 
     private List<String> commaStringToList(String str) {
-        if (str == null || str.isEmpty())
-            return new ArrayList<>();
-        return List.of(str.split(","));
+        return str != null && !str.trim().isEmpty() ? List.of(str.split(",")) : new ArrayList<>();
     }
 }

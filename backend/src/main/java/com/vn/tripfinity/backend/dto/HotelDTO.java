@@ -98,11 +98,12 @@ public class HotelDTO {
     @JsonAlias("checkout_time")
     private LocalTime checkoutTime;
 
+    // Đổi tên field để khớp với database column name
     @JsonAlias("highlights_json")
-    private List<String> highlights; // JSON array
+    private List<Integer> highlightsJson; // JSON array of integers
 
     @JsonAlias("amenities_json")
-    private List<String> amenities; // JSON array
+    private List<Integer> amenitiesJson; // JSON array of integers
 
     @JsonAlias("policies_text")
     private String policiesText;
@@ -128,7 +129,7 @@ public class HotelDTO {
     private LocalDateTime publishedAt;
 
     @NotNull(message = "visibility không được để trống")
-    private String visibility; // public, private
+    private String visibility; // public_, private_
 
     @JsonAlias("created_at")
     private LocalDateTime createdAt;

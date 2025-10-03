@@ -109,11 +109,12 @@ public class Hotel {
     @Column(name = "checkout_time")
     private LocalTime checkoutTime;
 
+    // Thay đổi để lưu JSON array chứa số nguyên
     @Column(name = "highlights_json", columnDefinition = "JSON")
-    private String highlightsJson;
+    private String highlightsJson; // JSON array: [1, 2, 3, ...]
 
     @Column(name = "amenities_json", columnDefinition = "JSON")
-    private String amenitiesJson;
+    private String amenitiesJson; // JSON array: [1, 2, 3, ...]
 
     @Column(name = "policies_text", columnDefinition = "TEXT")
     private String policiesText;
