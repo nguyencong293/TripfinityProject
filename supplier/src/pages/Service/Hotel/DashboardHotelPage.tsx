@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { useHotels } from "../../../hooks/useHotels";
 import type { HotelDTO } from "../../../types";
+import { deleteHotel } from "../../../services/hotelService";
 
 /* ===================== Mock Types cho các phần tĩnh ===================== */
 interface Reservation {
@@ -316,6 +317,25 @@ const DashboardHotelPage: React.FC = () => {
     refetch,
     clearFilters,
   } = useHotels();
+
+  const handleDeleteHotel = async (hotel: HotelDTO) => {
+    if (!hotel.hotelId) return;
+
+    const confirmed = window.confirm(
+      `Bạn có chắc chắn muốn xóa khách sạn "${hotel.title}"?\nHành động này không thể hoàn tác.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteHotel(hotel.hotelId);
+      alert("Xóa khách sạn thành công!");
+      refetch(); // Reload danh sách
+    } catch (err) {
+      console.error("Error deleting hotel:", err);
+      alert("Lỗi xóa khách sạn. Vui lòng thử lại.");
+    }
+  };
 
   /* Mock data cho các phần tĩnh */
   const [reservations] = useState<Reservation[]>(() => genReservations(hotels));
@@ -956,7 +976,9 @@ const DashboardHotelPage: React.FC = () => {
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={() =>
-                                    navigate(`/hotels/${hotel.hotelId}`)
+                                    navigate(
+                                      `/supplier/service/hotel/${hotel.hotelId}/view`
+                                    )
                                   }
                                   className="p-1.5 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors"
                                   title="Xem chi tiết"
@@ -975,22 +997,14 @@ const DashboardHotelPage: React.FC = () => {
                                   <Edit className="w-4 h-4 icon-secondary" />
                                 </button>
                                 <button
-                                  onClick={() => {
-                                    if (
-                                      confirm(
-                                        `Bạn có chắc muốn xóa "${hotel.title}"?`
-                                      )
-                                    ) {
-                                      console.log(
-                                        "Delete hotel",
-                                        hotel.hotelId
-                                      );
-                                    }
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteHotel(hotel);
                                   }}
-                                  className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                  className="p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
                                   title="Xóa"
                                 >
-                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
                             </td>
