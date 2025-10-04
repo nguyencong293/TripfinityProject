@@ -965,7 +965,9 @@ const DashboardHotelPage: React.FC = () => {
                                 </button>
                                 <button
                                   onClick={() =>
-                                    navigate(`/hotels/${hotel.hotelId}/edit`)
+                                    navigate(
+                                      `/supplier/service/hotel/${hotel.hotelId}/edit`
+                                    )
                                   }
                                   className="p-1.5 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors"
                                   title="Chỉnh sửa"

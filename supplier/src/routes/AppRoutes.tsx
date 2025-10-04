@@ -43,7 +43,10 @@ const AppRoutes: React.FC = () => {
             <Route path="service/tour" element={<DashboardTourPage />} />
             <Route path="service/hotel" element={<DashboardHotelPage />} />
             <Route path="service/hotel/create" element={<HotelCreatePage />} />
-            <Route path="service/hotel/edit" element={<HotelEditPage />} />
+            <Route
+              path="service/hotel/:hotelId/edit"
+              element={<HotelEditPage />}
+            />
             <Route
               path="service/attraction"
               element={<DashboardAttractionPage />}
