@@ -7,6 +7,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 10000, // 10 seconds timeout
 });
 
 api.interceptors.request.use(
@@ -28,10 +29,29 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      window.location.href = "/supplier/login";
+    // Network error or server not responding
+    if (!error.response) {
+      // Server is down or network error
+      const currentPath = window.location.pathname;
+      if (currentPath !== "/supplier/server-error") {
+        window.location.href = "/supplier/server-error";
+      }
+      return Promise.reject(error);
     }
+
+    // Handle 401 Unauthorized
+    if (error.response?.status === 401) {
+      const currentPath = window.location.pathname;
+      if (
+        currentPath !== "/supplier/login" &&
+        currentPath !== "/supplier/server-error"
+      ) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/supplier/login";
+      }
+    }
+
     return Promise.reject(error);
   }
 );

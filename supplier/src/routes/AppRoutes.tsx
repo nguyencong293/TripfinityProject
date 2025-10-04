@@ -17,11 +17,15 @@ import ProtectedRoute from "./ProtectedRoute";
 import PublicRoute from "./PublicRoute";
 import ProfileProviderPage from "../pages/ProfileProviderPage";
 import HotelViewPage from "../pages/Service/Hotel/HotelViewPage";
+import ServerErrorPage from "../pages/ServerErrorPage";
 
 const AppRoutes: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Server Error Page - không cần authentication */}
+        <Route path="/supplier/server-error" element={<ServerErrorPage />} />
+
         {/* Public routes - chỉ cho phép truy cập khi chưa đăng nhập */}
         <Route element={<PublicRoute />}>
           <Route path="/supplier/login" element={<SupplierLoginPage />} />
