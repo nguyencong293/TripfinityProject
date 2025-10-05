@@ -1,5 +1,9 @@
 import api from "./api";
-import type { HotelDTO } from "../types";
+import type {
+  HotelDTO,
+  HotelDashboardStatistics,
+  HotelBookingDTO,
+} from "../types";
 
 /**
  * Get all hotels by provider ID
@@ -125,4 +129,145 @@ export const deleteHotelImage = async (
     params: { imageUrl },
   });
   return response.data;
+};
+
+/**
+ * Get Hotel Dashboard Statistics
+ * Tính toán thống kê từ các endpoint hiện có
+ */
+export const getHotelDashboardStatistics = async (
+  providerId: number
+): Promise<HotelDashboardStatistics> => {
+  try {
+    // Fetch all data in parallel
+    const [hotelsResponse, bookingsResponse, unseenBookingsResponse] =
+      await Promise.all([
+        api.get<HotelDTO[]>(`/hotels/provider/${providerId}`),
+        api.get<HotelBookingDTO[]>(`/hotel-bookings/provider/${providerId}`),
+        api.get<HotelBookingDTO[]>(
+          `/hotel-bookings/provider/${providerId}/unseen`
+        ),
+      ]);
+
+    const hotels = hotelsResponse.data;
+    const bookings = bookingsResponse.data;
+    const unseenBookings = unseenBookingsResponse.data;
+
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    // ==================== HOTEL STATISTICS ====================
+    const totalHotels = hotels.length;
+
+    const hotelsLastMonth = hotels.filter((hotel: HotelDTO) => {
+      if (!hotel.createdAt) return false;
+      const created = new Date(hotel.createdAt);
+      return (
+        created.getFullYear() === lastMonthYear &&
+        created.getMonth() <= lastMonth
+      );
+    }).length;
+
+    const totalHotelsChange =
+      hotelsLastMonth > 0
+        ? ((totalHotels - hotelsLastMonth) / hotelsLastMonth) * 100
+        : totalHotels > 0
+        ? 100
+        : 0;
+
+    // ==================== BOOKING STATISTICS ====================
+    const totalBookings = bookings.length;
+
+    const todayBookings = bookings.filter((booking: HotelBookingDTO) => {
+      if (!booking.bookingDate) return false;
+      return booking.bookingDate.split("T")[0] === today;
+    }).length;
+
+    const unseenBookingsCount = unseenBookings.length;
+
+    // ==================== REVENUE STATISTICS ====================
+    const confirmedBookings = bookings.filter(
+      (booking: HotelBookingDTO) =>
+        booking.bookingStatus === "confirmed" ||
+        booking.bookingStatus === "completed"
+    );
+
+    const allRevenue = confirmedBookings.reduce(
+      (sum: number, booking: HotelBookingDTO) =>
+        sum + (Number(booking.totalPrice) || 0),
+      0
+    );
+
+    const monthlyRevenue = confirmedBookings
+      .filter((booking: HotelBookingDTO) => {
+        if (!booking.bookingDate) return false;
+        const date = new Date(booking.bookingDate);
+        return (
+          date.getMonth() === currentMonth && date.getFullYear() === currentYear
+        );
+      })
+      .reduce(
+        (sum: number, booking: HotelBookingDTO) =>
+          sum + (Number(booking.totalPrice) || 0),
+        0
+      );
+
+    const lastMonthRevenue = confirmedBookings
+      .filter((booking: HotelBookingDTO) => {
+        if (!booking.bookingDate) return false;
+        const date = new Date(booking.bookingDate);
+        return (
+          date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear
+        );
+      })
+      .reduce(
+        (sum: number, booking: HotelBookingDTO) =>
+          sum + (Number(booking.totalPrice) || 0),
+        0
+      );
+
+    const revenueChange =
+      lastMonthRevenue > 0
+        ? ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+        : monthlyRevenue > 0
+        ? 100
+        : 0;
+
+    // ==================== RATING STATISTICS ====================
+    const hotelsWithRating = hotels.filter(
+      (hotel: HotelDTO) =>
+        hotel.ratingAverage !== undefined && hotel.ratingAverage !== null
+    );
+
+    const averageRating =
+      hotelsWithRating.length > 0
+        ? hotelsWithRating.reduce(
+            (sum: number, hotel: HotelDTO) => sum + Number(hotel.ratingAverage),
+            0
+          ) / hotelsWithRating.length
+        : 0;
+
+    // Total reviews (placeholder - có thể enhance bằng cách fetch rating summaries)
+    const totalReviews = 0;
+
+    return {
+      totalHotels,
+      totalHotelsChange,
+      totalBookings,
+      todayBookings,
+      unseenBookings: unseenBookingsCount,
+      totalRevenue: allRevenue,
+      monthlyRevenue,
+      revenueChange,
+      averageRating,
+      totalReviews,
+    };
+  } catch (error) {
+    console.error("Error fetching hotel dashboard statistics:", error);
+    throw error;
+  }
 };

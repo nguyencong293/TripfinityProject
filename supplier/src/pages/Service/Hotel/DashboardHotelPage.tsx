@@ -1,1342 +1,2091 @@
-import React, { useState, useMemo, type JSX } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  BarChart3,
   Hotel,
-  Plus,
-  Search,
-  RefreshCw,
-  X,
-  CheckSquare,
-  Square,
-  ChevronDown,
-  ChevronUp,
-  MapPin,
-  Star,
-  DollarSign,
   Calendar,
   TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Star,
   AlertCircle,
-  Loader2,
-  Clock,
   Bell,
-  Activity,
   MessageSquare,
-  Settings,
-  Image as ImageIcon,
+  CheckCircle,
+  Ticket,
+  TrendingDown as PriceDown,
+  ChevronRight,
   Eye,
   Edit,
-  Trash2,
-  Archive,
-  Upload,
+  MoreVertical,
+  MapPin,
+  Users,
+  Plus,
+  List,
+  Settings,
+  BarChart2,
+  FileText,
+  Zap,
 } from "lucide-react";
-import { useHotels } from "../../../hooks/useHotels";
-import type { HotelDTO } from "../../../types";
-import { deleteHotel } from "../../../services/hotelService";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { useTheme } from "../../../hooks/useTheme";
+import { useLanguage } from "../../../hooks/useLanguage";
+import { useHotelDashboardStatistics } from "../../../hooks/useHotelDashboardStatistics";
+import { getProviderByUserId } from "../../../services/providerService";
+import { getHotelsByProvider } from "../../../services/hotelService";
+import type {
+  HotelDTO,
+  HotelBookingDTO,
+  HotelReviewDTO,
+  HotelPriceAlertDTO,
+  HotelRatingSummaryDTO,
+} from "../../../types";
+import api from "../../../services/api";
+import ReviewCard from "../../../components/hotel/ReviewCard";
+import PriceAlertCard from "../../../components/hotel/PriceAlertCard";
+import RatingSummaryCard from "../../../components/hotel/RatingSummaryCard";
 
-/* ===================== Mock Types cho các phần tĩnh ===================== */
-interface Reservation {
-  id: number;
-  hotel_id: number;
-  guest_name: string;
-  room_type: string;
-  check_in: string;
-  check_out: string;
-  booking_status: "pending" | "confirmed" | "cancelled" | "checked_in";
-  payment_status: "pending" | "paid" | "partial";
-}
-
-interface InventorySlot {
-  date: string;
-  hotel_id: number;
-  room_type: string;
-  available_count: number;
-  occupied: number;
-  blocked: boolean;
-  price_override?: number | null;
-}
-
-interface RatePlan {
-  id: number;
-  hotel_id: number;
-  room_type: string;
-  name: string;
-  base_price: number;
-  currency: string;
-  refundable: boolean;
-  meal_plan?: string;
-}
-
-interface Review {
-  id: number;
-  hotel_id: number;
-  guest: string;
-  rating: number;
-  aspects: {
-    cleanliness: number;
-    service: number;
-    facilities: number;
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  trend?: {
+    value: number;
+    isPositive: boolean;
   };
-  content: string;
-  created_at: string;
-}
-
-interface HousekeepingItem {
-  id: number;
-  room_label: string;
-  status: "maintenance" | "cleaning" | "ready";
-  reason?: string;
-}
-
-interface AlertItem {
-  id: number;
-  type: "overbook_risk" | "maintenance_conflict" | "staff_low";
-  message: string;
-  severity: "info" | "warn" | "critical";
-  created_at: string;
-}
-
-interface ActivityLog {
-  id: number;
-  action:
-    | "publish"
-    | "unpublish"
-    | "price_update"
-    | "reservation_confirm"
-    | "reservation_cancel"
-    | "clone"
-    | "media_upload"
-    | "virtual_tour_add";
-  hotel_id?: number;
-  meta?: {
-    title?: string;
-    [key: string]: string | number | boolean | undefined;
+  badge?: {
+    text: string;
+    variant: "success" | "warning" | "danger" | "info";
   };
-  created_at: string;
+  action?: {
+    text: string;
+    onClick: () => void;
+  };
 }
 
-/* ===================== Mock Generators ===================== */
-const roomTypes = ["Standard", "Deluxe", "Suite", "Family", "Studio"] as const;
+const StatCard: React.FC<StatCardProps> = ({
+  icon,
+  label,
+  value,
+  trend,
+  badge,
+  action,
+}) => {
+  const { dark } = useTheme();
 
-function rand<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function genReservations(hotels: HotelDTO[]): Reservation[] {
-  const arr: Reservation[] = [];
-  const now = Date.now();
-  for (let i = 1; i <= 30; i++) {
-    const h = hotels[Math.floor(Math.random() * hotels.length)];
-    if (!h || !h.hotelId) continue;
-    const offset = Math.floor(Math.random() * 3);
-    const ci = new Date(now + offset * 86400000).toISOString().substring(0, 10);
-    const co = new Date(
-      new Date(ci).getTime() + (1 + Math.floor(Math.random() * 3)) * 86400000
-    )
-      .toISOString()
-      .substring(0, 10);
-    const bookingStatuses: Array<
-      "pending" | "confirmed" | "cancelled" | "checked_in"
-    > = ["pending", "confirmed", "cancelled"];
-    const paymentStatuses: Array<"pending" | "paid" | "partial"> = [
-      "pending",
-      "paid",
-      "partial",
-    ];
-    arr.push({
-      id: 5000 + i,
-      hotel_id: h.hotelId,
-      guest_name: `Guest ${i}`,
-      room_type: rand(roomTypes),
-      check_in: ci,
-      check_out: co,
-      booking_status: rand(bookingStatuses),
-      payment_status: rand(paymentStatuses),
-    });
-  }
-  return arr;
-}
-
-function genInventory(hotels: HotelDTO[]): InventorySlot[] {
-  const now = Date.now();
-  const arr: InventorySlot[] = [];
-  hotels
-    .filter((h) => h.hotelId !== undefined)
-    .slice(0, 5)
-    .forEach((h) => {
-      roomTypes.slice(0, 3).forEach((rt) => {
-        for (let d = 0; d < 30; d++) {
-          const date = new Date(now + d * 86400000)
-            .toISOString()
-            .substring(0, 10);
-          const total = 5 + Math.floor(Math.random() * 10);
-          const occ = Math.floor(Math.random() * total);
-          arr.push({
-            date,
-            hotel_id: h.hotelId!,
-            room_type: rt,
-            available_count: total - occ,
-            occupied: occ,
-            blocked: Math.random() > 0.9,
-          });
-        }
-      });
-    });
-  return arr;
-}
-
-function genRatePlans(hotels: HotelDTO[]): RatePlan[] {
-  const arr: RatePlan[] = [];
-  let id = 1;
-  hotels.slice(0, 6).forEach((h) => {
-    if (!h.hotelId) return;
-    roomTypes.slice(0, 3).forEach((rt, idx) => {
-      arr.push({
-        id: id++,
-        hotel_id: h.hotelId!,
-        room_type: rt,
-        name:
-          idx === 0 ? "Flexible" : idx === 1 ? "Non-Refundable" : "Early Bird",
-        base_price: h.price + idx * 150000,
-        currency: "VND",
-        refundable: idx !== 1,
-        meal_plan: idx === 2 ? "Breakfast" : undefined,
-      });
-    });
-  });
-  return arr;
-}
-
-function genReviews(hotels: HotelDTO[]): Review[] {
-  const arr: Review[] = [];
-  let id = 1;
-  hotels.slice(0, 6).forEach((h) => {
-    if (!h.hotelId) return;
-    const n = 1 + ((h.hotelId || 0) % 3);
-    for (let i = 0; i < n; i++) {
-      arr.push({
-        id: id++,
-        hotel_id: h.hotelId,
-        guest: `Reviewer ${id}`,
-        rating: parseFloat((3 + Math.random() * 2).toFixed(1)),
-        aspects: {
-          cleanliness: parseFloat((3 + Math.random() * 2).toFixed(1)),
-          service: parseFloat((3 + Math.random() * 2).toFixed(1)),
-          facilities: parseFloat((3 + Math.random() * 2).toFixed(1)),
-        },
-        content: "Trải nghiệm tốt, phòng sạch (mock).",
-        created_at: new Date(Date.now() - i * 3600000).toISOString(),
-      });
-    }
-  });
-  return arr;
-}
-
-function genHousekeeping(): HousekeepingItem[] {
-  return [
-    { id: 1, room_label: "101", status: "maintenance", reason: "Ống nước" },
-    { id: 2, room_label: "205", status: "cleaning" },
-    { id: 3, room_label: "320", status: "maintenance", reason: "Điều hòa" },
-    { id: 4, room_label: "402", status: "ready" },
-  ];
-}
-
-function genAlerts(hotels: HotelDTO[]): AlertItem[] {
-  const firstHotelTitle = hotels[0]?.title || "Hotel";
-  return [
-    {
-      id: 1,
-      type: "overbook_risk",
-      message: `Nguy cơ overbook tại ${firstHotelTitle}`,
-      severity: "warn",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      type: "maintenance_conflict",
-      message: "Bảo trì trùng ngày check-in phòng 205",
-      severity: "critical",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 3,
-      type: "staff_low",
-      message: "Thiếu nhân sự buồng phòng ngày mai",
-      severity: "info",
-      created_at: new Date().toISOString(),
-    },
-  ];
-}
-
-function genActivities(hotels: HotelDTO[]): ActivityLog[] {
-  const actions: Array<ActivityLog["action"]> = [
-    "publish",
-    "unpublish",
-    "price_update",
-    "reservation_confirm",
-    "reservation_cancel",
-    "clone",
-    "media_upload",
-    "virtual_tour_add",
-  ];
-  const arr: ActivityLog[] = [];
-  for (let i = 0; i < 22; i++) {
-    const h = hotels[Math.floor(Math.random() * hotels.length)];
-    if (!h || !h.hotelId) continue;
-    arr.push({
-      id: i + 1,
-      action: rand(actions),
-      hotel_id: h.hotelId,
-      meta: { title: h.title },
-      created_at: new Date(Date.now() - i * 3600000).toISOString(),
-    });
-  }
-  return arr;
-}
-
-/* ===================== Helpers ===================== */
-const fmtCurrency = (v: number): string =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    minimumFractionDigits: 0,
-  }).format(v);
-
-const cx = (...c: Array<string | false | null | undefined>): string =>
-  c.filter(Boolean).join(" ");
-
-/* ===================== Main Component ===================== */
-const DashboardHotelPage: React.FC = () => {
-  const navigate = useNavigate();
-  const {
-    hotels,
-    filteredHotels,
-    loading,
-    error,
-    filters,
-    setFilters,
-    refetch,
-    clearFilters,
-  } = useHotels();
-
-  const handleDeleteHotel = async (hotel: HotelDTO) => {
-    if (!hotel.hotelId) return;
-
-    const confirmed = window.confirm(
-      `Bạn có chắc chắn muốn xóa khách sạn "${hotel.title}"?\nHành động này không thể hoàn tác.`
-    );
-
-    if (!confirmed) return;
-
-    try {
-      await deleteHotel(hotel.hotelId);
-      alert("Xóa khách sạn thành công!");
-      refetch(); // Reload danh sách
-    } catch (err) {
-      console.error("Error deleting hotel:", err);
-      alert("Lỗi xóa khách sạn. Vui lòng thử lại.");
-    }
+  const badgeColors = {
+    success: dark
+      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+      : "bg-emerald-50 text-emerald-700 border-emerald-200",
+    warning: dark
+      ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+      : "bg-amber-50 text-amber-700 border-amber-200",
+    danger: dark
+      ? "bg-red-500/20 text-red-400 border-red-500/30"
+      : "bg-red-50 text-red-700 border-red-200",
+    info: dark
+      ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+      : "bg-blue-50 text-blue-700 border-blue-200",
   };
 
-  /* Mock data cho các phần tĩnh */
-  const [reservations] = useState<Reservation[]>(() => genReservations(hotels));
-  const [inventory] = useState<InventorySlot[]>(() => genInventory(hotels));
-  const [ratePlans] = useState<RatePlan[]>(() => genRatePlans(hotels));
-  const [reviews] = useState<Review[]>(() => genReviews(hotels));
-  const [housekeeping] = useState<HousekeepingItem[]>(() => genHousekeeping());
-  const [alerts] = useState<AlertItem[]>(() => genAlerts(hotels));
-  const [activities] = useState<ActivityLog[]>(() => genActivities(hotels));
-
-  /* Collapsible sections */
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const toggleCollapse = (k: string): void =>
-    setCollapsed((prev) => ({ ...prev, [k]: !prev[k] }));
-
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const toggleSelectAll = (): void => {
-    const ids = filteredHotels.map((h) => h.hotelId!).filter(Boolean);
-    const all = ids.every((i) => selectedIds.has(i));
-    setSelectedIds(all ? new Set() : new Set(ids));
-  };
-  const toggleSelectOne = (id: number): void =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-
-  /* KPIs */
-  const kpis = useMemo(() => {
-    const total = filteredHotels.length;
-    const published = filteredHotels.filter(
-      (h) => h.hotelStatus === "published"
-    ).length;
-    const archived = filteredHotels.filter(
-      (h) => h.hotelStatus === "archived"
-    ).length;
-    const avgRating =
-      filteredHotels.length > 0
-        ? filteredHotels.reduce((sum, h) => sum + (h.ratingAverage || 0), 0) /
-          filteredHotels.length
-        : 0;
-    const avgPrice =
-      filteredHotels.length > 0
-        ? filteredHotels.reduce((sum, h) => sum + h.price, 0) /
-          filteredHotels.length
-        : 0;
-
-    return { total, published, archived, avgRating, avgPrice };
-  }, [filteredHotels]);
-
-  /* Derived upcoming arrivals */
-  const upcomingArrivals = useMemo(() => {
-    const today = new Date().toISOString().substring(0, 10);
-    const in3 = new Date(Date.now() + 3 * 86400000)
-      .toISOString()
-      .substring(0, 10);
-    return reservations
-      .filter((r) => r.check_in >= today && r.check_in <= in3)
-      .slice(0, 12);
-  }, [reservations]);
-
-  /* Availability heatmap */
-  const [availabilityHotelId, setAvailabilityHotelId] = useState<number>(() =>
-    hotels.length && hotels[0].hotelId ? hotels[0].hotelId : 0
-  );
-  const availabilityHeat = useMemo(() => {
-    const roomSet = new Set<string>();
-    inventory
-      .filter((s) => s.hotel_id === availabilityHotelId)
-      .forEach((s) => roomSet.add(s.room_type));
-    const roomList = Array.from(roomSet.values());
-    const days: string[] = [];
-    for (let d = 0; d < 30; d++) {
-      days.push(
-        new Date(Date.now() + d * 86400000).toISOString().substring(0, 10)
-      );
-    }
-    return {
-      roomList,
-      days,
-      matrix: roomList.map((rt) =>
-        days.map(
-          (date) =>
-            inventory.find(
-              (s) =>
-                s.room_type === rt &&
-                s.date === date &&
-                s.hotel_id === availabilityHotelId
-            ) || null
-        )
-      ),
-    };
-  }, [availabilityHotelId, inventory]);
-
-  const ratePlansPreview = useMemo(() => ratePlans.slice(0, 9), [ratePlans]);
-  const reviewPreview = useMemo(() => reviews.slice(0, 5), [reviews]);
-  const housekeepingProblems = useMemo(
-    () => housekeeping.filter((h) => h.status !== "ready"),
-    [housekeeping]
-  );
-  const alertsRecent = useMemo(() => alerts.slice(0, 6), [alerts]);
-  const activityRecent = useMemo(() => activities.slice(0, 10), [activities]);
-
-  /* Bulk actions (mock) */
-  const bulkPublish = (): void => {
-    console.log("Bulk publish hotels:", Array.from(selectedIds));
-    alert(`Publishing ${selectedIds.size} hotels (mock)`);
-  };
-  const bulkArchive = (): void => {
-    console.log("Bulk archive hotels:", Array.from(selectedIds));
-    alert(`Archiving ${selectedIds.size} hotels (mock)`);
-  };
-
-  /* Status badge */
-  const statusBadge = (status: HotelDTO["hotelStatus"]): JSX.Element => {
-    const map: Record<HotelDTO["hotelStatus"], string> = {
-      published:
-        "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-      archived:
-        "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-      disabled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-    };
-    const label: Record<HotelDTO["hotelStatus"], string> = {
-      published: "Đang xuất bản",
-      archived: "Lưu trữ",
-      disabled: "Ngưng",
-    };
-    return (
-      <span
-        className={cx(
-          "text-xs px-2 py-0.5 rounded font-medium inline-block",
-          map[status]
-        )}
-      >
-        {label[status]}
-      </span>
-    );
-  };
-
-  /* Visibility badge */
-  const visibilityBadge = (
-    visibility?: HotelDTO["visibility"]
-  ): JSX.Element | null => {
-    if (!visibility) return null;
-    const map: Record<HotelDTO["visibility"], string> = {
-      public_:
-        "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-      private_:
-        "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-    };
-    const label: Record<HotelDTO["visibility"], string> = {
-      public_: "Công khai",
-      private_: "Riêng tư",
-    };
-    return (
-      <span
-        className={cx(
-          "text-xs px-2 py-0.5 rounded font-medium inline-block",
-          map[visibility]
-        )}
-      >
-        {label[visibility]}
-      </span>
-    );
-  };
-
-  const sectionHeader = (
-    title: string,
-    key: string,
-    icon?: React.ReactNode,
-    extra?: React.ReactNode
-  ): JSX.Element => {
-    const col = collapsed[key];
-    return (
-      <div className="flex items-center gap-2 mb-3">
-        <button
-          onClick={() => toggleCollapse(key)}
-          className="flex items-center gap-2 flex-1 text-left group"
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl border p-6 transition-all hover:shadow-lg ${
+        dark
+          ? "bg-gray-800/50 border-gray-700 hover:border-emerald-500/50"
+          : "bg-white border-gray-200 hover:border-emerald-500/50"
+      }`}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div
+          className={`p-3 rounded-lg ${
+            dark ? "bg-emerald-500/20" : "bg-emerald-50"
+          }`}
         >
           {icon}
-          <h2 className="text-xl font-bold theme-text-primary">{title}</h2>
-          {col ? (
-            <ChevronDown className="w-5 h-5 icon-secondary group-hover:icon-brand transition-colors" />
-          ) : (
-            <ChevronUp className="w-5 h-5 icon-secondary group-hover:icon-brand transition-colors" />
-          )}
-        </button>
-        {extra}
-      </div>
-    );
-  };
-
-  const renderKPI = (
-    label: string,
-    value: React.ReactNode,
-    icon: React.ReactNode,
-    sub?: React.ReactNode
-  ): JSX.Element => (
-    <div className="theme-border rounded-lg p-4 theme-bg-card flex flex-col gap-2 shadow-sm">
-      <div className="flex items-center gap-2">
-        <div className="p-2 rounded-lg bg-light-secondary dark:bg-dark-secondary">
-          {icon}
         </div>
-        <span className="text-sm theme-text-secondary font-medium">
-          {label}
-        </span>
-      </div>
-      <div className="text-2xl font-bold">{value}</div>
-      {sub && <div className="text-xs theme-text-secondary">{sub}</div>}
-    </div>
-  );
-
-  /* ===================== JSX ===================== */
-  return (
-    <div className="p-6 max-w-[1900px] mx-auto flex flex-col gap-10 theme-text-primary">
-      {/* Header & Filters */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg">
-              <Hotel className="w-7 h-7" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Quản lý Khách sạn</h1>
-              <p className="text-sm theme-text-secondary mt-0.5">
-                Tổng quan và quản lý toàn bộ khách sạn
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => refetch()}
-              className="btn-outline px-4 py-2 flex items-center gap-2"
-              disabled={loading}
-            >
-              <RefreshCw className={cx("w-4 h-4", loading && "animate-spin")} />
-              <span className="hidden sm:inline">Làm mới</span>
-            </button>
-            <button
-              onClick={() => navigate("/supplier/service/hotel/create")}
-              className="btn-primary px-4 py-2 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Tạo khách sạn mới
-            </button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 icon-secondary" />
-            <input
-              value={filters.search || ""}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, search: e.target.value }))
-              }
-              placeholder="Tìm theo tên, ID..."
-              className="w-full pl-10 pr-3 py-2 border theme-border rounded-lg bg-white dark:bg-dark-card theme-text-primary focus-ring-primary text-sm"
-            />
-          </div>
-
-          <select
-            value={filters.status || ""}
-            onChange={(e) => {
-              const value = e.target.value;
-              setFilters((prev) => ({
-                ...prev,
-                status: value === "" ? "" : (value as HotelDTO["hotelStatus"]),
-              }));
-            }}
-            className="px-3 py-2 border theme-border rounded-lg bg-white dark:bg-dark-card theme-text-primary focus-ring-primary text-sm"
+        {badge && (
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium border ${
+              badgeColors[badge.variant]
+            }`}
           >
-            <option value="">Tất cả trạng thái</option>
-            <option value="published">Đang xuất bản</option>
-            <option value="archived">Lưu trữ</option>
-            <option value="disabled">Ngưng</option>
-          </select>
-
-          <select
-            value={filters.visibility || ""}
-            onChange={(e) => {
-              const value = e.target.value;
-              setFilters((prev) => ({
-                ...prev,
-                visibility:
-                  value === "" ? "" : (value as HotelDTO["visibility"]),
-              }));
-            }}
-            className="px-3 py-2 border theme-border rounded-lg bg-white dark:bg-dark-card theme-text-primary focus-ring-primary text-sm"
-          >
-            <option value="">Tất cả hiển thị</option>
-            <option value="public_">Công khai</option>
-            <option value="private_">Riêng tư</option>
-          </select>
-
-          <select
-            value={filters.propertyType || ""}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, propertyType: e.target.value }))
-            }
-            className="px-3 py-2 border theme-border rounded-lg bg-white dark:bg-dark-card theme-text-primary focus-ring-primary text-sm"
-          >
-            <option value="">Tất cả loại hình</option>
-            <option value="hotel">Khách sạn</option>
-            <option value="resort">Resort</option>
-            <option value="apartment">Căn hộ</option>
-            <option value="villa">Biệt thự</option>
-            <option value="hostel">Hostel</option>
-            <option value="guesthouse">Nhà khách</option>
-            <option value="homestay">Homestay</option>
-          </select>
-        </div>
-
-        {/* Active Filters */}
-        {(filters.search ||
-          filters.status ||
-          filters.visibility ||
-          filters.propertyType) && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm theme-text-secondary">Bộ lọc:</span>
-            {filters.search && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-light-secondary dark:bg-dark-secondary rounded text-sm">
-                Tìm: &quot;{filters.search}&quot;
-                <button
-                  onClick={() =>
-                    setFilters((prev) => ({ ...prev, search: "" }))
-                  }
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-            {filters.status && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-light-secondary dark:bg-dark-secondary rounded text-sm">
-                Trạng thái: {filters.status}
-                <button
-                  onClick={() =>
-                    setFilters((prev) => ({ ...prev, status: "" }))
-                  }
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-            {filters.visibility && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-light-secondary dark:bg-dark-secondary rounded text-sm">
-                Hiển thị: {filters.visibility}
-                <button
-                  onClick={() =>
-                    setFilters((prev) => ({ ...prev, visibility: "" }))
-                  }
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-            {filters.propertyType && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-light-secondary dark:bg-dark-secondary rounded text-sm">
-                Loại: {filters.propertyType}
-                <button
-                  onClick={() =>
-                    setFilters((prev) => ({ ...prev, propertyType: "" }))
-                  }
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-            <button
-              onClick={clearFilters}
-              className="text-sm text-red-600 hover:underline"
-            >
-              Xóa tất cả
-            </button>
-          </div>
+            {badge.text}
+          </span>
         )}
       </div>
 
-      {/* Error State */}
-      {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-          <span className="text-sm text-red-700 dark:text-red-300">
-            {error}
+      <div className="space-y-1">
+        <p
+          className={`text-sm font-medium ${
+            dark ? "text-gray-400" : "text-gray-600"
+          }`}
+        >
+          {label}
+        </p>
+        <p
+          className={`text-3xl font-bold ${
+            dark ? "text-white" : "text-gray-900"
+          }`}
+        >
+          {value}
+        </p>
+      </div>
+
+      {trend && (
+        <div className="mt-4 flex items-center gap-2">
+          {trend.isPositive ? (
+            <TrendingUp className="w-4 h-4 text-emerald-500" />
+          ) : (
+            <TrendingDown className="w-4 h-4 text-red-500" />
+          )}
+          <span
+            className={`text-sm font-medium ${
+              trend.isPositive ? "text-emerald-500" : "text-red-500"
+            }`}
+          >
+            {trend.isPositive ? "+" : ""}
+            {trend.value.toFixed(1)}%
+          </span>
+          <span
+            className={`text-sm ${dark ? "text-gray-400" : "text-gray-500"}`}
+          >
+            so với tháng trước
           </span>
         </div>
       )}
 
-      {/* Loading State */}
-      {loading && (
-        <div className="flex items-center justify-center gap-3 py-12">
-          <Loader2 className="w-6 h-6 animate-spin icon-brand" />
-          <span className="theme-text-secondary">Đang tải dữ liệu...</span>
-        </div>
+      {action && (
+        <button
+          onClick={action.onClick}
+          className={`mt-4 w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+            dark
+              ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+              : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+          }`}
+        >
+          {action.text}
+        </button>
       )}
+    </div>
+  );
+};
+
+// Notification types
+type NotificationType =
+  | "new_booking"
+  | "new_review"
+  | "payment_success"
+  | "e_ticket_created"
+  | "price_alert";
+
+interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  time: string;
+  isNew: boolean;
+}
+
+interface NotificationItemProps {
+  notification: Notification;
+  onClick: () => void;
+}
+
+const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onClick,
+}) => {
+  const { dark } = useTheme();
+
+  const getIcon = (type: NotificationType) => {
+    switch (type) {
+      case "new_booking":
+        return <Calendar className="w-5 h-5 text-blue-500" />;
+      case "new_review":
+        return <MessageSquare className="w-5 h-5 text-purple-500" />;
+      case "payment_success":
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case "e_ticket_created":
+        return <Ticket className="w-5 h-5 text-orange-500" />;
+      case "price_alert":
+        return <PriceDown className="w-5 h-5 text-red-500" />;
+    }
+  };
+
+  const getBgColor = (type: NotificationType) => {
+    switch (type) {
+      case "new_booking":
+        return dark ? "bg-blue-500/10" : "bg-blue-50";
+      case "new_review":
+        return dark ? "bg-purple-500/10" : "bg-purple-50";
+      case "payment_success":
+        return dark ? "bg-green-500/10" : "bg-green-50";
+      case "e_ticket_created":
+        return dark ? "bg-orange-500/10" : "bg-orange-50";
+      case "price_alert":
+        return dark ? "bg-red-500/10" : "bg-red-50";
+    }
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-shrink-0 w-80 p-4 rounded-xl border transition-all hover:shadow-md ${
+        dark
+          ? "bg-gray-800/50 border-gray-700 hover:border-emerald-500/50"
+          : "bg-white border-gray-200 hover:border-emerald-500/50"
+      }`}
+    >
+      <div className="flex gap-3">
+        <div
+          className={`flex-shrink-0 p-2 rounded-lg ${getBgColor(
+            notification.type
+          )}`}
+        >
+          {getIcon(notification.type)}
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <div className="flex items-start justify-between gap-2">
+            <p
+              className={`text-sm font-semibold ${
+                dark ? "text-white" : "text-gray-900"
+              }`}
+            >
+              {notification.title}
+            </p>
+            {notification.isNew && (
+              <span className="flex-shrink-0 w-2 h-2 bg-emerald-500 rounded-full" />
+            )}
+          </div>
+          <p
+            className={`text-xs mt-1 line-clamp-2 ${
+              dark ? "text-gray-400" : "text-gray-600"
+            }`}
+          >
+            {notification.message}
+          </p>
+          <p
+            className={`text-xs mt-2 ${
+              dark ? "text-gray-500" : "text-gray-500"
+            }`}
+          >
+            {notification.time}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+};
+
+// Hotel Card Component
+interface HotelCardProps {
+  hotel: HotelDTO;
+  onView: () => void;
+  onEdit: () => void;
+}
+
+const HotelCard: React.FC<HotelCardProps> = ({ hotel, onView, onEdit }) => {
+  const { dark } = useTheme();
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "published":
+        return dark
+          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+          : "bg-emerald-50 text-emerald-700 border-emerald-200";
+      case "archived":
+        return dark
+          ? "bg-gray-500/20 text-gray-400 border-gray-500/30"
+          : "bg-gray-50 text-gray-700 border-gray-200";
+      case "disabled":
+        return dark
+          ? "bg-red-500/20 text-red-400 border-red-500/30"
+          : "bg-red-50 text-red-700 border-red-200";
+      default:
+        return dark
+          ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+          : "bg-blue-50 text-blue-700 border-blue-200";
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "published":
+        return "Đang hoạt động";
+      case "archived":
+        return "Đã lưu trữ";
+      case "disabled":
+        return "Vô hiệu hóa";
+      default:
+        return status;
+    }
+  };
+
+  return (
+    <div
+      className={`rounded-xl border overflow-hidden transition-all hover:shadow-lg ${
+        dark
+          ? "bg-gray-800/50 border-gray-700 hover:border-emerald-500/50"
+          : "bg-white border-gray-200 hover:border-emerald-500/50"
+      }`}
+    >
+      {/* Image */}
+      <div className="relative h-48 bg-gradient-to-br from-emerald-500/20 to-blue-500/20">
+        {hotel.thumbnailUrl ? (
+          <img
+            src={hotel.thumbnailUrl}
+            alt={hotel.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Hotel className="w-16 h-16 text-gray-400" />
+          </div>
+        )}
+        {/* Status Badge */}
+        <div className="absolute top-3 right-3">
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+              hotel.hotelStatus
+            )}`}
+          >
+            {getStatusText(hotel.hotelStatus)}
+          </span>
+        </div>
+      </div>
 
       {/* Content */}
-      {!loading && (
-        <>
-          {/* KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {renderKPI(
-              "Tổng khách sạn",
-              kpis.total,
-              <Hotel className="w-5 h-5 icon-brand" />,
-              `${filteredHotels.length} đang hiển thị`
-            )}
-            {renderKPI(
-              "Đang hoạt động",
-              kpis.published,
-              <TrendingUp className="w-5 h-5 text-green-600" />,
-              `${((kpis.published / (kpis.total || 1)) * 100).toFixed(
-                0
-              )}% tổng số`
-            )}
-            {renderKPI(
-              "Lưu trữ",
-              kpis.archived,
-              <Archive className="w-5 h-5 text-amber-600" />
-            )}
-            {renderKPI(
-              "Đánh giá TB",
-              kpis.avgRating.toFixed(1),
-              <Star className="w-5 h-5 text-yellow-500" />,
-              "⭐".repeat(Math.round(kpis.avgRating))
-            )}
-            {renderKPI(
-              "Giá TB",
-              fmtCurrency(kpis.avgPrice),
-              <DollarSign className="w-5 h-5 text-blue-600" />
-            )}
-          </div>
+      <div className="p-4">
+        <h3
+          className={`text-lg font-semibold mb-2 line-clamp-1 ${
+            dark ? "text-white" : "text-gray-900"
+          }`}
+        >
+          {hotel.title}
+        </h3>
 
-          {/* Hotels List */}
-          <div className="flex flex-col gap-4">
-            {sectionHeader(
-              `Danh sách khách sạn (${filteredHotels.length})`,
-              "hotels-list",
-              <Hotel className="w-6 h-6 icon-brand" />,
-              <div className="flex gap-2">
-                {selectedIds.size > 0 && (
-                  <>
-                    <button
-                      onClick={bulkPublish}
-                      className="btn-secondary px-3 py-1 text-sm flex items-center gap-1"
-                    >
-                      <Upload className="w-3 h-3" />
-                      Xuất bản ({selectedIds.size})
-                    </button>
-                    <button
-                      onClick={bulkArchive}
-                      className="btn-outline px-3 py-1 text-sm flex items-center gap-1"
-                    >
-                      <Archive className="w-3 h-3" />
-                      Lưu trữ ({selectedIds.size})
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {!collapsed["hotels-list"] && (
-              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm">
-                {/* Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-light-secondary dark:bg-dark-secondary">
-                      <tr>
-                        <th className="p-3 text-left">
-                          <button onClick={toggleSelectAll}>
-                            {filteredHotels.length > 0 &&
-                            filteredHotels.every((h) =>
-                              h.hotelId ? selectedIds.has(h.hotelId) : false
-                            ) ? (
-                              <CheckSquare className="w-4 h-4 icon-brand" />
-                            ) : (
-                              <Square className="w-4 h-4 icon-secondary" />
-                            )}
-                          </button>
-                        </th>
-                        <th className="p-3 text-left font-semibold">ID</th>
-                        <th className="p-3 text-left font-semibold">
-                          Khách sạn
-                        </th>
-                        <th className="p-3 text-left font-semibold">
-                          Loại hình
-                        </th>
-                        <th className="p-3 text-left font-semibold">Vị trí</th>
-                        <th className="p-3 text-left font-semibold">Giá</th>
-                        <th className="p-3 text-left font-semibold">
-                          Đánh giá
-                        </th>
-                        <th className="p-3 text-left font-semibold">
-                          Trạng thái
-                        </th>
-                        <th className="p-3 text-left font-semibold">
-                          Hiển thị
-                        </th>
-                        <th className="p-3 text-left font-semibold">
-                          Hành động
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredHotels.length === 0 && (
-                        <tr>
-                          <td
-                            colSpan={10}
-                            className="p-8 text-center theme-text-secondary"
-                          >
-                            Không có khách sạn nào
-                          </td>
-                        </tr>
-                      )}
-                      {filteredHotels.map((hotel) => {
-                        if (!hotel.hotelId) return null;
-                        return (
-                          <tr
-                            key={hotel.hotelId}
-                            className="border-t theme-border hover:bg-light-secondary dark:hover:bg-dark-secondary/50 transition-colors"
-                          >
-                            {/* Checkbox */}
-                            <td className="p-3">
-                              <button
-                                onClick={() => toggleSelectOne(hotel.hotelId!)}
-                              >
-                                {selectedIds.has(hotel.hotelId) ? (
-                                  <CheckSquare className="w-4 h-4 icon-brand" />
-                                ) : (
-                                  <Square className="w-4 h-4 icon-secondary" />
-                                )}
-                              </button>
-                            </td>
-
-                            {/* ID */}
-                            <td className="p-3">
-                              <span className="font-mono text-xs theme-text-secondary">
-                                #{hotel.hotelId}
-                              </span>
-                            </td>
-
-                            {/* Hotel Info */}
-                            <td className="p-3">
-                              <div className="flex items-center gap-3">
-                                {hotel.thumbnailUrl ? (
-                                  <img
-                                    src={hotel.thumbnailUrl}
-                                    alt={hotel.title}
-                                    className="w-12 h-12 rounded object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-12 h-12 rounded bg-light-secondary dark:bg-dark-secondary flex items-center justify-center">
-                                    <ImageIcon className="w-5 h-5 icon-secondary" />
-                                  </div>
-                                )}
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {hotel.title}
-                                  </span>
-                                  {hotel.slug && (
-                                    <span className="text-xs theme-text-secondary">
-                                      {hotel.slug}
-                                    </span>
-                                  )}
-                                  {hotel.isFeatured && (
-                                    <span className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-0.5">
-                                      <Star className="w-3 h-3 fill-current" />
-                                      Nổi bật
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-
-                            {/* Property Type */}
-                            <td className="p-3">
-                              <span className="capitalize">
-                                {hotel.propertyType || "hotel"}
-                              </span>
-                            </td>
-
-                            {/* Location */}
-                            <td className="p-3">
-                              <div className="flex items-start gap-1">
-                                <MapPin className="w-3 h-3 icon-secondary mt-0.5 flex-shrink-0" />
-                                <span className="text-xs">
-                                  {hotel.location || hotel.address || "—"}
-                                </span>
-                              </div>
-                            </td>
-
-                            {/* Price */}
-                            <td className="p-3">
-                              <span className="font-semibold">
-                                {fmtCurrency(hotel.price)}
-                              </span>
-                            </td>
-
-                            {/* Rating */}
-                            <td className="p-3">
-                              {hotel.ratingAverage ? (
-                                <div className="flex items-center gap-1">
-                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                  <span className="font-medium">
-                                    {hotel.ratingAverage.toFixed(1)}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-xs theme-text-secondary">
-                                  Chưa có
-                                </span>
-                              )}
-                              {hotel.starRating && (
-                                <div className="text-xs theme-text-secondary mt-0.5">
-                                  {hotel.starRating} sao
-                                </div>
-                              )}
-                            </td>
-
-                            {/* Status */}
-                            <td className="p-3">
-                              {statusBadge(hotel.hotelStatus)}
-                            </td>
-
-                            {/* Visibility */}
-                            <td className="p-3">
-                              {visibilityBadge(hotel.visibility)}
-                            </td>
-
-                            {/* Actions */}
-                            <td className="p-3">
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() =>
-                                    navigate(
-                                      `/supplier/service/hotel/${hotel.hotelId}/view`
-                                    )
-                                  }
-                                  className="p-1.5 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors"
-                                  title="Xem chi tiết"
-                                >
-                                  <Eye className="w-4 h-4 icon-secondary" />
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    navigate(
-                                      `/supplier/service/hotel/${hotel.hotelId}/edit`
-                                    )
-                                  }
-                                  className="p-1.5 rounded hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors"
-                                  title="Chỉnh sửa"
-                                >
-                                  <Edit className="w-4 h-4 icon-secondary" />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteHotel(hotel);
-                                  }}
-                                  className="p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
-                                  title="Xóa"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Các phần tĩnh khác - giữ nguyên UI mock */}
-          {/* Upcoming Arrivals (Mock) */}
-          <div className="flex flex-col gap-4">
-            {sectionHeader(
-              `Check-in sắp tới (${upcomingArrivals.length})`,
-              "arrivals",
-              <Calendar className="w-6 h-6 icon-brand" />
-            )}
-            {!collapsed["arrivals"] && (
-              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-light-secondary dark:bg-dark-secondary">
-                      <tr>
-                        <th className="p-3 text-left font-semibold">Khách</th>
-                        <th className="p-3 text-left font-semibold">
-                          Loại phòng
-                        </th>
-                        <th className="p-3 text-left font-semibold">
-                          Check-in
-                        </th>
-                        <th className="p-3 text-left font-semibold">
-                          Check-out
-                        </th>
-                        <th className="p-3 text-left font-semibold">
-                          Trạng thái
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {upcomingArrivals.map((res) => (
-                        <tr
-                          key={res.id}
-                          className="border-t theme-border hover:bg-light-secondary dark:hover:bg-dark-secondary/50"
-                        >
-                          <td className="p-3">{res.guest_name}</td>
-                          <td className="p-3">{res.room_type}</td>
-                          <td className="p-3">{res.check_in}</td>
-                          <td className="p-3">{res.check_out}</td>
-                          <td className="p-3">
-                            <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                              {res.booking_status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Availability Heatmap (Mock) */}
-          <div className="flex flex-col gap-4">
-            {sectionHeader(
-              "Lịch phòng trống (30 ngày tới)",
-              "availability",
-              <Calendar className="w-6 h-6 icon-brand" />,
-              <select
-                value={availabilityHotelId}
-                onChange={(e) => setAvailabilityHotelId(Number(e.target.value))}
-                className="px-2 py-1 text-sm border theme-border rounded"
+        {/* Info Grid */}
+        <div className="space-y-2 mb-4">
+          {hotel.location && (
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin
+                className={`w-4 h-4 ${
+                  dark ? "text-gray-400" : "text-gray-500"
+                }`}
+              />
+              <span
+                className={`line-clamp-1 ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
               >
-                {hotels.slice(0, 5).map((h) => (
-                  <option key={h.hotelId} value={h.hotelId}>
-                    {h.title}
-                  </option>
-                ))}
-              </select>
+                {hotel.location}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-4 text-sm">
+            {hotel.starRating && (
+              <div className="flex items-center gap-1">
+                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                <span
+                  className={`font-medium ${
+                    dark ? "text-gray-300" : "text-gray-700"
+                  }`}
+                >
+                  {hotel.starRating} sao
+                </span>
+              </div>
             )}
-            {!collapsed["availability"] && (
-              <div className="border theme-border rounded-xl p-4 theme-bg-card shadow-sm overflow-x-auto">
-                <div className="min-w-[800px]">
-                  <div className="grid grid-cols-[120px_1fr] gap-2">
-                    <div className="font-semibold text-sm">Loại phòng</div>
-                    <div className="grid grid-cols-7 gap-1">
-                      {availabilityHeat.days.slice(0, 7).map((d) => (
-                        <div key={d} className="text-xs text-center">
-                          {new Date(d).getDate()}
-                        </div>
-                      ))}
-                    </div>
-                    {availabilityHeat.roomList.map((rt, ri) => (
-                      <React.Fragment key={rt}>
-                        <div className="text-sm font-medium">{rt}</div>
-                        <div className="grid grid-cols-7 gap-1">
-                          {availabilityHeat.matrix[ri]
-                            ?.slice(0, 7)
-                            .map((slot, di) => {
-                              const pct = slot
-                                ? (slot.available_count /
-                                    (slot.available_count + slot.occupied)) *
-                                  100
-                                : 0;
-                              const color =
-                                pct > 70
-                                  ? "bg-green-200 dark:bg-green-800"
-                                  : pct > 30
-                                  ? "bg-yellow-200 dark:bg-yellow-800"
-                                  : "bg-red-200 dark:bg-red-800";
-                              return (
-                                <div
-                                  key={di}
-                                  className={cx(
-                                    "h-8 rounded text-xs flex items-center justify-center",
-                                    color
-                                  )}
-                                  title={`${slot?.available_count || 0} trống`}
-                                >
-                                  {slot?.available_count || 0}
-                                </div>
-                              );
-                            })}
-                        </div>
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
+
+            {hotel.ratingAverage !== undefined && (
+              <div className="flex items-center gap-1">
+                <Star className="w-4 h-4 text-orange-500" />
+                <span
+                  className={`font-medium ${
+                    dark ? "text-gray-300" : "text-gray-700"
+                  }`}
+                >
+                  {hotel.ratingAverage.toFixed(1)}
+                </span>
               </div>
             )}
           </div>
 
-          {/* Rate Plans (Mock) */}
-          <div className="flex flex-col gap-4">
-            {sectionHeader(
-              `Rate Plans (${ratePlansPreview.length})`,
-              "rate-plans",
-              <DollarSign className="w-6 h-6 icon-brand" />
-            )}
-            {!collapsed["rate-plans"] && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {ratePlansPreview.map((rp) => (
-                  <div
-                    key={rp.id}
-                    className="border theme-border rounded-lg p-4 theme-bg-card shadow-sm flex flex-col gap-2"
-                  >
-                    <div className="font-semibold">{rp.name}</div>
-                    <div className="text-sm theme-text-secondary">
-                      {rp.room_type}
-                    </div>
-                    <div className="text-lg font-bold">
-                      {fmtCurrency(rp.base_price)}
-                    </div>
-                    <div className="flex gap-2 flex-wrap text-xs">
-                      {rp.refundable && (
-                        <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded">
-                          Hoàn tiền
-                        </span>
-                      )}
-                      {rp.meal_plan && (
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded">
-                          {rp.meal_plan}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {hotel.capacity && (
+            <div className="flex items-center gap-2 text-sm">
+              <Users
+                className={`w-4 h-4 ${
+                  dark ? "text-gray-400" : "text-gray-500"
+                }`}
+              />
+              <span className={dark ? "text-gray-400" : "text-gray-600"}>
+                Sức chứa: {hotel.capacity} người
+              </span>
+            </div>
+          )}
 
-          {/* Reviews (Mock) */}
-          <div className="flex flex-col gap-4">
-            {sectionHeader(
-              `Đánh giá gần đây (${reviewPreview.length})`,
-              "reviews",
-              <MessageSquare className="w-6 h-6 icon-brand" />
-            )}
-            {!collapsed["reviews"] && (
-              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm">
-                <div className="divide-y theme-border">
-                  {reviewPreview.map((rev) => (
-                    <div key={rev.id} className="p-4 flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold">{rev.guest}</span>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="font-medium">{rev.rating}</span>
-                        </div>
-                      </div>
-                      <p className="text-sm theme-text-secondary">
-                        {rev.content}
-                      </p>
-                      <div className="flex gap-3 text-xs theme-text-secondary">
-                        <span>Sạch sẽ: {rev.aspects.cleanliness}</span>
-                        <span>Dịch vụ: {rev.aspects.service}</span>
-                        <span>Tiện nghi: {rev.aspects.facilities}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="flex items-center gap-2 text-sm">
+            <DollarSign
+              className={`w-4 h-4 ${dark ? "text-gray-400" : "text-gray-500"}`}
+            />
+            <span
+              className={`font-semibold ${
+                dark ? "text-emerald-400" : "text-emerald-600"
+              }`}
+            >
+              {hotel.price.toLocaleString("vi-VN")} {hotel.currencyCode}
+            </span>
           </div>
+        </div>
 
-          {/* Housekeeping (Mock) */}
-          <div className="flex flex-col gap-4">
-            {sectionHeader(
-              `Vấn đề buồng phòng (${housekeepingProblems.length})`,
-              "housekeeping",
-              <Settings className="w-6 h-6 icon-brand" />
-            )}
-            {!collapsed["housekeeping"] && (
-              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm">
-                <table className="w-full text-sm">
-                  <thead className="bg-light-secondary dark:bg-dark-secondary">
-                    <tr>
-                      <th className="p-3 text-left font-semibold">Phòng</th>
-                      <th className="p-3 text-left font-semibold">
-                        Trạng thái
-                      </th>
-                      <th className="p-3 text-left font-semibold">Lý do</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {housekeepingProblems.map((hk) => (
-                      <tr
-                        key={hk.id}
-                        className="border-t theme-border hover:bg-light-secondary dark:hover:bg-dark-secondary/50"
-                      >
-                        <td className="p-3 font-mono">{hk.room_label}</td>
-                        <td className="p-3">
-                          <span
-                            className={cx(
-                              "text-xs px-2 py-0.5 rounded",
-                              hk.status === "maintenance"
-                                ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                                : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
-                            )}
-                          >
-                            {hk.status}
-                          </span>
-                        </td>
-                        <td className="p-3 theme-text-secondary">
-                          {hk.reason || "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+        {/* Actions */}
+        <div className="flex gap-2">
+          <button
+            onClick={onView}
+            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+              dark
+                ? "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+            }`}
+          >
+            <Eye className="w-4 h-4" />
+            Xem
+          </button>
+          <button
+            onClick={onEdit}
+            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+              dark
+                ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+            }`}
+          >
+            <Edit className="w-4 h-4" />
+            Sửa
+          </button>
+          <button
+            className={`p-2 rounded-lg text-sm font-medium transition-colors ${
+              dark
+                ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-          {/* Alerts (Mock) */}
-          <div className="flex flex-col gap-4">
-            {sectionHeader(
-              `Cảnh báo (${alertsRecent.length})`,
-              "alerts",
-              <Bell className="w-6 h-6 icon-brand" />
-            )}
-            {!collapsed["alerts"] && (
-              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm divide-y theme-border">
-                {alertsRecent.map((alert) => {
-                  const severityClass =
-                    alert.severity === "critical"
-                      ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
-                      : alert.severity === "warn"
-                      ? "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800"
-                      : "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800";
-                  return (
-                    <div
-                      key={alert.id}
-                      className={cx(
-                        "p-4 flex items-start gap-3",
-                        severityClass
-                      )}
-                    >
-                      <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <div className="font-medium">{alert.message}</div>
-                        <div className="text-xs theme-text-secondary mt-1">
-                          {new Date(alert.created_at).toLocaleString("vi-VN")}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+// Booking Row Component
+const BookingRow = ({ booking }: { booking: HotelBookingDTO }) => {
+  const { dark } = useTheme();
 
-          {/* Activity Log (Mock) */}
-          <div className="flex flex-col gap-4">
-            {sectionHeader(
-              `Nhật ký hoạt động (${activityRecent.length})`,
-              "activity",
-              <Activity className="w-6 h-6 icon-brand" />
-            )}
-            {!collapsed["activity"] && (
-              <div className="border theme-border rounded-xl overflow-hidden theme-bg-card shadow-sm">
-                <div className="divide-y theme-border">
-                  {activityRecent.map((act) => (
-                    <div
-                      key={act.id}
-                      className="p-3 flex items-center gap-3 hover:bg-light-secondary dark:hover:bg-dark-secondary/50"
-                    >
-                      <Clock className="w-4 h-4 icon-secondary flex-shrink-0" />
-                      <div className="flex-1 text-sm">
-                        <span className="font-medium">{act.action}</span>
-                        {act.meta?.title && (
-                          <span className="theme-text-secondary">
-                            {" "}
-                            - {act.meta.title}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs theme-text-secondary">
-                        {new Date(act.created_at).toLocaleString("vi-VN")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+  const getStatusColor = (status: string) => {
+    const colors = {
+      pending:
+        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500",
+      confirmed:
+        "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500",
+      completed:
+        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500",
+      cancelled: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500",
+      refunded:
+        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-500",
+    };
+    return (
+      colors[status as keyof typeof colors] ||
+      "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-500"
+    );
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("vi-VN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
+  };
+
+  return (
+    <div
+      className={`p-4 rounded-lg border transition-colors ${
+        !booking.providerSeen
+          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+          : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+      }`}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h4
+              className={`font-semibold ${
+                dark ? "text-white" : "text-gray-900"
+              }`}
+            >
+              #{booking.bookingId}
+            </h4>
+            {!booking.providerSeen && (
+              <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-400 rounded-full">
+                Mới
+              </span>
             )}
           </div>
-        </>
+          <p className={`text-sm ${dark ? "text-gray-400" : "text-gray-600"}`}>
+            User ID: {booking.userId}
+          </p>
+        </div>
+        <span
+          className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(
+            booking.bookingStatus || "pending"
+          )}`}
+        >
+          {booking.bookingStatus || "pending"}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <p className={`mb-1 ${dark ? "text-gray-400" : "text-gray-500"}`}>
+            Ngày nhận phòng
+          </p>
+          <p className={`font-medium ${dark ? "text-white" : "text-gray-900"}`}>
+            {formatDate(booking.startDate)}
+          </p>
+        </div>
+        <div>
+          <p className={`mb-1 ${dark ? "text-gray-400" : "text-gray-500"}`}>
+            Ngày trả phòng
+          </p>
+          <p className={`font-medium ${dark ? "text-white" : "text-gray-900"}`}>
+            {formatDate(booking.endDate)}
+          </p>
+        </div>
+        <div>
+          <p className={`mb-1 ${dark ? "text-gray-400" : "text-gray-500"}`}>
+            Số khách
+          </p>
+          <p className={`font-medium ${dark ? "text-white" : "text-gray-900"}`}>
+            {booking.numAdults} người lớn
+            {booking.numChildren ? `, ${booking.numChildren} trẻ em` : ""}
+          </p>
+        </div>
+        <div>
+          <p className={`mb-1 ${dark ? "text-gray-400" : "text-gray-500"}`}>
+            Tổng tiền
+          </p>
+          <p
+            className={`font-semibold ${
+              dark ? "text-blue-400" : "text-blue-600"
+            }`}
+          >
+            {booking.totalPrice?.toLocaleString("vi-VN") || "0"}{" "}
+            {booking.currencyCode || "VND"}
+          </p>
+        </div>
+      </div>
+      {booking.providerNotes && (
+        <div
+          className={`mt-3 p-2 rounded ${
+            dark ? "bg-gray-700/50" : "bg-gray-50"
+          }`}
+        >
+          <p className={`text-xs ${dark ? "text-gray-400" : "text-gray-600"}`}>
+            Ghi chú: {booking.providerNotes}
+          </p>
+        </div>
       )}
+    </div>
+  );
+};
+
+// Revenue Chart Data Type
+interface RevenueChartData {
+  day: number;
+  revenue: number;
+  label: string;
+}
+
+// Custom Tooltip Props
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    value: number;
+    payload: RevenueChartData;
+  }>;
+}
+
+// ==================== SECTION 6: QUICK ACTION COMPONENT ====================
+interface QuickActionProps {
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  color: "emerald" | "blue" | "purple" | "orange" | "pink" | "indigo";
+  onClick: () => void;
+}
+
+const QuickAction: React.FC<QuickActionProps> = ({
+  icon,
+  label,
+  description,
+  color,
+  onClick,
+}) => {
+  const { dark } = useTheme();
+
+  const colorClasses = {
+    emerald: {
+      bg: dark ? "bg-emerald-500/10" : "bg-emerald-50",
+      icon: "text-emerald-500",
+      hover: dark
+        ? "hover:bg-emerald-500/20 hover:border-emerald-500/50"
+        : "hover:bg-emerald-100 hover:border-emerald-300",
+    },
+    blue: {
+      bg: dark ? "bg-blue-500/10" : "bg-blue-50",
+      icon: "text-blue-500",
+      hover: dark
+        ? "hover:bg-blue-500/20 hover:border-blue-500/50"
+        : "hover:bg-blue-100 hover:border-blue-300",
+    },
+    purple: {
+      bg: dark ? "bg-purple-500/10" : "bg-purple-50",
+      icon: "text-purple-500",
+      hover: dark
+        ? "hover:bg-purple-500/20 hover:border-purple-500/50"
+        : "hover:bg-purple-100 hover:border-purple-300",
+    },
+    orange: {
+      bg: dark ? "bg-orange-500/10" : "bg-orange-50",
+      icon: "text-orange-500",
+      hover: dark
+        ? "hover:bg-orange-500/20 hover:border-orange-500/50"
+        : "hover:bg-orange-100 hover:border-orange-300",
+    },
+    pink: {
+      bg: dark ? "bg-pink-500/10" : "bg-pink-50",
+      icon: "text-pink-500",
+      hover: dark
+        ? "hover:bg-pink-500/20 hover:border-pink-500/50"
+        : "hover:bg-pink-100 hover:border-pink-300",
+    },
+    indigo: {
+      bg: dark ? "bg-indigo-500/10" : "bg-indigo-50",
+      icon: "text-indigo-500",
+      hover: dark
+        ? "hover:bg-indigo-500/20 hover:border-indigo-500/50"
+        : "hover:bg-indigo-100 hover:border-indigo-300",
+    },
+  };
+
+  const colors = colorClasses[color];
+
+  return (
+    <button
+      onClick={onClick}
+      className={`group relative rounded-xl border p-6 transition-all ${
+        dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
+      } ${colors.hover}`}
+    >
+      <div className="flex items-start gap-4">
+        <div className={`p-3 rounded-lg ${colors.bg}`}>
+          <div className={colors.icon}>{icon}</div>
+        </div>
+        <div className="flex-1 text-left">
+          <h3
+            className={`text-base font-semibold mb-1 ${
+              dark ? "text-white" : "text-gray-900"
+            }`}
+          >
+            {label}
+          </h3>
+          <p className={`text-sm ${dark ? "text-gray-400" : "text-gray-600"}`}>
+            {description}
+          </p>
+        </div>
+        <ChevronRight
+          className={`w-5 h-5 transition-transform group-hover:translate-x-1 ${
+            dark ? "text-gray-500" : "text-gray-400"
+          }`}
+        />
+      </div>
+    </button>
+  );
+};
+
+const DashboardHotelPage: React.FC = () => {
+  const { dark } = useTheme();
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+
+  const [providerId, setProviderId] = useState<number | undefined>(undefined);
+  const [loadingProvider, setLoadingProvider] = useState(true);
+  const [hotels, setHotels] = useState<HotelDTO[]>([]);
+  const [loadingHotels, setLoadingHotels] = useState(false);
+  const [hotelsError, setHotelsError] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<HotelBookingDTO[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<HotelReviewDTO[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [priceAlerts, setPriceAlerts] = useState<HotelPriceAlertDTO[]>([]);
+  const [loadingAlerts, setLoadingAlerts] = useState(false);
+  const [alertsError, setAlertsError] = useState<string | null>(null);
+  const [ratingSummaries, setRatingSummaries] = useState<
+    HotelRatingSummaryDTO[]
+  >([]);
+  const [loadingSummaries, setLoadingSummaries] = useState(false);
+  const [summariesError, setSummariesError] = useState<string | null>(null);
+
+  // Get provider ID from localStorage user
+  useEffect(() => {
+    const fetchProviderId = async () => {
+      try {
+        const userStr = localStorage.getItem("user");
+        if (!userStr) {
+          setLoadingProvider(false);
+          return;
+        }
+
+        const user = JSON.parse(userStr);
+        const provider = await getProviderByUserId(user.userId);
+
+        if (provider?.providerId) {
+          setProviderId(provider.providerId);
+        }
+      } catch (error) {
+        console.error("Error fetching provider:", error);
+      } finally {
+        setLoadingProvider(false);
+      }
+    };
+
+    fetchProviderId();
+  }, []);
+
+  // Fetch hotels
+  useEffect(() => {
+    const fetchHotels = async () => {
+      if (!providerId) return;
+
+      setLoadingHotels(true);
+      setHotelsError(null);
+
+      try {
+        const data = await getHotelsByProvider(providerId);
+        setHotels(data);
+      } catch (error) {
+        console.error("Error fetching hotels:", error);
+        setHotelsError("Không thể tải danh sách khách sạn");
+      } finally {
+        setLoadingHotels(false);
+      }
+    };
+
+    fetchHotels();
+  }, [providerId]);
+
+  // Fetch bookings
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!providerId) return;
+
+      setLoadingBookings(true);
+      setBookingsError(null);
+
+      try {
+        const response = await api.get<HotelBookingDTO[]>(
+          `/hotel-bookings/provider/${providerId}`
+        );
+        // Sort by createdAt descending (newest first)
+        const sortedBookings = response.data.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
+        setBookings(sortedBookings);
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+        setBookingsError("Không thể tải danh sách đặt phòng");
+      } finally {
+        setLoadingBookings(false);
+      }
+    };
+
+    fetchBookings();
+  }, [providerId]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!providerId || hotels.length === 0) return;
+
+      setLoadingReviews(true);
+      setReviewsError(null);
+
+      try {
+        // Fetch reviews for all hotels of this provider
+        const allReviews: HotelReviewDTO[] = [];
+
+        for (const hotel of hotels) {
+          try {
+            const response = await api.get<HotelReviewDTO[]>(
+              `/hotel-reviews/hotel/${hotel.hotelId}`
+            );
+            allReviews.push(...response.data);
+          } catch (hotelError: unknown) {
+            // Bỏ qua lỗi 404 (endpoint chưa có hoặc hotel chưa có review)
+            if (
+              hotelError &&
+              typeof hotelError === "object" &&
+              "response" in hotelError
+            ) {
+              const axiosError = hotelError as {
+                response?: { status?: number };
+              };
+              if (axiosError.response?.status === 404) {
+                console.log(
+                  `Hotel ${hotel.hotelId} chưa có review hoặc endpoint chưa tồn tại`
+                );
+                continue;
+              }
+            }
+            throw hotelError; // Re-throw nếu là lỗi khác
+          }
+        }
+
+        // Sort by createdAt descending (newest first)
+        const sortedReviews = allReviews.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
+
+        setReviews(sortedReviews);
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+        // Chỉ set error nếu là lỗi thật sự (không phải 404)
+        if (error && typeof error === "object" && "response" in error) {
+          const axiosError = error as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) {
+            setReviewsError("Không thể tải danh sách đánh giá");
+          }
+        } else {
+          setReviewsError("Không thể tải danh sách đánh giá");
+        }
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+
+    fetchReviews();
+  }, [providerId, hotels]);
+
+  // Fetch price alerts
+  useEffect(() => {
+    const fetchPriceAlerts = async () => {
+      if (!providerId) return;
+
+      setLoadingAlerts(true);
+      setAlertsError(null);
+
+      try {
+        const response = await api.get<HotelPriceAlertDTO[]>(
+          `/hotel-price-alerts/provider/${providerId}`
+        );
+
+        // Sort by createdAt descending (newest first)
+        const sortedAlerts = response.data.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
+
+        setPriceAlerts(sortedAlerts);
+      } catch (error) {
+        console.error("Error fetching price alerts:", error);
+        // Xử lý 404 như Section 7
+        if (error && typeof error === "object" && "response" in error) {
+          const axiosError = error as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) {
+            setAlertsError("Không thể tải danh sách cảnh báo giá");
+          }
+        } else {
+          setAlertsError("Không thể tải danh sách cảnh báo giá");
+        }
+      } finally {
+        setLoadingAlerts(false);
+      }
+    };
+
+    fetchPriceAlerts();
+  }, [providerId]);
+
+  // Fetch rating summaries
+  useEffect(() => {
+    const fetchRatingSummaries = async () => {
+      if (!providerId) return;
+
+      setLoadingSummaries(true);
+      setSummariesError(null);
+
+      try {
+        const response = await api.get<HotelRatingSummaryDTO[]>(
+          `/hotel-rating-summaries/provider/${providerId}`
+        );
+
+        // Sort by totalReviews descending (most reviewed first)
+        const sortedSummaries = response.data.sort((a, b) => {
+          return b.totalReviews - a.totalReviews;
+        });
+
+        setRatingSummaries(sortedSummaries);
+      } catch (error) {
+        console.error("Error fetching rating summaries:", error);
+        // Xử lý 404 như các section khác
+        if (error && typeof error === "object" && "response" in error) {
+          const axiosError = error as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) {
+            setSummariesError("Không thể tải thống kê đánh giá");
+          }
+        } else {
+          setSummariesError("Không thể tải thống kê đánh giá");
+        }
+      } finally {
+        setLoadingSummaries(false);
+      }
+    };
+
+    fetchRatingSummaries();
+  }, [providerId]);
+
+  const {
+    statistics,
+    loading: statsLoading,
+    error: statsError,
+    refetch,
+  } = useHotelDashboardStatistics(providerId);
+
+  const isLoading = loadingProvider || statsLoading;
+
+  // Mock notifications - in real app, fetch from API
+  const notifications: Notification[] = [
+    {
+      id: "1",
+      type: "new_booking",
+      title: "Đặt phòng mới",
+      message: "Bạn có 3 đặt phòng mới tại Seaside Resort cần xác nhận",
+      time: "5 phút trước",
+      isNew: true,
+    },
+    {
+      id: "2",
+      type: "payment_success",
+      title: "Thanh toán thành công",
+      message:
+        "Khách hàng Nguyễn Văn A đã thanh toán 2.500.000đ cho booking #12345",
+      time: "15 phút trước",
+      isNew: true,
+    },
+    {
+      id: "3",
+      type: "new_review",
+      title: "Đánh giá mới",
+      message: "Mountain View Hotel nhận được đánh giá 5 sao từ khách hàng",
+      time: "30 phút trước",
+      isNew: false,
+    },
+    {
+      id: "4",
+      type: "e_ticket_created",
+      title: "E-Ticket đã được tạo",
+      message: "E-Ticket cho booking #12346 đã được tạo và gửi cho khách",
+      time: "1 giờ trước",
+      isNew: false,
+    },
+    {
+      id: "5",
+      type: "price_alert",
+      title: "Cảnh báo giá",
+      message: "Giá phòng của City Center Hotel thấp hơn 15% so với đối thủ",
+      time: "2 giờ trước",
+      isNew: false,
+    },
+  ];
+
+  // ==================== SECTION 5: REVENUE CHART DATA ====================
+  const revenueChartData = useMemo((): RevenueChartData[] => {
+    if (bookings.length === 0) return [];
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    // Initialize data for all days in current month
+    const dailyRevenue: { [key: number]: number } = {};
+    for (let day = 1; day <= daysInMonth; day++) {
+      dailyRevenue[day] = 0;
+    }
+
+    // Calculate revenue by day
+    bookings.forEach((booking) => {
+      if (
+        booking.bookingDate &&
+        (booking.bookingStatus === "confirmed" ||
+          booking.bookingStatus === "completed")
+      ) {
+        const bookingDate = new Date(booking.bookingDate);
+        if (
+          bookingDate.getMonth() === currentMonth &&
+          bookingDate.getFullYear() === currentYear
+        ) {
+          const day = bookingDate.getDate();
+          dailyRevenue[day] += Number(booking.totalPrice) || 0;
+        }
+      }
+    });
+
+    // Convert to chart data format
+    return Array.from({ length: daysInMonth }, (_, i) => ({
+      day: i + 1,
+      revenue: dailyRevenue[i + 1],
+      label: `${i + 1}`,
+    }));
+  }, [bookings]);
+
+  // Custom tooltip for revenue chart
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          className={`p-3 rounded-lg border shadow-lg ${
+            dark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+          }`}
+        >
+          <p
+            className={`text-sm font-medium ${
+              dark ? "text-gray-300" : "text-gray-700"
+            }`}
+          >
+            Ngày {payload[0].payload.day}
+          </p>
+          <p className="text-sm font-semibold text-emerald-500 mt-1">
+            {Number(payload[0].value).toLocaleString("vi-VN")} đ
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    document.title = `${t("hotel_dashboard")} - Tripfinity`;
+  }, [t]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+          <p className={dark ? "text-gray-400" : "text-gray-600"}>
+            Đang tải dữ liệu...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (statsError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-500 mb-4">{statsError}</p>
+          <button
+            onClick={refetch}
+            className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!providerId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <p className={dark ? "text-gray-400" : "text-gray-600"}>
+            Không tìm thấy thông tin nhà cung cấp
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const newNotificationsCount = notifications.filter((n) => n.isNew).length;
+
+  // Get top 6 hotels for dashboard
+  const displayedHotels = hotels.slice(0, 6);
+
+  // Get recent 5 bookings
+  const recentBookings = bookings.slice(0, 5);
+  const unseenBookingsCount = bookings.filter((b) => !b.providerSeen).length;
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1
+            className={`text-2xl font-bold flex items-center gap-2 ${
+              dark ? "text-white" : "text-gray-900"
+            }`}
+          >
+            <BarChart3 className="w-7 h-7 text-emerald-500" />
+            Dashboard Quản lý Khách sạn
+          </h1>
+          <p className={`mt-1 ${dark ? "text-gray-400" : "text-gray-600"}`}>
+            Tổng quan về hoạt động kinh doanh khách sạn
+          </p>
+        </div>
+      </div>
+
+      {/* SECTION 1: THỐNG KÊ TỔNG QUAN */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          icon={<Hotel className="w-6 h-6 text-emerald-500" />}
+          label="Tổng số khách sạn"
+          value={statistics?.totalHotels || 0}
+          trend={
+            statistics?.totalHotelsChange !== undefined
+              ? {
+                  value: statistics.totalHotelsChange,
+                  isPositive: statistics.totalHotelsChange >= 0,
+                }
+              : undefined
+          }
+          action={{
+            text: "Xem danh sách",
+            onClick: () => console.log("View hotels list"),
+          }}
+        />
+
+        <StatCard
+          icon={<Calendar className="w-6 h-6 text-blue-500" />}
+          label="Tổng đặt phòng"
+          value={statistics?.totalBookings || 0}
+          badge={
+            statistics?.unseenBookings
+              ? {
+                  text: `${statistics.unseenBookings} mới`,
+                  variant: "warning",
+                }
+              : undefined
+          }
+          action={{
+            text: "Xem đặt phòng",
+            onClick: () => console.log("View bookings"),
+          }}
+        />
+
+        <StatCard
+          icon={<DollarSign className="w-6 h-6 text-green-500" />}
+          label="Doanh thu tháng này"
+          value={
+            statistics?.monthlyRevenue
+              ? `${statistics.monthlyRevenue.toLocaleString("vi-VN")}đ`
+              : "0đ"
+          }
+          trend={
+            statistics?.revenueChange !== undefined
+              ? {
+                  value: statistics.revenueChange,
+                  isPositive: statistics.revenueChange >= 0,
+                }
+              : undefined
+          }
+          action={{
+            text: "Xem chi tiết",
+            onClick: () => console.log("View revenue details"),
+          }}
+        />
+
+        <StatCard
+          icon={<Star className="w-6 h-6 text-yellow-500" />}
+          label="Đánh giá trung bình"
+          value={
+            statistics?.averageRating
+              ? statistics.averageRating.toFixed(1)
+              : "N/A"
+          }
+          badge={
+            statistics?.totalReviews
+              ? {
+                  text: `${statistics.totalReviews} đánh giá`,
+                  variant: "info",
+                }
+              : undefined
+          }
+          action={{
+            text: "Xem đánh giá",
+            onClick: () => console.log("View ratings"),
+          }}
+        />
+      </div>
+
+      {/* SECTION 2: THÔNG BÁO MỚI (Notification Bar) */}
+      <div
+        className={`rounded-xl border p-6 ${
+          dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Bell
+              className={`w-5 h-5 ${
+                dark ? "text-emerald-400" : "text-emerald-600"
+              }`}
+            />
+            <h2
+              className={`text-lg font-semibold ${
+                dark ? "text-white" : "text-gray-900"
+              }`}
+            >
+              Thông báo mới
+            </h2>
+            {newNotificationsCount > 0 && (
+              <span className="px-2 py-0.5 text-xs font-medium bg-emerald-500 text-white rounded-full">
+                {newNotificationsCount}
+              </span>
+            )}
+          </div>
+          <button
+            className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+              dark
+                ? "text-emerald-400 hover:text-emerald-300"
+                : "text-emerald-600 hover:text-emerald-700"
+            }`}
+            onClick={() => console.log("View all notifications")}
+          >
+            Xem tất cả
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-emerald-500 scrollbar-track-gray-200 dark:scrollbar-track-gray-800">
+          {notifications.map((notification) => (
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              onClick={() =>
+                console.log("Clicked notification:", notification.id)
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* SECTION 3: DANH SÁCH KHÁCH SẠN */}
+      <div
+        className={`rounded-xl border p-6 ${
+          dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Hotel
+              className={`w-5 h-5 ${
+                dark ? "text-emerald-400" : "text-emerald-600"
+              }`}
+            />
+            <h2
+              className={`text-lg font-semibold ${
+                dark ? "text-white" : "text-gray-900"
+              }`}
+            >
+              Danh sách khách sạn
+            </h2>
+            <span
+              className={`text-sm ${dark ? "text-gray-400" : "text-gray-600"}`}
+            >
+              ({hotels.length} khách sạn)
+            </span>
+          </div>
+          <button
+            className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+              dark
+                ? "text-emerald-400 hover:text-emerald-300"
+                : "text-emerald-600 hover:text-emerald-700"
+            }`}
+            onClick={() => console.log("View all hotels")}
+          >
+            Xem tất cả
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {loadingHotels ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-2"></div>
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Đang tải khách sạn...
+              </p>
+            </div>
+          </div>
+        ) : hotelsError ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+              <p className="text-sm text-red-500">{hotelsError}</p>
+            </div>
+          </div>
+        ) : displayedHotels.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <Hotel
+                className={`w-12 h-12 mx-auto mb-3 ${
+                  dark ? "text-gray-600" : "text-gray-400"
+                }`}
+              />
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Chưa có khách sạn nào
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {displayedHotels.map((hotel) => (
+              <HotelCard
+                key={hotel.hotelId}
+                hotel={hotel}
+                onView={() =>
+                  navigate(`/supplier/service/hotel/${hotel.hotelId}`)
+                }
+                onEdit={() =>
+                  navigate(`/supplier/service/hotel/${hotel.hotelId}/edit`)
+                }
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 4: ĐẶT PHÒNG GẦN ĐÂY */}
+      <div
+        className={`rounded-xl border p-6 ${
+          dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Calendar
+              className={`w-5 h-5 ${
+                dark ? "text-emerald-400" : "text-emerald-600"
+              }`}
+            />
+            <h2
+              className={`text-lg font-semibold ${
+                dark ? "text-white" : "text-gray-900"
+              }`}
+            >
+              Đặt phòng gần đây
+            </h2>
+            {unseenBookingsCount > 0 && (
+              <span className="px-2 py-0.5 text-xs font-medium bg-emerald-500 text-white rounded-full">
+                {unseenBookingsCount} mới
+              </span>
+            )}
+          </div>
+          <button
+            className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+              dark
+                ? "text-emerald-400 hover:text-emerald-300"
+                : "text-emerald-600 hover:text-emerald-700"
+            }`}
+            onClick={() => console.log("View all bookings")}
+          >
+            Xem tất cả
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {loadingBookings ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-2"></div>
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Đang tải đặt phòng...
+              </p>
+            </div>
+          </div>
+        ) : bookingsError ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+              <p className="text-sm text-red-500">{bookingsError}</p>
+            </div>
+          </div>
+        ) : recentBookings.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <Calendar
+                className={`w-12 h-12 mx-auto mb-3 ${
+                  dark ? "text-gray-600" : "text-gray-400"
+                }`}
+              />
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Chưa có đặt phòng nào
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {recentBookings.map((booking) => (
+              <BookingRow key={booking.bookingId} booking={booking} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 5: BIỂU ĐỒ DOANH THU */}
+      <div
+        className={`rounded-xl border p-6 ${
+          dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <BarChart3
+              className={`w-5 h-5 ${
+                dark ? "text-emerald-400" : "text-emerald-600"
+              }`}
+            />
+            <h2
+              className={`text-lg font-semibold ${
+                dark ? "text-white" : "text-gray-900"
+              }`}
+            >
+              Doanh thu tháng này
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-sm ${dark ? "text-gray-400" : "text-gray-600"}`}
+            >
+              Tổng:{" "}
+              <span
+                className={`font-semibold ${
+                  dark ? "text-emerald-400" : "text-emerald-600"
+                }`}
+              >
+                {(statistics?.monthlyRevenue || 0).toLocaleString("vi-VN")} đ
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {loadingBookings ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-2"></div>
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Đang tải dữ liệu doanh thu...
+              </p>
+            </div>
+          </div>
+        ) : bookingsError ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+              <p className="text-sm text-red-500">{bookingsError}</p>
+            </div>
+          </div>
+        ) : revenueChartData.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <BarChart3
+                className={`w-12 h-12 mx-auto mb-3 ${
+                  dark ? "text-gray-600" : "text-gray-400"
+                }`}
+              />
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Chưa có dữ liệu doanh thu
+              </p>
+            </div>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={revenueChartData}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke={dark ? "#374151" : "#e5e7eb"}
+              />
+              <XAxis
+                dataKey="label"
+                stroke={dark ? "#9ca3af" : "#6b7280"}
+                style={{ fontSize: "12px" }}
+              />
+              <YAxis
+                stroke={dark ? "#9ca3af" : "#6b7280"}
+                style={{ fontSize: "12px" }}
+                tickFormatter={(value: number) =>
+                  `${(value / 1000000).toFixed(1)}M`
+                }
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar
+                dataKey="revenue"
+                fill="#10b981"
+                radius={[8, 8, 0, 0]}
+                maxBarSize={40}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p
+                className={`text-xs ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Đặt phòng hôm nay
+              </p>
+              <p
+                className={`text-lg font-semibold mt-1 ${
+                  dark ? "text-white" : "text-gray-900"
+                }`}
+              >
+                {statistics?.todayBookings || 0}
+              </p>
+            </div>
+            <div>
+              <p
+                className={`text-xs ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Tổng doanh thu
+              </p>
+              <p
+                className={`text-lg font-semibold mt-1 ${
+                  dark ? "text-emerald-400" : "text-emerald-600"
+                }`}
+              >
+                {(statistics?.totalRevenue || 0).toLocaleString("vi-VN")} đ
+              </p>
+            </div>
+            <div>
+              <p
+                className={`text-xs ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Tăng trưởng
+              </p>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                {(statistics?.revenueChange || 0) >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-emerald-500" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-500" />
+                )}
+                <p
+                  className={`text-lg font-semibold ${
+                    (statistics?.revenueChange || 0) >= 0
+                      ? "text-emerald-500"
+                      : "text-red-500"
+                  }`}
+                >
+                  {(statistics?.revenueChange || 0) >= 0 ? "+" : ""}
+                  {(statistics?.revenueChange || 0).toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 6: HÀNH ĐỘNG NHANH (QUICK ACTIONS) */}
+      <div
+        className={`rounded-xl border p-6 ${
+          dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center gap-2 mb-6">
+          <Zap
+            className={`w-5 h-5 ${
+              dark ? "text-emerald-400" : "text-emerald-600"
+            }`}
+          />
+          <h2
+            className={`text-lg font-semibold ${
+              dark ? "text-white" : "text-gray-900"
+            }`}
+          >
+            Hành động nhanh
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <QuickAction
+            icon={<Plus className="w-6 h-6" />}
+            label="Thêm khách sạn mới"
+            description="Tạo khách sạn mới và đăng tải lên hệ thống"
+            color="emerald"
+            onClick={() => navigate("/supplier/service/hotel/create")}
+          />
+
+          <QuickAction
+            icon={<List className="w-6 h-6" />}
+            label="Quản lý đặt phòng"
+            description="Xem và xử lý các đặt phòng hiện tại"
+            color="blue"
+            onClick={() => console.log("Navigate to bookings management")}
+          />
+
+          <QuickAction
+            icon={<MessageSquare className="w-6 h-6" />}
+            label="Quản lý đánh giá"
+            description="Xem và phản hồi đánh giá từ khách hàng"
+            color="purple"
+            onClick={() => console.log("Navigate to reviews management")}
+          />
+
+          <QuickAction
+            icon={<BarChart2 className="w-6 h-6" />}
+            label="Báo cáo doanh thu"
+            description="Xem chi tiết báo cáo doanh thu và thống kê"
+            color="orange"
+            onClick={() => console.log("Navigate to revenue reports")}
+          />
+
+          <QuickAction
+            icon={<Settings className="w-6 h-6" />}
+            label="Cài đặt giá"
+            description="Quản lý giá phòng và các tùy chọn giá"
+            color="pink"
+            onClick={() => console.log("Navigate to price settings")}
+          />
+
+          <QuickAction
+            icon={<FileText className="w-6 h-6" />}
+            label="Quản lý hợp đồng"
+            description="Xem và quản lý các hợp đồng với khách hàng"
+            color="indigo"
+            onClick={() => console.log("Navigate to contracts")}
+          />
+        </div>
+      </div>
+
+      {/* SECTION 7: ĐÁNH GIÁ GẦN ĐÂY */}
+      <div
+        className={`rounded-xl border p-6 ${
+          dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <MessageSquare
+              className={`w-5 h-5 ${
+                dark ? "text-emerald-400" : "text-emerald-600"
+              }`}
+            />
+            <h2
+              className={`text-lg font-semibold ${
+                dark ? "text-white" : "text-gray-900"
+              }`}
+            >
+              Đánh giá gần đây
+            </h2>
+            <span
+              className={`text-sm ${dark ? "text-gray-400" : "text-gray-600"}`}
+            >
+              ({reviews.length} đánh giá)
+            </span>
+          </div>
+          <button
+            className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+              dark
+                ? "text-emerald-400 hover:text-emerald-300"
+                : "text-emerald-600 hover:text-emerald-700"
+            }`}
+            onClick={() => console.log("View all reviews")}
+          >
+            Xem tất cả
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {loadingReviews ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-2"></div>
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Đang tải đánh giá...
+              </p>
+            </div>
+          </div>
+        ) : reviewsError ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+              <p className="text-sm text-red-500">{reviewsError}</p>
+            </div>
+          </div>
+        ) : reviews.slice(0, 5).length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <MessageSquare
+                className={`w-12 h-12 mx-auto mb-3 ${
+                  dark ? "text-gray-600" : "text-gray-400"
+                }`}
+              />
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Chưa có đánh giá nào
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {reviews.slice(0, 5).map((review) => {
+              const hotel = hotels.find((h) => h.hotelId === review.hotelId);
+              return (
+                <ReviewCard
+                  key={review.reviewId}
+                  review={review}
+                  hotelName={hotel?.title || "Khách sạn"}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {/* SECTION 8: CẢNH BÁO GIÁ (PRICE ALERTS) */}
+      <div
+        className={`rounded-xl border p-6 ${
+          dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle
+              className={`w-5 h-5 ${
+                dark ? "text-emerald-400" : "text-emerald-600"
+              }`}
+            />
+            <h2
+              className={`text-lg font-semibold ${
+                dark ? "text-white" : "text-gray-900"
+              }`}
+            >
+              Cảnh báo giá
+            </h2>
+            <span
+              className={`text-sm ${dark ? "text-gray-400" : "text-gray-600"}`}
+            >
+              ({priceAlerts.length} cảnh báo)
+            </span>
+          </div>
+          <button
+            className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+              dark
+                ? "text-emerald-400 hover:text-emerald-300"
+                : "text-emerald-600 hover:text-emerald-700"
+            }`}
+            onClick={() => console.log("View all price alerts")}
+          >
+            Xem tất cả
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {loadingAlerts ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-2"></div>
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Đang tải cảnh báo giá...
+              </p>
+            </div>
+          </div>
+        ) : alertsError ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+              <p className="text-sm text-red-500">{alertsError}</p>
+            </div>
+          </div>
+        ) : priceAlerts.slice(0, 5).length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <TrendingDown
+                className={`w-12 h-12 mx-auto mb-3 ${
+                  dark ? "text-gray-600" : "text-gray-400"
+                }`}
+              />
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Chưa có cảnh báo giá nào
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {priceAlerts.slice(0, 5).map((alert) => {
+              const hotel = hotels.find((h) => h.hotelId === alert.hotelId);
+              return (
+                <PriceAlertCard
+                  key={alert.alertId}
+                  alert={alert}
+                  hotelName={hotel?.title || "Khách sạn"}
+                  currentPrice={hotel?.price}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {/* SECTION 9: THỐNG KÊ ĐÁNH GIÁ (RATING STATISTICS) */}
+      <div
+        className={`rounded-xl border p-6 ${
+          dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <BarChart2
+              className={`w-5 h-5 ${
+                dark ? "text-emerald-400" : "text-emerald-600"
+              }`}
+            />
+            <h2
+              className={`text-lg font-semibold ${
+                dark ? "text-white" : "text-gray-900"
+              }`}
+            >
+              Thống kê đánh giá
+            </h2>
+            <span
+              className={`text-sm ${dark ? "text-gray-400" : "text-gray-600"}`}
+            >
+              ({ratingSummaries.length} khách sạn)
+            </span>
+          </div>
+          <button
+            className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+              dark
+                ? "text-emerald-400 hover:text-emerald-300"
+                : "text-emerald-600 hover:text-emerald-700"
+            }`}
+            onClick={() => console.log("View detailed statistics")}
+          >
+            Xem chi tiết
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {loadingSummaries ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-2"></div>
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Đang tải thống kê đánh giá...
+              </p>
+            </div>
+          </div>
+        ) : summariesError ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+              <p className="text-sm text-red-500">{summariesError}</p>
+            </div>
+          </div>
+        ) : ratingSummaries.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <BarChart2
+                className={`w-12 h-12 mx-auto mb-3 ${
+                  dark ? "text-gray-600" : "text-gray-400"
+                }`}
+              />
+              <p
+                className={`text-sm ${
+                  dark ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                Chưa có thống kê đánh giá
+              </p>
+              <p
+                className={`text-xs mt-1 ${
+                  dark ? "text-gray-500" : "text-gray-500"
+                }`}
+              >
+                Thống kê sẽ hiển thị khi khách sạn nhận được đánh giá
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {ratingSummaries.map((summary) => {
+              const hotel = hotels.find((h) => h.hotelId === summary.hotelId);
+              return (
+                <RatingSummaryCard
+                  key={summary.hotelId}
+                  summary={summary}
+                  hotelName={hotel?.title || `Khách sạn #${summary.hotelId}`}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Summary Statistics */}
+        {ratingSummaries.length > 0 && (
+          <div
+            className={`mt-6 pt-6 border-t ${
+              dark ? "border-gray-700" : "border-gray-200"
+            }`}
+          >
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <p
+                  className={`text-xs mb-1 ${
+                    dark ? "text-gray-400" : "text-gray-600"
+                  }`}
+                >
+                  Tổng đánh giá
+                </p>
+                <p
+                  className={`text-2xl font-bold ${
+                    dark ? "text-white" : "text-gray-900"
+                  }`}
+                >
+                  {ratingSummaries.reduce((sum, s) => sum + s.totalReviews, 0)}
+                </p>
+              </div>
+
+              <div className="text-center">
+                <p
+                  className={`text-xs mb-1 ${
+                    dark ? "text-gray-400" : "text-gray-600"
+                  }`}
+                >
+                  Điểm TB tất cả KS
+                </p>
+                <div className="flex items-center justify-center gap-1">
+                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                  <p
+                    className={`text-2xl font-bold ${
+                      dark ? "text-emerald-400" : "text-emerald-600"
+                    }`}
+                  >
+                    {(
+                      ratingSummaries.reduce((sum, s) => sum + s.avgRating, 0) /
+                      ratingSummaries.length
+                    ).toFixed(1)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <p
+                  className={`text-xs mb-1 ${
+                    dark ? "text-gray-400" : "text-gray-600"
+                  }`}
+                >
+                  Đánh giá 5 sao
+                </p>
+                <p
+                  className={`text-2xl font-bold ${
+                    dark ? "text-emerald-400" : "text-emerald-600"
+                  }`}
+                >
+                  {ratingSummaries.reduce((sum, s) => sum + s.count5, 0)}
+                </p>
+              </div>
+
+              <div className="text-center">
+                <p
+                  className={`text-xs mb-1 ${
+                    dark ? "text-gray-400" : "text-gray-600"
+                  }`}
+                >
+                  KS có đánh giá
+                </p>
+                <p
+                  className={`text-2xl font-bold ${
+                    dark ? "text-blue-400" : "text-blue-600"
+                  }`}
+                >
+                  {ratingSummaries.filter((s) => s.totalReviews > 0).length}/
+                  {hotels.length}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

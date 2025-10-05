@@ -165,3 +165,103 @@ export interface HotelStats {
   totalRooms: number;
   occupancyRate: number;
 }
+
+// Hotel Dashboard Statistics
+export interface HotelDashboardStatistics {
+  // Hotel stats
+  totalHotels: number;
+  totalHotelsChange: number; // % change from last month
+
+  // Booking stats
+  totalBookings: number;
+  todayBookings: number;
+  unseenBookings: number;
+
+  // Revenue stats
+  totalRevenue: number;
+  monthlyRevenue: number;
+  revenueChange: number; // % change from last month
+
+  // Rating stats
+  averageRating: number;
+  totalReviews: number;
+}
+
+// Booking DTO interface (based on backend)
+export interface HotelBookingDTO {
+  bookingId?: number;
+  userId: number;
+  hotelId: number;
+  bookingDate?: string; // ISO string
+  startDate?: string;
+  endDate?: string;
+  numAdults: number;
+  numChildren?: number;
+  totalPrice: number;
+  currencyCode?: string;
+  bookingStatus?:
+    | "pending"
+    | "confirmed"
+    | "cancelled"
+    | "completed"
+    | "refunded";
+  eTicketUrl?: string;
+  qrCodeData?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  providerId?: number;
+  channel?: string;
+  holdUntil?: string;
+  providerSeen?: boolean;
+  providerNotes?: string;
+}
+
+export interface HotelReviewDTO {
+  reviewId?: number;
+  hotelId: number;
+  userId: number;
+  rating: number; // 1-5
+  title?: string;
+  content: string;
+  imageUrls?: string[];
+  likesCount?: number;
+  replyCount?: number;
+  reviewStatus?: "approved" | "rejected";
+  aspects?: {
+    cleanliness: number; // 1-5
+    service: number; // 1-5
+    valueForMoney: number; // 1-5
+    location: number; // 1-5
+    facilities: number; // 1-5
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface HotelPriceAlertDTO {
+  alertId?: number;
+  userId: number;
+  hotelId: number;
+  targetPrice: number;
+  currencyCode?: string;
+  isActive?: boolean;
+  lastNotifiedAt?: string; // ISO datetime
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface HotelRatingSummaryDTO {
+  hotelId: number;
+  avgRating: number; // 0.00 - 5.00
+  totalReviews: number;
+  count1: number; // Số review 1 sao
+  count2: number; // Số review 2 sao
+  count3: number; // Số review 3 sao
+  count4: number; // Số review 4 sao
+  count5: number; // Số review 5 sao
+  avgCleanliness?: number; // 0.00 - 5.00
+  avgService?: number;
+  avgValueForMoney?: number;
+  avgLocation?: number;
+  avgFacilities?: number;
+}
