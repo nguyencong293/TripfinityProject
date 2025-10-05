@@ -1300,6 +1300,78 @@ const DashboardHotelPage: React.FC = () => {
         </div>
       </div>
 
+      {/* SECTION 6: HÀNH ĐỘNG NHANH (QUICK ACTIONS) */}
+      <div
+        className={`rounded-xl border p-6 ${
+          dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center gap-2 mb-6">
+          <Zap
+            className={`w-5 h-5 ${
+              dark ? "text-emerald-400" : "text-emerald-600"
+            }`}
+          />
+          <h2
+            className={`text-lg font-semibold ${
+              dark ? "text-white" : "text-gray-900"
+            }`}
+          >
+            Hành động nhanh
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <QuickAction
+            icon={<Plus className="w-6 h-6" />}
+            label="Thêm khách sạn mới"
+            description="Tạo khách sạn mới và đăng tải lên hệ thống"
+            color="emerald"
+            onClick={() => navigate("/supplier/service/hotel/create")}
+          />
+
+          <QuickAction
+            icon={<List className="w-6 h-6" />}
+            label="Quản lý đặt phòng"
+            description="Xem và xử lý các đặt phòng hiện tại"
+            color="blue"
+            onClick={() => console.log("Navigate to bookings management")}
+          />
+
+          <QuickAction
+            icon={<MessageSquare className="w-6 h-6" />}
+            label="Quản lý đánh giá"
+            description="Xem và phản hồi đánh giá từ khách hàng"
+            color="purple"
+            onClick={() => console.log("Navigate to reviews management")}
+          />
+
+          <QuickAction
+            icon={<BarChart2 className="w-6 h-6" />}
+            label="Báo cáo doanh thu"
+            description="Xem chi tiết báo cáo doanh thu và thống kê"
+            color="orange"
+            onClick={() => console.log("Navigate to revenue reports")}
+          />
+
+          <QuickAction
+            icon={<Settings className="w-6 h-6" />}
+            label="Cài đặt giá"
+            description="Quản lý giá phòng và các tùy chọn giá"
+            color="pink"
+            onClick={() => console.log("Navigate to price settings")}
+          />
+
+          <QuickAction
+            icon={<FileText className="w-6 h-6" />}
+            label="Quản lý hợp đồng"
+            description="Xem và quản lý các hợp đồng với khách hàng"
+            color="indigo"
+            onClick={() => console.log("Navigate to contracts")}
+          />
+        </div>
+      </div>
+
       {/* SECTION 3: DANH SÁCH KHÁCH SẠN */}
       <div
         className={`rounded-xl border p-6 ${
@@ -1378,12 +1450,12 @@ const DashboardHotelPage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {displayedHotels.map((hotel) => (
+            {displayedHotels.slice(0, 6).map((hotel) => (
               <HotelCard
                 key={hotel.hotelId}
                 hotel={hotel}
                 onView={() =>
-                  navigate(`/supplier/service/hotel/${hotel.hotelId}`)
+                  navigate(`/supplier/service/hotel/${hotel.hotelId}/view`)
                 }
                 onEdit={() =>
                   navigate(`/supplier/service/hotel/${hotel.hotelId}/edit`)
@@ -1644,78 +1716,6 @@ const DashboardHotelPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* SECTION 6: HÀNH ĐỘNG NHANH (QUICK ACTIONS) */}
-      <div
-        className={`rounded-xl border p-6 ${
-          dark ? "bg-gray-800/50 border-gray-700" : "bg-white border-gray-200"
-        }`}
-      >
-        <div className="flex items-center gap-2 mb-6">
-          <Zap
-            className={`w-5 h-5 ${
-              dark ? "text-emerald-400" : "text-emerald-600"
-            }`}
-          />
-          <h2
-            className={`text-lg font-semibold ${
-              dark ? "text-white" : "text-gray-900"
-            }`}
-          >
-            Hành động nhanh
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <QuickAction
-            icon={<Plus className="w-6 h-6" />}
-            label="Thêm khách sạn mới"
-            description="Tạo khách sạn mới và đăng tải lên hệ thống"
-            color="emerald"
-            onClick={() => navigate("/supplier/service/hotel/create")}
-          />
-
-          <QuickAction
-            icon={<List className="w-6 h-6" />}
-            label="Quản lý đặt phòng"
-            description="Xem và xử lý các đặt phòng hiện tại"
-            color="blue"
-            onClick={() => console.log("Navigate to bookings management")}
-          />
-
-          <QuickAction
-            icon={<MessageSquare className="w-6 h-6" />}
-            label="Quản lý đánh giá"
-            description="Xem và phản hồi đánh giá từ khách hàng"
-            color="purple"
-            onClick={() => console.log("Navigate to reviews management")}
-          />
-
-          <QuickAction
-            icon={<BarChart2 className="w-6 h-6" />}
-            label="Báo cáo doanh thu"
-            description="Xem chi tiết báo cáo doanh thu và thống kê"
-            color="orange"
-            onClick={() => console.log("Navigate to revenue reports")}
-          />
-
-          <QuickAction
-            icon={<Settings className="w-6 h-6" />}
-            label="Cài đặt giá"
-            description="Quản lý giá phòng và các tùy chọn giá"
-            color="pink"
-            onClick={() => console.log("Navigate to price settings")}
-          />
-
-          <QuickAction
-            icon={<FileText className="w-6 h-6" />}
-            label="Quản lý hợp đồng"
-            description="Xem và quản lý các hợp đồng với khách hàng"
-            color="indigo"
-            onClick={() => console.log("Navigate to contracts")}
-          />
         </div>
       </div>
 
