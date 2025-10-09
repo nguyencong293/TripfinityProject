@@ -7,7 +7,7 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:tripfinity}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&useSSL=false&connectionCollation=utf8mb4_unicode_ci
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:baby}
+    password: ${DB_PASSWORD:sqlpass}
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:20}
       minimum-idle: ${DB_POOL_MIN_IDLE:2}
@@ -39,7 +39,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: tripfinity2025@gmail.com
-    password: fgfc atqj jrxy kjmc
+    password: sdbw bxtv wwgn khln
     properties:
       mail:
         smtp:
@@ -52,7 +52,7 @@ spring:
         registration:
           google:
             client-id: 173444476399-srrjbrmg2c0rsatfd4498t0499gmn104.apps.googleusercontent.com
-            client-secret: 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
+            client-secret: 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
             scope:
               - openid
               - profile
