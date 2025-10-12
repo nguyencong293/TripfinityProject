@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Eye,
   Edit,
-  MoreVertical,
   MapPin,
   Users,
   Plus,
@@ -471,15 +470,6 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel, onView, onEdit }) => {
           >
             <Edit className="w-4 h-4" />
             Sửa
-          </button>
-          <button
-            className={`p-2 rounded-lg text-sm font-medium transition-colors ${
-              dark
-                ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            <MoreVertical className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -1404,7 +1394,7 @@ const DashboardHotelPage: React.FC = () => {
                 ? "text-emerald-400 hover:text-emerald-300"
                 : "text-emerald-600 hover:text-emerald-700"
             }`}
-            onClick={() => console.log("View all hotels")}
+            onClick={() => navigate("/supplier/service/hotel/list")}
           >
             Xem tất cả
             <ChevronRight className="w-4 h-4" />
