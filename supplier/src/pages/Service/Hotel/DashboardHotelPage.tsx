@@ -4,25 +4,14 @@ import {
   BarChart3,
   Hotel,
   Calendar,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Star,
   Bell,
-  MessageSquare,
-  CheckCircle,
-  Ticket,
-  TrendingDown as PriceDown,
   ChevronRight,
-  Eye,
-  Edit,
-  MapPin,
-  Users,
   Plus,
   List,
   Settings,
   BarChart2,
   FileText,
+  MessageSquare,
   Zap,
 } from "lucide-react";
 import {
@@ -39,382 +28,16 @@ import { getProviderByUserId } from "../../../services/providerService";
 import { getHotelsByProvider } from "../../../services/hotelService";
 import type { HotelDTO, HotelBookingDTO } from "../../../types";
 import api from "../../../services/api";
+import {
+  QuickAction,
+  NotificationItem,
+  StatCard,
+  HotelCard,
+  BookingRow,
+} from "../../../components/hotel";
 
-// QuickAction (theme-based)
-interface QuickActionProps {
-  icon: React.ReactNode;
-  label: string;
-  description: string;
-  onClick: () => void;
-}
-const QuickAction: React.FC<QuickActionProps> = ({
-  icon,
-  label,
-  description,
-  onClick,
-}) => (
-  <button
-    onClick={onClick}
-    className="group relative rounded-xl border theme-border theme-bg-card p-6 transition-all hover:shadow-lg text-left w-full"
-  >
-    <div className="flex items-start gap-4">
-      <div className="p-3 rounded-lg theme-bg-secondary">{icon}</div>
-      <div className="flex-1">
-        <h4 className="text-base font-semibold mb-1 theme-text-primary">
-          {label}
-        </h4>
-        <p className="text-sm theme-text-secondary">{description}</p>
-      </div>
-      <ChevronRight className="w-5 h-5 icon-disabled transition-transform group-hover:translate-x-1" />
-    </div>
-  </button>
-);
-
-// Notification item (theme-based)
-type NotificationType =
-  | "new_booking"
-  | "new_review"
-  | "payment_success"
-  | "e_ticket_created"
-  | "price_alert";
-interface Notification {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  time: string;
-  isNew: boolean;
-}
-interface NotificationItemProps {
-  notification: Notification;
-  onClick: () => void;
-}
-const NotificationItem: React.FC<NotificationItemProps> = ({
-  notification,
-  onClick,
-}) => {
-  const getIcon = (type: NotificationType) => {
-    switch (type) {
-      case "new_booking":
-        return <Calendar className="w-5 h-5 theme-text-info" />;
-      case "new_review":
-        return <MessageSquare className="w-5 h-5 theme-text-info" />;
-      case "payment_success":
-        return <CheckCircle className="w-5 h-5 theme-text-success" />;
-      case "e_ticket_created":
-        return <Ticket className="w-5 h-5 theme-text-warning" />;
-      case "price_alert":
-        return <PriceDown className="w-5 h-5 theme-text-error" />;
-    }
-  };
-  const getBg = (type: NotificationType) => {
-    switch (type) {
-      case "new_booking":
-      case "new_review":
-        return "theme-bg-info";
-      case "payment_success":
-        return "theme-bg-success";
-      case "e_ticket_created":
-        return "theme-bg-warning";
-      case "price_alert":
-        return "theme-bg-error";
-    }
-  };
-  return (
-    <button
-      onClick={onClick}
-      className="flex-shrink-0 w-80 p-4 rounded-xl border theme-border theme-bg-card transition-all hover:shadow-md"
-    >
-      <div className="flex gap-3">
-        <div
-          className={`flex-shrink-0 p-2 rounded-lg ${getBg(notification.type)}`}
-        >
-          {getIcon(notification.type)}
-        </div>
-        <div className="flex-1 min-w-0 text-left">
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold theme-text-primary">
-              {notification.title}
-            </p>
-            {notification.isNew && (
-              <span className="flex-shrink-0 w-2 h-2 theme-bg-primary rounded-full" />
-            )}
-          </div>
-          <p className="text-xs mt-1 line-clamp-2 theme-text-secondary">
-            {notification.message}
-          </p>
-          <p className="text-xs mt-2 theme-text-secondary">
-            {notification.time}
-          </p>
-        </div>
-      </div>
-    </button>
-  );
-};
-
-// Stat card (theme-based)
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  trend?: { value: number; isPositive: boolean };
-  badge?: { text: string; variant: "success" | "warning" | "danger" | "info" };
-}
-const StatCard: React.FC<StatCardProps> = ({
-  icon,
-  label,
-  value,
-  trend,
-  badge,
-}) => {
-  const badgeColors: Record<
-    NonNullable<StatCardProps["badge"]>["variant"],
-    string
-  > = {
-    success: "theme-bg-success theme-text-success border-success",
-    warning: "theme-bg-warning theme-text-warning border-warning",
-    danger: "theme-bg-error theme-text-error border-error",
-    info: "theme-bg-info theme-text-info border-info",
-  } as const;
-  return (
-    <div className="relative overflow-hidden rounded-xl border theme-border theme-bg-card p-6 transition-all hover:shadow-lg">
-      <div className="flex items-start justify-between mb-4">
-        <div className="p-3 rounded-lg theme-bg-secondary">{icon}</div>
-        {badge && (
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-medium border ${
-              badgeColors[badge.variant]
-            }`}
-          >
-            {badge.text}
-          </span>
-        )}
-      </div>
-      <div className="space-y-1">
-        <p className="text-sm font-medium theme-text-secondary">{label}</p>
-        <p className="text-3xl font-bold theme-text-primary">{value}</p>
-      </div>
-      {trend && (
-        <div className="mt-4 flex items-center gap-2">
-          {trend.isPositive ? (
-            <TrendingUp className="w-4 h-4 theme-text-success" />
-          ) : (
-            <TrendingDown className="w-4 h-4 theme-text-error" />
-          )}
-          <span
-            className={`text-sm font-medium ${
-              trend.isPositive ? "theme-text-success" : "theme-text-error"
-            }`}
-          >
-            {trend.isPositive ? "+" : ""}
-            {trend.value.toFixed(1)}%
-          </span>
-          <span className="text-sm theme-text-secondary">
-            so với tháng trước
-          </span>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Hotel card (theme-based)
-interface HotelCardProps {
-  hotel: HotelDTO;
-  onView: () => void;
-  onEdit: () => void;
-}
-const HotelCard: React.FC<HotelCardProps> = ({ hotel, onView, onEdit }) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "published":
-        return "theme-bg-success theme-text-success border-success";
-      case "archived":
-        return "theme-bg-warning theme-text-warning border-warning";
-      case "disabled":
-        return "theme-bg-error theme-text-error border-error";
-      default:
-        return "theme-bg-info theme-text-info border-info";
-    }
-  };
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("vi-VN").format(v);
-  return (
-    <div className="rounded-xl border theme-border theme-bg-card overflow-hidden transition-all hover:shadow-lg">
-      <div className="relative h-48 theme-bg-secondary">
-        {hotel.thumbnailUrl ? (
-          <img
-            src={hotel.thumbnailUrl}
-            alt={hotel.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Hotel className="w-16 h-16 icon-disabled" />
-          </div>
-        )}
-        <div className="absolute top-3 right-3">
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-              hotel.hotelStatus
-            )}`}
-          >
-            {hotel.hotelStatus}
-          </span>
-        </div>
-      </div>
-      <div className="p-4">
-        <h3 className="text-lg font-semibold mb-2 line-clamp-1 theme-text-primary">
-          {hotel.title}
-        </h3>
-        <div className="space-y-2 mb-4">
-          {hotel.location && (
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="w-4 h-4 icon-disabled" />
-              <span className="line-clamp-1 theme-text-secondary">
-                {hotel.location}
-              </span>
-            </div>
-          )}
-          <div className="flex items-center gap-4 text-sm">
-            {hotel.starRating && (
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 theme-text-warning" />
-                <span className="font-medium theme-text-secondary">
-                  {hotel.starRating} sao
-                </span>
-              </div>
-            )}
-            {hotel.ratingAverage !== undefined && (
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 theme-text-warning" />
-                <span className="font-medium theme-text-secondary">
-                  {hotel.ratingAverage.toFixed(1)}
-                </span>
-              </div>
-            )}
-          </div>
-          {hotel.capacity && (
-            <div className="flex items-center gap-2 text-sm">
-              <Users className="w-4 h-4 icon-disabled" />
-              <span className="theme-text-secondary">
-                Sức chứa: {hotel.capacity} người
-              </span>
-            </div>
-          )}
-          <div className="flex items-center gap-2 text-sm">
-            <DollarSign className="w-4 h-4 icon-disabled" />
-            <span className="font-semibold theme-text-brand">
-              {formatCurrency(hotel.price)} {hotel.currencyCode}
-            </span>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={onView}
-            className="flex-1 btn-secondary btn-text-responsive flex items-center justify-center gap-2"
-          >
-            <Eye className="w-4 h-4" /> Xem
-          </button>
-          <button
-            onClick={onEdit}
-            className="flex-1 btn-primary btn-text-responsive flex items-center justify-center gap-2"
-          >
-            <Edit className="w-4 h-4" /> Sửa
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Booking row (theme-based)
-const BookingRow = ({ booking }: { booking: HotelBookingDTO }) => {
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      pending: "theme-bg-warning theme-text-warning border-warning",
-      confirmed: "theme-bg-info theme-text-info border-info",
-      completed: "theme-bg-success theme-text-success border-success",
-      cancelled: "theme-bg-error theme-text-error border-error",
-      refunded: "theme-bg-info theme-text-info border-info",
-    };
-    return (
-      colors[status] || "theme-bg-secondary theme-text-secondary theme-border"
-    );
-  };
-  const formatDate = (s?: string) =>
-    s ? new Date(s).toLocaleDateString("vi-VN") : "N/A";
-  const formatCurrency = (v?: number) =>
-    new Intl.NumberFormat("vi-VN").format(v || 0);
-  return (
-    <div
-      className={`p-4 rounded-lg border transition-colors ${
-        !booking.providerSeen
-          ? "theme-bg-info border-info"
-          : "theme-bg-card theme-border"
-      }`}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-semibold theme-text-primary">
-              #{booking.bookingId}
-            </h4>
-            {!booking.providerSeen && (
-              <span className="px-2 py-0.5 text-xs font-medium theme-bg-info theme-text-info rounded-full">
-                Mới
-              </span>
-            )}
-          </div>
-          <p className="text-sm theme-text-secondary">
-            User ID: {booking.userId}
-          </p>
-        </div>
-        <span
-          className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-            booking.bookingStatus || "pending"
-          )}`}
-        >
-          {booking.bookingStatus || "pending"}
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <p className="mb-1 theme-text-secondary">Ngày nhận phòng</p>
-          <p className="font-medium theme-text-primary">
-            {formatDate(booking.startDate)}
-          </p>
-        </div>
-        <div>
-          <p className="mb-1 theme-text-secondary">Ngày trả phòng</p>
-          <p className="font-medium theme-text-primary">
-            {formatDate(booking.endDate)}
-          </p>
-        </div>
-        <div>
-          <p className="mb-1 theme-text-secondary">Số khách</p>
-          <p className="font-medium theme-text-primary">
-            {booking.numAdults} người lớn
-            {booking.numChildren ? `, ${booking.numChildren} trẻ em` : ""}
-          </p>
-        </div>
-        <div>
-          <p className="mb-1 theme-text-secondary">Tổng tiền</p>
-          <p className="font-semibold theme-text-brand">
-            {formatCurrency(booking.totalPrice)} {booking.currencyCode || "VND"}
-          </p>
-        </div>
-      </div>
-      {booking.providerNotes && (
-        <div className="mt-3 p-2 rounded theme-bg-secondary">
-          <p className="text-xs theme-text-secondary">
-            Ghi chú: {booking.providerNotes}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
+// Notification types for this page context
+import type { Notification } from "../../../components/hotel/NotificationItem";
 
 // Main Dashboard
 const DashboardHotelPage: React.FC = () => {
@@ -501,13 +124,13 @@ const DashboardHotelPage: React.FC = () => {
           trend={{ value: 12.4, isPositive: true }}
         />
         <StatCard
-          icon={<Users className="w-5 h-5 icon-brand" />}
+          icon={<Hotel className="w-5 h-5 icon-brand" />}
           label="Đơn đặt phòng"
           value={statistics?.totalBookings || 0}
           trend={{ value: 3.2, isPositive: true }}
         />
         <StatCard
-          icon={<Star className="w-5 h-5 icon-brand" />}
+          icon={<Calendar className="w-5 h-5 icon-brand" />}
           label="Đánh giá"
           value={statistics?.totalReviews || 0}
           badge={{ text: "Tăng", variant: "info" }}
