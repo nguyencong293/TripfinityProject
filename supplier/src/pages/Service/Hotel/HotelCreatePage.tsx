@@ -20,14 +20,75 @@ const PROPERTY_TYPES = [
 ] as const;
 
 const AREAS = [
-  { id: 1, name: "Hà Nội" },
-  { id: 2, name: "TP. Hồ Chí Minh" },
-  { id: 3, name: "Đà Nẵng" },
-  { id: 4, name: "Quảng Ninh" },
-  { id: 5, name: "Khánh Hòa" },
+  { id: 1, name: "An Giang" },
+  { id: 2, name: "Bà Rịa - Vũng Tàu" },
+  { id: 3, name: "Bắc Kạn" },
+  { id: 4, name: "Bắc Giang" },
+  { id: 5, name: "Bạc Liêu" },
+  { id: 6, name: "Bắc Ninh" },
+  { id: 7, name: "Bến Tre" },
+  { id: 8, name: "Bình Định" },
+  { id: 9, name: "Bình Dương" },
+  { id: 10, name: "Bình Phước" },
+  { id: 11, name: "Bình Thuận" },
+  { id: 12, name: "Cà Mau" },
+  { id: 13, name: "Cần Thơ" },
+  { id: 14, name: "Cao Bằng" },
+  { id: 15, name: "Đà Nẵng" },
+  { id: 16, name: "Đắk Lắk" },
+  { id: 17, name: "Đắk Nông" },
+  { id: 18, name: "Điện Biên" },
+  { id: 19, name: "Đồng Nai" },
+  { id: 20, name: "Đồng Tháp" },
+  { id: 21, name: "Gia Lai" },
+  { id: 22, name: "Hà Giang" },
+  { id: 23, name: "Hà Nam" },
+  { id: 24, name: "Hà Nội" },
+  { id: 25, name: "Hà Tĩnh" },
+  { id: 26, name: "Hải Dương" },
+  { id: 27, name: "Hải Phòng" },
+  { id: 28, name: "Hậu Giang" },
+  { id: 29, name: "Hòa Bình" },
+  { id: 30, name: "Hưng Yên" },
+  { id: 31, name: "Khánh Hòa" },
+  { id: 32, name: "Kiên Giang" },
+  { id: 33, name: "Kon Tum" },
+  { id: 34, name: "Lai Châu" },
+  { id: 35, name: "Lâm Đồng" },
+  { id: 36, name: "Lạng Sơn" },
+  { id: 37, name: "Lào Cai" },
+  { id: 38, name: "Long An" },
+  { id: 39, name: "Nam Định" },
+  { id: 40, name: "Nghệ An" },
+  { id: 41, name: "Ninh Bình" },
+  { id: 42, name: "Ninh Thuận" },
+  { id: 43, name: "Phú Thọ" },
+  { id: 44, name: "Phú Yên" },
+  { id: 45, name: "Quảng Bình" },
+  { id: 46, name: "Quảng Nam" },
+  { id: 47, name: "Quảng Ngãi" },
+  { id: 48, name: "Quảng Ninh" },
+  { id: 49, name: "Quảng Trị" },
+  { id: 50, name: "Sóc Trăng" },
+  { id: 51, name: "Sơn La" },
+  { id: 52, name: "Tây Ninh" },
+  { id: 53, name: "Thái Bình" },
+  { id: 54, name: "Thái Nguyên" },
+  { id: 55, name: "Thanh Hóa" },
+  { id: 56, name: "Thừa Thiên Huế" },
+  { id: 57, name: "Tiền Giang" },
+  { id: 58, name: "TP. Hồ Chí Minh" },
+  { id: 59, name: "Trà Vinh" },
+  { id: 60, name: "Tuyên Quang" },
+  { id: 61, name: "Vĩnh Long" },
+  { id: 62, name: "Vĩnh Phúc" },
+  { id: 63, name: "Yên Bái" },
 ];
 
 const STAR_RATINGS = [1, 2, 3, 4, 5];
+
+// Price constraints for hotel price input
+const MAX_PRICE = 1000000000; // 1,000,000,000 VND
 
 // Highlights Dictionary (ID-based)
 const HIGHLIGHTS_OPTIONS = [
@@ -41,6 +102,27 @@ const HIGHLIGHTS_OPTIONS = [
   { id: 8, label: "Phòng gym" },
   { id: 9, label: "Nhà hàng cao cấp" },
   { id: 10, label: "Bar & Lounge" },
+  // Bổ sung dành cho resort/khách sạn
+  { id: 11, label: "Bãi biển riêng" },
+  { id: 12, label: "Hồ bơi vô cực" },
+  { id: 13, label: "Bar hồ bơi" },
+  { id: 14, label: "Câu lạc bộ trẻ em (Kids Club)" },
+  { id: 15, label: "Dịch vụ trông trẻ" },
+  { id: 16, label: "Sân tennis" },
+  { id: 17, label: "Sân golf gần kề" },
+  { id: 18, label: "Thể thao dưới nước" },
+  { id: 19, label: "Lặn biển / Snorkeling" },
+  { id: 20, label: "Kayak / Chèo SUP" },
+  { id: 21, label: "Công viên nước mini" },
+  { id: 22, label: "Rooftop bar" },
+  { id: 23, label: "Nhà hàng buffet" },
+  { id: 24, label: "Trung tâm hội nghị / phòng họp" },
+  { id: 25, label: "Dịch vụ đưa đón sân bay" },
+  { id: 26, label: "Dịch vụ đưa đón trong khu" },
+  { id: 27, label: "Bãi đỗ xe có nhân viên (valet)" },
+  { id: 28, label: "Xông hơi / Sauna" },
+  { id: 29, label: "Bể sục / Jacuzzi" },
+  { id: 30, label: "Khu vui chơi trẻ em" },
 ];
 
 // Amenities Dictionary (ID-based)
@@ -55,6 +137,32 @@ const AMENITIES_OPTIONS = [
   { id: 8, label: "Bãi đậu xe miễn phí" },
   { id: 9, label: "Đưa đón sân bay" },
   { id: 10, label: "Cho phép thú cưng" },
+  // Bổ sung tiện nghi phổ biến
+  { id: 11, label: "Máy pha cà phê / Ấm đun" },
+  { id: 12, label: "Áo choàng tắm & Dép đi trong phòng" },
+  { id: 13, label: "Ban công / Sân hiên" },
+  { id: 14, label: "Tầm nhìn ra biển / hồ / núi" },
+  { id: 15, label: "Góc bếp (kitchenette)" },
+  { id: 16, label: "Máy giặt" },
+  { id: 17, label: "Bàn ủi / Bàn là" },
+  { id: 18, label: "Lễ tân 24/7" },
+  { id: 19, label: "Dịch vụ Concierge" },
+  { id: 20, label: "Giữ hành lý" },
+  { id: 21, label: "Thang máy" },
+  { id: 22, label: "Phòng/tiện nghi cho người khuyết tật" },
+  { id: 23, label: "Đổi tiền / ATM" },
+  { id: 24, label: "Trạm sạc xe điện" },
+  { id: 25, label: "Phòng xông hơi / Sauna" },
+  { id: 26, label: "Phòng tắm hơi ướt / Steam" },
+  { id: 27, label: "Bồn tắm nóng / Jacuzzi" },
+  { id: 28, label: "Hồ bơi trẻ em" },
+  { id: 29, label: "Sân chơi trẻ em" },
+  { id: 30, label: "Sân tennis / Thuê vợt" },
+  { id: 31, label: "Thuê xe đạp" },
+  { id: 32, label: "Dịch vụ thuê xe / taxi" },
+  { id: 33, label: "Bãi biển gần" },
+  { id: 34, label: "Phòng họp / Tiệc" },
+  { id: 35, label: "Ăn sáng miễn phí" },
 ];
 
 // Badges Options (string-based for selection)
@@ -366,16 +474,30 @@ const HotelCreatePage: React.FC = () => {
             </label>
             <input
               type="number"
-              value={formData.price || ""}
+              value={formData.price ?? ""}
               onChange={(e) => {
-                const newPrice = Number(e.target.value) || 0;
-                console.log(`🔄 Price changed to: ${newPrice}`);
-                updateField("price", newPrice);
+                const raw = e.target.value;
+                if (raw === "") {
+                  updateField("price", 0);
+                  return;
+                }
+                const parsed = Math.floor(Number(raw));
+                const clamped = Math.min(Math.max(parsed || 0, 0), MAX_PRICE);
+                console.log(
+                  `🔄 Price changed to: ${parsed} -> clamped: ${clamped}`
+                );
+                updateField("price", clamped);
               }}
               className={baseInput}
               placeholder="0"
-              min="0"
+              min={0}
+              max={MAX_PRICE}
+              step={1}
+              inputMode="numeric"
             />
+            <span className="text-xs theme-text-secondary">
+              Tối đa: {MAX_PRICE.toLocaleString("vi-VN")} VND
+            </span>
             {errors.price && <span className={errorText}>{errors.price}</span>}
           </div>
 
@@ -504,9 +626,22 @@ const HotelCreatePage: React.FC = () => {
               type="number"
               value={formData.capacity || ""}
               onChange={(e) => {
-                const newCapacity = Number(e.target.value) || null;
+                const raw = e.target.value;
+                const newCapacity =
+                  raw === "" ? null : Math.max(0, Number(raw) || 0);
                 console.log(`🔄 Capacity changed to: ${newCapacity}`);
+                // Cập nhật capacity trước
                 updateField("capacity", newCapacity);
+                // Tự động điều chỉnh min/max cho phù hợp
+                const cap = newCapacity ?? 0;
+                const currentMin = formData.minParticipants ?? 0;
+                const currentMax = formData.maxParticipants ?? 0;
+                const adjMin = Math.min(Math.max(0, currentMin), cap);
+                const adjMax = Math.min(Math.max(adjMin, currentMax), cap);
+                if (adjMin !== currentMin)
+                  updateField("minParticipants", adjMin);
+                if (adjMax !== currentMax)
+                  updateField("maxParticipants", adjMax);
               }}
               className={baseInput}
               placeholder="VD: 100"
@@ -532,16 +667,26 @@ const HotelCreatePage: React.FC = () => {
               type="number"
               value={formData.minParticipants || ""}
               onChange={(e) => {
-                const newMinParticipants = Number(e.target.value) || null;
-                console.log(
-                  `🔄 Min participants changed to: ${newMinParticipants}`
-                );
-                updateField("minParticipants", newMinParticipants);
+                const raw = e.target.value;
+                const cap = formData.capacity ?? 0;
+                let next = raw === "" ? null : Number(raw) || 0;
+                if (next !== null) next = Math.min(Math.max(0, next), cap);
+                console.log(`🔄 Min participants changed to: ${next}`);
+                updateField("minParticipants", next);
+                // Đảm bảo max >= min
+                const currentMax = formData.maxParticipants ?? 0;
+                if (next !== null && currentMax < next) {
+                  updateField("maxParticipants", next);
+                }
               }}
               className={baseInput}
               placeholder="VD: 1"
-              min="0"
+              min={0}
+              max={formData.capacity ?? undefined}
             />
+            <span className="text-xs theme-text-secondary">
+              0 ≤ tối thiểu ≤ sức chứa
+            </span>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -550,16 +695,23 @@ const HotelCreatePage: React.FC = () => {
               type="number"
               value={formData.maxParticipants || ""}
               onChange={(e) => {
-                const newMaxParticipants = Number(e.target.value) || null;
-                console.log(
-                  `🔄 Max participants changed to: ${newMaxParticipants}`
-                );
-                updateField("maxParticipants", newMaxParticipants);
+                const raw = e.target.value;
+                const cap = formData.capacity ?? 0;
+                const currentMin = formData.minParticipants ?? 0;
+                let next = raw === "" ? null : Number(raw) || 0;
+                if (next !== null)
+                  next = Math.min(Math.max(currentMin, next), cap);
+                console.log(`🔄 Max participants changed to: ${next}`);
+                updateField("maxParticipants", next);
               }}
               className={baseInput}
               placeholder="VD: 50"
-              min="0"
+              min={formData.minParticipants ?? 0}
+              max={formData.capacity ?? undefined}
             />
+            <span className="text-xs theme-text-secondary">
+              tối thiểu ≤ tối đa ≤ sức chứa
+            </span>
           </div>
 
           <div className="flex flex-col gap-2">

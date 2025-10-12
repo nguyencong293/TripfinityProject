@@ -20,6 +20,7 @@ import {
 import { useHotelView } from "../../../hooks/useHotelView";
 
 /* ================= Constants ================= */
+// Must stay in-sync with HIGHLIGHTS_OPTIONS in HotelCreatePage/HotelEditPage
 const HIGHLIGHTS_DICT: Record<number, string> = {
   1: "View biển",
   2: "View núi",
@@ -31,8 +32,30 @@ const HIGHLIGHTS_DICT: Record<number, string> = {
   8: "Phòng gym",
   9: "Nhà hàng cao cấp",
   10: "Bar & Lounge",
+  // Bổ sung dành cho resort/khách sạn
+  11: "Bãi biển riêng",
+  12: "Hồ bơi vô cực",
+  13: "Bar hồ bơi",
+  14: "Câu lạc bộ trẻ em (Kids Club)",
+  15: "Dịch vụ trông trẻ",
+  16: "Sân tennis",
+  17: "Sân golf gần kề",
+  18: "Thể thao dưới nước",
+  19: "Lặn biển / Snorkeling",
+  20: "Kayak / Chèo SUP",
+  21: "Công viên nước mini",
+  22: "Rooftop bar",
+  23: "Nhà hàng buffet",
+  24: "Trung tâm hội nghị / phòng họp",
+  25: "Dịch vụ đưa đón sân bay",
+  26: "Dịch vụ đưa đón trong khu",
+  27: "Bãi đỗ xe có nhân viên (valet)",
+  28: "Xông hơi / Sauna",
+  29: "Bể sục / Jacuzzi",
+  30: "Khu vui chơi trẻ em",
 };
 
+// Must stay in-sync with AMENITIES_OPTIONS in HotelCreatePage/HotelEditPage
 const AMENITIES_DICT: Record<number, string> = {
   1: "WiFi miễn phí",
   2: "Điều hòa",
@@ -44,6 +67,32 @@ const AMENITIES_DICT: Record<number, string> = {
   8: "Bãi đậu xe miễn phí",
   9: "Đưa đón sân bay",
   10: "Cho phép thú cưng",
+  // Bổ sung tiện nghi phổ biến
+  11: "Máy pha cà phê / Ấm đun",
+  12: "Áo choàng tắm & Dép đi trong phòng",
+  13: "Ban công / Sân hiên",
+  14: "Tầm nhìn ra biển / hồ / núi",
+  15: "Góc bếp (kitchenette)",
+  16: "Máy giặt",
+  17: "Bàn ủi / Bàn là",
+  18: "Lễ tân 24/7",
+  19: "Dịch vụ Concierge",
+  20: "Giữ hành lý",
+  21: "Thang máy",
+  22: "Phòng/tiện nghi cho người khuyết tật",
+  23: "Đổi tiền / ATM",
+  24: "Trạm sạc xe điện",
+  25: "Phòng xông hơi / Sauna",
+  26: "Phòng tắm hơi ướt / Steam",
+  27: "Bồn tắm nóng / Jacuzzi",
+  28: "Hồ bơi trẻ em",
+  29: "Sân chơi trẻ em",
+  30: "Sân tennis / Thuê vợt",
+  31: "Thuê xe đạp",
+  32: "Dịch vụ thuê xe / taxi",
+  33: "Bãi biển gần",
+  34: "Phòng họp / Tiệc",
+  35: "Ăn sáng miễn phí",
 };
 
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
