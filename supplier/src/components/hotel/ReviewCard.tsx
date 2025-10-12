@@ -1,6 +1,7 @@
 import { Star } from "lucide-react";
 import type { HotelReviewDTO } from "../../types";
 import type React from "react";
+import { useLanguage } from "../../hooks/useLanguage";
 
 // ==================== SECTION 7: REVIEW CARD COMPONENT ====================
 interface ReviewCardProps {
@@ -9,6 +10,7 @@ interface ReviewCardProps {
 }
 
 const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
+  const { t } = useLanguage();
   const renderStars = (rating: number) => {
     return (
       <div className="flex gap-0.5">
@@ -56,7 +58,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
             )}
           </div>
           <p className="text-xs theme-text-secondary">
-            {hotelName} • User ID: {review.userId}
+            {hotelName} • {t("user_id")}: {review.userId}
           </p>
         </div>
         <span className="text-xs theme-text-secondary">
@@ -73,11 +75,23 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
       {review.aspects && (
         <div className="grid grid-cols-5 gap-2 mb-3">
           {[
-            { label: "Sạch sẽ", value: review.aspects.cleanliness },
-            { label: "Dịch vụ", value: review.aspects.service },
-            { label: "Giá trị", value: review.aspects.valueForMoney },
-            { label: "Vị trí", value: review.aspects.location },
-            { label: "Tiện nghi", value: review.aspects.facilities },
+            {
+              label: t("hotel_aspect_cleanliness"),
+              value: review.aspects.cleanliness,
+            },
+            { label: t("hotel_aspect_service"), value: review.aspects.service },
+            {
+              label: t("hotel_aspect_value"),
+              value: review.aspects.valueForMoney,
+            },
+            {
+              label: t("hotel_aspect_location"),
+              value: review.aspects.location,
+            },
+            {
+              label: t("hotel_aspect_facilities"),
+              value: review.aspects.facilities,
+            },
           ].map((aspect) => (
             <div key={aspect.label} className="text-center">
               <p className="text-xs mb-0.5 theme-text-secondary">
@@ -99,17 +113,17 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
       <div className="flex items-center justify-between pt-3 border-t theme-divider">
         <div className="flex items-center gap-3 text-xs">
           <span className="theme-text-secondary">
-            👍 {review.likesCount || 0} lượt thích
+            👍 {review.likesCount || 0} {t("likes")}
           </span>
           <span className="theme-text-secondary">
-            💬 {review.replyCount || 0} phản hồi
+            💬 {review.replyCount || 0} {t("replies")}
           </span>
         </div>
         <button
           className="text-xs font-medium transition-colors link-brand"
           onClick={() => console.log("View review details:", review.reviewId)}
         >
-          Xem chi tiết
+          {t("view_details")}
         </button>
       </div>
     </div>

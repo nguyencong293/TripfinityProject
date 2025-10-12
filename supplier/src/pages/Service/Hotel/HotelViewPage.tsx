@@ -18,6 +18,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useHotelView } from "../../../hooks/useHotelView";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 /* ================= Constants ================= */
 // Must stay in-sync with HIGHLIGHTS_OPTIONS in HotelCreatePage/HotelEditPage
@@ -95,15 +96,7 @@ const AMENITIES_DICT: Record<number, string> = {
   35: "Ăn sáng miễn phí",
 };
 
-const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  hotel: "Khách sạn",
-  resort: "Resort",
-  apartment: "Căn hộ",
-  villa: "Biệt thự",
-  hostel: "Hostel",
-  guesthouse: "Nhà khách",
-  homestay: "Homestay",
-};
+// Property type labels are localized via i18n keys
 
 /* ================= Styles ================= */
 const pageTitle =
@@ -121,6 +114,7 @@ const HotelViewPage: React.FC = () => {
   const navigate = useNavigate();
   const { hotel, loading, deleting, error, handleDelete } =
     useHotelView(hotelId);
+  const { t } = useLanguage();
 
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat("vi-VN", {
@@ -144,9 +138,9 @@ const HotelViewPage: React.FC = () => {
       disabled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
     };
     const labels: Record<string, string> = {
-      published: "Đang xuất bản",
-      archived: "Lưu trữ",
-      disabled: "Ngưng hoạt động",
+      published: t("hotelPage.list.status.published"),
+      archived: t("hotelPage.list.status.archived"),
+      disabled: t("hotelPage.list.status.disabled"),
     };
     return (
       <span
@@ -172,12 +166,12 @@ const HotelViewPage: React.FC = () => {
         {isPublic ? (
           <>
             <Eye className="w-3 h-3" />
-            Công khai
+            {t("hotel_view_public")}
           </>
         ) : (
           <>
             <EyeOff className="w-3 h-3" />
-            Riêng tư
+            {t("hotel_view_private")}
           </>
         )}
       </span>
@@ -197,16 +191,16 @@ const HotelViewPage: React.FC = () => {
       <div className="max-w-5xl mx-auto px-6 py-8">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">
-            Lỗi
+            {t("error")}
           </h2>
           <p className="text-red-600 dark:text-red-400">
-            {error || "Không tìm thấy khách sạn"}
+            {error || t("hotel_view_not_found")}
           </p>
           <button
             onClick={() => navigate("/supplier/service/hotel")}
             className="mt-4 btn-outline px-4 py-2"
           >
-            Quay lại danh sách
+            {t("hotel_back")}
           </button>
         </div>
       </div>
@@ -232,7 +226,7 @@ const HotelViewPage: React.FC = () => {
               {hotel.isFeatured && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
                   <Award className="w-3 h-3" />
-                  Nổi bật
+                  {t("hotel_view_featured")}
                 </span>
               )}
             </div>
@@ -245,7 +239,7 @@ const HotelViewPage: React.FC = () => {
             className="btn-primary px-4 py-2 flex items-center gap-2"
           >
             <Edit className="w-4 h-4" />
-            Chỉnh sửa
+            {t("edit")}
           </button>
           <button
             onClick={handleDelete}
@@ -257,7 +251,7 @@ const HotelViewPage: React.FC = () => {
             ) : (
               <Trash2 className="w-4 h-4" />
             )}
-            Xóa
+            {t("delete")}
           </button>
         </div>
       </div>
@@ -277,20 +271,20 @@ const HotelViewPage: React.FC = () => {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Basic Info */}
         <div className="theme-bg-card border theme-border rounded-xl p-6 flex flex-col gap-4">
-          <h2 className={sectionTitle}>Thông tin cơ bản</h2>
+          <h2 className={sectionTitle}>{t("hotel_view_basic_info")}</h2>
 
           <div className="space-y-3">
             <div>
-              <div className={labelCls}>Loại hình</div>
+              <div className={labelCls}>{t("hotel_view_property_type")}</div>
               <div className={valueCls + " flex items-center gap-2 mt-1"}>
                 <Building2 className="w-4 h-4" />
-                {PROPERTY_TYPE_LABELS[hotel.propertyType || "hotel"]}
+                {t(`hotel_view_property_${hotel.propertyType || "hotel"}`)}
               </div>
             </div>
 
             {hotel.starRating && (
               <div>
-                <div className={labelCls}>Hạng sao</div>
+                <div className={labelCls}>{t("hotel_view_star_rating")}</div>
                 <div className={valueCls + " flex items-center gap-1 mt-1"}>
                   {Array.from({ length: hotel.starRating }).map((_, i) => (
                     <Star
@@ -303,7 +297,7 @@ const HotelViewPage: React.FC = () => {
             )}
 
             <div>
-              <div className={labelCls}>Giá</div>
+              <div className={labelCls}>{t("hotel_view_price")}</div>
               <div className={valueCls + " flex items-center gap-2 mt-1"}>
                 <DollarSign className="w-4 h-4" />
                 {formatCurrency(hotel.price)}
@@ -312,7 +306,7 @@ const HotelViewPage: React.FC = () => {
 
             {hotel.location && (
               <div>
-                <div className={labelCls}>Vị trí</div>
+                <div className={labelCls}>{t("hotel_view_location")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <MapPin className="w-4 h-4" />
                   {hotel.location}
@@ -322,7 +316,7 @@ const HotelViewPage: React.FC = () => {
 
             {hotel.address && (
               <div>
-                <div className={labelCls}>Địa chỉ</div>
+                <div className={labelCls}>{t("hotel_view_address")}</div>
                 <div className={valueCls + " mt-1"}>{hotel.address}</div>
               </div>
             )}
@@ -331,33 +325,35 @@ const HotelViewPage: React.FC = () => {
 
         {/* Capacity & Time */}
         <div className="theme-bg-card border theme-border rounded-xl p-6 flex flex-col gap-4">
-          <h2 className={sectionTitle}>Sức chứa & Thời gian</h2>
+          <h2 className={sectionTitle}>{t("hotel_view_capacity_time")}</h2>
 
           <div className="space-y-3">
             {hotel.capacity && (
               <div>
-                <div className={labelCls}>Sức chứa</div>
+                <div className={labelCls}>{t("hotel_view_capacity")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Building2 className="w-4 h-4" />
-                  {hotel.capacity} phòng
+                  {hotel.capacity} {t("hotel_view_rooms")}
                 </div>
               </div>
             )}
 
             {(hotel.minParticipants || hotel.maxParticipants) && (
               <div>
-                <div className={labelCls}>Số lượng khách</div>
+                <div className={labelCls}>{t("hotel_view_guests")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Users className="w-4 h-4" />
                   {hotel.minParticipants || 0} - {hotel.maxParticipants || "∞"}{" "}
-                  người
+                  {t("hotel_view_persons")}
                 </div>
               </div>
             )}
 
             {(hotel.checkinTime || hotel.checkoutTime) && (
               <div>
-                <div className={labelCls}>Giờ nhận/trả phòng</div>
+                <div className={labelCls}>
+                  {t("hotel_view_checkin_checkout")}
+                </div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Clock className="w-4 h-4" />
                   {hotel.checkinTime || "—"} / {hotel.checkoutTime || "—"}
@@ -367,7 +363,7 @@ const HotelViewPage: React.FC = () => {
 
             {(hotel.startDate || hotel.endDate) && (
               <div>
-                <div className={labelCls}>Thời gian hoạt động</div>
+                <div className={labelCls}>{t("hotel_view_operation_time")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Calendar className="w-4 h-4" />
                   {formatDate(hotel.startDate)} - {formatDate(hotel.endDate)}
@@ -377,7 +373,7 @@ const HotelViewPage: React.FC = () => {
 
             {hotel.ratingAverage !== undefined && hotel.ratingAverage > 0 && (
               <div>
-                <div className={labelCls}>Đánh giá trung bình</div>
+                <div className={labelCls}>{t("hotel_view_avg_rating")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   {hotel.ratingAverage.toFixed(1)} / 5.0
@@ -391,7 +387,9 @@ const HotelViewPage: React.FC = () => {
       {/* Description */}
       {hotel.serviceDescription && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Mô tả dịch vụ</h2>
+          <h2 className={sectionTitle + " mb-4"}>
+            {t("hotel_view_description")}
+          </h2>
           <p className={valueCls + " whitespace-pre-wrap"}>
             {hotel.serviceDescription}
           </p>
@@ -401,7 +399,9 @@ const HotelViewPage: React.FC = () => {
       {/* Highlights */}
       {hotel.highlightsJson && hotel.highlightsJson.length > 0 && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Điểm nổi bật</h2>
+          <h2 className={sectionTitle + " mb-4"}>
+            {t("hotel_view_highlights")}
+          </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {hotel.highlightsJson.map((id) => (
               <div
@@ -421,7 +421,9 @@ const HotelViewPage: React.FC = () => {
       {/* Amenities */}
       {hotel.amenitiesJson && hotel.amenitiesJson.length > 0 && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Tiện nghi</h2>
+          <h2 className={sectionTitle + " mb-4"}>
+            {t("hotel_view_amenities")}
+          </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {hotel.amenitiesJson.map((id) => (
               <div
@@ -441,7 +443,7 @@ const HotelViewPage: React.FC = () => {
       {/* Badges */}
       {hotel.badges && hotel.badges.length > 0 && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Huy hiệu</h2>
+          <h2 className={sectionTitle + " mb-4"}>{t("hotel_view_badges")}</h2>
           <div className="flex flex-wrap gap-2">
             {hotel.badges.map((badge) => (
               <span
@@ -460,7 +462,7 @@ const HotelViewPage: React.FC = () => {
         <div className="theme-bg-card border theme-border rounded-xl p-6">
           <h2 className={sectionTitle + " mb-4 flex items-center gap-2"}>
             <ImageIcon className="w-5 h-5" />
-            Thư viện ảnh ({hotel.imageUrls.length})
+            {t("hotel_view_gallery")} ({hotel.imageUrls.length})
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {hotel.imageUrls.map((url, index) => (
@@ -482,7 +484,7 @@ const HotelViewPage: React.FC = () => {
       {/* Policies */}
       {hotel.policiesText && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Chính sách & Quy định</h2>
+          <h2 className={sectionTitle + " mb-4"}>{t("hotel_view_policies")}</h2>
           <p className={valueCls + " whitespace-pre-wrap"}>
             {hotel.policiesText}
           </p>
@@ -491,7 +493,7 @@ const HotelViewPage: React.FC = () => {
 
       {/* SEO Info */}
       <div className="theme-bg-card border theme-border rounded-xl p-6">
-        <h2 className={sectionTitle + " mb-4"}>Thông tin SEO</h2>
+        <h2 className={sectionTitle + " mb-4"}>{t("hotel_view_seo_info")}</h2>
         <div className="space-y-3">
           {hotel.slug && (
             <div>
@@ -503,13 +505,13 @@ const HotelViewPage: React.FC = () => {
           )}
           {hotel.seoTitle && (
             <div>
-              <div className={labelCls}>Tiêu đề SEO</div>
+              <div className={labelCls}>{t("hotel_view_seo_title")}</div>
               <div className={valueCls + " mt-1"}>{hotel.seoTitle}</div>
             </div>
           )}
           {hotel.seoDescription && (
             <div>
-              <div className={labelCls}>Mô tả SEO</div>
+              <div className={labelCls}>{t("hotel_view_seo_description")}</div>
               <div className={valueCls + " mt-1"}>{hotel.seoDescription}</div>
             </div>
           )}
@@ -518,7 +520,9 @@ const HotelViewPage: React.FC = () => {
 
       {/* Metadata */}
       <div className="theme-bg-card border theme-border rounded-xl p-6">
-        <h2 className={sectionTitle + " mb-4"}>Thông tin hệ thống</h2>
+        <h2 className={sectionTitle + " mb-4"}>
+          {t("hotel_view_system_info")}
+        </h2>
         <div className="grid md:grid-cols-2 gap-4 text-sm">
           <div>
             <span className={labelCls}>ID:</span>{" "}
@@ -534,7 +538,7 @@ const HotelViewPage: React.FC = () => {
           </div>
           {hotel.publishedAt && (
             <div>
-              <span className={labelCls}>Ngày xuất bản:</span>{" "}
+              <span className={labelCls}>{t("hotel_view_published_at")}:</span>{" "}
               <span className={valueCls}>{formatDate(hotel.publishedAt)}</span>
             </div>
           )}

@@ -1,6 +1,7 @@
 import React from "react";
 import { Star } from "lucide-react";
 import type { HotelRatingSummaryDTO } from "../../types";
+import { useLanguage } from "../../hooks/useLanguage";
 
 interface RatingSummaryCardProps {
   summary: HotelRatingSummaryDTO;
@@ -11,6 +12,7 @@ const RatingSummaryCard: React.FC<RatingSummaryCardProps> = ({
   summary,
   hotelName,
 }) => {
+  const { t } = useLanguage();
   // Calculate percentage for each rating
   const getPercentage = (count: number) => {
     if (summary.totalReviews === 0) return 0;
@@ -44,11 +46,11 @@ const RatingSummaryCard: React.FC<RatingSummaryCardProps> = ({
   ];
 
   const aspects = [
-    { label: "Sạch sẽ", value: summary.avgCleanliness },
-    { label: "Dịch vụ", value: summary.avgService },
-    { label: "Giá trị", value: summary.avgValueForMoney },
-    { label: "Vị trí", value: summary.avgLocation },
-    { label: "Tiện nghi", value: summary.avgFacilities },
+    { label: t("hotel_aspect_cleanliness"), value: summary.avgCleanliness },
+    { label: t("hotel_aspect_service"), value: summary.avgService },
+    { label: t("hotel_aspect_value"), value: summary.avgValueForMoney },
+    { label: t("hotel_aspect_location"), value: summary.avgLocation },
+    { label: t("hotel_aspect_facilities"), value: summary.avgFacilities },
   ];
 
   return (
@@ -60,7 +62,7 @@ const RatingSummaryCard: React.FC<RatingSummaryCardProps> = ({
             {hotelName}
           </h4>
           <p className="text-sm theme-text-secondary">
-            {summary.totalReviews} đánh giá
+            {summary.totalReviews} {t("hotel_rating_total_reviews_suffix")}
           </p>
         </div>
 
@@ -72,14 +74,16 @@ const RatingSummaryCard: React.FC<RatingSummaryCardProps> = ({
               {summary.avgRating.toFixed(1)}
             </span>
           </div>
-          <p className="text-xs theme-text-success">Trung bình</p>
+          <p className="text-xs theme-text-success">
+            {t("hotel_rating_average")}
+          </p>
         </div>
       </div>
 
       {/* Rating Distribution */}
       <div className="mb-4">
         <h5 className="text-sm font-semibold mb-3 theme-text-primary">
-          Phân bố đánh giá
+          {t("hotel_rating_distribution")}
         </h5>
         <div className="space-y-2">
           {ratingDistribution.map((item) => (
@@ -116,7 +120,7 @@ const RatingSummaryCard: React.FC<RatingSummaryCardProps> = ({
         summary.avgFacilities) && (
         <div>
           <h5 className="text-sm font-semibold mb-3 theme-text-primary">
-            Điểm chi tiết
+            {t("hotel_rating_detail_scores")}
           </h5>
           <div className="grid grid-cols-5 gap-3">
             {aspects.map((aspect) => (

@@ -1,6 +1,7 @@
 import React from "react";
 import { AlertCircle, TrendingDown, Clock, User } from "lucide-react";
 import type { HotelPriceAlertDTO } from "../../types";
+import { useLanguage } from "../../hooks/useLanguage";
 
 interface PriceAlertCardProps {
   alert: HotelPriceAlertDTO;
@@ -13,6 +14,7 @@ const PriceAlertCard: React.FC<PriceAlertCardProps> = ({
   hotelName,
   currentPrice,
 }) => {
+  const { t } = useLanguage();
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
     return new Intl.DateTimeFormat("vi-VN", {
@@ -49,17 +51,17 @@ const PriceAlertCard: React.FC<PriceAlertCardProps> = ({
             </h4>
             {isTriggered && (
               <span className="px-2 py-0.5 text-xs font-medium rounded-full theme-bg-error theme-text-error">
-                Đã kích hoạt
+                {t("hotel_price_alert_triggered")}
               </span>
             )}
             {!alert.isActive && (
               <span className="px-2 py-0.5 text-xs font-medium rounded-full theme-bg-secondary theme-text-secondary">
-                Tạm dừng
+                {t("hotel_price_alert_paused")}
               </span>
             )}
           </div>
           <p className="text-xs theme-text-secondary">
-            Alert ID: #{alert.alertId} • User ID: {alert.userId}
+            {t("alert_id")}: #{alert.alertId} • {t("user_id")}: {alert.userId}
           </p>
         </div>
         <div
@@ -77,7 +79,9 @@ const PriceAlertCard: React.FC<PriceAlertCardProps> = ({
 
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
-          <p className="text-xs mb-1 theme-text-secondary">Giá mục tiêu</p>
+          <p className="text-xs mb-1 theme-text-secondary">
+            {t("hotel_price_alert_target_price")}
+          </p>
           <p className="text-sm font-semibold theme-text-warning">
             {formatPrice(alert.targetPrice, alert.currencyCode || "VND")}
           </p>
@@ -85,7 +89,9 @@ const PriceAlertCard: React.FC<PriceAlertCardProps> = ({
 
         {currentPrice !== undefined && (
           <div>
-            <p className="text-xs mb-1 theme-text-secondary">Giá hiện tại</p>
+            <p className="text-xs mb-1 theme-text-secondary">
+              {t("hotel_price_alert_current_price")}
+            </p>
             <p
               className={`text-sm font-semibold ${
                 isTriggered ? "theme-text-error" : "theme-text-success"
@@ -107,10 +113,14 @@ const PriceAlertCard: React.FC<PriceAlertCardProps> = ({
         >
           {isTriggered ? (
             <span>
-              ⚠️ Giá đã giảm xuống {formatPrice(Math.abs(priceDifference))}
+              ⚠️ {t("hotel_price_alert_price_dropped_prefix")}{" "}
+              {formatPrice(Math.abs(priceDifference))}
             </span>
           ) : (
-            <span>✓ Giá cao hơn mục tiêu {formatPrice(priceDifference)}</span>
+            <span>
+              ✓ {t("hotel_price_alert_price_above_target_prefix")}{" "}
+              {formatPrice(priceDifference)}
+            </span>
           )}
         </div>
       )}
@@ -127,7 +137,8 @@ const PriceAlertCard: React.FC<PriceAlertCardProps> = ({
           <div className="flex items-center gap-1">
             <User className="w-3.5 h-3.5 icon-primary" />
             <span className="theme-text-secondary">
-              Đã thông báo: {formatDate(alert.lastNotifiedAt)}
+              {t("hotel_price_alert_notified_prefix")}{" "}
+              {formatDate(alert.lastNotifiedAt)}
             </span>
           </div>
         )}

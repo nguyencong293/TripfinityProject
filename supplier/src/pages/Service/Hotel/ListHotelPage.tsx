@@ -5,6 +5,7 @@ import { useTheme } from "../../../hooks/useTheme";
 import { useHotels } from "../../../hooks/useHotels";
 import type { HotelDTO } from "../../../types";
 import { deleteHotel } from "../../../services/hotelService";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 const ListHotelPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,11 +13,12 @@ const ListHotelPage: React.FC = () => {
   const { hotels, loading, error, refetch } = useHotels();
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const onDelete = async (h: HotelDTO) => {
     if (!h.hotelId) return;
     const ok = window.confirm(
-      `Bạn có chắc muốn xóa khách sạn ID ${h.hotelId}?`
+      `${t("hotel_list_delete_confirm")} ${h.hotelId}?`
     );
     if (!ok) return;
     try {
@@ -25,7 +27,8 @@ const ListHotelPage: React.FC = () => {
       await deleteHotel(h.hotelId);
       await refetch();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Xóa khách sạn thất bại";
+      const msg =
+        e instanceof Error ? e.message : t("hotel_list_delete_failed");
       setDeleteError(msg);
     } finally {
       setDeletingId(null);
@@ -54,26 +57,26 @@ const ListHotelPage: React.FC = () => {
 
   const columns: Array<{ key: ColumnKey; label: string }> = useMemo(
     () => [
-      { key: "hotelId", label: "ID" },
-      { key: "thumb", label: "Ảnh" },
-      { key: "title", label: "Tiêu đề" },
-      { key: "propertyType", label: "Loại hình" },
-      { key: "price", label: "Giá" },
-      { key: "currencyCode", label: "Tiền tệ" },
-      { key: "hotelStatus", label: "Trạng thái" },
-      { key: "visibility", label: "Hiển thị" },
-      { key: "starRating", label: "Sao" },
-      { key: "ratingAverage", label: "Điểm TB" },
-      { key: "location", label: "Khu vực" },
-      { key: "address", label: "Địa chỉ" },
-      { key: "capacity", label: "Sức chứa" },
-      { key: "minParticipants", label: "Tối thiểu" },
-      { key: "maxParticipants", label: "Tối đa" },
-      { key: "createdAt", label: "Tạo lúc" },
-      { key: "updatedAt", label: "Cập nhật" },
-      { key: "actions", label: "Thao tác" },
+      { key: "hotelId", label: t("hotel_list_col_id") },
+      { key: "thumb", label: t("hotel_list_col_thumbnail") },
+      { key: "title", label: t("hotel_list_col_title") },
+      { key: "propertyType", label: t("hotel_list_col_property_type") },
+      { key: "price", label: t("hotel_list_col_price") },
+      { key: "currencyCode", label: t("hotel_list_col_currency") },
+      { key: "hotelStatus", label: t("hotel_list_col_status") },
+      { key: "visibility", label: t("hotel_list_col_visibility") },
+      { key: "starRating", label: t("hotel_list_col_star_rating") },
+      { key: "ratingAverage", label: t("hotel_list_col_rating_average") },
+      { key: "location", label: t("hotel_list_col_location") },
+      { key: "address", label: t("hotel_list_col_address") },
+      { key: "capacity", label: t("hotel_list_col_capacity") },
+      { key: "minParticipants", label: t("hotel_list_col_min_participants") },
+      { key: "maxParticipants", label: t("hotel_list_col_max_participants") },
+      { key: "createdAt", label: t("hotel_list_col_created_at") },
+      { key: "updatedAt", label: t("hotel_list_col_updated_at") },
+      { key: "actions", label: t("hotel_list_col_actions") },
     ],
-    []
+    [t]
   );
 
   const cell = (h: HotelDTO, key: ColumnKey): React.ReactNode => {
@@ -127,14 +130,16 @@ const ListHotelPage: React.FC = () => {
             }
           >
             {h.hotelStatus === "published"
-              ? "Đang hoạt động"
+              ? t("hotel_list_status_published")
               : h.hotelStatus === "archived"
-              ? "Đã lưu trữ"
-              : "Vô hiệu hóa"}
+              ? t("hotel_list_status_archived")
+              : t("hotel_list_status_disabled")}
           </span>
         );
       case "visibility":
-        return h.visibility === "public_" ? "Công khai" : "Riêng tư";
+        return h.visibility === "public_"
+          ? t("hotel_list_visibility_public")
+          : t("hotel_list_visibility_private");
       case "starRating":
         return h.starRating ?? "";
       case "ratingAverage":
@@ -223,7 +228,7 @@ const ListHotelPage: React.FC = () => {
                 ? "bg-gray-800 text-gray-200 hover:bg-gray-700"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200")
             }
-            title="Quay lại"
+            title={t("previous")}
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -232,12 +237,12 @@ const ListHotelPage: React.FC = () => {
               "text-xl font-semibold " + (dark ? "text-white" : "text-gray-900")
             }
           >
-            Danh sách khách sạn
+            {t("hotel_list_title")}
           </h1>
           <span
             className={"text-sm " + (dark ? "text-gray-400" : "text-gray-600")}
           >
-            ({hotels.length} khách sạn)
+            ({hotels.length} {t("hotel_list_count_suffix")})
           </span>
         </div>
       </div>
@@ -267,7 +272,7 @@ const ListHotelPage: React.FC = () => {
                 "text-sm " + (dark ? "text-gray-400" : "text-gray-600")
               }
             >
-              Đang tải danh sách khách sạn...
+              {t("hotel_list_loading")}
             </p>
           </div>
         ) : error ? (
@@ -285,7 +290,7 @@ const ListHotelPage: React.FC = () => {
                 "text-sm " + (dark ? "text-gray-400" : "text-gray-600")
               }
             >
-              Chưa có khách sạn nào
+              {t("hotel_list_no_hotels")}
             </p>
           </div>
         ) : (

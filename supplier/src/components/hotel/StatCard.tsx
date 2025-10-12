@@ -1,4 +1,5 @@
 import React from "react";
+import { useLanguage } from "../../hooks/useLanguage";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 export interface StatCardProps {
@@ -16,6 +17,7 @@ const StatCard: React.FC<StatCardProps> = ({
   trend,
   badge,
 }) => {
+  const { t } = useLanguage();
   const badgeColors: Record<
     NonNullable<StatCardProps["badge"]>["variant"],
     string
@@ -59,7 +61,7 @@ const StatCard: React.FC<StatCardProps> = ({
             {trend.value.toFixed(1)}%
           </span>
           <span className="text-sm theme-text-secondary">
-            so với tháng trước
+            {t("hotel_compare_prev_month")}
           </span>
         </div>
       )}

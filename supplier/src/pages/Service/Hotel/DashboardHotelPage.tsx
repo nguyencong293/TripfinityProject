@@ -49,6 +49,7 @@ import {
   RatingSummaryCard,
   ReviewCard,
 } from "../../../components/hotel";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 // Notification types for this page context
 import type { Notification } from "../../../components/hotel/NotificationItem";
@@ -58,6 +59,7 @@ import type { Notification } from "../../../components/hotel/NotificationItem";
 const DashboardHotelPage: React.FC = () => {
   const navigate = useNavigate();
   const { statistics } = useHotelDashboardStatistics(undefined);
+  const { t } = useLanguage();
   const [providerId, setProviderId] = useState<number | undefined>();
   const [hotels, setHotels] = useState<HotelDTO[]>([]);
   const [bookings, setBookings] = useState<HotelBookingDTO[]>([]);
@@ -133,17 +135,17 @@ const DashboardHotelPage: React.FC = () => {
     {
       id: "1",
       type: "new_booking",
-      title: "Đặt phòng mới",
-      message: "Bạn có đặt phòng mới",
-      time: "5 phút trước",
+      title: t("hotel_dashboard_notif_new_booking_title"),
+      message: t("hotel_dashboard_notif_new_booking_message"),
+      time: `5 ${t("minutes_ago_suffix")}`,
       isNew: true,
     },
     {
       id: "2",
       type: "payment_success",
-      title: "Thanh toán thành công",
-      message: "Thanh toán #12345",
-      time: "15 phút trước",
+      title: t("hotel_dashboard_notif_payment_success_title"),
+      message: t("hotel_dashboard_notif_payment_success_message"),
+      time: `15 ${t("minutes_ago_suffix")}`,
       isNew: true,
     },
   ];
@@ -163,7 +165,7 @@ const DashboardHotelPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<BarChart3 className="w-5 h-5 icon-brand" />}
-          label="Tổng doanh thu"
+          label={t("hotel_dashboard_total_revenue")}
           value={`${(statistics?.totalRevenue || 0).toLocaleString(
             "vi-VN"
           )} VND`}
@@ -171,19 +173,19 @@ const DashboardHotelPage: React.FC = () => {
         />
         <StatCard
           icon={<Hotel className="w-5 h-5 icon-brand" />}
-          label="Đơn đặt phòng"
+          label={t("hotel_dashboard_total_bookings")}
           value={statistics?.totalBookings || 0}
           trend={{ value: 3.2, isPositive: true }}
         />
         <StatCard
           icon={<Calendar className="w-5 h-5 icon-brand" />}
-          label="Đánh giá"
+          label={t("hotel_dashboard_total_reviews")}
           value={statistics?.totalReviews || 0}
-          badge={{ text: "Tăng", variant: "info" }}
+          badge={{ text: t("increase"), variant: "info" }}
         />
         <StatCard
           icon={<Hotel className="w-5 h-5 icon-brand" />}
-          label="Khách sạn"
+          label={t("hotel_dashboard_hotels")}
           value={hotels.length}
         />
       </div>
@@ -194,7 +196,7 @@ const DashboardHotelPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 icon-brand" />
             <h2 className="text-lg font-semibold theme-text-primary">
-              Thông báo mới
+              {t("hotel_dashboard_new_notifications")}
             </h2>
             {newNotificationsCount > 0 && (
               <span className="px-2 py-0.5 text-xs font-medium theme-bg-primary theme-text-button rounded-full">
@@ -206,7 +208,7 @@ const DashboardHotelPage: React.FC = () => {
             className="link-brand text-sm font-medium flex items-center gap-1"
             onClick={() => console.log("View all notifications")}
           >
-            Xem tất cả <ChevronRight className="w-4 h-4" />
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         <div className="flex gap-4 overflow-x-auto pb-2">
@@ -225,44 +227,44 @@ const DashboardHotelPage: React.FC = () => {
         <div className="flex items-center gap-2 mb-6">
           <Zap className="w-5 h-5 icon-brand" />
           <h2 className="text-lg font-semibold theme-text-primary">
-            Hành động nhanh
+            {t("hotel_dashboard_quick_actions")}
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <QuickAction
             icon={<Plus className="w-6 h-6" />}
-            label="Thêm khách sạn mới"
-            description="Tạo khách sạn và đăng tải"
+            label={t("hotel_dashboard_action_add_hotel")}
+            description={t("hotel_dashboard_action_add_hotel_desc")}
             onClick={() => navigate("/supplier/service/hotel/create")}
           />
           <QuickAction
             icon={<List className="w-6 h-6" />}
-            label="Quản lý đặt phòng"
-            description="Xem và xử lý đặt phòng"
+            label={t("hotel_dashboard_action_manage_bookings")}
+            description={t("hotel_dashboard_action_manage_bookings_desc")}
             onClick={() => console.log("Bookings")}
           />
           <QuickAction
             icon={<MessageSquare className="w-6 h-6" />}
-            label="Quản lý đánh giá"
-            description="Xem và phản hồi đánh giá"
+            label={t("hotel_dashboard_action_manage_reviews")}
+            description={t("hotel_dashboard_action_manage_reviews_desc")}
             onClick={() => console.log("Reviews")}
           />
           <QuickAction
             icon={<BarChart2 className="w-6 h-6" />}
-            label="Báo cáo doanh thu"
-            description="Xem báo cáo chi tiết"
+            label={t("hotel_dashboard_action_revenue_report")}
+            description={t("hotel_dashboard_action_revenue_report_desc")}
             onClick={() => console.log("Revenue")}
           />
           <QuickAction
             icon={<Settings className="w-6 h-6" />}
-            label="Cài đặt giá"
-            description="Quản lý giá phòng"
+            label={t("hotel_dashboard_action_price_settings")}
+            description={t("hotel_dashboard_action_price_settings_desc")}
             onClick={() => console.log("Prices")}
           />
           <QuickAction
             icon={<FileText className="w-6 h-6" />}
-            label="Quản lý hợp đồng"
-            description="Xem hợp đồng"
+            label={t("hotel_dashboard_action_contracts")}
+            description={t("hotel_dashboard_action_contracts_desc")}
             onClick={() => console.log("Contracts")}
           />
         </div>
@@ -273,7 +275,7 @@ const DashboardHotelPage: React.FC = () => {
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="w-5 h-5 icon-brand" />
           <h2 className="text-lg font-semibold theme-text-primary">
-            Biểu đồ doanh thu
+            {t("hotel_dashboard_revenue_chart")}
           </h2>
         </div>
         <div className="h-64">
@@ -293,13 +295,13 @@ const DashboardHotelPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Danh sách khách sạn
+            {t("hotel_dashboard_hotel_list")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
             onClick={() => navigate("/supplier/service/hotel/list")}
           >
-            Xem tất cả <ChevronRight className="w-4 h-4" />
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -321,7 +323,7 @@ const DashboardHotelPage: React.FC = () => {
         <div className="flex items-center gap-2 mb-4">
           <Calendar className="w-5 h-5 icon-brand" />
           <h2 className="text-lg font-semibold theme-text-primary">
-            Đặt phòng gần đây
+            {t("hotel_dashboard_recent_bookings")}
           </h2>
         </div>
         <div className="flex flex-col gap-3">
@@ -335,12 +337,12 @@ const DashboardHotelPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="rounded-xl border theme-border theme-bg-card p-6">
           <h2 className="text-lg font-semibold theme-text-primary mb-4">
-            Cảnh báo giá
+            {t("hotel_dashboard_price_alerts")}
           </h2>
           {activeAlert ? (
             <PriceAlertCard
               alert={activeAlert}
-              hotelName={firstHotel?.title || "Khách sạn"}
+              hotelName={firstHotel?.title || t("hotel")}
               currentPrice={
                 bookings.find((b) => b.hotelId === firstHotel?.hotelId)
                   ?.totalPrice
@@ -348,23 +350,23 @@ const DashboardHotelPage: React.FC = () => {
             />
           ) : (
             <div className="theme-text-secondary text-sm">
-              Chưa có cảnh báo giá
+              {t("hotel_dashboard_no_price_alerts")}
             </div>
           )}
         </div>
 
         <div className="rounded-xl border theme-border theme-bg-card p-6 lg:col-span-2">
           <h2 className="text-lg font-semibold theme-text-primary mb-4">
-            Tổng quan đánh giá
+            {t("hotel_dashboard_rating_overview")}
           </h2>
           {ratingSummary ? (
             <RatingSummaryCard
               summary={ratingSummary}
-              hotelName={firstHotel?.title || "Khách sạn"}
+              hotelName={firstHotel?.title || t("hotel")}
             />
           ) : (
             <div className="theme-text-secondary text-sm">
-              Chưa có dữ liệu đánh giá
+              {t("hotel_dashboard_no_rating_data")}
             </div>
           )}
         </div>
@@ -374,24 +376,26 @@ const DashboardHotelPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Nhận xét gần đây
+            {t("hotel_dashboard_recent_reviews")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
             onClick={() => console.log("View all reviews")}
           >
-            Xem tất cả <ChevronRight className="w-4 h-4" />
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recentReviews.length === 0 && (
-            <div className="theme-text-secondary text-sm">Chưa có nhận xét</div>
+            <div className="theme-text-secondary text-sm">
+              {t("hotel_dashboard_no_reviews")}
+            </div>
           )}
           {recentReviews.map((r) => (
             <ReviewCard
               key={r.reviewId}
               review={r}
-              hotelName={firstHotel?.title || "Khách sạn"}
+              hotelName={firstHotel?.title || t("hotel")}
             />
           ))}
         </div>
