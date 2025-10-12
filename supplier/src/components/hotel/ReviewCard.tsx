@@ -1,7 +1,6 @@
 import { Star } from "lucide-react";
 import type { HotelReviewDTO } from "../../types";
 import type React from "react";
-import { useTheme } from "../../hooks/useTheme";
 
 // ==================== SECTION 7: REVIEW CARD COMPONENT ====================
 interface ReviewCardProps {
@@ -10,8 +9,6 @@ interface ReviewCardProps {
 }
 
 const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
-  const { dark } = useTheme();
-
   const renderStars = (rating: number) => {
     return (
       <div className="flex gap-0.5">
@@ -19,11 +16,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
           <Star
             key={star}
             className={`w-4 h-4 ${
-              star <= rating
-                ? "text-yellow-500 fill-yellow-500"
-                : dark
-                ? "text-gray-600"
-                : "text-gray-300"
+              star <= rating ? "icon-primary" : "icon-disabled"
             }`}
           />
         ))}
@@ -44,49 +37,35 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
   };
 
   const getAspectColor = (score: number) => {
-    if (score >= 4) return "text-emerald-500";
-    if (score >= 3) return "text-yellow-500";
-    return "text-red-500";
+    if (score >= 4) return "theme-text-success";
+    if (score >= 3) return "theme-text-warning";
+    return "theme-text-error";
   };
 
   return (
-    <div
-      className={`rounded-xl border p-4 transition-all hover:shadow-md ${
-        dark
-          ? "bg-gray-800/50 border-gray-700 hover:border-purple-500/50"
-          : "bg-white border-gray-200 hover:border-purple-500/50"
-      }`}
-    >
+    <div className="rounded-xl border theme-border theme-bg-card p-4 transition-all hover:shadow-md">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             {renderStars(review.rating)}
             {review.title && (
-              <h4
-                className={`font-semibold text-sm ${
-                  dark ? "text-white" : "text-gray-900"
-                }`}
-              >
+              <h4 className="font-semibold text-sm theme-text-primary">
                 {review.title}
               </h4>
             )}
           </div>
-          <p className={`text-xs ${dark ? "text-gray-400" : "text-gray-600"}`}>
+          <p className="text-xs theme-text-secondary">
             {hotelName} • User ID: {review.userId}
           </p>
         </div>
-        <span className={`text-xs ${dark ? "text-gray-500" : "text-gray-500"}`}>
+        <span className="text-xs theme-text-secondary">
           {formatDate(review.createdAt)}
         </span>
       </div>
 
       {/* Content */}
-      <p
-        className={`text-sm mb-3 line-clamp-2 ${
-          dark ? "text-gray-300" : "text-gray-700"
-        }`}
-      >
+      <p className="text-sm mb-3 line-clamp-2 theme-text-primary">
         {review.content}
       </p>
 
@@ -101,11 +80,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
             { label: "Tiện nghi", value: review.aspects.facilities },
           ].map((aspect) => (
             <div key={aspect.label} className="text-center">
-              <p
-                className={`text-xs mb-0.5 ${
-                  dark ? "text-gray-500" : "text-gray-500"
-                }`}
-              >
+              <p className="text-xs mb-0.5 theme-text-secondary">
                 {aspect.label}
               </p>
               <p
@@ -121,21 +96,17 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between pt-3 border-t theme-divider">
         <div className="flex items-center gap-3 text-xs">
-          <span className={dark ? "text-gray-400" : "text-gray-600"}>
+          <span className="theme-text-secondary">
             👍 {review.likesCount || 0} lượt thích
           </span>
-          <span className={dark ? "text-gray-400" : "text-gray-600"}>
+          <span className="theme-text-secondary">
             💬 {review.replyCount || 0} phản hồi
           </span>
         </div>
         <button
-          className={`text-xs font-medium transition-colors ${
-            dark
-              ? "text-purple-400 hover:text-purple-300"
-              : "text-purple-600 hover:text-purple-700"
-          }`}
+          className="text-xs font-medium transition-colors link-brand"
           onClick={() => console.log("View review details:", review.reviewId)}
         >
           Xem chi tiết
