@@ -25,7 +25,12 @@ import {
 } from "recharts";
 import { useHotelDashboardStatistics } from "../../../hooks/useHotelDashboardStatistics";
 import { getProviderByUserId } from "../../../services/providerService";
-import { getHotelsByProvider } from "../../../services/hotelService";
+import {
+  getHotelsByProvider,
+  getActiveHotelPriceAlertsByProvider,
+  getHotelRatingSummariesByProvider,
+  getHotelReviewsByHotel,
+} from "../../../services/hotelService";
 import type {
   HotelDTO,
   HotelBookingDTO,
@@ -47,6 +52,7 @@ import {
 
 // Notification types for this page context
 import type { Notification } from "../../../components/hotel/NotificationItem";
+// merged into hotelService
 
 // Main Dashboard
 const DashboardHotelPage: React.FC = () => {
@@ -55,6 +61,11 @@ const DashboardHotelPage: React.FC = () => {
   const [providerId, setProviderId] = useState<number | undefined>();
   const [hotels, setHotels] = useState<HotelDTO[]>([]);
   const [bookings, setBookings] = useState<HotelBookingDTO[]>([]);
+  const [priceAlerts, setPriceAlerts] = useState<HotelPriceAlertDTO[]>([]);
+  const [ratingSummaries, setRatingSummaries] = useState<
+    HotelRatingSummaryDTO[]
+  >([]);
+  const [recentReviews, setRecentReviews] = useState<HotelReviewDTO[]>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -81,6 +92,23 @@ const DashboardHotelPage: React.FC = () => {
           `/hotel-bookings/provider/${providerId}`
         );
         setBookings(bRes.data);
+
+        // Fetch provider-level data
+        const [alerts, summaries] = await Promise.all([
+          getActiveHotelPriceAlertsByProvider(providerId),
+          getHotelRatingSummariesByProvider(providerId),
+        ]);
+        setPriceAlerts(alerts);
+        setRatingSummaries(summaries);
+
+        // Fetch reviews for the first hotel (if available)
+        const firstHotelId = hs[0]?.hotelId;
+        if (firstHotelId) {
+          const revs = await getHotelReviewsByHotel(firstHotelId);
+          setRecentReviews(revs.slice(0, 2));
+        } else {
+          setRecentReviews([]);
+        }
       } catch (e) {
         console.error(e);
       }
@@ -120,61 +148,14 @@ const DashboardHotelPage: React.FC = () => {
     },
   ];
 
-  // Demo data for new cards (can be wired to real APIs later)
-  const demoPriceAlert: HotelPriceAlertDTO = {
-    alertId: 1,
-    hotelId: hotels[0]?.hotelId || 0,
-    userId: 1001,
-    targetPrice: 800000,
-    currencyCode: "VND",
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    lastNotifiedAt: undefined,
-  };
-
-  const demoRatingSummary: HotelRatingSummaryDTO = {
-    hotelId: hotels[0]?.hotelId || 0,
-    avgRating: 4.3,
-    totalReviews: 128,
-    count5: 70,
-    count4: 35,
-    count3: 15,
-    count2: 5,
-    count1: 3,
-    avgCleanliness: 4.2,
-    avgService: 4.4,
-    avgValueForMoney: 4.0,
-    avgLocation: 4.1,
-    avgFacilities: 4.2,
-  };
-
-  const demoReview: HotelReviewDTO = {
-    reviewId: 1,
-    hotelId: hotels[0]?.hotelId || 0,
-    userId: 1001,
-    rating: 5,
-    title: "Tuyệt vời!",
-    content:
-      "Khách sạn sạch sẽ, nhân viên thân thiện và vị trí rất thuận tiện. Sẽ quay lại!",
-    createdAt: new Date().toISOString(),
-    likesCount: 12,
-    replyCount: 3,
-    aspects: {
-      cleanliness: 4.5,
-      service: 4.8,
-      valueForMoney: 4.2,
-      location: 4.6,
-      facilities: 4.4,
-    },
-  };
-
-  const demoReview2: HotelReviewDTO = {
-    ...demoReview,
-    reviewId: 2,
-    rating: 4,
-    title: "Hài lòng",
-    likesCount: 5,
-  };
+  // Derived selections
+  const firstHotel = hotels[0];
+  const activeAlert =
+    priceAlerts.find((a) => a.hotelId === firstHotel?.hotelId) ||
+    priceAlerts[0];
+  const ratingSummary =
+    ratingSummaries.find((s) => s.hotelId === firstHotel?.hotelId) ||
+    ratingSummaries[0];
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-6">
@@ -356,21 +337,36 @@ const DashboardHotelPage: React.FC = () => {
           <h2 className="text-lg font-semibold theme-text-primary mb-4">
             Cảnh báo giá
           </h2>
-          <PriceAlertCard
-            alert={demoPriceAlert}
-            hotelName={hotels[0]?.title || "Khách sạn"}
-            currentPrice={bookings[0]?.totalPrice || 950000}
-          />
+          {activeAlert ? (
+            <PriceAlertCard
+              alert={activeAlert}
+              hotelName={firstHotel?.title || "Khách sạn"}
+              currentPrice={
+                bookings.find((b) => b.hotelId === firstHotel?.hotelId)
+                  ?.totalPrice
+              }
+            />
+          ) : (
+            <div className="theme-text-secondary text-sm">
+              Chưa có cảnh báo giá
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl border theme-border theme-bg-card p-6 lg:col-span-2">
           <h2 className="text-lg font-semibold theme-text-primary mb-4">
             Tổng quan đánh giá
           </h2>
-          <RatingSummaryCard
-            summary={demoRatingSummary}
-            hotelName={hotels[0]?.title || "Khách sạn"}
-          />
+          {ratingSummary ? (
+            <RatingSummaryCard
+              summary={ratingSummary}
+              hotelName={firstHotel?.title || "Khách sạn"}
+            />
+          ) : (
+            <div className="theme-text-secondary text-sm">
+              Chưa có dữ liệu đánh giá
+            </div>
+          )}
         </div>
       </div>
 
@@ -388,14 +384,16 @@ const DashboardHotelPage: React.FC = () => {
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ReviewCard
-            review={demoReview}
-            hotelName={hotels[0]?.title || "Khách sạn"}
-          />
-          <ReviewCard
-            review={demoReview2}
-            hotelName={hotels[0]?.title || "Khách sạn"}
-          />
+          {recentReviews.length === 0 && (
+            <div className="theme-text-secondary text-sm">Chưa có nhận xét</div>
+          )}
+          {recentReviews.map((r) => (
+            <ReviewCard
+              key={r.reviewId}
+              review={r}
+              hotelName={firstHotel?.title || "Khách sạn"}
+            />
+          ))}
         </div>
       </div>
     </div>

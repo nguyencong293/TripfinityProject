@@ -3,6 +3,9 @@ import type {
   HotelDTO,
   HotelDashboardStatistics,
   HotelBookingDTO,
+  HotelPriceAlertDTO,
+  HotelRatingSummaryDTO,
+  HotelReviewDTO,
 } from "../types";
 
 /**
@@ -270,4 +273,43 @@ export const getHotelDashboardStatistics = async (
     console.error("Error fetching hotel dashboard statistics:", error);
     throw error;
   }
+};
+
+// ==================== MERGED: Price Alerts ====================
+export const getActiveHotelPriceAlertsByProvider = async (
+  providerId: number
+): Promise<HotelPriceAlertDTO[]> => {
+  const res = await api.get<HotelPriceAlertDTO[]>(
+    `/hotel-price-alerts/provider/${providerId}/active`
+  );
+  return res.data;
+};
+
+// ==================== MERGED: Rating Summaries ====================
+export const getHotelRatingSummariesByProvider = async (
+  providerId: number
+): Promise<HotelRatingSummaryDTO[]> => {
+  const res = await api.get<HotelRatingSummaryDTO[]>(
+    `/hotel-rating-summaries/provider/${providerId}`
+  );
+  return res.data;
+};
+
+export const getHotelRatingSummaryByHotel = async (
+  hotelId: number
+): Promise<HotelRatingSummaryDTO> => {
+  const res = await api.get<HotelRatingSummaryDTO>(
+    `/hotel-rating-summaries/hotel/${hotelId}`
+  );
+  return res.data;
+};
+
+// ==================== MERGED: Reviews ====================
+export const getHotelReviewsByHotel = async (
+  hotelId: number
+): Promise<HotelReviewDTO[]> => {
+  const res = await api.get<HotelReviewDTO[]>(
+    `/hotel-reviews/hotel/${hotelId}`
+  );
+  return res.data;
 };
