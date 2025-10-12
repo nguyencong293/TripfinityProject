@@ -9,6 +9,78 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/hotel_api_service.dart';
 
+// Canonical dictionaries: keep in sync with Supplier (HotelViewPage / Create/Edit)
+const Map<int, String> kHighlightsDict = {
+  1: "View biển",
+  2: "View núi",
+  3: "Trung tâm thành phố",
+  4: "Gần sân bay",
+  5: "Hồ bơi ngoài trời",
+  6: "Hồ bơi trong nhà",
+  7: "Spa & Massage",
+  8: "Phòng gym",
+  9: "Nhà hàng cao cấp",
+  10: "Bar & Lounge",
+  11: "Bãi biển riêng",
+  12: "Hồ bơi vô cực",
+  13: "Bar hồ bơi",
+  14: "Câu lạc bộ trẻ em (Kids Club)",
+  15: "Dịch vụ trông trẻ",
+  16: "Sân tennis",
+  17: "Sân golf gần kề",
+  18: "Thể thao dưới nước",
+  19: "Lặn biển / Snorkeling",
+  20: "Kayak / Chèo SUP",
+  21: "Công viên nước mini",
+  22: "Rooftop bar",
+  23: "Nhà hàng buffet",
+  24: "Trung tâm hội nghị / phòng họp",
+  25: "Dịch vụ đưa đón sân bay",
+  26: "Dịch vụ đưa đón trong khu",
+  27: "Bãi đỗ xe có nhân viên (valet)",
+  28: "Xông hơi / Sauna",
+  29: "Bể sục / Jacuzzi",
+  30: "Khu vui chơi trẻ em",
+};
+
+const Map<int, String> kAmenitiesDict = {
+  1: "WiFi miễn phí",
+  2: "Điều hòa",
+  3: "Tivi màn hình phẳng",
+  4: "Minibar",
+  5: "Két an toàn",
+  6: "Máy sấy tóc",
+  7: "Dịch vụ phòng 24/7",
+  8: "Bãi đậu xe miễn phí",
+  9: "Đưa đón sân bay",
+  10: "Cho phép thú cưng",
+  11: "Máy pha cà phê / Ấm đun",
+  12: "Áo choàng tắm & Dép đi trong phòng",
+  13: "Ban công / Sân hiên",
+  14: "Tầm nhìn ra biển / hồ / núi",
+  15: "Góc bếp (kitchenette)",
+  16: "Máy giặt",
+  17: "Bàn ủi / Bàn là",
+  18: "Lễ tân 24/7",
+  19: "Dịch vụ Concierge",
+  20: "Giữ hành lý",
+  21: "Thang máy",
+  22: "Phòng/tiện nghi cho người khuyết tật",
+  23: "Đổi tiền / ATM",
+  24: "Trạm sạc xe điện",
+  25: "Phòng xông hơi / Sauna",
+  26: "Phòng tắm hơi ướt / Steam",
+  27: "Bồn tắm nóng / Jacuzzi",
+  28: "Hồ bơi trẻ em",
+  29: "Sân chơi trẻ em",
+  30: "Sân tennis / Thuê vợt",
+  31: "Thuê xe đạp",
+  32: "Dịch vụ thuê xe / taxi",
+  33: "Bãi biển gần",
+  34: "Phòng họp / Tiệc",
+  35: "Ăn sáng miễn phí",
+};
+
 class HotelDetailOverviewScreen extends StatefulWidget {
   // Prefer id to fetch live detail
   final int? hotelId;
@@ -46,36 +118,16 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
 
   int? _resolvedId;
 
-  // Amenity catalogs for UI grouping (icons only)
-  late final List<_Amenity> _propertyAmenities = [
-    _Amenity('Wifi miễn phí', LucideIcons.wifi),
-    _Amenity('Bể bơi', LucideIcons.umbrella),
-    _Amenity('Spa', LucideIcons.leaf),
-    _Amenity('Gym', LucideIcons.dumbbell),
-    _Amenity('Nhà hàng', LucideIcons.chefHat),
-    _Amenity('Bar', LucideIcons.wine),
-    _Amenity('Đỗ xe miễn phí', LucideIcons.parkingCircle),
-    _Amenity('Room service', LucideIcons.conciergeBell),
-  ];
-  late final List<_Amenity> _serviceAmenities = [
-    _Amenity('Đưa đón sân bay', LucideIcons.plane),
-    _Amenity('Lễ tân 24/7', LucideIcons.clock),
-    _Amenity('Máy giặt/giặt ủi', LucideIcons.sparkles),
-    _Amenity('Phòng gia đình', LucideIcons.users),
-    _Amenity('Thân thiện thú cưng', LucideIcons.doorOpen),
-    _Amenity('Không hút thuốc', LucideIcons.ban),
-    _Amenity('Tiếp cận xe lăn', LucideIcons.accessibility),
-  ];
-  late final List<_Amenity> _roomAmenities = [
-    _Amenity('Điều hòa', LucideIcons.snowflake),
-    _Amenity('Ban công riêng', LucideIcons.doorOpen),
-    _Amenity('Tủ lạnh nhỏ', LucideIcons.doorOpen),
-    _Amenity('Két an toàn', LucideIcons.shield),
-    _Amenity('TV màn hình phẳng', LucideIcons.tv),
-    _Amenity('Ấm đun nước', LucideIcons.coffee),
-    _Amenity('Máy sấy tóc', LucideIcons.wind),
-    _Amenity('Bồn tắm', LucideIcons.bath),
-  ];
+  // Image slider state
+  final PageController _imageController = PageController();
+  int _imageIndex = 0;
+
+  // Date and guests/rooms selection
+  DateTimeRange? _dateRange;
+  int _rooms = 1;
+  int _peopleCount = 2;
+
+  // Note: amenity catalogs now driven entirely by backend IDs using kAmenitiesDict/kHighlightsDict
 
   final Map<String, bool> _expandedState = {};
 
@@ -84,6 +136,12 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     super.initState();
     _resolvedId = widget.hotelId ?? _tryParseInt(widget.hotel?['hotelId']);
     _fetchDetail();
+  }
+
+  @override
+  void dispose() {
+    _imageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -135,7 +193,7 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
           : ListView(
               padding: EdgeInsets.zero,
               children: [
-                _heroImage(_primaryImage(data)),
+                _imageGallery(_imageList(data)),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: _headerInfo(context, data),
@@ -164,43 +222,29 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
                   ),
                 ),
 
-                // Highlights (from highlightsJson)
-                if (_listOfString(data['highlightsJson']).isNotEmpty)
+                // Highlights mapped from backend IDs
+                if (_listOfInt(data['highlightsJson']).isNotEmpty)
                   _sectionWrapper(
                     context,
                     title: 'Điểm nổi bật',
                     child: _bulletList(
                       context,
-                      _listOfString(data['highlightsJson']),
+                      _mapIdsToLabels(
+                        _listOfInt(data['highlightsJson']),
+                        kHighlightsDict,
+                      ),
                     ),
                   ),
 
-                // Amenity blocks
-                _amenitiesBlock(
-                  context,
-                  title: 'Tiện nghi nổi bật',
-                  amenities: _propertyAmenities,
-                  initiallyVisible: 6,
-                ),
-                _amenitiesBlock(
-                  context,
-                  title: 'Dịch vụ & tiện ích bổ sung',
-                  amenities: _serviceAmenities,
-                  initiallyVisible: 5,
-                ),
-                _amenitiesBlock(
-                  context,
-                  title: 'Tiện nghi trong phòng',
-                  amenities: _roomAmenities,
-                  initiallyVisible: 6,
-                ),
-
-                // Amenities from backend (amenitiesJson)
-                if (_listOfString(data['amenitiesJson']).isNotEmpty)
+                // Amenities mapped from backend IDs
+                if (_listOfInt(data['amenitiesJson']).isNotEmpty)
                   _amenitiesBlock(
                     context,
-                    title: 'Tiện nghi theo khách sạn',
-                    amenities: _listOfString(data['amenitiesJson']),
+                    title: 'Tiện nghi',
+                    amenities: _mapIdsToLabels(
+                      _listOfInt(data['amenitiesJson']),
+                      kAmenitiesDict,
+                    ),
                     initiallyVisible: 8,
                   ),
 
@@ -292,70 +336,117 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
   }
 
   // ===== UI pieces =====
-  Widget _heroImage(String? urlOrAsset) {
-    final images = _imageList(_data);
-    final primary = (urlOrAsset ?? '').isNotEmpty
-        ? urlOrAsset!
-        : (images.isNotEmpty ? images.first : '');
-
-    final isNetwork = primary.startsWith('http');
-
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Use fallback if empty or any load error happens
-          if (primary.isEmpty)
-            _imageFallback(context)
-          else if (isNetwork)
-            Image.network(
-              primary,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _imageFallback(context),
-            )
-          else
-            Image.asset(
-              primary,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _imageFallback(context),
-            ),
-
-          if (images.length > 1)
-            Positioned(
-              bottom: 12,
-              left: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+  Widget _imageGallery(List<String> images) {
+    final hasImages = images.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (!hasImages)
+                _imageFallback(context)
+              else
+                PageView.builder(
+                  controller: _imageController,
+                  itemCount: images.length,
+                  onPageChanged: (i) => setState(() => _imageIndex = i),
+                  itemBuilder: (_, i) {
+                    final url = images[i];
+                    final isNetwork = url.startsWith('http');
+                    if (url.isEmpty) return _imageFallback(context);
+                    return isNetwork
+                        ? Image.network(
+                            url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _imageFallback(context),
+                          )
+                        : Image.asset(
+                            url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _imageFallback(context),
+                          );
+                  },
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      LucideIcons.image,
-                      size: 14,
-                      color: Colors.white,
+
+              if (hasImages && images.length > 1)
+                Positioned(
+                  bottom: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '1 / ${images.length}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          LucideIcons.image,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_imageIndex + 1} / ${images.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (hasImages && images.length > 1)
+          SizedBox(
+            height: 64,
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, i) {
+                final url = images[i];
+                final selected = i == _imageIndex;
+                return InkWell(
+                  onTap: () => _imageController.animateToPage(
+                    i,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                  ),
+                  child: Container(
+                    width: 86,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: selected
+                            ? context.primaryColor
+                            : context.dividerColor,
+                        width: selected ? 2 : 1,
                       ),
                     ),
-                  ],
-                ),
-              ),
+                    clipBehavior: Clip.antiAlias,
+                    child: url.startsWith('http')
+                        ? Image.network(url, fit: BoxFit.cover)
+                        : Image.asset(url, fit: BoxFit.cover),
+                  ),
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemCount: images.length,
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -436,8 +527,8 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
           child: _outlinedChip(
             context,
             icon: LucideIcons.calendar,
-            label: '11 thg 6 → 12',
-            onTap: () {},
+            label: _dateRangeLabel(),
+            onTap: _openDateRangePicker,
           ),
         ),
         const SizedBox(width: 12),
@@ -445,8 +536,8 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
           child: _outlinedChip(
             context,
             icon: LucideIcons.bedSingle,
-            label: '1  2',
-            onTap: () {},
+            label: _guestRoomLabel(),
+            onTap: _openGuestRoomSelector,
           ),
         ),
       ],
@@ -456,9 +547,16 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
   Widget _priceAndAction(BuildContext context, Map<String, dynamic> d) {
     final price = d['price'];
     final currency = d['currencyCode']?.toString();
-    final priceText = price == null
+    num? unit;
+    if (price is num) {
+      unit = price;
+    } else if (price != null) {
+      unit = num.tryParse(price.toString());
+    }
+    final total = unit == null ? null : unit * _rooms;
+    final priceText = total == null
         ? (d['price']?.toString() ?? '—')
-        : _formatPrice(price, currency);
+        : _formatPrice(total, currency);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -944,12 +1042,7 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     return int.tryParse(v.toString());
   }
 
-  String _primaryImage(Map<String, dynamic> d) {
-    final images = _imageList(d);
-    if (images.isNotEmpty) return images.first;
-    final th = d['thumbnailUrl']?.toString() ?? d['image']?.toString() ?? '';
-    return th;
-  }
+  // primary image helper removed; using PageView gallery instead
 
   List<String> _imageList(Map<String, dynamic> d) {
     final raw = d['imageUrls'];
@@ -959,9 +1052,30 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     return const [];
   }
 
-  List<String> _listOfString(dynamic v) {
-    if (v is List) return v.map((e) => e.toString()).toList();
+  List<int> _listOfInt(dynamic v) {
+    if (v is List) {
+      return v
+          .map((e) {
+            if (e is int) return e;
+            return int.tryParse(e.toString());
+          })
+          .where((e) => e != null)
+          .cast<int>()
+          .toList();
+    }
     return const [];
+  }
+
+  List<String> _mapIdsToLabels(List<int> ids, Map<int, String> dict) {
+    // Deduplicate while preserving order
+    final seen = <int>{};
+    final labels = <String>[];
+    for (final id in ids) {
+      if (seen.add(id)) {
+        labels.add(dict[id] ?? 'ID: $id');
+      }
+    }
+    return labels;
   }
 
   String _formatDate(String iso) {
@@ -972,6 +1086,208 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
       return '${parts[2]}/${parts[1]}/${parts[0]}';
     }
     return iso;
+  }
+
+  String _formatDateShort(DateTime d) {
+    // Example: 11 thg 6
+    return '${d.day} thg ${d.month}';
+  }
+
+  String _dateRangeLabel() {
+    if (_dateRange == null) {
+      final now = DateTime.now();
+      final tomorrow = now.add(const Duration(days: 1));
+      return '${_formatDateShort(now)} → ${_formatDateShort(tomorrow)}';
+    }
+    final s = _formatDateShort(_dateRange!.start);
+    final e = _formatDateShort(_dateRange!.end);
+    return '$s → $e';
+  }
+
+  String _guestRoomLabel() {
+    return '$_rooms phòng · $_peopleCount khách';
+  }
+
+  Future<void> _openDateRangePicker() async {
+    final now = DateTime.now();
+    final initial =
+        _dateRange ??
+        DateTimeRange(start: now, end: now.add(const Duration(days: 1)));
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: initial,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365 * 2)),
+      helpText: 'Chọn ngày',
+      saveText: 'Xong',
+    );
+    if (picked != null) {
+      setState(() => _dateRange = picked);
+    }
+  }
+
+  Future<void> _openGuestRoomSelector() async {
+    int rooms = _rooms;
+    int people = _peopleCount;
+
+    // Min/Max people from backend (supplier parity)
+    final d = _data;
+    final minPeople = _toInt(d['minParticipants']) ?? 1;
+    final maxPeople = _toInt(d['maxParticipants']) ?? (minPeople + 8);
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: context.cardBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            Widget row(
+              String label,
+              int value,
+              VoidCallback onMinus,
+              VoidCallback onPlus, {
+              String? hint,
+            }) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            label,
+                            style: context.bodyOneStyle.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (hint != null)
+                            Text(
+                              hint,
+                              style: context.captionStyle.copyWith(
+                                color: context.textSecondaryColor,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    _qtyBtn(icon: LucideIcons.minus, onTap: onMinus),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        '$value',
+                        style: context.bodyOneStyle.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    _qtyBtn(icon: LucideIcons.plus, onTap: onPlus),
+                  ],
+                ),
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: context.dividerColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Chọn phòng & số người',
+                    style: context.bodyOneStyle.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  row(
+                    'Phòng',
+                    rooms,
+                    () {
+                      if (rooms > 1) setLocal(() => rooms--);
+                    },
+                    () {
+                      setLocal(() => rooms++);
+                    },
+                  ),
+                  row(
+                    'Số người',
+                    people,
+                    () {
+                      if (people > minPeople) setLocal(() => people--);
+                    },
+                    () {
+                      if (people < maxPeople) setLocal(() => people++);
+                    },
+                    hint: 'Tối thiểu $minPeople · Tối đa $maxPeople',
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF23A455),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        setState(() {
+                          _rooms = rooms;
+                          _peopleCount = people.clamp(minPeople, maxPeople);
+                        });
+                      },
+                      child: const Text(
+                        'Xong',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _qtyBtn({required IconData icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          border: Border.all(color: context.dividerColor),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Icon(icon, size: 16),
+      ),
+    );
   }
 
   String _formatPrice(dynamic price, String? currency) {
@@ -985,7 +1301,16 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     if (n == null) return price.toString();
     final c = (currency ?? '').toUpperCase();
     if (c == 'VND' || c == 'VNĐ') {
-      return '${n.toStringAsFixed(0)} đ';
+      // Format with dot thousand separators for Vietnamese currency
+      final s = n.toStringAsFixed(0);
+      final rev = s.split('').reversed.toList();
+      final parts = <String>[];
+      for (int i = 0; i < rev.length; i++) {
+        if (i > 0 && i % 3 == 0) parts.add('.');
+        parts.add(rev[i]);
+      }
+      final grouped = parts.reversed.join();
+      return '$grouped đ';
     }
     if (c.isEmpty) return n.toString();
     return '$n $c';
