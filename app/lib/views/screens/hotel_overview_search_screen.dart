@@ -21,43 +21,102 @@ class HotelOverviewSearchScreen extends StatefulWidget {
 }
 
 class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
-  bool _hasDate = true;
-  bool _hasGuests = true;
+  bool _hasDate = false;
+  bool _hasGuests = false;
+
+  // Date & guest selection for search header chips
+  DateTimeRange? _searchDateRange;
+  int _searchRooms = 1;
+  int _searchPeople = 2;
 
   RangeValues _priceRange = const RangeValues(800000, 3500000);
   static const double _minPrice = 0;
   static const double _maxPrice = 10000000;
 
   final Set<int> _selectedStars = {}; // 1..5
-  final Set<String> _selectedAmenities = <String>{};
+  final Set<int> _selectedAmenityIds = <int>{};
+  final Set<int> _selectedHighlightIds = <int>{};
   bool _freeCancellation = false;
   bool _payAtHotel = false;
   bool _breakfastIncluded = false;
   bool _inStockOnly = false;
 
-  final List<_Amenity> _amenityCatalog = const [
-    _Amenity('amenity_wifi', LucideIcons.wifi),
-    _Amenity('amenity_pool', LucideIcons.wifi),
-    _Amenity('amenity_spa', LucideIcons.wifi),
-    _Amenity('amenity_gym', LucideIcons.dumbbell),
-    _Amenity('amenity_airport_transfer', LucideIcons.plane),
-    _Amenity('amenity_private_beach', LucideIcons.umbrella),
-    _Amenity('amenity_free_parking', LucideIcons.parkingCircle),
-    _Amenity('amenity_restaurant', LucideIcons.chefHat),
-    _Amenity('amenity_bar', LucideIcons.wine),
-    _Amenity('amenity_reception_24_7', LucideIcons.clock),
-    _Amenity('amenity_family_room', LucideIcons.users),
-    _Amenity('amenity_pet_friendly', LucideIcons.wifi),
-    _Amenity('amenity_wheelchair_access', LucideIcons.accessibility),
-    _Amenity('amenity_non_smoking', LucideIcons.wifi),
-    _Amenity('amenity_air_conditioning', LucideIcons.snowflake),
-    _Amenity('amenity_room_service', LucideIcons.conciergeBell),
-    _Amenity('amenity_laundry', LucideIcons.wifi),
-  ];
+  // Supplier-aligned dictionaries (IDs must match backend/supplier)
+  static const Map<int, String> _kHighlightsDict = {
+    1: "View biển",
+    2: "View núi",
+    3: "Trung tâm thành phố",
+    4: "Gần sân bay",
+    5: "Hồ bơi ngoài trời",
+    6: "Hồ bơi trong nhà",
+    7: "Spa & Massage",
+    8: "Phòng gym",
+    9: "Nhà hàng cao cấp",
+    10: "Bar & Lounge",
+    11: "Bãi biển riêng",
+    12: "Hồ bơi vô cực",
+    13: "Bar hồ bơi",
+    14: "Câu lạc bộ trẻ em (Kids Club)",
+    15: "Dịch vụ trông trẻ",
+    16: "Sân tennis",
+    17: "Sân golf gần kề",
+    18: "Thể thao dưới nước",
+    19: "Lặn biển / Snorkeling",
+    20: "Kayak / Chèo SUP",
+    21: "Công viên nước mini",
+    22: "Rooftop bar",
+    23: "Nhà hàng buffet",
+    24: "Trung tâm hội nghị / phòng họp",
+    25: "Dịch vụ đưa đón sân bay",
+    26: "Dịch vụ đưa đón trong khu",
+    27: "Bãi đỗ xe có nhân viên (valet)",
+    28: "Xông hơi / Sauna",
+    29: "Bể sục / Jacuzzi",
+    30: "Khu vui chơi trẻ em",
+  };
+
+  static const Map<int, String> _kAmenitiesDict = {
+    1: "WiFi miễn phí",
+    2: "Điều hòa",
+    3: "Tivi màn hình phẳng",
+    4: "Minibar",
+    5: "Két an toàn",
+    6: "Máy sấy tóc",
+    7: "Dịch vụ phòng 24/7",
+    8: "Bãi đậu xe miễn phí",
+    9: "Đưa đón sân bay",
+    10: "Cho phép thú cưng",
+    11: "Máy pha cà phê / Ấm đun",
+    12: "Áo choàng tắm & Dép đi trong phòng",
+    13: "Ban công / Sân hiên",
+    14: "Tầm nhìn ra biển / hồ / núi",
+    15: "Góc bếp (kitchenette)",
+    16: "Máy giặt",
+    17: "Bàn ủi / Bàn là",
+    18: "Lễ tân 24/7",
+    19: "Dịch vụ Concierge",
+    20: "Giữ hành lý",
+    21: "Thang máy",
+    22: "Phòng/tiện nghi cho người khuyết tật",
+    23: "Đổi tiền / ATM",
+    24: "Trạm sạc xe điện",
+    25: "Phòng xông hơi / Sauna",
+    26: "Phòng tắm hơi ướt / Steam",
+    27: "Bồn tắm nóng / Jacuzzi",
+    28: "Hồ bơi trẻ em",
+    29: "Sân chơi trẻ em",
+    30: "Sân tennis / Thuê vợt",
+    31: "Thuê xe đạp",
+    32: "Dịch vụ thuê xe / taxi",
+    33: "Bãi biển gần",
+    34: "Phòng họp / Tiệc",
+    35: "Ăn sáng miễn phí",
+  };
 
   // Dynamic data from API
   bool _loading = false;
   String? _error;
+  List<Map<String, dynamic>> _allHotels = [];
   List<Map<String, dynamic>> _hotels = [];
 
   @override
@@ -168,12 +227,18 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
       'image': (h['imageUrl'] ?? '').toString(),
     };
 
+    // Map selected amenity IDs to labels to highlight in detail view
+    final activeAmenityNames = _selectedAmenityIds
+        .map((id) => _kAmenitiesDict[id])
+        .whereType<String>()
+        .toSet();
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => HotelDetailOverviewScreen(
           hotelId: id,
           hotel: fallback,
-          activeAmenities: _selectedAmenities,
+          activeAmenities: activeAmenityNames,
         ),
       ),
     );
@@ -205,6 +270,14 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
           final price = m['price'];
           final currency = m['currencyCode']?.toString();
           final ratingAvg = m['ratingAverage'];
+          final starRating = m['starRating'];
+          final hotelStatus = m['hotelStatus'];
+          num? priceRaw;
+          if (price is num) {
+            priceRaw = price;
+          } else if (price != null) {
+            priceRaw = num.tryParse(price.toString());
+          }
 
           return {
             'hotelId': m['hotelId'],
@@ -212,13 +285,17 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
             'location': m['location']?.toString() ?? '',
             'rating': ratingAvg,
             'price': _formatPrice(price, currency),
+            'priceRaw': priceRaw,
+            'starRating': starRating,
+            'hotelStatus': hotelStatus,
             'imageUrl': m['thumbnailUrl'],
           };
         }).toList();
       }
 
       setState(() {
-        _hotels = hotels;
+        _allHotels = hotels;
+        _hotels = _applyFilters(_allHotels);
         _loading = false;
       });
     } catch (e) {
@@ -227,6 +304,32 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
         _error = 'error_load_hotels'.tr;
       });
     }
+  }
+
+  List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> input) {
+    return input.where((h) {
+      // Price filter
+      final price = h['priceRaw'];
+      if (price is num) {
+        if (price < _priceRange.start || price > _priceRange.end) return false;
+      }
+      // Star rating filter
+      if (_selectedStars.isNotEmpty) {
+        final sr = h['starRating'];
+        if (sr is int) {
+          if (!_selectedStars.contains(sr)) return false;
+        } else {
+          return false; // if user selected stars but item has no starRating
+        }
+      }
+      // In-stock filter -> published status
+      if (_inStockOnly) {
+        final st = (h['hotelStatus'] ?? '').toString();
+        if (st != 'published') return false;
+      }
+      // amenity-based filtering requires amenitiesJson in payload and mapping selected amenity IDs
+      return true;
+    }).toList();
   }
 
   Widget _buildFilterChips(BuildContext context) {
@@ -245,16 +348,18 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
           const SizedBox(width: 8),
           _pill(
             context,
-            icon: _hasDate ? LucideIcons.calendarDays : LucideIcons.calendar,
-            label: _hasDate ? '11 thg 6 → 12' : 'date'.tr,
-            onTap: () => setState(() => _hasDate = !_hasDate),
+            icon: LucideIcons.calendarDays,
+            label: _datePillLabel(),
+            selected: _hasDate,
+            onTap: _openSearchDatePicker,
           ),
           const SizedBox(width: 8),
           _pill(
             context,
             icon: LucideIcons.bedDouble,
-            label: _hasGuests ? '1  ·  2' : 'guests'.tr,
-            onTap: () => setState(() => _hasGuests = !_hasGuests),
+            label: _guestPillLabel(),
+            selected: _hasGuests,
+            onTap: _openSearchGuestSelector,
           ),
           const SizedBox(width: 8),
           _pill(
@@ -271,7 +376,8 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
 
   bool get _hasAnyFilterApplied {
     return _selectedStars.isNotEmpty ||
-        _selectedAmenities.isNotEmpty ||
+        _selectedAmenityIds.isNotEmpty ||
+        _selectedHighlightIds.isNotEmpty ||
         _freeCancellation ||
         _payAtHotel ||
         _breakfastIncluded ||
@@ -283,7 +389,8 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
   Future<void> _openFilterSheet(BuildContext context) async {
     RangeValues price = _priceRange;
     final selectedStars = Set<int>.from(_selectedStars);
-    final selectedAmenities = Set<String>.from(_selectedAmenities);
+    final selectedAmenityIds = Set<int>.from(_selectedAmenityIds);
+    final selectedHighlightIds = Set<int>.from(_selectedHighlightIds);
     bool freeCancel = _freeCancellation;
     bool payAtHotel = _payAtHotel;
     bool breakfast = _breakfastIncluded;
@@ -350,7 +457,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
                                         _maxPrice,
                                       );
                                       selectedStars.clear();
-                                      selectedAmenities.clear();
+                                      selectedAmenityIds.clear();
                                       freeCancel = false;
                                       payAtHotel = false;
                                       breakfast = false;
@@ -480,75 +587,100 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
 
                             const SizedBox(height: 12),
 
-                            // Amenities
+                            // Highlights (supplier-aligned)
+                            _sectionTitle(
+                              ctx,
+                              LucideIcons.sparkles,
+                              'highlights'.tr,
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _kHighlightsDict.entries.map((e) {
+                                final selected = selectedHighlightIds.contains(
+                                  e.key,
+                                );
+                                return FilterChip(
+                                  selected: selected,
+                                  showCheckmark: false,
+                                  label: Text(
+                                    e.value,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.bodyTwoStyle.copyWith(
+                                      color: selected
+                                          ? context.buttonTextColor
+                                          : context.textSecondaryColor,
+                                    ),
+                                  ),
+                                  backgroundColor: context.cardBackgroundColor,
+                                  selectedColor: context.primaryColor,
+                                  side: BorderSide(
+                                    color: selected
+                                        ? context.primaryColor
+                                        : context.dividerColor,
+                                  ),
+                                  onSelected: (_) {
+                                    setSheetState(() {
+                                      if (selected) {
+                                        selectedHighlightIds.remove(e.key);
+                                      } else {
+                                        selectedHighlightIds.add(e.key);
+                                      }
+                                    });
+                                  },
+                                );
+                              }).toList(),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // Amenities (supplier-aligned)
                             _sectionTitle(
                               ctx,
                               LucideIcons.sofa,
                               'amenities'.tr,
                             ),
                             const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _amenityCatalog.map((a) {
-                                  final selected = selectedAmenities.contains(
-                                    a.name,
-                                  );
-                                  return FilterChip(
-                                    selected: selected,
-                                    showCheckmark: false,
-                                    label: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          a.icon,
-                                          size: 16,
-                                          color: selected
-                                              ? context.buttonTextColor
-                                              : context.textSecondaryColor,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                            maxWidth: 160,
-                                          ),
-                                          child: Text(
-                                            a.name.tr,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: context.bodyTwoStyle
-                                                .copyWith(
-                                                  color: selected
-                                                      ? context.buttonTextColor
-                                                      : context
-                                                            .textSecondaryColor,
-                                                ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    backgroundColor:
-                                        context.cardBackgroundColor,
-                                    selectedColor: context.primaryColor,
-                                    side: BorderSide(
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _kAmenitiesDict.entries.map((e) {
+                                final selected = selectedAmenityIds.contains(
+                                  e.key,
+                                );
+                                return FilterChip(
+                                  selected: selected,
+                                  showCheckmark: false,
+                                  label: Text(
+                                    e.value,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.bodyTwoStyle.copyWith(
                                       color: selected
-                                          ? context.primaryColor
-                                          : context.dividerColor,
+                                          ? context.buttonTextColor
+                                          : context.textSecondaryColor,
                                     ),
-                                    onSelected: (_) {
-                                      setSheetState(() {
-                                        if (selected) {
-                                          selectedAmenities.remove(a.name);
-                                        } else {
-                                          selectedAmenities.add(a.name);
-                                        }
-                                      });
-                                    },
-                                  );
-                                }).toList(),
-                              ),
+                                  ),
+                                  backgroundColor: context.cardBackgroundColor,
+                                  selectedColor: context.primaryColor,
+                                  side: BorderSide(
+                                    color: selected
+                                        ? context.primaryColor
+                                        : context.dividerColor,
+                                  ),
+                                  onSelected: (_) {
+                                    setSheetState(() {
+                                      if (selected) {
+                                        selectedAmenityIds.remove(e.key);
+                                      } else {
+                                        selectedAmenityIds.add(e.key);
+                                      }
+                                    });
+                                  },
+                                );
+                              }).toList(),
                             ),
 
                             const SizedBox(height: 12),
@@ -638,13 +770,17 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
                                     _selectedStars
                                       ..clear()
                                       ..addAll(selectedStars);
-                                    _selectedAmenities
+                                    _selectedAmenityIds
                                       ..clear()
-                                      ..addAll(selectedAmenities);
+                                      ..addAll(selectedAmenityIds);
+                                    _selectedHighlightIds
+                                      ..clear()
+                                      ..addAll(selectedHighlightIds);
                                     _freeCancellation = freeCancel;
                                     _payAtHotel = payAtHotel;
                                     _breakfastIncluded = breakfast;
                                     _inStockOnly = inStock;
+                                    _hotels = _applyFilters(_allHotels);
                                   });
                                   Navigator.of(ctx).pop();
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -815,17 +951,196 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
     if (n == null) return price.toString();
     final c = (currency ?? '').toUpperCase();
     if (c == 'VND' || c == 'VNĐ') {
-      return '${n.toStringAsFixed(0)} đ';
+      final s = n.toStringAsFixed(0);
+      final buf = StringBuffer();
+      for (int i = 0; i < s.length; i++) {
+        final idx = s.length - i - 1;
+        buf.write(s[idx]);
+        if ((i + 1) % 3 == 0 && idx != 0) buf.write('.');
+      }
+      final rev = buf.toString().split('').reversed.join();
+      return '$rev đ';
     }
     if (c.isEmpty) return n.toString();
     return '$n $c';
   }
-}
 
-class _Amenity {
-  final String name; // lang key
-  final IconData icon;
-  const _Amenity(this.name, this.icon);
+  // ===== Date & guest helpers for header chips =====
+  String _formatDateShort(DateTime d) => '${d.day} thg ${d.month}';
+
+  String _datePillLabel() {
+    if (_searchDateRange == null) return 'date'.tr;
+    final s = _formatDateShort(_searchDateRange!.start);
+    final e = _formatDateShort(_searchDateRange!.end);
+    return '$s → $e';
+  }
+
+  String _guestPillLabel() {
+    if (!_hasGuests) return 'guests'.tr;
+    return '$_searchRooms phòng · $_searchPeople khách';
+  }
+
+  Future<void> _openSearchDatePicker() async {
+    final now = DateTime.now();
+    final initial =
+        _searchDateRange ??
+        DateTimeRange(start: now, end: now.add(const Duration(days: 1)));
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: initial,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365 * 2)),
+      helpText: 'Chọn ngày',
+      saveText: 'Xong',
+    );
+    if (picked != null) {
+      setState(() {
+        _searchDateRange = picked;
+        _hasDate = true;
+      });
+    }
+  }
+
+  Future<void> _openSearchGuestSelector() async {
+    int rooms = _searchRooms;
+    int people = _searchPeople;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: context.backgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            Widget row(
+              String label,
+              int value,
+              VoidCallback onMinus,
+              VoidCallback onPlus,
+            ) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: context.bodyOneStyle.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    _qtyBtn(icon: LucideIcons.minus, onTap: onMinus),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        '$value',
+                        style: context.bodyOneStyle.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    _qtyBtn(icon: LucideIcons.plus, onTap: onPlus),
+                  ],
+                ),
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: context.textDisabledColor.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Chọn phòng & số người',
+                    style: context.bodyOneStyle.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  row(
+                    'Phòng',
+                    rooms,
+                    () {
+                      if (rooms > 1) setLocal(() => rooms--);
+                    },
+                    () {
+                      setLocal(() => rooms++);
+                    },
+                  ),
+                  row(
+                    'Số người',
+                    people,
+                    () {
+                      if (people > 1) setLocal(() => people--);
+                    },
+                    () {
+                      if (people < 10) setLocal(() => people++);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: context.primaryColor,
+                        foregroundColor: context.buttonTextColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        setState(() {
+                          _searchRooms = rooms;
+                          _searchPeople = people;
+                          _hasGuests = true;
+                        });
+                      },
+                      child: const Text(
+                        'Xong',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _qtyBtn({required IconData icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          border: Border.all(color: context.dividerColor),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Icon(icon, size: 16),
+      ),
+    );
+  }
 }
 
 class _HotelCard extends StatelessWidget {
