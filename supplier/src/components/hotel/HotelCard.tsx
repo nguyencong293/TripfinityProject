@@ -97,7 +97,12 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel, onView, onEdit }) => {
           <div className="flex items-center gap-2 text-sm">
             <DollarSign className="w-4 h-4 icon-disabled" />
             <span className="font-semibold theme-text-brand">
-              {formatCurrency(hotel.price)} {hotel.currencyCode}
+              {`${formatCurrency(hotel.price)} ${hotel.currencyCode}`}
+              {hotel.pricePerNight !== undefined && hotel.pricePerNight !== null
+                ? ` + ${formatCurrency(hotel.pricePerNight)} ${
+                    hotel.currencyCode
+                  } / đêm`
+                : ""}
             </span>
           </div>
         </div>

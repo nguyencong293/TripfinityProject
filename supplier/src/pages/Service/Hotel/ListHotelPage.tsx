@@ -106,7 +106,12 @@ const ListHotelPage: React.FC = () => {
       case "price":
         return (
           <span className={dark ? "text-emerald-400" : "text-emerald-700"}>
-            {h.price?.toLocaleString("vi-VN")} {h.currencyCode}
+            {`${h.price?.toLocaleString("vi-VN")} ${h.currencyCode}`}
+            {h.pricePerNight !== undefined && h.pricePerNight !== null
+              ? ` + ${(h.pricePerNight as number).toLocaleString("vi-VN")} ${
+                  h.currencyCode
+                } / đêm`
+              : ""}
           </span>
         );
       case "currencyCode":

@@ -298,9 +298,19 @@ const HotelViewPage: React.FC = () => {
 
             <div>
               <div className={labelCls}>{t("hotel_view_price")}</div>
-              <div className={valueCls + " flex items-center gap-2 mt-1"}>
-                <DollarSign className="w-4 h-4" />
-                {formatCurrency(hotel.price)}
+              <div
+                className={valueCls + " flex items-center gap-2 mt-1 flex-wrap"}
+              >
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" />
+                  <span>{formatCurrency(hotel.price)}</span>
+                </div>
+                {hotel.pricePerNight !== undefined &&
+                  hotel.pricePerNight !== null && (
+                    <span className="theme-text-secondary text-sm">{`+ ${formatCurrency(
+                      hotel.pricePerNight
+                    )} / đêm`}</span>
+                  )}
               </div>
             </div>
 
