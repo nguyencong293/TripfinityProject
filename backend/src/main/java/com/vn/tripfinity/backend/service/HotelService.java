@@ -129,6 +129,7 @@ public class HotelService {
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
                 .price(dto.getPrice())
+                .pricePerNight(dto.getPricePerNight())
                 .currencyCode(dto.getCurrencyCode())
                 .capacity(dto.getCapacity())
                 .minParticipants(dto.getMinParticipants())
@@ -201,6 +202,8 @@ public class HotelService {
             hotel.setEndDate(dto.getEndDate());
         if (dto.getPrice() != null)
             hotel.setPrice(dto.getPrice());
+        if (dto.getPricePerNight() != null)
+            hotel.setPricePerNight(dto.getPricePerNight());
         if (dto.getCurrencyCode() != null)
             hotel.setCurrencyCode(dto.getCurrencyCode());
         if (dto.getCapacity() != null)
@@ -462,6 +465,7 @@ public class HotelService {
                 .startDate(hotel.getStartDate())
                 .endDate(hotel.getEndDate())
                 .price(hotel.getPrice())
+                .pricePerNight(hotel.getPricePerNight())
                 .currencyCode(hotel.getCurrencyCode())
                 .capacity(hotel.getCapacity())
                 .minParticipants(hotel.getMinParticipants())

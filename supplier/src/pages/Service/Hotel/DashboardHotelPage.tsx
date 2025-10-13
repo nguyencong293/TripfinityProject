@@ -309,7 +309,9 @@ const DashboardHotelPage: React.FC = () => {
             <HotelCard
               key={h.hotelId}
               hotel={h}
-              onView={() => navigate(`/supplier/service/hotel/${h.hotelId}`)}
+              onView={() =>
+                navigate(`/supplier/service/hotel/${h.hotelId}/view`)
+              }
               onEdit={() =>
                 navigate(`/supplier/service/hotel/${h.hotelId}/edit`)
               }

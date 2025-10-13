@@ -433,6 +433,34 @@ const HotelEditPage: React.FC = () => {
             {errors.price && <span className={errorText}>{errors.price}</span>}
           </div>
 
+          {/* Price Per Night - OPTIONAL */}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Giá mỗi đêm (VND)</label>
+            <input
+              type="number"
+              value={formData.pricePerNight ?? ""}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === "") {
+                  updateField("pricePerNight", null);
+                  return;
+                }
+                const parsed = Math.floor(Number(raw));
+                const clamped = Math.min(Math.max(parsed || 0, 0), MAX_PRICE);
+                updateField("pricePerNight", clamped);
+              }}
+              className={baseInput}
+              placeholder="0"
+              min={0}
+              max={MAX_PRICE}
+              step={1}
+              inputMode="numeric"
+            />
+            {errors.pricePerNight && (
+              <span className={errorText}>{errors.pricePerNight}</span>
+            )}
+          </div>
+
           {/* Property Type */}
           <div className="flex flex-col gap-2">
             <label className={labelCls}>Loại hình</label>

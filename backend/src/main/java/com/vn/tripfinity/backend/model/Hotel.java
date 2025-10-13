@@ -65,6 +65,9 @@ public class Hotel {
     @Column(name = "price", nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "price_per_night", precision = 12, scale = 2)
+    private BigDecimal pricePerNight;
+
     @Column(name = "currency_code", nullable = false, length = 3)
     private String currencyCode;
 

@@ -98,6 +98,7 @@ export interface HotelDTO {
   areaId: number;
   title: string;
   price: number;
+  pricePerNight?: number;
   currencyCode: string;
   hotelStatus: "published" | "archived" | "disabled";
   visibility: "public_" | "private_";

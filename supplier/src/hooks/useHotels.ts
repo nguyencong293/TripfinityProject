@@ -171,6 +171,7 @@ interface HotelFormData {
   title: string;
   areaId: number | null;
   price: number;
+  pricePerNight?: number | null;
   currencyCode: string;
   propertyType: PropertyType; // type-safe union
   visibility: Visibility;
@@ -229,6 +230,7 @@ const initialFormData: HotelFormData = {
   title: "",
   areaId: null,
   price: 1,
+  pricePerNight: null,
   currencyCode: "VND",
   propertyType: "hotel",
   visibility: "public_",
@@ -367,6 +369,8 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
     if (!formData.areaId) newErrors.areaId = "Khu vực là bắt buộc";
     if (!formData.price || formData.price <= 0)
       newErrors.price = "Giá phải lớn hơn 0";
+    if (formData.pricePerNight != null && formData.pricePerNight < 0)
+      newErrors.pricePerNight = "Giá mỗi đêm không hợp lệ";
 
     if (
       formData.starRating &&
@@ -422,6 +426,7 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
           areaId: formData.areaId!,
           title: formData.title,
           price: formData.price,
+          pricePerNight: formData.pricePerNight ?? undefined,
           currencyCode: formData.currencyCode,
           propertyType: formData.propertyType,
           visibility: formData.visibility,

@@ -251,6 +251,7 @@ public class SearchService {
                 .startDate(h.getStartDate())
                 .endDate(h.getEndDate())
                 .price(h.getPrice())
+                .pricePerNight(h.getPricePerNight())
                 .currencyCode(h.getCurrencyCode())
                 .capacity(h.getCapacity())
                 .minParticipants(h.getMinParticipants())

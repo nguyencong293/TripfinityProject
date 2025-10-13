@@ -50,6 +50,10 @@ public class HotelDTO {
     @DecimalMin(value = "0.00", message = "price phải >= 0")
     private BigDecimal price;
 
+    @DecimalMin(value = "0.00", message = "pricePerNight phải >= 0")
+    @JsonAlias("price_per_night")
+    private BigDecimal pricePerNight;
+
     @NotBlank(message = "currencyCode không được để trống")
     @Size(max = 3)
     @JsonAlias("currency_code")
