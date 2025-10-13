@@ -465,6 +465,33 @@ const HotelCreatePage: React.FC = () => {
             {errors.areaId && (
               <span className={errorText}>{errors.areaId}</span>
             )}
+
+            {/* Max beds per room */}
+            <div className="flex flex-col gap-2">
+              <label className={labelCls}>
+                Số giường tối đa / phòng{" "}
+                <span className="theme-text-error">*</span>
+              </label>
+              <input
+                type="number"
+                value={formData.maxBedsPerRoom ?? 1}
+                onChange={(e) => {
+                  const val = Math.max(
+                    1,
+                    Math.floor(Number(e.target.value) || 1)
+                  );
+                  updateField("maxBedsPerRoom", val);
+                }}
+                className={baseInput}
+                placeholder="1"
+                min={1}
+                step={1}
+                inputMode="numeric"
+              />
+              {errors.maxBedsPerRoom && (
+                <span className={errorText}>{errors.maxBedsPerRoom}</span>
+              )}
+            </div>
           </div>
 
           {/* Price - REQUIRED */}

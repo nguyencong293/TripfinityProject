@@ -254,6 +254,7 @@ public class SearchService {
                 .pricePerNight(h.getPricePerNight())
                 .currencyCode(h.getCurrencyCode())
                 .capacity(h.getCapacity())
+                .maxBedsPerRoom(h.getMaxBedsPerRoom())
                 .minParticipants(h.getMinParticipants())
                 .maxParticipants(h.getMaxParticipants())
                 .thumbnailUrl(h.getThumbnailUrl())

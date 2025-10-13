@@ -29,6 +29,7 @@ interface HotelFormData {
   startDate: string;
   endDate: string;
   capacity: number | null;
+  maxBedsPerRoom: number | null;
   minParticipants: number | null;
   maxParticipants: number | null;
   starRating: number | null;
@@ -100,6 +101,7 @@ export const useHotelEdit = (
     startDate: "",
     endDate: "",
     capacity: null,
+    maxBedsPerRoom: 1,
     minParticipants: null,
     maxParticipants: null,
     starRating: null,
@@ -177,6 +179,7 @@ export const useHotelEdit = (
           startDate: hotelData.startDate || "",
           endDate: hotelData.endDate || "",
           capacity: hotelData.capacity || null,
+          maxBedsPerRoom: hotelData.maxBedsPerRoom ?? 1,
           minParticipants: hotelData.minParticipants || null,
           maxParticipants: hotelData.maxParticipants || null,
           starRating: hotelData.starRating || null,
@@ -285,6 +288,8 @@ export const useHotelEdit = (
       newErrors.price = "Giá phải lớn hơn 0";
     if (formData.pricePerNight != null && formData.pricePerNight < 0)
       newErrors.pricePerNight = "Giá mỗi đêm không hợp lệ";
+    if (formData.maxBedsPerRoom == null || formData.maxBedsPerRoom < 1)
+      newErrors.maxBedsPerRoom = "Số giường/ phòng phải >= 1";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -354,6 +359,8 @@ export const useHotelEdit = (
         if (formData.endDate) hotelData.endDate = formData.endDate;
 
         if (formData.capacity) hotelData.capacity = formData.capacity;
+        if (formData.maxBedsPerRoom)
+          hotelData.maxBedsPerRoom = formData.maxBedsPerRoom;
         if (formData.minParticipants)
           hotelData.minParticipants = formData.minParticipants;
         if (formData.maxParticipants)

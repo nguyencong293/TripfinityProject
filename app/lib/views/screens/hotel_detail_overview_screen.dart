@@ -601,12 +601,19 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
                   d['name']?.toString() ??
                   'Khách sạn';
               final currency = d['currencyCode']?.toString();
-              num unit = 0;
+              num basePrice = 0;
               final price = d['price'];
               if (price is num) {
-                unit = price;
+                basePrice = price;
               } else if (price != null) {
-                unit = num.tryParse(price.toString()) ?? 0;
+                basePrice = num.tryParse(price.toString()) ?? 0;
+              }
+              num? extraPerNight;
+              final extraRaw = d['pricePerNight'];
+              if (extraRaw is num) {
+                extraPerNight = extraRaw;
+              } else if (extraRaw != null) {
+                extraPerNight = num.tryParse(extraRaw.toString());
               }
 
               if (hotelId == null) {
@@ -627,7 +634,8 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
                     imageUrl: _imageList(d).isNotEmpty
                         ? _imageList(d).first
                         : null,
-                    unitPrice: unit,
+                    basePrice: basePrice,
+                    extraPricePerNight: extraPerNight,
                     currencyCode: currency,
                     dateRange: range,
                     rooms: _rooms,

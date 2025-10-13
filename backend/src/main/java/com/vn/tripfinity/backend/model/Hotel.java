@@ -74,6 +74,10 @@ public class Hotel {
     @Column(name = "capacity")
     private Integer capacity;
 
+    // Số giường tối đa trên mỗi phòng
+    @Column(name = "max_beds_per_room")
+    private Integer maxBedsPerRoom;
+
     @Column(name = "min_participants")
     private Integer minParticipants;
 

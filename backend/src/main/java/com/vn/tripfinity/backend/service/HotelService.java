@@ -132,6 +132,7 @@ public class HotelService {
                 .pricePerNight(dto.getPricePerNight())
                 .currencyCode(dto.getCurrencyCode())
                 .capacity(dto.getCapacity())
+                .maxBedsPerRoom(dto.getMaxBedsPerRoom())
                 .minParticipants(dto.getMinParticipants())
                 .maxParticipants(dto.getMaxParticipants())
                 .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
@@ -208,6 +209,8 @@ public class HotelService {
             hotel.setCurrencyCode(dto.getCurrencyCode());
         if (dto.getCapacity() != null)
             hotel.setCapacity(dto.getCapacity());
+        if (dto.getMaxBedsPerRoom() != null)
+            hotel.setMaxBedsPerRoom(dto.getMaxBedsPerRoom());
         if (dto.getMinParticipants() != null)
             hotel.setMinParticipants(dto.getMinParticipants());
         if (dto.getMaxParticipants() != null)
@@ -468,6 +471,7 @@ public class HotelService {
                 .pricePerNight(hotel.getPricePerNight())
                 .currencyCode(hotel.getCurrencyCode())
                 .capacity(hotel.getCapacity())
+                .maxBedsPerRoom(hotel.getMaxBedsPerRoom())
                 .minParticipants(hotel.getMinParticipants())
                 .maxParticipants(hotel.getMaxParticipants())
                 .thumbnailUrl(hotel.getThumbnailUrl())

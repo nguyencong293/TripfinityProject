@@ -61,6 +61,11 @@ public class HotelDTO {
 
     private Integer capacity;
 
+    // Số giường tối đa trên 1 phòng (>=1)
+    @Min(value = 1, message = "maxBedsPerRoom phải >= 1")
+    @JsonAlias("max_beds_per_room")
+    private Integer maxBedsPerRoom;
+
     @JsonAlias("min_participants")
     private Integer minParticipants;
 

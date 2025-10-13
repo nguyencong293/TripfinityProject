@@ -109,6 +109,8 @@ export interface HotelDTO {
   startDate?: string; // ISO date (yyyy-MM-dd)
   endDate?: string; // ISO date
   capacity?: number;
+  // Max beds per room (>=1)
+  maxBedsPerRoom?: number;
   minParticipants?: number;
   maxParticipants?: number;
   thumbnailUrl?: string;

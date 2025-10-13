@@ -11,7 +11,8 @@ class HotelBookingCheckoutScreen extends StatefulWidget {
   final int hotelId;
   final String hotelTitle;
   final String? imageUrl;
-  final num unitPrice;
+  final num basePrice;
+  final num? extraPricePerNight;
   final String? currencyCode;
   final DateTimeRange dateRange;
   final int rooms;
@@ -22,7 +23,8 @@ class HotelBookingCheckoutScreen extends StatefulWidget {
     required this.hotelId,
     required this.hotelTitle,
     this.imageUrl,
-    required this.unitPrice,
+    required this.basePrice,
+    this.extraPricePerNight,
     required this.currencyCode,
     required this.dateRange,
     required this.rooms,
@@ -96,7 +98,12 @@ class _HotelBookingCheckoutScreenState
         .difference(_dateRange.start)
         .inDays
         .clamp(1, 365);
-    final total = widget.unitPrice * _rooms * nights;
+    num total = widget.basePrice * _rooms;
+    if (widget.extraPricePerNight != null && nights > 1) {
+      total += widget.extraPricePerNight! * _rooms * (nights - 1);
+    } else {
+      total *= nights;
+    }
 
     return Scaffold(
       backgroundColor: context.backgroundColor,
@@ -204,8 +211,27 @@ class _HotelBookingCheckoutScreenState
                   ),
                 ),
                 const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Text(
+                      _formatPrice(widget.basePrice, widget.currencyCode),
+                      style: context.bodyOneStyle.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (widget.extraPricePerNight != null)
+                      Text(
+                        ' + ${_formatPrice(widget.extraPricePerNight!, widget.currencyCode)} / đêm',
+                        style: context.bodyOneStyle.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.orange,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
                 Text(
-                  _formatPrice(total, widget.currencyCode),
+                  'Tổng: ${_formatPrice(total, widget.currencyCode)}',
                   style: context.bodyOneStyle.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
