@@ -8,6 +8,7 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/hotel_api_service.dart';
+import 'package:app/views/screens/hotel_booking_checkout_screen.dart';
 
 // Canonical dictionaries: keep in sync with Supplier (HotelViewPage / Create/Edit)
 const Map<int, String> kHighlightsDict = {
@@ -581,7 +582,60 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
               ),
               elevation: 0,
             ),
-            onPressed: () {},
+            onPressed: () {
+              // Prepare date range
+              final now = DateTime.now();
+              final range =
+                  _dateRange ??
+                  DateTimeRange(
+                    start: now,
+                    end: now.add(const Duration(days: 1)),
+                  );
+
+              // Resolve fields
+              final hotelId =
+                  _resolvedId ??
+                  (_tryParseInt(d['hotelId']) ?? _tryParseInt(d['id']));
+              final title =
+                  d['title']?.toString() ??
+                  d['name']?.toString() ??
+                  'Khách sạn';
+              final currency = d['currencyCode']?.toString();
+              num unit = 0;
+              final price = d['price'];
+              if (price is num) {
+                unit = price;
+              } else if (price != null) {
+                unit = num.tryParse(price.toString()) ?? 0;
+              }
+
+              if (hotelId == null) {
+                final messenger = ScaffoldMessenger.maybeOf(context);
+                messenger?.showSnackBar(
+                  const SnackBar(
+                    content: Text('Không xác định được khách sạn để đặt.'),
+                  ),
+                );
+                return;
+              }
+
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => HotelBookingCheckoutScreen(
+                    hotelId: hotelId,
+                    hotelTitle: title,
+                    imageUrl: _imageList(d).isNotEmpty
+                        ? _imageList(d).first
+                        : null,
+                    unitPrice: unit,
+                    currencyCode: currency,
+                    dateRange: range,
+                    rooms: _rooms,
+                    people: _peopleCount,
+                  ),
+                ),
+              );
+            },
             child: const Text(
               'Đặt khách sạn',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
