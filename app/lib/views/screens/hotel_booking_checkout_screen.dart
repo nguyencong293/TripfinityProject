@@ -17,6 +17,10 @@ class HotelBookingCheckoutScreen extends StatefulWidget {
   final DateTimeRange dateRange;
   final int rooms;
   final int people;
+  final int? minParticipants;
+  final int? maxParticipants;
+  final int? maxBedsPerRoom; // from backend: max beds per room
+  final int? maxRooms; // capacity (rooms)
 
   const HotelBookingCheckoutScreen({
     super.key,
@@ -29,6 +33,10 @@ class HotelBookingCheckoutScreen extends StatefulWidget {
     required this.dateRange,
     required this.rooms,
     required this.people,
+    this.minParticipants,
+    this.maxParticipants,
+    this.maxBedsPerRoom,
+    this.maxRooms,
   });
 
   @override
@@ -47,6 +55,7 @@ class _HotelBookingCheckoutScreenState
   bool _submitting = false;
   int _rooms = 1;
   int _beds = 1;
+  int _people = 1;
   late DateTimeRange _dateRange;
 
   @override
@@ -54,6 +63,7 @@ class _HotelBookingCheckoutScreenState
     super.initState();
     _rooms = widget.rooms;
     _beds = 1;
+    _people = widget.people;
     _dateRange = widget.dateRange;
   }
 
@@ -94,16 +104,12 @@ class _HotelBookingCheckoutScreenState
   Widget build(BuildContext context) {
     _rooms = _rooms.clamp(1, 99);
     _beds = _beds.clamp(1, 99);
-    final nights = _dateRange.end
-        .difference(_dateRange.start)
-        .inDays
-        .clamp(1, 365);
-    num total = widget.basePrice * _rooms;
-    if (widget.extraPricePerNight != null && nights > 1) {
-      total += widget.extraPricePerNight! * _rooms * (nights - 1);
-    } else {
-      total *= nights;
-    }
+    final nights = _calcNights(_dateRange);
+    // Công thức người dùng yêu cầu:
+    // Tổng = số phòng × (giá gốc + số đêm × giá mỗi đêm)
+    final extra = (widget.extraPricePerNight ?? 0);
+    final perRoomTotal = widget.basePrice + nights * extra;
+    final total = _rooms * perRoomTotal;
 
     return Scaffold(
       backgroundColor: context.backgroundColor,
@@ -127,6 +133,8 @@ class _HotelBookingCheckoutScreenState
           _dateSelector(),
           const SizedBox(height: 12),
           _roomBedSelector(),
+          const SizedBox(height: 12),
+          _peopleSelector(),
           const SizedBox(height: 12),
           _contactForm(),
           const SizedBox(height: 12),
@@ -205,7 +213,7 @@ class _HotelBookingCheckoutScreenState
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${_formatDate(_dateRange.start)} → ${_formatDate(_dateRange.end)} · $_rooms phòng · ${widget.people} khách · $nights đêm',
+                  '${_formatDate(_dateRange.start)} → ${_formatDate(_dateRange.end)} · $_rooms phòng · $_people khách · $nights đêm',
                   style: context.captionStyle.copyWith(
                     color: context.textSecondaryColor,
                   ),
@@ -296,15 +304,74 @@ class _HotelBookingCheckoutScreenState
           _qtyRow(
             label: 'Phòng',
             value: _rooms,
-            onMinus: () => setState(() => _rooms = (_rooms - 1).clamp(1, 99)),
-            onPlus: () => setState(() => _rooms = (_rooms + 1).clamp(1, 99)),
+            onMinus: () => setState(() {
+              final minR = 1;
+              final maxR = (widget.maxRooms ?? 99).clamp(1, 999);
+              _rooms = (_rooms - 1).clamp(minR, maxR);
+              // Clamp beds when rooms changes
+              final maxBeds = (widget.maxBedsPerRoom ?? 99) * _rooms;
+              _beds = _beds.clamp(1, maxBeds.clamp(1, 999));
+            }),
+            onPlus: () => setState(() {
+              final minR = 1;
+              final maxR = (widget.maxRooms ?? 99).clamp(1, 999);
+              _rooms = (_rooms + 1).clamp(minR, maxR);
+              final maxBeds = (widget.maxBedsPerRoom ?? 99) * _rooms;
+              _beds = _beds.clamp(1, maxBeds.clamp(1, 999));
+            }),
           ),
           const SizedBox(height: 8),
           _qtyRow(
             label: 'Giường',
             value: _beds,
-            onMinus: () => setState(() => _beds = (_beds - 1).clamp(1, 99)),
-            onPlus: () => setState(() => _beds = (_beds + 1).clamp(1, 99)),
+            onMinus: () => setState(() {
+              final maxBeds = (widget.maxBedsPerRoom ?? 99) * _rooms;
+              _beds = (_beds - 1).clamp(1, maxBeds.clamp(1, 999));
+            }),
+            onPlus: () => setState(() {
+              final maxBeds = (widget.maxBedsPerRoom ?? 99) * _rooms;
+              _beds = (_beds + 1).clamp(1, maxBeds.clamp(1, 999));
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _peopleSelector() {
+    final minP = (widget.minParticipants ?? 1).clamp(1, 9999);
+    final maxP = (widget.maxParticipants ?? 9999).clamp(minP, 9999);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.cardBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Số khách',
+            style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          _qtyRow(
+            label: 'Khách',
+            value: _people,
+            onMinus: () => setState(() {
+              _people = (_people - 1).clamp(minP, maxP);
+            }),
+            onPlus: () => setState(() {
+              _people = (_people + 1).clamp(minP, maxP);
+            }),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Tối thiểu $minP · Tối đa $maxP',
+            style: context.captionStyle.copyWith(
+              color: context.textSecondaryColor,
+            ),
           ),
         ],
       ),
@@ -519,7 +586,7 @@ class _HotelBookingCheckoutScreenState
           _dateRange.end.month,
           _dateRange.end.day,
         ),
-        numAdults: widget.people,
+        numAdults: _people,
         totalPrice: total,
         currencyCode: (widget.currencyCode ?? 'VND').toUpperCase(),
         providerNotes: _buildProviderNotes(),
@@ -552,6 +619,14 @@ class _HotelBookingCheckoutScreenState
   }
 
   String _formatDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
+  int _calcNights(DateTimeRange range) {
+    // Normalize to midnight to avoid any time component affecting inDays
+    final s = DateTime(range.start.year, range.start.month, range.start.day);
+    final e = DateTime(range.end.year, range.end.month, range.end.day);
+    final diff = e.difference(s).inDays;
+    return diff <= 0 ? 1 : diff; // at least 1 night
+  }
+
   String _formatPrice(num price, String? currency) {
     final c = (currency ?? 'VND').toUpperCase();
     if (c == 'VND' || c == 'VNĐ') {

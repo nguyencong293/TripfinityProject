@@ -583,13 +583,18 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
               elevation: 0,
             ),
             onPressed: () {
-              // Prepare date range
+              // Prepare date range: use user's selection if any.
+              // Otherwise, default to tonight→tomorrow to ensure at least 1 night.
               final now = DateTime.now();
               final range =
                   _dateRange ??
                   DateTimeRange(
-                    start: now,
-                    end: now.add(const Duration(days: 1)),
+                    start: DateTime(now.year, now.month, now.day),
+                    end: DateTime(
+                      now.year,
+                      now.month,
+                      now.day,
+                    ).add(const Duration(days: 1)),
                   );
 
               // Resolve fields
@@ -616,6 +621,39 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
                 extraPerNight = num.tryParse(extraRaw.toString());
               }
 
+              // Constraints
+              int? minParticipants;
+              final minRaw = d['minParticipants'] ?? d['min_participants'];
+              if (minRaw is num) {
+                minParticipants = minRaw.toInt();
+              } else if (minRaw != null) {
+                minParticipants = int.tryParse(minRaw.toString());
+              }
+
+              int? maxParticipants;
+              final maxRaw = d['maxParticipants'] ?? d['max_participants'];
+              if (maxRaw is num) {
+                maxParticipants = maxRaw.toInt();
+              } else if (maxRaw != null) {
+                maxParticipants = int.tryParse(maxRaw.toString());
+              }
+
+              int? maxBedsPerRoom;
+              final bedsRaw = d['maxBedsPerRoom'] ?? d['max_beds_per_room'];
+              if (bedsRaw is num) {
+                maxBedsPerRoom = bedsRaw.toInt();
+              } else if (bedsRaw != null) {
+                maxBedsPerRoom = int.tryParse(bedsRaw.toString());
+              }
+
+              int? capacityRooms;
+              final capRaw = d['capacity'];
+              if (capRaw is num) {
+                capacityRooms = capRaw.toInt();
+              } else if (capRaw != null) {
+                capacityRooms = int.tryParse(capRaw.toString());
+              }
+
               if (hotelId == null) {
                 final messenger = ScaffoldMessenger.maybeOf(context);
                 messenger?.showSnackBar(
@@ -640,6 +678,10 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
                     dateRange: range,
                     rooms: _rooms,
                     people: _peopleCount,
+                    minParticipants: minParticipants,
+                    maxParticipants: maxParticipants,
+                    maxBedsPerRoom: maxBedsPerRoom,
+                    maxRooms: capacityRooms,
                   ),
                 ),
               );
