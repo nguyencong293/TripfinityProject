@@ -4,9 +4,11 @@ import com.vn.tripfinity.backend.dto.HotelBookingDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Hotel;
 import com.vn.tripfinity.backend.model.HotelBooking;
+import com.vn.tripfinity.backend.model.HotelPayment;
 import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.HotelBookingRepository;
+import com.vn.tripfinity.backend.repository.HotelPaymentRepository;
 import com.vn.tripfinity.backend.repository.HotelRepository;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +29,7 @@ import java.util.stream.Collectors;
 public class HotelBookingService {
 
     private final HotelBookingRepository bookingRepository;
+    private final HotelPaymentRepository paymentRepository;
     private final UserRepository userRepository;
     private final HotelRepository hotelRepository;
     private final ProviderRepository providerRepository;
@@ -164,7 +168,59 @@ public class HotelBookingService {
         HotelBooking savedBooking = bookingRepository.save(booking);
         log.info("✅ Tạo Booking ID: {}", savedBooking.getBookingId());
 
+        // Auto-create payment record
+        createPaymentRecord(savedBooking, dto.getPaymentMethod());
+
         return convertToDTO(savedBooking);
+    }
+
+    /**
+     * Create payment record for booking
+     * 
+     * @param booking          The hotel booking
+     * @param paymentMethodStr Payment method (counter, zalopay, etc.)
+     */
+    private void createPaymentRecord(HotelBooking booking, String paymentMethodStr) {
+        try {
+            HotelPayment.PaymentMethod paymentMethod;
+            HotelPayment.PaymentStatus paymentStatus;
+
+            // Parse payment method
+            if (paymentMethodStr != null && !paymentMethodStr.isEmpty()) {
+                paymentMethod = HotelPayment.PaymentMethod.valueOf(paymentMethodStr.toLowerCase());
+            } else {
+                paymentMethod = HotelPayment.PaymentMethod.counter; // Default
+            }
+
+            // Set payment status based on method
+            if (paymentMethod == HotelPayment.PaymentMethod.counter) {
+                paymentStatus = HotelPayment.PaymentStatus.pending; // Pay later at hotel
+            } else {
+                paymentStatus = HotelPayment.PaymentStatus.success; // Online payment already completed
+            }
+
+            // Generate transaction ID
+            String transactionId = "TXN_" + booking.getBookingId() + "_" + System.currentTimeMillis();
+
+            HotelPayment payment = HotelPayment.builder()
+                    .booking(booking)
+                    .user(booking.getUser())
+                    .amount(booking.getTotalPrice())
+                    .currencyCode(booking.getCurrencyCode())
+                    .paymentMethod(paymentMethod)
+                    .transactionId(transactionId)
+                    .paymentStatus(paymentStatus)
+                    .paymentDate(LocalDateTime.now())
+                    .build();
+
+            paymentRepository.save(payment);
+            log.info("✅ Created payment record for booking #{} with method: {}, status: {}",
+                    booking.getBookingId(), paymentMethod, paymentStatus);
+
+        } catch (Exception e) {
+            log.error("Failed to create payment record for booking #{}: {}", booking.getBookingId(), e.getMessage());
+            // Don't fail the booking creation if payment record fails
+        }
     }
 
     public HotelBookingDTO updateBooking(Integer bookingId, HotelBookingDTO dto) {

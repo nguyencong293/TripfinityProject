@@ -41,6 +41,7 @@ class HotelBookingApiService {
     String? channel,
     int? providerId,
     String? providerNotes,
+    String? paymentMethod, // counter, zalopay, vnpay, etc.
   }) async {
     final body = {
       'user_id': userId,
@@ -55,6 +56,8 @@ class HotelBookingApiService {
       if (providerId != null) 'provider_id': providerId,
       if (providerNotes != null && providerNotes.isNotEmpty)
         'provider_notes': providerNotes,
+      if (paymentMethod != null && paymentMethod.isNotEmpty)
+        'payment_method': paymentMethod,
     };
 
     final res = await _dio.post('/hotel-bookings', data: body);

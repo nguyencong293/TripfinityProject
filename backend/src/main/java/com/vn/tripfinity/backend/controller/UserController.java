@@ -54,7 +54,7 @@ public class UserController {
     @PutMapping("/{userId}")
     public ResponseEntity<UserDTO> updateUser(
             @PathVariable Integer userId,
-            @Valid @RequestBody UserDTO userDTO) {
+            @RequestBody UserDTO userDTO) { // Remove @Valid to allow partial updates
         log.info("Put /api/users/{} - Updating user", userId);
         UserDTO updatedUser = userService.updateUser(userId, userDTO);
         return ResponseEntity.ok(updatedUser);

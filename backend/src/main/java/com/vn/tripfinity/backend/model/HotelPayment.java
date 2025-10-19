@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class HotelPayment {
 
     public enum PaymentMethod {
-        vnpay, momo, visa, mastercard, paypal, other
+        counter, zalopay, vnpay, momo, visa, mastercard, paypal, other
     }
 
     public enum PaymentStatus {

@@ -6,6 +6,8 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:app/services/hotel_booking_api_service.dart';
+import 'package:app/services/zalopay_api_service.dart';
+import 'package:app/views/screens/payment_webview_screen.dart';
 
 class HotelBookingCheckoutScreen extends StatefulWidget {
   final int hotelId;
@@ -53,6 +55,7 @@ class _HotelBookingCheckoutScreenState
   final _requestCtrl = TextEditingController();
 
   bool _submitting = false;
+  String _paymentMethod = 'counter'; // 'counter' or 'zalopay'
   int _rooms = 1;
   int _beds = 1;
   int _people = 1;
@@ -65,6 +68,82 @@ class _HotelBookingCheckoutScreenState
     _beds = 1;
     _people = widget.people;
     _dateRange = widget.dateRange;
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final name =
+          prefs.getString('user_name') ?? prefs.getString('full_name') ?? '';
+      final email =
+          prefs.getString('user_email') ?? prefs.getString('email') ?? '';
+      final phone =
+          prefs.getString('user_phone') ??
+          prefs.getString('phone_number') ??
+          '';
+
+      if (mounted) {
+        setState(() {
+          _nameCtrl.text = name;
+          _emailCtrl.text = email;
+          _phoneCtrl.text = phone;
+        });
+      }
+    } catch (e) {
+      // Silent fail - user can input manually
+    }
+  }
+
+  Future<void> _updateUserInfoIfNeeded(
+    SharedPreferences prefs,
+    int userId,
+  ) async {
+    try {
+      final savedName =
+          prefs.getString('user_name') ?? prefs.getString('full_name') ?? '';
+      final savedPhone =
+          prefs.getString('user_phone') ??
+          prefs.getString('phone_number') ??
+          '';
+
+      final newName = _nameCtrl.text.trim();
+      final newPhone = _phoneCtrl.text.trim();
+
+      // Check if name or phone changed
+      if (newName != savedName || newPhone != savedPhone) {
+        // Update backend
+        final dio = Dio();
+        dio.options.baseUrl = 'http://10.0.2.2:8080/api';
+        final token = prefs.getString('user_token');
+        if (token != null) {
+          dio.options.headers['Authorization'] = 'Bearer $token';
+        }
+
+        await dio.put(
+          '/users/$userId',
+          data: {
+            if (newName.isNotEmpty && newName != savedName)
+              'full_name': newName,
+            if (newPhone.isNotEmpty && newPhone != savedPhone)
+              'phone_number': newPhone,
+          },
+        );
+
+        // Update SharedPreferences
+        if (newName != savedName) {
+          await prefs.setString('user_name', newName);
+          await prefs.setString('full_name', newName);
+        }
+        if (newPhone != savedPhone) {
+          await prefs.setString('user_phone', newPhone);
+          await prefs.setString('phone_number', newPhone);
+        }
+      }
+    } catch (e) {
+      // Silent fail - don't block booking if user update fails
+      print('Failed to update user info: $e');
+    }
   }
 
   Future<void> _openDateRangePicker() async {
@@ -139,6 +218,8 @@ class _HotelBookingCheckoutScreenState
           _contactForm(),
           const SizedBox(height: 12),
           _policies(),
+          const SizedBox(height: 12),
+          _paymentMethodSelector(),
           const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
@@ -161,14 +242,49 @@ class _HotelBookingCheckoutScreenState
                         color: Colors.white,
                       ),
                     )
-                  : const Text(
-                      'Xác nhận đặt (chưa thanh toán)',
-                      style: TextStyle(
+                  : Text(
+                      _paymentMethod == 'counter'
+                          ? 'Xác nhận đặt (trả tại quầy)'
+                          : 'Thanh toán qua ZaloPay',
+                      style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
                       ),
                     ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paymentMethodSelector() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.cardBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Phương thức thanh toán',
+            style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          RadioListTile<String>(
+            value: 'counter',
+            groupValue: _paymentMethod,
+            onChanged: (v) => setState(() => _paymentMethod = v ?? 'counter'),
+            title: const Text('Thanh toán trực tiếp tại quầy'),
+          ),
+          RadioListTile<String>(
+            value: 'zalopay',
+            groupValue: _paymentMethod,
+            onChanged: (v) => setState(() => _paymentMethod = v ?? 'zalopay'),
+            title: const Text('Thanh toán qua ZaloPay (sandbox)'),
           ),
         ],
       ),
@@ -473,6 +589,7 @@ class _HotelBookingCheckoutScreenState
             'Email',
             _emailCtrl,
             keyboardType: TextInputType.emailAddress,
+            readOnly: true, // Email cannot be changed
             validator: (v) =>
                 (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null,
           ),
@@ -503,6 +620,7 @@ class _HotelBookingCheckoutScreenState
     String? Function(String?)? validator,
     int maxLines = 1,
     TextInputType? keyboardType,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,6 +635,7 @@ class _HotelBookingCheckoutScreenState
           validator: validator,
           maxLines: maxLines,
           keyboardType: keyboardType,
+          readOnly: readOnly,
           decoration: InputDecoration(
             filled: true,
             fillColor: context.cardBackgroundColor,
@@ -572,30 +691,163 @@ class _HotelBookingCheckoutScreenState
         return;
       }
 
-      final api = HotelBookingApiService(dio: Dio(), prefs: prefs);
-      await api.createBooking(
-        userId: uid,
-        hotelId: widget.hotelId,
-        startDate: DateTime(
-          _dateRange.start.year,
-          _dateRange.start.month,
-          _dateRange.start.day,
-        ),
-        endDate: DateTime(
-          _dateRange.end.year,
-          _dateRange.end.month,
-          _dateRange.end.day,
-        ),
-        numAdults: _people,
-        totalPrice: total,
-        currencyCode: (widget.currencyCode ?? 'VND').toUpperCase(),
-        providerNotes: _buildProviderNotes(),
-      );
+      // Update user info if name or phone changed
+      await _updateUserInfoIfNeeded(prefs, uid);
 
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      _showSnack('Đặt chỗ thành công. Chờ thanh toán.');
-      Navigator.of(context).pop();
+      // COUNTER payment: Create booking immediately
+      if (_paymentMethod == 'counter') {
+        final api = HotelBookingApiService(dio: Dio(), prefs: prefs);
+        await api.createBooking(
+          userId: uid,
+          hotelId: widget.hotelId,
+          startDate: DateTime(
+            _dateRange.start.year,
+            _dateRange.start.month,
+            _dateRange.start.day,
+          ),
+          endDate: DateTime(
+            _dateRange.end.year,
+            _dateRange.end.month,
+            _dateRange.end.day,
+          ),
+          numAdults: _people,
+          totalPrice: total,
+          currencyCode: (widget.currencyCode ?? 'VND').toUpperCase(),
+          providerNotes: _buildProviderNotes(),
+          paymentMethod: 'counter', // Important: specify payment method
+        );
+        if (!mounted) return;
+        setState(() => _submitting = false);
+        _showSnack('Đặt chỗ thành công. Thanh toán tại quầy khi nhận phòng.');
+        Navigator.of(context).pop();
+        return;
+      }
+
+      // ZALOPAY payment: Do NOT create booking yet, just create order
+      try {
+        final zalo = ZaloPayApiService(dio: Dio(), prefs: prefs);
+        final orderResult = await zalo.createOrder(
+          amount: total,
+          userId: uid,
+          hotelId: widget.hotelId,
+          startDate: DateTime(
+            _dateRange.start.year,
+            _dateRange.start.month,
+            _dateRange.start.day,
+          ),
+          endDate: DateTime(
+            _dateRange.end.year,
+            _dateRange.end.month,
+            _dateRange.end.day,
+          ),
+          numAdults: _people,
+          numChildren: 0,
+          providerNotes:
+              _buildProviderNotes(), // Include provider notes (rooms, beds, requests)
+          description: 'Thanh toan dat phong hotel #${widget.hotelId}',
+        );
+
+        final orderUrl = orderResult['order_url']!;
+        final appTransId =
+            orderResult['apptransid']!; // Note: lowercase from backend
+
+        setState(() => _submitting = false);
+
+        // Open WebView for payment
+        final result = await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => PaymentWebViewScreen(url: orderUrl),
+          ),
+        );
+
+        if (result == true) {
+          // Payment completed successfully - now create booking via test endpoint
+          setState(() => _submitting = true);
+          try {
+            // Call test endpoint to create booking from pending payment
+            final testDio = Dio();
+            testDio.options.baseUrl = 'http://10.0.2.2:8080/api';
+            final token = prefs.getString('user_token');
+            if (token != null) {
+              testDio.options.headers['Authorization'] = 'Bearer $token';
+            }
+
+            final createResponse = await testDio.post(
+              '/test/create-booking-from-pending',
+              queryParameters: {'appTransId': appTransId},
+            );
+
+            setState(() => _submitting = false);
+
+            if (createResponse.statusCode == 200 &&
+                createResponse.data is Map &&
+                (createResponse.data as Map)['success'] == true) {
+              // Booking created successfully
+              final bookingId = (createResponse.data as Map)['bookingId'];
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => AlertDialog(
+                    title: Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green, size: 32),
+                        SizedBox(width: 12),
+                        Text('Thanh toán thành công!'),
+                      ],
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Đặt phòng của bạn đã được xác nhận.'),
+                        if (bookingId != null)
+                          Text(
+                            'Mã đặt phòng: #$bookingId',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Bạn có thể kiểm tra chi tiết đặt phòng trong mục "Đơn của tôi".',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close dialog
+                          Navigator.of(context).pop(); // Close checkout screen
+                        },
+                        child: Text('Đóng'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            } else {
+              // Failed to create booking
+              _showSnack(
+                'Thanh toán thành công nhưng không tạo được đặt phòng. Vui lòng liên hệ hỗ trợ.',
+              );
+            }
+          } catch (e) {
+            setState(() => _submitting = false);
+            _showSnack(
+              'Thanh toán thành công nhưng lỗi tạo đặt phòng: ${e.toString()}',
+            );
+          }
+        } else {
+          // Payment cancelled or failed
+          _showSnack('Thanh toán chưa hoàn tất. Vui lòng thử lại nếu cần.');
+        }
+      } catch (e) {
+        setState(() => _submitting = false);
+        _showSnack('Không tạo được đơn ZaloPay: ${e.toString()}');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);

@@ -54,6 +54,9 @@ public class HotelBookingDTO {
     @JsonAlias("booking_status")
     private String bookingStatus; // pending, confirmed, cancelled, completed, refunded
 
+    @JsonAlias("payment_method")
+    private String paymentMethod; // counter, zalopay, vnpay, etc.
+
     @Size(max = 512)
     @JsonAlias("e_ticket_url")
     private String eTicketUrl;

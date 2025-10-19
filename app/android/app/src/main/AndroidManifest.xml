@@ -60,5 +60,16 @@
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
         </intent>
+        <!-- Allow opening ZaloPay app -->
+        <package android:name="com.vng.zalopay" />
+        <!-- Allow url_launcher to query installable apps -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="zalopay" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
     </queries>
 </manifest>

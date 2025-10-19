@@ -45,12 +45,14 @@ class HotelApiService {
     int hotelId, {
     String? status,
   }) async {
-    final res = await _dio.get(
-      '/hotels/$hotelId/reviews',
-      queryParameters: {
-        if (status != null && status.isNotEmpty) 'status': status,
-      },
-    );
+    // Backend endpoints:
+    // - GET /api/hotel-reviews/hotel/{hotelId}
+    // - GET /api/hotel-reviews/hotel/{hotelId}/status/{status}
+    final String path = (status != null && status.isNotEmpty)
+        ? '/hotel-reviews/hotel/$hotelId/status/$status'
+        : '/hotel-reviews/hotel/$hotelId';
+
+    final res = await _dio.get(path);
     if (res.statusCode == 200 && res.data is List) {
       return List<Map<String, dynamic>>.from(res.data);
     }
