@@ -248,119 +248,6 @@ CREATE TABLE attractions (
     CONSTRAINT fk_attractions_area FOREIGN KEY (area_id) REFERENCES areas(area_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 8) price options per type
-CREATE TABLE tour_price_options (
-    option_id INT AUTO_INCREMENT PRIMARY KEY,
-    tour_id INT NOT NULL,
-    option_name VARCHAR(100) NOT NULL,
-    price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    per_person BOOLEAN NOT NULL DEFAULT TRUE,
-    min_age SMALLINT DEFAULT NULL,
-    max_age SMALLINT DEFAULT NULL,
-    description VARCHAR(255) DEFAULT NULL,
-    includes_json JSON DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_tour_option (tour_id, option_name),
-    CONSTRAINT fk_tour_option_tour FOREIGN KEY (tour_id) REFERENCES tours(tour_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE hotel_price_options (
-    option_id INT AUTO_INCREMENT PRIMARY KEY,
-    hotel_id INT NOT NULL,
-    option_name VARCHAR(100) NOT NULL,
-    price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    per_person BOOLEAN NOT NULL DEFAULT TRUE,
-    min_age SMALLINT DEFAULT NULL,
-    max_age SMALLINT DEFAULT NULL,
-    description VARCHAR(255) DEFAULT NULL,
-    includes_json JSON DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_hotel_option (hotel_id, option_name),
-    CONSTRAINT fk_hotel_option_hotel FOREIGN KEY (hotel_id) REFERENCES hotels(hotel_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE restaurant_price_options (
-    option_id INT AUTO_INCREMENT PRIMARY KEY,
-    restaurant_id INT NOT NULL,
-    option_name VARCHAR(100) NOT NULL,
-    price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    per_person BOOLEAN NOT NULL DEFAULT TRUE,
-    min_age SMALLINT DEFAULT NULL,
-    max_age SMALLINT DEFAULT NULL,
-    description VARCHAR(255) DEFAULT NULL,
-    includes_json JSON DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_restaurant_option (restaurant_id, option_name),
-    CONSTRAINT fk_restaurant_option_rest FOREIGN KEY (restaurant_id) REFERENCES restaurants(restaurant_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE attraction_price_options (
-    option_id INT AUTO_INCREMENT PRIMARY KEY,
-    attraction_id INT NOT NULL,
-    option_name VARCHAR(100) NOT NULL,
-    price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    per_person BOOLEAN NOT NULL DEFAULT TRUE,
-    min_age SMALLINT DEFAULT NULL,
-    max_age SMALLINT DEFAULT NULL,
-    description VARCHAR(255) DEFAULT NULL,
-    includes_json JSON DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_attraction_option (attraction_id, option_name),
-    CONSTRAINT fk_attraction_option_attr FOREIGN KEY (attraction_id) REFERENCES attractions(attraction_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 9) itineraries (tour only)
-CREATE TABLE itineraries (
-    itinerary_id INT AUTO_INCREMENT PRIMARY KEY,
-    tour_id INT NOT NULL,
-    day_number INT NOT NULL,
-    itinerarie_date DATE DEFAULT NULL,
-    itinerarie_time VARCHAR(50) DEFAULT NULL,
-    activity_description TEXT NOT NULL,
-    location VARCHAR(255) DEFAULT NULL,
-    guide_id INT DEFAULT NULL,
-    map_coordinates VARCHAR(100) DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_itin_tour FOREIGN KEY (tour_id) REFERENCES tours(tour_id),
-    CONSTRAINT fk_itin_guide FOREIGN KEY (guide_id) REFERENCES users(user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 10) group bookings (tour only) + members
-CREATE TABLE tour_group_bookings (
-    group_id INT AUTO_INCREMENT PRIMARY KEY,
-    leader_id INT NOT NULL,
-    tour_id INT NOT NULL,
-    group_name VARCHAR(255) DEFAULT NULL,
-    max_participants INT DEFAULT NULL,
-    group_booking_status ENUM('open','closed','cancelled') NOT NULL DEFAULT 'open',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_tour_group_leader FOREIGN KEY (leader_id) REFERENCES users(user_id),
-    CONSTRAINT fk_tour_group_tour FOREIGN KEY (tour_id) REFERENCES tours(tour_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE group_members (
-    group_member_id INT AUTO_INCREMENT PRIMARY KEY,
-    group_id INT NOT NULL,
-    user_id INT NOT NULL,
-    is_leader BOOLEAN NOT NULL DEFAULT FALSE,
-    share_amount DECIMAL(12,2) DEFAULT NULL,
-    payment_status ENUM('pending','paid','refunded') NOT NULL DEFAULT 'pending',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_group_member_group FOREIGN KEY (group_id) REFERENCES tour_group_bookings(group_id),
-    CONSTRAINT fk_group_member_user FOREIGN KEY (user_id) REFERENCES users(user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 -- 11) bookings per type
 CREATE TABLE hotel_bookings (
     booking_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -370,7 +257,6 @@ CREATE TABLE hotel_bookings (
     start_date DATE DEFAULT NULL,
     end_date DATE DEFAULT NULL,
     num_adults INT NOT NULL DEFAULT 1,
-    num_children INT NOT NULL DEFAULT 0,
     total_price DECIMAL(12,2) NOT NULL,
     currency_code CHAR(3) NOT NULL,
     booking_status ENUM('pending','confirmed','cancelled','completed','refunded') NOT NULL DEFAULT 'pending',
@@ -390,7 +276,6 @@ CREATE TABLE restaurant_bookings (
     start_date DATE DEFAULT NULL,
     end_date DATE DEFAULT NULL,
     num_adults INT NOT NULL DEFAULT 1,
-    num_children INT NOT NULL DEFAULT 0,
     total_price DECIMAL(12,2) NOT NULL,
     currency_code CHAR(3) NOT NULL,
     booking_status ENUM('pending','confirmed','cancelled','completed','refunded') NOT NULL DEFAULT 'pending',
@@ -410,7 +295,6 @@ CREATE TABLE attraction_bookings (
     start_date DATE DEFAULT NULL,
     end_date DATE DEFAULT NULL,
     num_adults INT NOT NULL DEFAULT 1,
-    num_children INT NOT NULL DEFAULT 0,
     total_price DECIMAL(12,2) NOT NULL,
     currency_code CHAR(3) NOT NULL,
     booking_status ENUM('pending','confirmed','cancelled','completed','refunded') NOT NULL DEFAULT 'pending',
@@ -426,12 +310,10 @@ CREATE TABLE tour_bookings (
     booking_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     tour_id INT NOT NULL,
-    group_id INT DEFAULT NULL,
     booking_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     start_date DATE DEFAULT NULL,
     end_date DATE DEFAULT NULL,
     num_adults INT NOT NULL DEFAULT 1,
-    num_children INT NOT NULL DEFAULT 0,
     total_price DECIMAL(12,2) NOT NULL,
     currency_code CHAR(3) NOT NULL,
     booking_status ENUM('pending','confirmed','cancelled','completed','refunded') NOT NULL DEFAULT 'pending',
@@ -440,8 +322,7 @@ CREATE TABLE tour_bookings (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_tour_booking_user FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT fk_tour_booking_tour FOREIGN KEY (tour_id) REFERENCES tours(tour_id),
-    CONSTRAINT fk_tour_booking_group FOREIGN KEY (group_id) REFERENCES tour_group_bookings(group_id)
+    CONSTRAINT fk_tour_booking_tour FOREIGN KEY (tour_id) REFERENCES tours(tour_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 12) payments per type
@@ -509,54 +390,6 @@ CREATE TABLE tour_payments (
     CONSTRAINT fk_tour_pay_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 13) e_tickets per type
-CREATE TABLE hotel_e_tickets (
-    e_ticket_id INT AUTO_INCREMENT PRIMARY KEY,
-    booking_id INT NOT NULL,
-    ticket_code VARCHAR(100) NOT NULL UNIQUE,
-    qr_code_data TEXT NOT NULL,
-    pdf_url VARCHAR(512) NOT NULL,
-    valid_from DATE DEFAULT NULL,
-    valid_until DATE DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hotel_ticket_booking FOREIGN KEY (booking_id) REFERENCES hotel_bookings(booking_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE restaurant_e_tickets (
-    e_ticket_id INT AUTO_INCREMENT PRIMARY KEY,
-    booking_id INT NOT NULL,
-    ticket_code VARCHAR(100) NOT NULL UNIQUE,
-    qr_code_data TEXT NOT NULL,
-    pdf_url VARCHAR(512) NOT NULL,
-    valid_from DATE DEFAULT NULL,
-    valid_until DATE DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_rest_ticket_booking FOREIGN KEY (booking_id) REFERENCES restaurant_bookings(booking_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE attraction_e_tickets (
-    e_ticket_id INT AUTO_INCREMENT PRIMARY KEY,
-    booking_id INT NOT NULL,
-    ticket_code VARCHAR(100) NOT NULL UNIQUE,
-    qr_code_data TEXT NOT NULL,
-    pdf_url VARCHAR(512) NOT NULL,
-    valid_from DATE DEFAULT NULL,
-    valid_until DATE DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_attr_ticket_booking FOREIGN KEY (booking_id) REFERENCES attraction_bookings(booking_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE tour_e_tickets (
-    e_ticket_id INT AUTO_INCREMENT PRIMARY KEY,
-    booking_id INT NOT NULL,
-    ticket_code VARCHAR(100) NOT NULL UNIQUE,
-    qr_code_data TEXT NOT NULL,
-    pdf_url VARCHAR(512) NOT NULL,
-    valid_from DATE DEFAULT NULL,
-    valid_until DATE DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_tour_ticket_booking FOREIGN KEY (booking_id) REFERENCES tour_bookings(booking_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 14) chat_messages
 CREATE TABLE chat_messages (
@@ -818,157 +651,6 @@ CREATE TABLE attraction_rating_summaries (
     avg_price DECIMAL(3,2),
     avg_facilities DECIMAL(3,2),
     CONSTRAINT fk_attr_rating FOREIGN KEY (attraction_id) REFERENCES attractions(attraction_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 22) virtual tours per type
-CREATE TABLE hotel_virtual_tours (
-    virtual_tour_id INT AUTO_INCREMENT PRIMARY KEY,
-    hotel_id INT NOT NULL,
-    media_type ENUM('360_image','360_video','ar_model') NOT NULL,
-    media_url VARCHAR(512) NOT NULL,
-    thumbnail_url VARCHAR(512) DEFAULT NULL,
-    metadata_json LONGTEXT DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hotel_virtual FOREIGN KEY (hotel_id) REFERENCES hotels(hotel_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE restaurant_virtual_tours (
-    virtual_tour_id INT AUTO_INCREMENT PRIMARY KEY,
-    restaurant_id INT NOT NULL,
-    media_type ENUM('360_image','360_video','ar_model') NOT NULL,
-    media_url VARCHAR(512) NOT NULL,
-    thumbnail_url VARCHAR(512) DEFAULT NULL,
-    metadata_json LONGTEXT DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_rest_virtual FOREIGN KEY (restaurant_id) REFERENCES restaurants(restaurant_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE attraction_virtual_tours (
-    virtual_tour_id INT AUTO_INCREMENT PRIMARY KEY,
-    attraction_id INT NOT NULL,
-    media_type ENUM('360_image','360_video','ar_model') NOT NULL,
-    media_url VARCHAR(512) NOT NULL,
-    thumbnail_url VARCHAR(512) DEFAULT NULL,
-    metadata_json LONGTEXT DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_attr_virtual FOREIGN KEY (attraction_id) REFERENCES attractions(attraction_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE tour_virtual_tours (
-    virtual_tour_id INT AUTO_INCREMENT PRIMARY KEY,
-    tour_id INT NOT NULL,
-    media_type ENUM('360_image','360_video','ar_model') NOT NULL,
-    media_url VARCHAR(512) NOT NULL,
-    thumbnail_url VARCHAR(512) DEFAULT NULL,
-    metadata_json LONGTEXT DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_tour_virtual FOREIGN KEY (tour_id) REFERENCES tours(tour_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 23) price predictions per type
-CREATE TABLE hotel_price_predictions (
-    prediction_id INT AUTO_INCREMENT PRIMARY KEY,
-    hotel_id INT NOT NULL,
-    predicted_date DATE NOT NULL,
-    predicted_price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    model_name VARCHAR(100) DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hotel_pred FOREIGN KEY (hotel_id) REFERENCES hotels(hotel_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE restaurant_price_predictions (
-    prediction_id INT AUTO_INCREMENT PRIMARY KEY,
-    restaurant_id INT NOT NULL,
-    predicted_date DATE NOT NULL,
-    predicted_price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    model_name VARCHAR(100) DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_rest_pred FOREIGN KEY (restaurant_id) REFERENCES restaurants(restaurant_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE attraction_price_predictions (
-    prediction_id INT AUTO_INCREMENT PRIMARY KEY,
-    attraction_id INT NOT NULL,
-    predicted_date DATE NOT NULL,
-    predicted_price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    model_name VARCHAR(100) DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_attr_pred FOREIGN KEY (attraction_id) REFERENCES attractions(attraction_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE tour_price_predictions (
-    prediction_id INT AUTO_INCREMENT PRIMARY KEY,
-    tour_id INT NOT NULL,
-    predicted_date DATE NOT NULL,
-    predicted_price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    model_name VARCHAR(100) DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_tour_pred FOREIGN KEY (tour_id) REFERENCES tours(tour_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 24) price alerts per type
-CREATE TABLE hotel_price_alerts (
-    alert_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    hotel_id INT NOT NULL,
-    target_price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    last_notified_at DATETIME DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hotel_alert_user FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT fk_hotel_alert_hotel FOREIGN KEY (hotel_id) REFERENCES hotels(hotel_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE restaurant_price_alerts (
-    alert_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    restaurant_id INT NOT NULL,
-    target_price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    last_notified_at DATETIME DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_rest_alert_user FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT fk_rest_alert_rest FOREIGN KEY (restaurant_id) REFERENCES restaurants(restaurant_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE attraction_price_alerts (
-    alert_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    attraction_id INT NOT NULL,
-    target_price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    last_notified_at DATETIME DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_attr_alert_user FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT fk_attr_alert_attr FOREIGN KEY (attraction_id) REFERENCES attractions(attraction_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE tour_price_alerts (
-    alert_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    tour_id INT NOT NULL,
-    target_price DECIMAL(12,2) NOT NULL,
-    currency_code CHAR(3) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    last_notified_at DATETIME DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_tour_alert_user FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT fk_tour_alert_tour FOREIGN KEY (tour_id) REFERENCES tours(tour_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 25) blogs

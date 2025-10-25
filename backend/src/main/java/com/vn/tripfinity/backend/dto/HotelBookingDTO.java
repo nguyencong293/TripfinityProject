@@ -38,10 +38,6 @@ public class HotelBookingDTO {
     @JsonAlias("num_adults")
     private Integer numAdults;
 
-    @Min(value = 0, message = "numChildren phải >= 0")
-    @JsonAlias("num_children")
-    private Integer numChildren;
-
     @NotNull(message = "totalPrice không được để trống")
     @DecimalMin(value = "0.00", message = "totalPrice phải >= 0")
     @JsonAlias("total_price")

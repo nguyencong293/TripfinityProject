@@ -50,9 +50,6 @@ public class HotelBooking {
     @Column(name = "num_adults", nullable = false)
     private Integer numAdults;
 
-    @Column(name = "num_children", nullable = false)
-    private Integer numChildren;
-
     @Column(name = "total_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalPrice;
 
@@ -101,8 +98,6 @@ public class HotelBooking {
             bookingDate = LocalDateTime.now();
         if (numAdults == null)
             numAdults = 1;
-        if (numChildren == null)
-            numChildren = 0;
         if (bookingStatus == null)
             bookingStatus = BookingStatus.pending;
         if (providerSeen == null)

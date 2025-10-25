@@ -153,7 +153,6 @@ public class HotelBookingService {
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
                 .numAdults(dto.getNumAdults())
-                .numChildren(dto.getNumChildren() != null ? dto.getNumChildren() : 0)
                 .totalPrice(dto.getTotalPrice())
                 .currencyCode(dto.getCurrencyCode())
                 .bookingStatus(bookingStatus)
@@ -253,8 +252,6 @@ public class HotelBookingService {
             booking.setEndDate(dto.getEndDate());
         if (dto.getNumAdults() != null)
             booking.setNumAdults(dto.getNumAdults());
-        if (dto.getNumChildren() != null)
-            booking.setNumChildren(dto.getNumChildren());
         if (dto.getTotalPrice() != null)
             booking.setTotalPrice(dto.getTotalPrice());
         if (dto.getCurrencyCode() != null)
@@ -335,7 +332,6 @@ public class HotelBookingService {
                 .startDate(booking.getStartDate())
                 .endDate(booking.getEndDate())
                 .numAdults(booking.getNumAdults())
-                .numChildren(booking.getNumChildren())
                 .totalPrice(booking.getTotalPrice())
                 .currencyCode(booking.getCurrencyCode())
                 .bookingStatus(booking.getBookingStatus() != null ? booking.getBookingStatus().name() : null)
