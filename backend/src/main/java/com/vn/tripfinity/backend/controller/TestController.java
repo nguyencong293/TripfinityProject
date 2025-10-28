@@ -1,14 +1,17 @@
 package com.vn.tripfinity.backend.controller;
 
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.vn.tripfinity.backend.dto.HotelBookingDTO;
 import com.vn.tripfinity.backend.dto.PendingPaymentDto;
 import com.vn.tripfinity.backend.service.HotelBookingService;
 import com.vn.tripfinity.backend.service.PendingPaymentService;
-
-import java.util.Map;
 
 /**
  * Test endpoint to manually trigger booking creation from pending payment
@@ -40,7 +43,6 @@ public class TestController {
                     .startDate(pendingPayment.getStartDate())
                     .endDate(pendingPayment.getEndDate())
                     .numAdults(pendingPayment.getNumAdults())
-                    .numChildren(pendingPayment.getNumChildren())
                     .totalPrice(pendingPayment.getTotalPrice())
                     .currencyCode(pendingPayment.getCurrencyCode())
                     .providerNotes(pendingPayment.getProviderNotes()) // Include provider notes

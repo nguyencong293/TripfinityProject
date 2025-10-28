@@ -144,7 +144,6 @@ public class ZaloPayController {
                     .startDate(pendingPayment.getStartDate())
                     .endDate(pendingPayment.getEndDate())
                     .numAdults(pendingPayment.getNumAdults())
-                    .numChildren(pendingPayment.getNumChildren())
                     .totalPrice(pendingPayment.getTotalPrice())
                     .currencyCode(pendingPayment.getCurrencyCode())
                     .providerNotes(pendingPayment.getProviderNotes()) // Include provider notes (rooms, beds, requests)
