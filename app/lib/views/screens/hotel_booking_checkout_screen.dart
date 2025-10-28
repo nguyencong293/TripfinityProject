@@ -142,7 +142,7 @@ class _HotelBookingCheckoutScreenState
       }
     } catch (e) {
       // Silent fail - don't block booking if user update fails
-      print('Failed to update user info: $e');
+      debugPrint('Failed to update user info: $e');
     }
   }
 
@@ -274,17 +274,25 @@ class _HotelBookingCheckoutScreenState
             style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
-          RadioListTile<String>(
-            value: 'counter',
+          RadioGroup<String>(
             groupValue: _paymentMethod,
             onChanged: (v) => setState(() => _paymentMethod = v ?? 'counter'),
-            title: const Text('Thanh toán trực tiếp tại quầy'),
-          ),
-          RadioListTile<String>(
-            value: 'zalopay',
-            groupValue: _paymentMethod,
-            onChanged: (v) => setState(() => _paymentMethod = v ?? 'zalopay'),
-            title: const Text('Thanh toán qua ZaloPay (sandbox)'),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Radio<String>(value: 'counter'),
+                  title: const Text('Thanh toán trực tiếp tại quầy'),
+                  contentPadding: EdgeInsets.zero,
+                  onTap: () => setState(() => _paymentMethod = 'counter'),
+                ),
+                ListTile(
+                  leading: Radio<String>(value: 'zalopay'),
+                  title: const Text('Thanh toán qua ZaloPay (sandbox)'),
+                  contentPadding: EdgeInsets.zero,
+                  onTap: () => setState(() => _paymentMethod = 'zalopay'),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -753,6 +761,7 @@ class _HotelBookingCheckoutScreenState
 
         setState(() => _submitting = false);
 
+        if (!mounted) return;
         // Open WebView for payment
         final result = await Navigator.of(context).push(
           MaterialPageRoute(

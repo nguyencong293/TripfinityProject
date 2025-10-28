@@ -1,22 +1,29 @@
 package com.vn.tripfinity.backend.controller;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vn.tripfinity.backend.config.ZaloPayProperties;
 import com.vn.tripfinity.backend.dto.HotelBookingDTO;
 import com.vn.tripfinity.backend.dto.PendingPaymentDto;
 import com.vn.tripfinity.backend.service.HotelBookingService;
 import com.vn.tripfinity.backend.service.PendingPaymentService;
 import com.vn.tripfinity.backend.service.ZaloPayService;
 import com.vn.tripfinity.backend.util.HmacUtil;
-import com.vn.tripfinity.backend.config.ZaloPayProperties;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/zalopay")
@@ -162,9 +169,15 @@ public class ZaloPayController {
             // Return success to ZaloPay
             return ResponseEntity.ok(Map.of("return_code", 1, "return_message", "success"));
 
-        } catch (Exception e) {
-            log.error("Error processing ZaloPay callback", e);
-            return ResponseEntity.ok(Map.of("return_code", 0, "return_message", "exception: " + e.getMessage()));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.error("JSON processing error in ZaloPay callback", e);
+            return ResponseEntity.ok(Map.of("return_code", 0, "return_message", "json parse error: " + e.getMessage()));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            log.error("Invalid argument in ZaloPay callback", e);
+            return ResponseEntity.ok(Map.of("return_code", 0, "return_message", "invalid argument: " + e.getMessage()));
+        } catch (RuntimeException e) {
+            log.error("Runtime error processing ZaloPay callback", e);
+            return ResponseEntity.ok(Map.of("return_code", 0, "return_message", "runtime exception: " + e.getMessage()));
         }
     }
 }

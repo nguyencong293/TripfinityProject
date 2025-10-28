@@ -1,19 +1,5 @@
 package com.vn.tripfinity.backend.service;
 
-import com.vn.tripfinity.backend.dto.UserDTO;
-import com.vn.tripfinity.backend.exception.DuplicateResourceException;
-import com.vn.tripfinity.backend.exception.PasswordMismatchException;
-import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
-import com.vn.tripfinity.backend.model.User;
-import com.vn.tripfinity.backend.repository.UserRepository;
-import com.vn.tripfinity.backend.service.cloudinary.CloudinaryService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -22,6 +8,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.vn.tripfinity.backend.dto.UserDTO;
+import com.vn.tripfinity.backend.exception.DuplicateResourceException;
+import com.vn.tripfinity.backend.exception.PasswordMismatchException;
+import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
+import com.vn.tripfinity.backend.model.User;
+import com.vn.tripfinity.backend.repository.UserRepository;
+import com.vn.tripfinity.backend.service.cloudinary.CloudinaryService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -122,7 +124,7 @@ public class UserService {
             try {
                 cloudinaryService.deleteImageByUrl(user.getAvatarUrl());
                 log.info("Đã xóa avatar cũ: {}", user.getAvatarUrl());
-            } catch (Exception e) {
+            } catch (IOException | RuntimeException e) {
                 log.warn("Không thể xóa avatar cũ: {}", e.getMessage());
             }
         }
@@ -148,7 +150,7 @@ public class UserService {
             try {
                 cloudinaryService.deleteImageByUrl(user.getAvatarUrl());
                 log.info("Đã xóa avatar: {}", user.getAvatarUrl());
-            } catch (Exception e) {
+            } catch (IOException | RuntimeException e) {
                 log.warn("Không thể xóa avatar: {}", e.getMessage());
             }
         }
@@ -227,7 +229,7 @@ public class UserService {
                 log.info("Đã upload ảnh Google lên Cloudinary: {}", cloudinaryUrl);
                 return cloudinaryUrl;
             }
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Lỗi khi upload ảnh từ URL: {}", e.getMessage());
             return imageUrl; // Trả về URL gốc nếu upload thất bại
         }
@@ -263,11 +265,7 @@ public class UserService {
             return false;
         }
 
-        if (user.getOtpExpiryTime() == null || user.getOtpExpiryTime().isBefore(LocalDateTime.now())) {
-            return false;
-        }
-
-        return true;
+        return user.getOtpExpiryTime() != null && !user.getOtpExpiryTime().isBefore(LocalDateTime.now());
     }
 
     public String resetPassword(String email,
