@@ -162,6 +162,24 @@
 
   "minutes_ago_suffix": "분 전",
   "view_all": "모두 보기",
+  "show_less": "접기",
+
+  "payment_status": "결제 상태",
+  "payment_counter": "카운터 결제",
+  "payment_counter_desc": "고객이 체크인 시 카운터에서 결제합니다",
+  "payment_online": "온라인 결제 완료",
+  "payment_online_desc": "고객이 전자지갑으로 결제했습니다",
+  "payment_completed": "결제 완료",
+
+  "booking_list_title": "예약 목록",
+  "bookings_count_suffix": "예약",
+  "customer_name": "고객 이름",
+  "phone_number": "전화번호",
+  "booking_status_pending": "대기 중",
+  "booking_status_confirmed": "확인됨",
+  "booking_status_completed": "완료",
+  "booking_status_cancelled": "취소됨",
+  "booking_status_refunded": "환불됨",
 
   "hotel_dashboard_total_revenue": "총 매출",
   "hotel_dashboard_total_bookings": "예약",

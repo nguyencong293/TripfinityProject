@@ -347,6 +347,24 @@
 
   "minutes_ago_suffix": "phút trước",
   "view_all": "Xem tất cả",
+  "show_less": "Thu gọn",
+
+  "payment_status": "Trạng thái thanh toán",
+  "payment_counter": "Thanh toán tại quầy",
+  "payment_counter_desc": "Khách hàng sẽ thanh toán trực tiếp khi nhận phòng",
+  "payment_online": "Đã thanh toán online",
+  "payment_online_desc": "Khách đã thanh toán qua ví điện tử",
+  "payment_completed": "Đã thanh toán",
+
+  "booking_list_title": "Danh sách đặt phòng",
+  "bookings_count_suffix": "đơn đặt phòng",
+  "customer_name": "Tên khách hàng",
+  "phone_number": "Số điện thoại",
+  "booking_status_pending": "Chờ xác nhận",
+  "booking_status_confirmed": "Đã xác nhận",
+  "booking_status_completed": "Hoàn thành",
+  "booking_status_cancelled": "Đã hủy",
+  "booking_status_refunded": "Đã hoàn tiền",
 
   "hotel_dashboard_total_revenue": "Tổng doanh thu",
   "hotel_dashboard_total_bookings": "Đơn đặt phòng",

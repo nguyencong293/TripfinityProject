@@ -355,9 +355,10 @@ const DashboardHotelPage: React.FC = () => {
           </div>
           <button
             className="link-brand text-sm font-medium flex items-center gap-1"
-            onClick={() => console.log("View all bookings")}
+            onClick={() => navigate("/supplier/service/hotel/bookings")}
           >
-            {t("view_all")} <ChevronRight className="w-4 h-4" />
+            {t("view_all")} 
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         {bookings.length === 0 ? (
@@ -367,26 +368,32 @@ const DashboardHotelPage: React.FC = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {bookings.slice(0, 5).map((b) => {
+            {bookings.slice(0, 3).map((b, index) => {
               const hotel = hotels.find((h) => h.hotelId === b.hotelId);
               const user = userCache.get(b.userId);
-              return (
-                <BookingRow
-                  key={b.bookingId}
-                  booking={b}
-                  hotelName={hotel?.title}
-                  userName={user?.fullName}
-                  userPhone={user?.phoneNumber}
-                  onView={() => console.log("View booking", b.bookingId)}
-                  onConfirm={() => {
-                    console.log("Confirm booking", b.bookingId);
-                    // TODO: Call API to confirm booking
-                  }}
-                  onCancel={() => {
-                    console.log("Cancel booking", b.bookingId);
-                    // TODO: Call API to cancel booking
-                  }}
-                />
+              return (  
+                <div key={b.bookingId} className="relative">
+                  <div className="absolute -left-2 top-3 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-sm font-bold shadow-lg z-10">
+                    {index + 1}
+                  </div>
+                  <div className="ml-8">
+                    <BookingRow
+                      booking={b}
+                      hotelName={hotel?.title}
+                      userName={user?.fullName}
+                      userPhone={user?.phoneNumber}
+                      onView={() => console.log("View booking", b.bookingId)}
+                      onConfirm={() => {
+                        console.log("Confirm booking", b.bookingId);
+                        // TODO: Call API to confirm booking
+                      }}
+                      onCancel={() => {
+                        console.log("Cancel booking", b.bookingId);
+                        // TODO: Call API to cancel booking
+                      }}
+                    />
+                  </div>
+                </div>
               );
             })}
           </div>

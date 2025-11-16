@@ -168,6 +168,24 @@
 
   "minutes_ago_suffix": "minutes ago",
   "view_all": "View all",
+  "show_less": "Show less",
+
+  "payment_status": "Payment Status",
+  "payment_counter": "Counter Payment",
+  "payment_counter_desc": "Customer will pay at the counter during check-in",
+  "payment_online": "Paid Online",
+  "payment_online_desc": "Customer has paid via e-wallet",
+  "payment_completed": "Payment Completed",
+
+  "booking_list_title": "Booking List",
+  "bookings_count_suffix": "bookings",
+  "customer_name": "Customer Name",
+  "phone_number": "Phone Number",
+  "booking_status_pending": "Pending",
+  "booking_status_confirmed": "Confirmed",
+  "booking_status_completed": "Completed",
+  "booking_status_cancelled": "Cancelled",
+  "booking_status_refunded": "Refunded",
 
   "hotel_dashboard_total_revenue": "Total revenue",
   "hotel_dashboard_total_bookings": "Bookings",
