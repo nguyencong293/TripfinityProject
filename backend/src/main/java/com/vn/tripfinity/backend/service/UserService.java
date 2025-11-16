@@ -91,14 +91,18 @@ public class UserService {
 
     public UserDTO updateUser(Integer userId, UserDTO userDTO) {
         log.debug("Cập nhật User ID: {}", userId);
+        log.debug("Request data - fullName: {}, phoneNumber: {}", userDTO.getFullName(), userDTO.getPhoneNumber());
+        
         User existingUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + userId));
 
         // Cập nhật các trường được phép
         if (userDTO.getFullName() != null) {
+            log.debug("Updating fullName from '{}' to '{}'", existingUser.getFullName(), userDTO.getFullName());
             existingUser.setFullName(userDTO.getFullName());
         }
         if (userDTO.getPhoneNumber() != null) {
+            log.debug("Updating phoneNumber from '{}' to '{}'", existingUser.getPhoneNumber(), userDTO.getPhoneNumber());
             existingUser.setPhoneNumber(userDTO.getPhoneNumber());
         }
         if (userDTO.getDateOfBirth() != null) {

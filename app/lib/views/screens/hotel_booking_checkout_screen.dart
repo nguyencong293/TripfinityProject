@@ -112,6 +112,18 @@ class _HotelBookingCheckoutScreenState
 
       // Check if name or phone changed
       if (newName != savedName || newPhone != savedPhone) {
+        debugPrint('🔄 User info changed - updating...');
+        debugPrint('  Old: name="$savedName", phone="$savedPhone"');
+        debugPrint('  New: name="$newName", phone="$newPhone"');
+
+        // Validate before update
+        if (newName.isEmpty) {
+          throw Exception('Tên không được để trống');
+        }
+        if (newPhone.isEmpty || newPhone.length < 8) {
+          throw Exception('Số điện thoại không hợp lệ');
+        }
+
         // Update backend
         final dio = Dio();
         dio.options.baseUrl = 'http://10.0.2.2:8080/api';
@@ -120,29 +132,57 @@ class _HotelBookingCheckoutScreenState
           dio.options.headers['Authorization'] = 'Bearer $token';
         }
 
-        await dio.put(
-          '/users/$userId',
-          data: {
-            if (newName.isNotEmpty && newName != savedName)
-              'full_name': newName,
-            if (newPhone.isNotEmpty && newPhone != savedPhone)
-              'phone_number': newPhone,
-          },
-        );
+        final updateData = {
+          if (newName.isNotEmpty && newName != savedName)
+            'fullName': newName, // Changed from 'full_name' to match DTO
+          if (newPhone.isNotEmpty && newPhone != savedPhone)
+            'phoneNumber': newPhone, // Changed from 'phone_number' to match DTO
+        };
 
-        // Update SharedPreferences
-        if (newName != savedName) {
-          await prefs.setString('user_name', newName);
-          await prefs.setString('full_name', newName);
-        }
-        if (newPhone != savedPhone) {
-          await prefs.setString('user_phone', newPhone);
-          await prefs.setString('phone_number', newPhone);
+        debugPrint('📤 Sending PUT /users/$userId with data: $updateData');
+
+        final response = await dio.put('/users/$userId', data: updateData);
+
+        debugPrint('📥 Response status: ${response.statusCode}');
+
+        if (response.statusCode == 200) {
+          debugPrint('✅ Backend update successful');
+          // Update SharedPreferences only if backend update successful
+          if (newName != savedName) {
+            await prefs.setString('user_name', newName);
+            await prefs.setString('full_name', newName);
+          }
+          if (newPhone != savedPhone) {
+            await prefs.setString('user_phone', newPhone);
+            await prefs.setString('phone_number', newPhone);
+          }
+
+          // Show success message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('✓ Đã cập nhật thông tin liên hệ'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+
+          debugPrint('✓ User info updated successfully');
         }
       }
     } catch (e) {
-      // Silent fail - don't block booking if user update fails
+      // Show error but don't block booking
       debugPrint('Failed to update user info: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể cập nhật thông tin: ${e.toString()}'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
