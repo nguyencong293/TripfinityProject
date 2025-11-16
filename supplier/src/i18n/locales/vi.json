@@ -366,6 +366,14 @@
   "booking_status_cancelled": "Đã hủy",
   "booking_status_refunded": "Đã hoàn tiền",
 
+  "hotel_name": "Khách sạn",
+  "customer_info": "Thông tin khách hàng",
+  "provider_notes": "Ghi chú / Yêu cầu đặc biệt",
+  "view_detail": "Xem chi tiết",
+  "confirm_booking": "Xác nhận đặt phòng",
+  "cancel_booking": "Hủy đặt phòng",
+  "hotel_booking_new_badge": "MỚI",
+
   "hotel_dashboard_total_revenue": "Tổng doanh thu",
   "hotel_dashboard_total_bookings": "Đơn đặt phòng",
   "hotel_dashboard_total_reviews": "Đánh giá",

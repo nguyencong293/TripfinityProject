@@ -181,6 +181,14 @@
   "booking_status_cancelled": "취소됨",
   "booking_status_refunded": "환불됨",
 
+  "hotel_name": "호텔",
+  "customer_info": "고객 정보",
+  "provider_notes": "메모 / 특별 요청",
+  "view_detail": "자세히 보기",
+  "confirm_booking": "예약 확인",
+  "cancel_booking": "예약 취소",
+  "hotel_booking_new_badge": "신규",
+
   "hotel_dashboard_total_revenue": "총 매출",
   "hotel_dashboard_total_bookings": "예약",
   "hotel_dashboard_total_reviews": "리뷰",
