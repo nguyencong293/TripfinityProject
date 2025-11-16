@@ -416,13 +416,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div className="flex flex-col h-full">
           {/* Logo & Collapse Button */}
           <div
-            className={`flex items-center gap-3 p-3.5 border-b theme-border ${
+            className={`flex items-center gap-3 p-3.5 border-b theme-border relative ${
               sidebarCollapsed ? "justify-center" : ""
             }`}
           >
             {/* Logo */}
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+            <Link 
+              to="/supplier" 
+              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1 min-w-0"
+            >
+              <div className="w-10 h-10 flex items-center justify-center overflow-hidden flex-shrink-0">
                 <div
                   className={`${
                     sidebarCollapsed ? "w-8 h-8" : "w-10 h-10"
@@ -457,12 +460,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   </p>
                 </div>
               )}
-            </div>
+            </Link>
 
-            {/* Collapse Button - Hidden on mobile */}
+            {/* Collapse Button - Hidden on mobile, positioned absolutely when collapsed */}
             <button
               onClick={toggleSidebarCollapse}
-              className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:theme-bg-secondary transition-colors theme-text-secondary"
+              className={`hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:theme-bg-secondary transition-colors theme-text-secondary ${
+                sidebarCollapsed ? "absolute right-1 top-1/2 -translate-y-1/2 z-10" : ""
+              }`}
               title={
                 sidebarCollapsed ? t("expand_sidebar") : t("collapse_sidebar")
               }
