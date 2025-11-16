@@ -20,10 +20,12 @@ import HotelViewPage from "../pages/Service/Hotel/HotelViewPage";
 import ServerErrorPage from "../pages/ServerErrorPage";
 import ListHotelPage from "../pages/Service/Hotel/ListHotelPage";
 import ListBookingPage from "../pages/Service/Hotel/ListBookingPage";
+import ScrollToTop from "../components/ScrollToTop";
 
 const AppRoutes: React.FC = () => {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Server Error Page - không cần authentication */}
         <Route path="/supplier/server-error" element={<ServerErrorPage />} />
