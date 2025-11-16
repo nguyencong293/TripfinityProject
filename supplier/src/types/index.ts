@@ -208,6 +208,7 @@ export interface HotelBookingDTO {
     | "cancelled"
     | "completed"
     | "refunded";
+  paymentMethod?: string; // "counter", "zalopay", "momo", "vnpay", "credit_card"
   eTicketUrl?: string;
   qrCodeData?: string;
   createdAt?: string;

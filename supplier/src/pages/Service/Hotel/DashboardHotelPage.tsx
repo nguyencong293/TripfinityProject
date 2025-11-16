@@ -24,7 +24,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useHotelDashboardStatistics } from "../../../hooks/useHotelDashboardStatistics";
-import { getProviderByUserId } from "../../../services/providerService";
+import { getProviderByUserId, getUserById } from "../../../services/providerService";
 import {
   getHotelsByProvider,
   getActiveHotelPriceAlertsByProvider,
@@ -37,6 +37,7 @@ import type {
   HotelPriceAlertDTO,
   HotelRatingSummaryDTO,
   HotelReviewDTO,
+  UserDTO,
 } from "../../../types";
 import api from "../../../services/api";
 import {
@@ -68,6 +69,7 @@ const DashboardHotelPage: React.FC = () => {
     HotelRatingSummaryDTO[]
   >([]);
   const [recentReviews, setRecentReviews] = useState<HotelReviewDTO[]>([]);
+  const [userCache, setUserCache] = useState<Map<number, UserDTO>>(new Map());
 
   useEffect(() => {
     const init = async () => {
@@ -88,12 +90,34 @@ const DashboardHotelPage: React.FC = () => {
     const load = async () => {
       if (!providerId) return;
       try {
+        console.log("🔍 Loading data for providerId:", providerId);
+        
         const hs = await getHotelsByProvider(providerId);
+        console.log("🏨 Hotels found:", hs.length, hs);
         setHotels(hs);
+        
         const bRes = await api.get<HotelBookingDTO[]>(
           `/hotel-bookings/provider/${providerId}`
         );
-        setBookings(bRes.data);
+        console.log("📅 Bookings response:", bRes.data);
+        console.log("📊 Total bookings:", bRes.data?.length || 0);
+        setBookings(bRes.data || []);
+
+        // Fetch user info for all bookings
+        const uniqueUserIds = Array.from(new Set((bRes.data || []).map(b => b.userId)));
+        const usersMap = new Map<number, UserDTO>();
+        await Promise.all(
+          uniqueUserIds.map(async (userId) => {
+            try {
+              const user = await getUserById(userId);
+              usersMap.set(userId, user);
+            } catch (e) {
+              console.error(`Failed to fetch user ${userId}:`, e);
+            }
+          })
+        );
+        setUserCache(usersMap);
+        console.log("👥 Users loaded:", usersMap.size);
 
         // Fetch provider-level data
         const [alerts, summaries] = await Promise.all([
@@ -112,7 +136,7 @@ const DashboardHotelPage: React.FC = () => {
           setRecentReviews([]);
         }
       } catch (e) {
-        console.error(e);
+        console.error("❌ Error loading dashboard data:", e);
       }
     };
     load();
@@ -322,17 +346,51 @@ const DashboardHotelPage: React.FC = () => {
 
       {/* SECTION 6: Đặt phòng gần đây */}
       <div className="rounded-xl border theme-border theme-bg-card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 icon-brand" />
-          <h2 className="text-lg font-semibold theme-text-primary">
-            {t("hotel_dashboard_recent_bookings")}
-          </h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 icon-brand" />
+            <h2 className="text-lg font-semibold theme-text-primary">
+              {t("hotel_dashboard_recent_bookings")}
+            </h2>
+          </div>
+          <button
+            className="link-brand text-sm font-medium flex items-center gap-1"
+            onClick={() => console.log("View all bookings")}
+          >
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
-        <div className="flex flex-col gap-3">
-          {bookings.slice(0, 5).map((b) => (
-            <BookingRow key={b.bookingId} booking={b} />
-          ))}
-        </div>
+        {bookings.length === 0 ? (
+          <div className="text-center py-8 theme-text-secondary">
+            <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>{t("hotel_dashboard_no_bookings") || "Chưa có đặt phòng nào"}</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {bookings.slice(0, 5).map((b) => {
+              const hotel = hotels.find((h) => h.hotelId === b.hotelId);
+              const user = userCache.get(b.userId);
+              return (
+                <BookingRow
+                  key={b.bookingId}
+                  booking={b}
+                  hotelName={hotel?.title}
+                  userName={user?.fullName}
+                  userPhone={user?.phoneNumber}
+                  onView={() => console.log("View booking", b.bookingId)}
+                  onConfirm={() => {
+                    console.log("Confirm booking", b.bookingId);
+                    // TODO: Call API to confirm booking
+                  }}
+                  onCancel={() => {
+                    console.log("Cancel booking", b.bookingId);
+                    // TODO: Call API to cancel booking
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* SECTION 7: Thống kê & đánh giá */}

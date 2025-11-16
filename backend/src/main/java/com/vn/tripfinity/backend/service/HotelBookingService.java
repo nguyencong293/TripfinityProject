@@ -1,5 +1,12 @@
 package com.vn.tripfinity.backend.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.vn.tripfinity.backend.dto.HotelBookingDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Hotel;
@@ -12,14 +19,9 @@ import com.vn.tripfinity.backend.repository.HotelPaymentRepository;
 import com.vn.tripfinity.backend.repository.HotelRepository;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -133,11 +135,16 @@ public class HotelBookingService {
         Hotel hotel = hotelRepository.findById(dto.getHotelId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + dto.getHotelId()));
 
+        // AUTO-FIX: Tự động lấy providerId từ hotel nếu không được cung cấp
         Provider provider = null;
         if (dto.getProviderId() != null) {
             provider = providerRepository.findById(dto.getProviderId())
                     .orElseThrow(
                             () -> new ResourceNotFoundException("Không tìm thấy Provider id: " + dto.getProviderId()));
+        } else if (hotel.getProvider() != null) {
+            // Lấy provider từ hotel
+            provider = hotel.getProvider();
+            log.info("✅ Tự động lấy Provider ID: {} từ Hotel ID: {}", provider.getProviderId(), hotel.getHotelId());
         }
 
         HotelBooking.BookingStatus bookingStatus = dto.getBookingStatus() != null
@@ -344,5 +351,41 @@ public class HotelBookingService {
                 .providerSeen(booking.getProviderSeen())
                 .providerNotes(booking.getProviderNotes())
                 .build();
+    }
+
+    /**
+     * Fix missing providerId for existing bookings
+     * Updates all bookings that don't have a provider set by getting it from their hotel
+     * 
+     * @return Number of bookings updated
+     */
+    @Transactional
+    public int fixMissingProviderIds() {
+        log.info("🔧 Bắt đầu fix providerId cho các bookings...");
+        
+        // Find all bookings without provider
+        List<HotelBooking> bookingsWithoutProvider = bookingRepository.findAll().stream()
+                .filter(booking -> booking.getProvider() == null && booking.getHotel() != null)
+                .collect(Collectors.toList());
+        
+        log.info("📊 Tìm thấy {} bookings không có providerId", bookingsWithoutProvider.size());
+        
+        int updatedCount = 0;
+        for (HotelBooking booking : bookingsWithoutProvider) {
+            Hotel hotel = booking.getHotel();
+            if (hotel.getProvider() != null) {
+                booking.setProvider(hotel.getProvider());
+                bookingRepository.save(booking);
+                updatedCount++;
+                log.info("✅ Updated Booking ID: {} với Provider ID: {}", 
+                    booking.getBookingId(), 
+                    hotel.getProvider().getProviderId());
+            } else {
+                log.warn("⚠️ Hotel ID: {} không có Provider!", hotel.getHotelId());
+            }
+        }
+        
+        log.info("🎉 Đã cập nhật {} bookings với providerId", updatedCount);
+        return updatedCount;
     }
 }
