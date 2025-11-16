@@ -218,6 +218,8 @@ export interface HotelBookingDTO {
   holdUntil?: string;
   providerSeen?: boolean;
   providerNotes?: string;
+  providerConfirmed?: boolean;
+  providerConfirmedAt?: string;
 }
 
 export interface HotelReviewDTO {

@@ -77,4 +77,10 @@ public class HotelBookingDTO {
 
     @JsonAlias("provider_notes")
     private String providerNotes;
+
+    @JsonAlias("provider_confirmed")
+    private Boolean providerConfirmed;
+
+    @JsonAlias("provider_confirmed_at")
+    private LocalDateTime providerConfirmedAt;
 }

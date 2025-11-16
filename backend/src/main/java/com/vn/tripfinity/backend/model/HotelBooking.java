@@ -1,13 +1,30 @@
 package com.vn.tripfinity.backend.model;
 
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @NoArgsConstructor
@@ -87,10 +104,16 @@ public class HotelBooking {
     private LocalDateTime holdUntil;
 
     @Column(name = "provider_seen", nullable = false)
-    private Boolean providerSeen;
+    private boolean providerSeen;
 
     @Column(name = "provider_notes", columnDefinition = "TEXT")
     private String providerNotes;
+
+    @Column(name = "provider_confirmed", nullable = false)
+    private boolean providerConfirmed;
+
+    @Column(name = "provider_confirmed_at")
+    private LocalDateTime providerConfirmedAt;
 
     @PrePersist
     public void prePersist() {
@@ -100,8 +123,6 @@ public class HotelBooking {
             numAdults = 1;
         if (bookingStatus == null)
             bookingStatus = BookingStatus.pending;
-        if (providerSeen == null)
-            providerSeen = false;
         if (currencyCode == null)
             currencyCode = "VND";
     }

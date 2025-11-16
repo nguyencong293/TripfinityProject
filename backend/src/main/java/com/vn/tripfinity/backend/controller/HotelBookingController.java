@@ -115,6 +115,13 @@ public class HotelBookingController {
         return ResponseEntity.ok(updatedBooking);
     }
 
+    @PatchMapping("/{id}/confirm")
+    public ResponseEntity<HotelBookingDTO> confirmBooking(@PathVariable Integer id) {
+        log.info("PATCH /api/hotel-bookings/{}/confirm - Xác nhận booking", id);
+        HotelBookingDTO confirmedBooking = bookingService.confirmBooking(id);
+        return ResponseEntity.ok(confirmedBooking);
+    }
+
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<HotelBookingDTO> cancelBooking(@PathVariable Integer id) {
         log.info("PATCH /api/hotel-bookings/{}/cancel - Hủy booking", id);

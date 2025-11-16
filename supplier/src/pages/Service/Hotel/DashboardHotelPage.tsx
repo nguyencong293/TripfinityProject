@@ -368,34 +368,47 @@ const DashboardHotelPage: React.FC = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {bookings.slice(0, 3).map((b, index) => {
-              const hotel = hotels.find((h) => h.hotelId === b.hotelId);
-              const user = userCache.get(b.userId);
-              return (  
-                <div key={b.bookingId} className="relative">
-                  <div className="absolute -left-2 top-3 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-sm font-bold shadow-lg z-10">
-                    {index + 1}
+            {[...bookings]
+              .sort((a, b) => {
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return dateB - dateA; // Mới nhất lên đầu
+              })
+              .slice(0, 1)
+              .map((b) => {
+                const hotel = hotels.find((h) => h.hotelId === b.hotelId);
+                const user = userCache.get(b.userId);
+                return (  
+                  <div key={b.bookingId} className="relative">
+                    <div className="m-auto">
+                      <BookingRow
+                        booking={b}
+                        hotelName={hotel?.title}
+                        userName={user?.fullName}
+                        userPhone={user?.phoneNumber}
+                        onView={() => console.log("View booking", b.bookingId)}
+                        onConfirm={async () => {
+                          try {
+                            await api.patch(`/hotel-bookings/${b.bookingId}/confirm`);
+                            // Refresh booking data
+                            const response = await api.get<HotelBookingDTO>(`/hotel-bookings/${b.bookingId}`);
+                            setBookings(prev => prev.map(booking => 
+                              booking.bookingId === b.bookingId ? response.data : booking
+                            ));
+                            console.log("✅ Booking confirmed:", b.bookingId);
+                          } catch (error) {
+                            console.error("❌ Error confirming booking:", error);
+                          }
+                        }}
+                        onCancel={() => {
+                          console.log("Cancel booking", b.bookingId);
+                          // TODO: Call API to cancel booking
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="ml-8">
-                    <BookingRow
-                      booking={b}
-                      hotelName={hotel?.title}
-                      userName={user?.fullName}
-                      userPhone={user?.phoneNumber}
-                      onView={() => console.log("View booking", b.bookingId)}
-                      onConfirm={() => {
-                        console.log("Confirm booking", b.bookingId);
-                        // TODO: Call API to confirm booking
-                      }}
-                      onCancel={() => {
-                        console.log("Cancel booking", b.bookingId);
-                        // TODO: Call API to cancel booking
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         )}
       </div>

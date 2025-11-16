@@ -166,7 +166,8 @@ public class HotelBookingService {
                 .qrCodeData(dto.getQrCodeData())
                 .channel(dto.getChannel())
                 .holdUntil(dto.getHoldUntil())
-                .providerSeen(dto.getProviderSeen() != null ? dto.getProviderSeen() : false)
+                .providerSeen(false)
+                .providerConfirmed(false)
                 .providerNotes(dto.getProviderNotes())
                 .build();
 
@@ -289,10 +290,25 @@ public class HotelBookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Booking id: " + bookingId));
 
         booking.setProviderSeen(true);
-        HotelBooking updatedBooking = bookingRepository.save(booking);
-        log.info("Đã đánh dấu đã xem Booking ID: {}", updatedBooking.getBookingId());
+        HotelBooking updated = bookingRepository.save(booking);
+        log.info("Đã đánh dấu Booking ID: {} là đã xem", bookingId);
 
-        return convertToDTO(updatedBooking);
+        return convertToDTO(updated);
+    }
+
+    public HotelBookingDTO confirmBooking(Integer bookingId) {
+        log.debug("Xác nhận Booking ID: {}", bookingId);
+        HotelBooking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Booking id: " + bookingId));
+
+        booking.setProviderConfirmed(true);
+        booking.setProviderConfirmedAt(LocalDateTime.now());
+        booking.setBookingStatus(HotelBooking.BookingStatus.confirmed);
+        
+        HotelBooking updated = bookingRepository.save(booking);
+        log.info("Đã xác nhận Booking ID: {} lúc {}", bookingId, updated.getProviderConfirmedAt());
+
+        return convertToDTO(updated);
     }
 
     public HotelBookingDTO cancelBooking(Integer bookingId) {
@@ -348,8 +364,10 @@ public class HotelBookingService {
                 .providerId(booking.getProvider() != null ? booking.getProvider().getProviderId() : null)
                 .channel(booking.getChannel())
                 .holdUntil(booking.getHoldUntil())
-                .providerSeen(booking.getProviderSeen())
+                .providerSeen(booking.isProviderSeen())
                 .providerNotes(booking.getProviderNotes())
+                .providerConfirmed(booking.isProviderConfirmed())
+                .providerConfirmedAt(booking.getProviderConfirmedAt())
                 .build();
     }
 
