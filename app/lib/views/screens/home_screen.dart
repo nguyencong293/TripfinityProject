@@ -614,22 +614,6 @@ class _HomeContent extends StatelessWidget {
             const SizedBox(height: 24),
 
             HomeHorizontalSection(
-              title: 'nearby_hotels'.tr,
-              pageStorageKey: 'hotels',
-              futureItems: _loadHomeHotels(),
-              onSeeMore: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const HotelOverviewSearchScreen(searchQuery: ''),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 24),
-
-            HomeHorizontalSection(
               title: 'nearby_tours'.tr,
               pageStorageKey: 'tours',
               futureItems: _loadHomeTours(),
