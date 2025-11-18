@@ -6,7 +6,7 @@ export interface StatCardProps {
   icon: React.ReactNode;
   label: string;
   value: string | number;
-  trend?: { value: number; isPositive: boolean };
+  trend?: { value: number; isPositive: boolean; isOver100?: boolean };
   badge?: { text: string; variant: "success" | "warning" | "danger" | "info" };
 }
 
@@ -58,6 +58,7 @@ const StatCard: React.FC<StatCardProps> = ({
             }`}
           >
             {trend.isPositive ? "+" : ""}
+            {trend.isOver100 ? ">" : ""}
             {trend.value.toFixed(1)}%
           </span>
           <span className="text-sm theme-text-secondary">

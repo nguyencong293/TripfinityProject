@@ -8,9 +8,7 @@ import {
   ChevronRight,
   Plus,
   List,
-  Settings,
   BarChart2,
-  FileText,
   MessageSquare,
   Zap,
 } from "lucide-react";
@@ -76,6 +74,7 @@ const DashboardHotelPage: React.FC = () => {
     type: "confirm" | "cancel";
     bookingId: number | null;
   }>({ isOpen: false, type: "confirm", bookingId: null });
+  const [revenueFilter, setRevenueFilter] = useState<"day" | "week" | "month" | "year">("day");
 
   const executeAction = async () => {
     if (!modalState.bookingId) return;
@@ -103,6 +102,96 @@ const DashboardHotelPage: React.FC = () => {
       );
     }
   };
+
+  // Helper function to format currency compactly
+  const formatCompactCurrency = (value: number): string => {
+    if (value >= 1000000000) {
+      return `${(value / 1000000000).toFixed(1)}T`; // Tỷ
+    } else if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}Tr`; // Triệu
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}N`; // Nghìn
+    }
+    return value.toString();
+  };
+
+  // Calculate month-over-month growth percentage
+  const calculateMonthGrowth = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const confirmedBookings = bookings.filter(b => b.providerConfirmed === 1);
+    
+    const currentMonthRevenue = confirmedBookings
+      .filter(b => {
+        if (!b.createdAt) return false;
+        const date = new Date(b.createdAt);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      })
+      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+    
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    
+    const lastMonthRevenue = confirmedBookings
+      .filter(b => {
+        if (!b.createdAt) return false;
+        const date = new Date(b.createdAt);
+        return date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear;
+      })
+      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+    
+    // Nếu tháng trước = 0 mà tháng nay > 0 thì tăng >100%
+    if (lastMonthRevenue === 0 && currentMonthRevenue > 0) {
+      return { value: 100, isPositive: true, isOver100: true };
+    }
+    // Nếu cả 2 tháng đều 0
+    if (lastMonthRevenue === 0 && currentMonthRevenue === 0) {
+      return { value: 0, isPositive: true, isOver100: false };
+    }
+    
+    const growthPercent = ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+    return { value: Math.abs(growthPercent), isPositive: growthPercent >= 0, isOver100: false };
+  }, [bookings]);
+
+  // Calculate month-over-month booking count growth
+  const calculateBookingGrowth = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const confirmedBookings = bookings.filter(b => b.providerConfirmed === 1);
+    
+    const currentMonthCount = confirmedBookings
+      .filter(b => {
+        if (!b.createdAt) return false;
+        const date = new Date(b.createdAt);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      }).length;
+    
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    
+    const lastMonthCount = confirmedBookings
+      .filter(b => {
+        if (!b.createdAt) return false;
+        const date = new Date(b.createdAt);
+        return date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear;
+      }).length;
+    
+    // Nếu tháng trước = 0 mà tháng nay > 0 thì tăng >100%
+    if (lastMonthCount === 0 && currentMonthCount > 0) {
+      return { value: 100, isPositive: true, isOver100: true };
+    }
+    // Nếu cả 2 tháng đều 0
+    if (lastMonthCount === 0 && currentMonthCount === 0) {
+      return { value: 0, isPositive: true, isOver100: false };
+    }
+    
+    const growthPercent = ((currentMonthCount - lastMonthCount) / lastMonthCount) * 100;
+    return { value: Math.abs(growthPercent), isPositive: growthPercent >= 0, isOver100: false };
+  }, [bookings]);
 
   useEffect(() => {
     const init = async () => {
@@ -176,16 +265,60 @@ const DashboardHotelPage: React.FC = () => {
   }, [providerId]);
 
   const revenueChartData = useMemo(() => {
-    const map = new Map<number, number>();
-    bookings.forEach((b) => {
-      const d = b.createdAt ? new Date(b.createdAt).getDate() : 1;
-      map.set(d, (map.get(d) || 0) + (b.totalPrice || 0));
-    });
-    return Array.from({ length: 30 }, (_, i) => {
-      const day = i + 1;
-      return { day, label: `Ngày ${day}`, revenue: map.get(day) || 0 };
-    });
-  }, [bookings]);
+    // Only count confirmed bookings (providerConfirmed === 1)
+    const confirmedBookings = bookings.filter(b => b.providerConfirmed === 1);
+    
+    if (revenueFilter === "day") {
+      const map = new Map<number, number>();
+      confirmedBookings.forEach((b) => {
+        const d = b.createdAt ? new Date(b.createdAt).getDate() : 1;
+        map.set(d, (map.get(d) || 0) + (b.totalPrice || 0));
+      });
+      return Array.from({ length: 30 }, (_, i) => {
+        const day = i + 1;
+        return { day, label: `${day}`, revenue: map.get(day) || 0 };
+      });
+    } else if (revenueFilter === "week") {
+      const map = new Map<number, number>();
+      confirmedBookings.forEach((b) => {
+        if (b.createdAt) {
+          const date = new Date(b.createdAt);
+          const week = Math.ceil(date.getDate() / 7);
+          map.set(week, (map.get(week) || 0) + (b.totalPrice || 0));
+        }
+      });
+      return Array.from({ length: 4 }, (_, i) => {
+        const week = i + 1;
+        return { day: week, label: `Tuần ${week}`, revenue: map.get(week) || 0 };
+      });
+    } else if (revenueFilter === "month") {
+      const map = new Map<number, number>();
+      confirmedBookings.forEach((b) => {
+        if (b.createdAt) {
+          const month = new Date(b.createdAt).getMonth() + 1;
+          map.set(month, (map.get(month) || 0) + (b.totalPrice || 0));
+        }
+      });
+      return Array.from({ length: 12 }, (_, i) => {
+        const month = i + 1;
+        return { day: month, label: `T${month}`, revenue: map.get(month) || 0 };
+      });
+    } else {
+      // year
+      const map = new Map<number, number>();
+      confirmedBookings.forEach((b) => {
+        if (b.createdAt) {
+          const year = new Date(b.createdAt).getFullYear();
+          map.set(year, (map.get(year) || 0) + (b.totalPrice || 0));
+        }
+      });
+      const currentYear = new Date().getFullYear();
+      return Array.from({ length: 5 }, (_, i) => {
+        const year = currentYear - 4 + i;
+        return { day: year, label: `${year}`, revenue: map.get(year) || 0 };
+      });
+    }
+  }, [bookings, revenueFilter]);
 
   const newNotificationsCount = 2;
   const notifications: Notification[] = [
@@ -223,22 +356,20 @@ const DashboardHotelPage: React.FC = () => {
         <StatCard
           icon={<BarChart3 className="w-5 h-5 icon-brand" />}
           label={t("hotel_dashboard_total_revenue")}
-          value={`${(statistics?.totalRevenue || 0).toLocaleString(
-            "vi-VN"
-          )} VND`}
-          trend={{ value: 12.4, isPositive: true }}
+          value={`${formatCompactCurrency(bookings.filter(b => b.providerConfirmed === 1).reduce((sum, b) => sum + (b.totalPrice || 0), 0))} VND`}
+          trend={calculateMonthGrowth}
         />
         <StatCard
           icon={<Hotel className="w-5 h-5 icon-brand" />}
           label={t("hotel_dashboard_total_bookings")}
-          value={statistics?.totalBookings || 0}
-          trend={{ value: 3.2, isPositive: true }}
+          value={bookings.filter(b => b.providerConfirmed === 1).length}
+          trend={calculateBookingGrowth}
         />
         <StatCard
           icon={<Calendar className="w-5 h-5 icon-brand" />}
           label={t("hotel_dashboard_total_reviews")}
           value={statistics?.totalReviews || 0}
-          badge={{ text: t("increase"), variant: "info" }}
+          // badge={{ text: t("increase"), variant: "info" }}
         />
         <StatCard
           icon={<Hotel className="w-5 h-5 icon-brand" />}
@@ -308,40 +439,76 @@ const DashboardHotelPage: React.FC = () => {
           />
           <QuickAction
             icon={<BarChart2 className="w-6 h-6" />}
-            label={t("hotel_dashboard_action_revenue_report")}
-            description={t("hotel_dashboard_action_revenue_report_desc")}
-            onClick={() => console.log("Revenue")}
+            label={t("hotel_dashboard_action_manage_hotel")}
+            description={t("hotel_dashboard_action_manage_hotel_desc")}
+            onClick={() => console.log("Manage Hotel")}
           />
-          <QuickAction
-            icon={<Settings className="w-6 h-6" />}
-            label={t("hotel_dashboard_action_price_settings")}
-            description={t("hotel_dashboard_action_price_settings_desc")}
-            onClick={() => console.log("Prices")}
-          />
-          <QuickAction
-            icon={<FileText className="w-6 h-6" />}
-            label={t("hotel_dashboard_action_contracts")}
-            description={t("hotel_dashboard_action_contracts_desc")}
-            onClick={() => console.log("Contracts")}
-          />
+
         </div>
       </div>
 
       {/* SECTION 4: Biểu đồ doanh thu */}
       <div className="rounded-xl border theme-border theme-bg-card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart3 className="w-5 h-5 icon-brand" />
-          <h2 className="text-lg font-semibold theme-text-primary">
-            {t("hotel_dashboard_revenue_chart")}
-          </h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 icon-brand" />
+            <h2 className="text-lg font-semibold theme-text-primary">
+              {t("hotel_dashboard_revenue_chart")}
+            </h2>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setRevenueFilter("day")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                revenueFilter === "day"
+                  ? "bg-blue-600 text-white"
+                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+              }`}
+            >
+              Ngày
+            </button>
+            <button
+              onClick={() => setRevenueFilter("week")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                revenueFilter === "week"
+                  ? "bg-blue-600 text-white"
+                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+              }`}
+            >
+              Tuần
+            </button>
+            <button
+              onClick={() => setRevenueFilter("month")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                revenueFilter === "month"
+                  ? "bg-blue-600 text-white"
+                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+              }`}
+            >
+              Tháng
+            </button>
+            <button
+              onClick={() => setRevenueFilter("year")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                revenueFilter === "year"
+                  ? "bg-blue-600 text-white"
+                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+              }`}
+            >
+              Năm
+            </button>
+          </div>
         </div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={revenueChartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
+              <XAxis dataKey="label" />
+              <YAxis tickFormatter={(value) => formatCompactCurrency(value)} />
+              <Tooltip 
+                formatter={(value: number) => [`${value.toLocaleString('vi-VN')} VND`, '']}
+                labelStyle={{ fontWeight: 'bold' }}
+              />
               <Bar dataKey="revenue" fill="#34A853" />
             </BarChart>
           </ResponsiveContainer>
