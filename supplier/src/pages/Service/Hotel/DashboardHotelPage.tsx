@@ -51,6 +51,7 @@ import {
   ReviewCard,
 } from "../../../components/hotel";
 import { useLanguage } from "../../../hooks/useLanguage";
+import ConfirmModal from "../../../components/common/ConfirmModal";
 
 // Notification types for this page context
 import type { Notification } from "../../../components/hotel/NotificationItem";
@@ -70,6 +71,38 @@ const DashboardHotelPage: React.FC = () => {
   >([]);
   const [recentReviews, setRecentReviews] = useState<HotelReviewDTO[]>([]);
   const [userCache, setUserCache] = useState<Map<number, UserDTO>>(new Map());
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: "confirm" | "cancel";
+    bookingId: number | null;
+  }>({ isOpen: false, type: "confirm", bookingId: null });
+
+  const executeAction = async () => {
+    if (!modalState.bookingId) return;
+
+    try {
+      if (modalState.type === "confirm") {
+        await api.patch(`/hotel-bookings/${modalState.bookingId}/confirm`);
+      } else {
+        await api.patch(`/hotel-bookings/${modalState.bookingId}/cancel`);
+      }
+      
+      // Refresh booking data
+      const response = await api.get<HotelBookingDTO>(`/hotel-bookings/${modalState.bookingId}`);
+      setBookings(prev => prev.map(booking => 
+        booking.bookingId === modalState.bookingId ? response.data : booking
+      ));
+      
+      setModalState({ isOpen: false, type: "confirm", bookingId: null });
+    } catch (error) {
+      console.error(`❌ Error ${modalState.type}ing booking:`, error);
+      alert(
+        modalState.type === "confirm"
+          ? t("booking_confirmed_error") || "Lỗi khi xác nhận đặt phòng"
+          : t("booking_cancelled_error") || "Lỗi khi hủy đặt phòng"
+      );
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -361,7 +394,7 @@ const DashboardHotelPage: React.FC = () => {
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        {bookings.length === 0 ? (
+        {bookings.filter(b => b.providerConfirmed === 0).length === 0 ? (
           <div className="text-center py-8 theme-text-secondary">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>{t("hotel_dashboard_no_bookings") || "Chưa có đặt phòng nào"}</p>
@@ -369,6 +402,7 @@ const DashboardHotelPage: React.FC = () => {
         ) : (
           <div className="flex flex-col gap-3">
             {[...bookings]
+              .filter(b => b.providerConfirmed === 0)
               .sort((a, b) => {
                 const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
                 const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -386,24 +420,9 @@ const DashboardHotelPage: React.FC = () => {
                         hotelName={hotel?.title}
                         userName={user?.fullName}
                         userPhone={user?.phoneNumber}
-                        onView={() => console.log("View booking", b.bookingId)}
-                        onConfirm={async () => {
-                          try {
-                            await api.patch(`/hotel-bookings/${b.bookingId}/confirm`);
-                            // Refresh booking data
-                            const response = await api.get<HotelBookingDTO>(`/hotel-bookings/${b.bookingId}`);
-                            setBookings(prev => prev.map(booking => 
-                              booking.bookingId === b.bookingId ? response.data : booking
-                            ));
-                            console.log("✅ Booking confirmed:", b.bookingId);
-                          } catch (error) {
-                            console.error("❌ Error confirming booking:", error);
-                          }
-                        }}
-                        onCancel={() => {
-                          console.log("Cancel booking", b.bookingId);
-                          // TODO: Call API to cancel booking
-                        }}
+                        onView={() => navigate(`/supplier/service/hotel/bookings/${b.bookingId}`)}
+                        onConfirm={() => setModalState({ isOpen: true, type: "confirm", bookingId: b.bookingId || null })}
+                        onCancel={() => setModalState({ isOpen: true, type: "cancel", bookingId: b.bookingId || null })}
                       />
                     </div>
                   </div>
@@ -480,6 +499,30 @@ const DashboardHotelPage: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ isOpen: false, type: "confirm", bookingId: null })}
+        onConfirm={executeAction}
+        title={
+          modalState.type === "confirm"
+            ? t("confirm_booking") || "Xác nhận đặt phòng"
+            : t("cancel_booking") || "Hủy đặt phòng"
+        }
+        message={
+          modalState.type === "confirm"
+            ? t("confirm_booking_message") || "Bạn có chắc chắn muốn xác nhận đặt phòng này không?"
+            : t("confirm_cancel_booking") || "Bạn có chắc chắn muốn hủy đặt phòng này không?"
+        }
+        confirmText={
+          modalState.type === "confirm"
+            ? t("confirm_booking") || "Xác nhận"
+            : t("cancel_booking") || "Hủy đặt phòng"
+        }
+        cancelText={t("back") || "Quay lại"}
+        type={modalState.type === "cancel" ? "danger" : "confirm"}
+      />
     </div>
   );
 };

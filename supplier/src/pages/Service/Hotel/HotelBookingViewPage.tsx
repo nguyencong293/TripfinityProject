@@ -21,6 +21,7 @@ import { useLanguage } from "../../../hooks/useLanguage";
 import type { HotelBookingDTO, HotelDTO, UserDTO } from "../../../types";
 import api from "../../../services/api";
 import { getUserById } from "../../../services/providerService";
+import ConfirmModal from "../../../components/common/ConfirmModal";
 
 const HotelBookingViewPage: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -33,6 +34,10 @@ const HotelBookingViewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: "confirm" | "cancel";
+  }>({ isOpen: false, type: "confirm" });
 
   useEffect(() => {
     if (!bookingId) return;
@@ -71,44 +76,38 @@ const HotelBookingViewPage: React.FC = () => {
 
   const handleConfirmBooking = async () => {
     if (!bookingId || !booking) return;
-    
-    try {
-      setActionLoading(true);
-      await api.patch(`/hotel-bookings/${bookingId}/confirm`);
-      
-      // Refresh booking data
-      const bookingRes = await api.get<HotelBookingDTO>(`/hotel-bookings/${bookingId}`);
-      setBooking(bookingRes.data);
-      
-      alert(t("booking_confirmed_success") || "Đã xác nhận đặt phòng thành công!");
-    } catch (e) {
-      console.error("Error confirming booking:", e);
-      alert(t("booking_confirmed_error") || "Lỗi khi xác nhận đặt phòng");
-    } finally {
-      setActionLoading(false);
-    }
+    setModalState({ isOpen: true, type: "confirm" });
   };
 
   const handleCancelBooking = async () => {
     if (!bookingId || !booking) return;
-    
-    const confirmed = window.confirm(
-      t("confirm_cancel_booking") || "Bạn có chắc chắn muốn hủy đặt phòng này?"
-    );
-    if (!confirmed) return;
+    setModalState({ isOpen: true, type: "cancel" });
+  };
+
+  const executeAction = async () => {
+    if (!bookingId) return;
 
     try {
       setActionLoading(true);
-      await api.patch(`/hotel-bookings/${bookingId}/cancel`);
+      
+      if (modalState.type === "confirm") {
+        await api.patch(`/hotel-bookings/${bookingId}/confirm`);
+      } else {
+        await api.patch(`/hotel-bookings/${bookingId}/cancel`);
+      }
       
       // Refresh booking data
       const bookingRes = await api.get<HotelBookingDTO>(`/hotel-bookings/${bookingId}`);
       setBooking(bookingRes.data);
       
-      alert(t("booking_cancelled_success") || "Đã hủy đặt phòng thành công!");
+      setModalState({ isOpen: false, type: "confirm" });
     } catch (e) {
-      console.error("Error cancelling booking:", e);
-      alert(t("booking_cancelled_error") || "Lỗi khi hủy đặt phòng");
+      console.error(`Error ${modalState.type}ing booking:`, e);
+      alert(
+        modalState.type === "confirm"
+          ? t("booking_confirmed_error") || "Lỗi khi xác nhận đặt phòng"
+          : t("booking_cancelled_error") || "Lỗi khi hủy đặt phòng"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -365,7 +364,7 @@ const HotelBookingViewPage: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="space-y-3">
-            {booking.bookingStatus === "pending" && !booking.providerConfirmed && (
+            {booking.providerConfirmed === 0 && (
               <button
                 onClick={handleConfirmBooking}
                 disabled={actionLoading}
@@ -381,7 +380,7 @@ const HotelBookingViewPage: React.FC = () => {
                 )}
               </button>
             )}
-            {(booking.bookingStatus === "pending" || booking.bookingStatus === "confirmed") && (
+            {(booking.providerConfirmed === 0 || booking.providerConfirmed === 1) && (
               <button
                 onClick={handleCancelBooking}
                 disabled={actionLoading}
@@ -400,6 +399,31 @@ const HotelBookingViewPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ isOpen: false, type: "confirm" })}
+        onConfirm={executeAction}
+        title={
+          modalState.type === "confirm"
+            ? t("confirm_booking") || "Xác nhận đặt phòng"
+            : t("cancel_booking") || "Hủy đặt phòng"
+        }
+        message={
+          modalState.type === "confirm"
+            ? t("confirm_booking_message") || "Bạn có chắc chắn muốn xác nhận đặt phòng này không?"
+            : t("confirm_cancel_booking") || "Bạn có chắc chắn muốn hủy đặt phòng này không?"
+        }
+        confirmText={
+          modalState.type === "confirm"
+            ? t("confirm_booking") || "Xác nhận"
+            : t("cancel_booking") || "Hủy đặt phòng"
+        }
+        cancelText={t("back") || "Quay lại"}
+        type={modalState.type === "cancel" ? "danger" : "confirm"}
+        loading={actionLoading}
+      />
     </div>
   );
 };

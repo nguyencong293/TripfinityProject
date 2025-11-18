@@ -7,6 +7,7 @@ import { useLanguage } from "../../../hooks/useLanguage";
 import api from "../../../services/api";
 import { getProviderByUserId, getUserById } from "../../../services/providerService";
 import { getHotelsByProvider } from "../../../services/hotelService";
+import ConfirmModal from "../../../components/common/ConfirmModal";
 
 const ListBookingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +19,12 @@ const ListBookingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<0 | 1 | 2>(0); // 0=pending, 1=confirmed, 2=cancelled
+  const [actionLoading, setActionLoading] = useState<number | null>(null); // bookingId being processed
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: "confirm" | "cancel";
+    bookingId: number | null;
+  }>({ isOpen: false, type: "confirm", bookingId: null });
 
   useEffect(() => {
     const loadData = async () => {
@@ -129,6 +136,50 @@ const ListBookingPage: React.FC = () => {
     return bookings.filter(b => b.providerConfirmed === status).length;
   };
 
+  const handleConfirmBooking = async (bookingId: number) => {
+    setModalState({ isOpen: true, type: "confirm", bookingId });
+  };
+
+  const handleCancelBooking = async (bookingId: number) => {
+    setModalState({ isOpen: true, type: "cancel", bookingId });
+  };
+
+  const executeAction = async () => {
+    if (!modalState.bookingId) return;
+
+    try {
+      setActionLoading(modalState.bookingId);
+      
+      if (modalState.type === "confirm") {
+        await api.patch(`/hotel-bookings/${modalState.bookingId}/confirm`);
+      } else {
+        await api.patch(`/hotel-bookings/${modalState.bookingId}/cancel`);
+      }
+      
+      // Refresh bookings list
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        const provider = await getProviderByUserId(user.userId);
+        if (provider?.providerId) {
+          const bookingsRes = await api.get<HotelBookingDTO[]>(`/hotel-bookings/provider/${provider.providerId}`);
+          setBookings(bookingsRes.data || []);
+        }
+      }
+      
+      setModalState({ isOpen: false, type: "confirm", bookingId: null });
+    } catch (e) {
+      console.error(`Error ${modalState.type}ing booking:`, e);
+      alert(
+        modalState.type === "confirm"
+          ? t("booking_confirmed_error") || "Lỗi khi xác nhận đặt phòng"
+          : t("booking_cancelled_error") || "Lỗi khi hủy đặt phòng"
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: dark ? "bg-orange-500/20 text-orange-400 border-orange-500/30" : "bg-orange-100 text-orange-700 border-orange-300",
@@ -197,7 +248,8 @@ const ListBookingPage: React.FC = () => {
         );
       case "createdAt":
         return <span className="text-sm">{formatDateTime(b.createdAt)}</span>;
-      case "actions":
+      case "actions": {
+        const isProcessing = actionLoading === b.bookingId;
         return (
           <div className="flex items-center gap-2">
             <button
@@ -208,37 +260,53 @@ const ListBookingPage: React.FC = () => {
                   : "hover:bg-blue-50 text-blue-600"
               }`}
               title={t("view_detail") || "Xem chi tiết"}
+              disabled={isProcessing}
             >
               <Eye className="w-4 h-4" />
             </button>
-            {b.bookingStatus === "pending" && (
+            {b.providerConfirmed === 0 && (
               <button
-                onClick={() => console.log("Confirm booking", b.bookingId)}
+                onClick={() => handleConfirmBooking(b.bookingId!)}
+                disabled={isProcessing}
                 className={`p-1.5 rounded transition-colors ${
-                  dark
+                  isProcessing
+                    ? "opacity-50 cursor-not-allowed"
+                    : dark
                     ? "hover:bg-green-500/20 text-green-400"
                     : "hover:bg-green-50 text-green-600"
                 }`}
                 title={t("confirm_booking") || "Xác nhận"}
               >
-                <CheckCircle className="w-4 h-4" />
+                {isProcessing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
               </button>
             )}
-            {(b.bookingStatus === "pending" || b.bookingStatus === "confirmed") && (
+            {(b.providerConfirmed === 0 || b.providerConfirmed === 1) && (
               <button
-                onClick={() => console.log("Cancel booking", b.bookingId)}
+                onClick={() => handleCancelBooking(b.bookingId!)}
+                disabled={isProcessing}
                 className={`p-1.5 rounded transition-colors ${
-                  dark
+                  isProcessing
+                    ? "opacity-50 cursor-not-allowed"
+                    : dark
                     ? "hover:bg-red-500/20 text-red-400"
                     : "hover:bg-red-50 text-red-600"
                 }`}
                 title={t("cancel_booking") || "Hủy"}
               >
-                <XCircle className="w-4 h-4" />
+                {isProcessing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <XCircle className="w-4 h-4" />
+                )}
               </button>
             )}
           </div>
         );
+      }
       default:
         return "";
     }
@@ -284,7 +352,7 @@ const ListBookingPage: React.FC = () => {
                 {t("booking_list_title") || "Danh sách đặt phòng"}
               </h1>
               <p className={`text-sm ${dark ? "text-gray-400" : "text-gray-600"}`}>
-                {bookings.length} {t("bookings_count_suffix") || "đơn đặt phòng"}
+                {bookings.filter(b => b.providerConfirmed === 0).length} {t("bookings_count_suffix") || "đơn đặt phòng"}
               </p>
             </div>
           </div>
@@ -413,6 +481,31 @@ const ListBookingPage: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ isOpen: false, type: "confirm", bookingId: null })}
+        onConfirm={executeAction}
+        title={
+          modalState.type === "confirm"
+            ? t("confirm_booking") || "Xác nhận đặt phòng"
+            : t("cancel_booking") || "Hủy đặt phòng"
+        }
+        message={
+          modalState.type === "confirm"
+            ? t("confirm_booking_message") || "Bạn có chắc chắn muốn xác nhận đặt phòng này không?"
+            : t("confirm_cancel_booking") || "Bạn có chắc chắn muốn hủy đặt phòng này không?"
+        }
+        confirmText={
+          modalState.type === "confirm"
+            ? t("confirm_booking") || "Xác nhận"
+            : t("cancel_booking") || "Hủy đặt phòng"
+        }
+        cancelText={t("back") || "Quay lại"}
+        type={modalState.type === "cancel" ? "danger" : "confirm"}
+        loading={actionLoading === modalState.bookingId}
+      />
     </div>
   );
 };

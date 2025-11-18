@@ -1,5 +1,7 @@
 package com.vn.tripfinity.backend.security;
 
+import java.util.Arrays;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,8 +20,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.vn.tripfinity.backend.service.auth.CustomOAuth2SuccessHandler;
 import com.vn.tripfinity.backend.service.auth.CustomUserDetailsService;
 import com.vn.tripfinity.backend.service.auth.token.JwtAuthenticationFilter;
-
-import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -84,7 +84,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(Arrays.asList("Authorization"));

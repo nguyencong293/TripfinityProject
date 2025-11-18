@@ -149,8 +149,8 @@ const BookingRow: React.FC<BookingRowProps> = ({ booking, hotelName, userName, u
 
       <div className="flex items-center gap-2 flex-wrap pt-3 border-t theme-border">
         {onView && <button onClick={onView} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold theme-text-primary hover:theme-text-brand bg-white hover:bg-blue-50 border-2 theme-border hover:border-blue-300 rounded-lg transition-all shadow-sm hover:shadow"><Eye className="w-4 h-4" />{t("view_detail") || "Xem chi tiết"}</button>}
-        {booking.bookingStatus === "pending" && onConfirm && <button onClick={onConfirm} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all shadow-sm hover:shadow-md"><CheckCircle className="w-4 h-4" />{t("confirm_booking") || "Xác nhận đặt phòng"}</button>}
-        {(booking.bookingStatus === "pending" || booking.bookingStatus === "confirmed") && onCancel && <button onClick={onCancel} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all shadow-sm hover:shadow-md"><XCircle className="w-4 h-4" />{t("cancel_booking") || "Hủy đặt phòng"}</button>}
+        {booking.providerConfirmed === 0 && onConfirm && <button onClick={onConfirm} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all shadow-sm hover:shadow-md"><CheckCircle className="w-4 h-4" />{t("confirm_booking") || "Xác nhận đặt phòng"}</button>}
+        {(booking.providerConfirmed === 0 || booking.providerConfirmed === 1) && onCancel && <button onClick={onCancel} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all shadow-sm hover:shadow-md"><XCircle className="w-4 h-4" />{t("cancel_booking") || "Hủy đặt phòng"}</button>}
       </div>
     </div>
   );

@@ -316,9 +316,11 @@ public class HotelBookingService {
         HotelBooking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Booking id: " + bookingId));
 
+        booking.setProviderConfirmed(2);
+        booking.setProviderConfirmedAt(LocalDateTime.now());
         booking.setBookingStatus(HotelBooking.BookingStatus.cancelled);
         HotelBooking updatedBooking = bookingRepository.save(booking);
-        log.info("Đã hủy Booking ID: {}", updatedBooking.getBookingId());
+        log.info("Đã hủy Booking ID: {} lúc {}", bookingId, updatedBooking.getProviderConfirmedAt());
 
         return convertToDTO(updatedBooking);
     }
