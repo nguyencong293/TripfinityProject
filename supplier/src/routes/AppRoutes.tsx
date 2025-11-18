@@ -20,6 +20,7 @@ import HotelViewPage from "../pages/Service/Hotel/HotelViewPage";
 import ServerErrorPage from "../pages/ServerErrorPage";
 import ListHotelPage from "../pages/Service/Hotel/ListHotelPage";
 import ListBookingPage from "../pages/Service/Hotel/ListBookingPage";
+import HotelBookingViewPage from "../pages/Service/Hotel/HotelBookingViewPage";
 import ScrollToTop from "../components/ScrollToTop";
 
 const AppRoutes: React.FC = () => {
@@ -53,6 +54,7 @@ const AppRoutes: React.FC = () => {
             <Route path="service/hotel" element={<DashboardHotelPage />} />
             <Route path="service/hotel/list" element={<ListHotelPage />} />
             <Route path="service/hotel/bookings" element={<ListBookingPage />} />
+            <Route path="service/hotel/bookings/:bookingId" element={<HotelBookingViewPage />} />
             <Route path="service/hotel/create" element={<HotelCreatePage />} />
             <Route
               path="service/hotel/:hotelId/edit"

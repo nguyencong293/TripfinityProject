@@ -185,7 +185,7 @@ const ListBookingPage: React.FC = () => {
         return (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => console.log("View booking", b.bookingId)}
+              onClick={() => navigate(`/supplier/service/hotel/bookings/${b.bookingId}`)}
               className={`p-1.5 rounded transition-colors ${
                 dark
                   ? "hover:bg-blue-500/20 text-blue-400"
