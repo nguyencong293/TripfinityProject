@@ -193,7 +193,6 @@
   "view_detail": "View Details",
   "confirm_booking": "Confirm Booking",
   "cancel_booking": "Cancel Booking",
-  "hotel_booking_new_badge": "NEW",
 
   "hotel_dashboard_total_revenue": "Total revenue",
   "hotel_dashboard_total_bookings": "Bookings",
@@ -252,7 +251,7 @@
   "checkin_date": "Check-in date",
   "checkout_date": "Check-out date",
   "guests": "Guests",
-  "adults_suffix": "adults",
+  "adults_suffix": "persons",
   "children_suffix": "children",
   "total_amount": "Total amount",
   "note_prefix": "Note:",

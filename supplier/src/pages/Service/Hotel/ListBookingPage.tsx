@@ -153,7 +153,7 @@ const ListBookingPage: React.FC = () => {
       case "checkOut":
         return formatDate(b.endDate);
       case "guests":
-        return `${b.numAdults} ${t("adults_suffix") || "người lớn"}${b.numChildren ? `, ${b.numChildren} ${t("children_suffix") || "trẻ em"}` : ""}`;
+        return `${b.numAdults} ${t("adults_suffix") || "người"}${b.numChildren ? `, ${b.numChildren} ${t("children_suffix") || "trẻ em"}` : ""}`;
       case "totalPrice":
         return (
           <span className={dark ? "text-emerald-400 font-bold" : "text-emerald-700 font-bold"}>
