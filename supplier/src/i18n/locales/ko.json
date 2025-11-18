@@ -347,5 +347,6 @@
   "payment_method_other": "기타",
   "payment_method_N/A": "미결제",
   "created_at": "생성 시간",
-  "back": "뒤로"
+  "back": "뒤로",
+  "hotel_dashboard_no_bookings": "예약이 없습니다"
 }

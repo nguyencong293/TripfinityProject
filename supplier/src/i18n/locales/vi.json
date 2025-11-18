@@ -541,5 +541,6 @@
   "payment_method_other": "Khác",
   "payment_method_N/A": "Chưa thanh toán",
   "created_at": "Tạo lúc",
-  "back": "Quay lại"
+  "back": "Quay lại",
+  "hotel_dashboard_no_bookings": "Chưa có đặt phòng nào"
 }

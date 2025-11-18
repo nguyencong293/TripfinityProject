@@ -354,5 +354,6 @@
   "payment_method_other": "Other",
   "payment_method_N/A": "Not Paid",
   "created_at": "Created at",
-  "back": "Back"
+  "back": "Back",
+  "hotel_dashboard_no_bookings": "No bookings yet"
 }
