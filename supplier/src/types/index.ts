@@ -218,7 +218,7 @@ export interface HotelBookingDTO {
   holdUntil?: string;
   providerSeen?: boolean;
   providerNotes?: string;
-  providerConfirmed?: boolean;
+  providerConfirmed?: number; // 0=pending, 1=confirmed, 2=cancelled
   providerConfirmedAt?: string;
 }
 

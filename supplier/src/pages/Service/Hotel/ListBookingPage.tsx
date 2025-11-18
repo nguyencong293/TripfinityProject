@@ -17,6 +17,7 @@ const ListBookingPage: React.FC = () => {
   const [userCache, setUserCache] = useState<Map<number, UserDTO>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<0 | 1 | 2>(0); // 0=pending, 1=confirmed, 2=cancelled
 
   useEffect(() => {
     const loadData = async () => {
@@ -112,6 +113,21 @@ const ListBookingPage: React.FC = () => {
     minute: '2-digit' 
   }) : "N/A";
   const formatCurrency = (v?: number) => new Intl.NumberFormat("vi-VN").format(v || 0);
+
+  // Filter bookings by provider_confirmed status and sort by newest first
+  const filteredBookings = useMemo(() => {
+    return bookings
+      .filter(b => b.providerConfirmed === activeTab)
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA; // Newest first
+      });
+  }, [bookings, activeTab]);
+
+  const getTabCount = (status: 0 | 1 | 2) => {
+    return bookings.filter(b => b.providerConfirmed === status).length;
+  };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -275,6 +291,73 @@ const ListBookingPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className={`flex gap-2 p-1 rounded-lg ${dark ? "bg-gray-800" : "bg-gray-100"}`}>
+        <button
+          onClick={() => setActiveTab(0)}
+          className={`flex-1 px-4 py-2.5 rounded-md font-medium transition-all ${
+            activeTab === 0
+              ? dark
+                ? "bg-orange-500/20 text-orange-400 shadow-sm"
+                : "bg-white text-orange-700 shadow-sm"
+              : dark
+              ? "text-gray-400 hover:text-gray-300"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          <span>{t("booking_status_pending") || "Chờ xác nhận"}</span>
+          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 0
+              ? dark ? "bg-orange-500/30" : "bg-orange-100"
+              : dark ? "bg-gray-700" : "bg-gray-200"
+          }`}>
+            {getTabCount(0)}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab(1)}
+          className={`flex-1 px-4 py-2.5 rounded-md font-medium transition-all ${
+            activeTab === 1
+              ? dark
+                ? "bg-green-500/20 text-green-400 shadow-sm"
+                : "bg-white text-green-700 shadow-sm"
+              : dark
+              ? "text-gray-400 hover:text-gray-300"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          <span>{t("booking_status_confirmed") || "Đã xác nhận"}</span>
+          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 1
+              ? dark ? "bg-green-500/30" : "bg-green-100"
+              : dark ? "bg-gray-700" : "bg-gray-200"
+          }`}>
+            {getTabCount(1)}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab(2)}
+          className={`flex-1 px-4 py-2.5 rounded-md font-medium transition-all ${
+            activeTab === 2
+              ? dark
+                ? "bg-red-500/20 text-red-400 shadow-sm"
+                : "bg-white text-red-700 shadow-sm"
+              : dark
+              ? "text-gray-400 hover:text-gray-300"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          <span>{t("booking_status_cancelled") || "Đã hủy"}</span>
+          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 2
+              ? dark ? "bg-red-500/30" : "bg-red-100"
+              : dark ? "bg-gray-700" : "bg-gray-200"
+          }`}>
+            {getTabCount(2)}
+          </span>
+        </button>
+      </div>
+
       {/* Table */}
       <div className={`rounded-xl border overflow-hidden ${dark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
         <div className="overflow-x-auto">
@@ -294,17 +377,19 @@ const ListBookingPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {bookings.length === 0 ? (
+              {filteredBookings.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length} className="px-4 py-8 text-center">
                     <Calendar className={`w-12 h-12 mx-auto mb-3 ${dark ? "text-gray-600" : "text-gray-300"}`} />
                     <p className={dark ? "text-gray-400" : "text-gray-500"}>
-                      {t("hotel_dashboard_no_bookings") || "Chưa có đặt phòng nào"}
+                      {activeTab === 0 && (t("no_pending_bookings") || "Chưa có đơn chờ xác nhận")}
+                      {activeTab === 1 && (t("no_confirmed_bookings") || "Chưa có đơn đã xác nhận")}
+                      {activeTab === 2 && (t("no_cancelled_bookings") || "Chưa có đơn đã hủy")}
                     </p>
                   </td>
                 </tr>
               ) : (
-                bookings.map((b) => (
+                filteredBookings.map((b) => (
                   <tr
                     key={b.bookingId}
                     className={`transition-colors ${
