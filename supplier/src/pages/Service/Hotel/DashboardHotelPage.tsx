@@ -25,14 +25,12 @@ import { useHotelDashboardStatistics } from "../../../hooks/useHotelDashboardSta
 import { getProviderByUserId, getUserById } from "../../../services/providerService";
 import {
   getHotelsByProvider,
-  getActiveHotelPriceAlertsByProvider,
   getHotelRatingSummariesByProvider,
   getHotelReviewsByHotel,
 } from "../../../services/hotelService";
 import type {
   HotelDTO,
   HotelBookingDTO,
-  HotelPriceAlertDTO,
   HotelRatingSummaryDTO,
   HotelReviewDTO,
   UserDTO,
@@ -44,7 +42,6 @@ import {
   StatCard,
   HotelCard,
   BookingRow,
-  PriceAlertCard,
   RatingSummaryCard,
   ReviewCard,
 } from "../../../components/hotel";
@@ -63,7 +60,6 @@ const DashboardHotelPage: React.FC = () => {
   const [providerId, setProviderId] = useState<number | undefined>();
   const [hotels, setHotels] = useState<HotelDTO[]>([]);
   const [bookings, setBookings] = useState<HotelBookingDTO[]>([]);
-  const [priceAlerts, setPriceAlerts] = useState<HotelPriceAlertDTO[]>([]);
   const [ratingSummaries, setRatingSummaries] = useState<
     HotelRatingSummaryDTO[]
   >([]);
@@ -242,11 +238,7 @@ const DashboardHotelPage: React.FC = () => {
         console.log("👥 Users loaded:", usersMap.size);
 
         // Fetch provider-level data
-        const [alerts, summaries] = await Promise.all([
-          getActiveHotelPriceAlertsByProvider(providerId),
-          getHotelRatingSummariesByProvider(providerId),
-        ]);
-        setPriceAlerts(alerts);
+        const summaries = await getHotelRatingSummariesByProvider(providerId);
         setRatingSummaries(summaries);
 
         // Fetch reviews for the first hotel (if available)
@@ -342,9 +334,6 @@ const DashboardHotelPage: React.FC = () => {
 
   // Derived selections
   const firstHotel = hotels[0];
-  const activeAlert =
-    priceAlerts.find((a) => a.hotelId === firstHotel?.hotelId) ||
-    priceAlerts[0];
   const ratingSummary =
     ratingSummaries.find((s) => s.hotelId === firstHotel?.hotelId) ||
     ratingSummaries[0];
@@ -600,31 +589,19 @@ const DashboardHotelPage: React.FC = () => {
       </div>
 
       {/* SECTION 7: Thống kê & đánh giá */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="rounded-xl border theme-border theme-bg-card p-6">
-          <h2 className="text-lg font-semibold theme-text-primary mb-4">
-            {t("hotel_dashboard_price_alerts")}
-          </h2>
-          {activeAlert ? (
-            <PriceAlertCard
-              alert={activeAlert}
-              hotelName={firstHotel?.title || t("hotel")}
-              currentPrice={
-                bookings.find((b) => b.hotelId === firstHotel?.hotelId)
-                  ?.totalPrice
-              }
-            />
-          ) : (
-            <div className="theme-text-secondary text-sm">
-              {t("hotel_dashboard_no_price_alerts")}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-xl border theme-border theme-bg-card p-6 lg:col-span-2">
+     <div className="rounded-xl border theme-border theme-bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary mb-4">
             {t("hotel_dashboard_rating_overview")}
           </h2>
+          <button
+            className="link-brand flex items-center gap-1"
+            onClick={() => console.log("View all reviews")}
+          >
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {ratingSummary ? (
             <RatingSummaryCard
               summary={ratingSummary}
@@ -637,6 +614,8 @@ const DashboardHotelPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      
 
       {/* SECTION 8: Nhận xét gần đây */}
       <div className="rounded-xl border theme-border theme-bg-card p-6">
