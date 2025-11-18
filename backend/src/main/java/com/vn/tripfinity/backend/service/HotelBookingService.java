@@ -167,7 +167,7 @@ public class HotelBookingService {
                 .channel(dto.getChannel())
                 .holdUntil(dto.getHoldUntil())
                 .providerSeen(false)
-                .providerConfirmed(false)
+                .providerConfirmed(0)
                 .providerNotes(dto.getProviderNotes())
                 .build();
 
@@ -301,7 +301,7 @@ public class HotelBookingService {
         HotelBooking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Booking id: " + bookingId));
 
-        booking.setProviderConfirmed(true);
+        booking.setProviderConfirmed(1);
         booking.setProviderConfirmedAt(LocalDateTime.now());
         booking.setBookingStatus(HotelBooking.BookingStatus.confirmed);
         
@@ -366,7 +366,7 @@ public class HotelBookingService {
                 .holdUntil(booking.getHoldUntil())
                 .providerSeen(booking.isProviderSeen())
                 .providerNotes(booking.getProviderNotes())
-                .providerConfirmed(booking.isProviderConfirmed())
+                .providerConfirmed(booking.getProviderConfirmed())
                 .providerConfirmedAt(booking.getProviderConfirmedAt())
                 .build();
     }

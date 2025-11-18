@@ -260,7 +260,7 @@ CREATE TABLE hotel_bookings (
     total_price DECIMAL(12,2) NOT NULL,
     currency_code CHAR(3) NOT NULL,
     booking_status ENUM('pending','confirmed','cancelled','completed','refunded') NOT NULL DEFAULT 'pending',
-    provider_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+    provider_confirmed TINYINT NOT NULL DEFAULT 0 COMMENT '0=pending, 1=confirmed, 2=cancelled',
     provider_confirmed_at DATETIME DEFAULT NULL,
     e_ticket_url VARCHAR(512) DEFAULT NULL,
     qr_code_data TEXT DEFAULT NULL,

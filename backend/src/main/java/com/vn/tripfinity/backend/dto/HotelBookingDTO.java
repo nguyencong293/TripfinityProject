@@ -1,12 +1,19 @@
 package com.vn.tripfinity.backend.dto;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import jakarta.validation.constraints.*;
-import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonAlias;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -79,7 +86,7 @@ public class HotelBookingDTO {
     private String providerNotes;
 
     @JsonAlias("provider_confirmed")
-    private Boolean providerConfirmed;
+    private Integer providerConfirmed; // 0=pending, 1=confirmed, 2=cancelled
 
     @JsonAlias("provider_confirmed_at")
     private LocalDateTime providerConfirmedAt;

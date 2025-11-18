@@ -110,7 +110,7 @@ public class HotelBooking {
     private String providerNotes;
 
     @Column(name = "provider_confirmed", nullable = false)
-    private boolean providerConfirmed;
+    private Integer providerConfirmed; // 0=pending, 1=confirmed, 2=cancelled
 
     @Column(name = "provider_confirmed_at")
     private LocalDateTime providerConfirmedAt;
@@ -125,5 +125,7 @@ public class HotelBooking {
             bookingStatus = BookingStatus.pending;
         if (currencyCode == null)
             currencyCode = "VND";
+        if (providerConfirmed == null)
+            providerConfirmed = 0;
     }
 }
