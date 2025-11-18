@@ -178,7 +178,7 @@
   "payment_completed": "Payment Completed",
 
   "booking_list_title": "Booking List",
-  "bookings_count_suffix": "bookings",
+  "bookings_count_suffix": "bookings pending confirmation",
   "customer_name": "Customer Name",
   "phone_number": "Phone Number",
   "booking_status_pending": "Pending",

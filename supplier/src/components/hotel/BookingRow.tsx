@@ -26,17 +26,6 @@ const BookingRow: React.FC<BookingRowProps> = ({ booking, hotelName, userName, u
     };
     return colors[status] || "theme-bg-secondary theme-text-secondary theme-border";
   };
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      pending: t("booking_status_pending") || "Chờ xác nhận",
-      confirmed: t("booking_status_confirmed") || "Đã xác nhận",
-      completed: t("booking_status_completed") || "Hoàn thành",
-      cancelled: t("booking_status_cancelled") || "Đã hủy",
-      refunded: t("booking_status_refunded") || "Đã hoàn tiền",
-    };
-    return labels[status] || status;
-  };
   
   const formatDate = (s?: string) => s ? new Date(s).toLocaleDateString("vi-VN") : "N/A";
   const formatDateTime = (s?: string) => s ? new Date(s).toLocaleString("vi-VN", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A";
@@ -58,7 +47,9 @@ const BookingRow: React.FC<BookingRowProps> = ({ booking, hotelName, userName, u
           <div className="flex items-center gap-3 mb-2 flex-wrap">
             <h3 className="text-xl font-bold theme-text-primary">#{booking.bookingId}</h3>
             {!booking.providerSeen && <span className="px-2.5 py-1 text-xs font-bold bg-red-500 text-white rounded-full animate-pulse shadow-sm">{t("hotel_booking_new_badge") || "MỚI"}</span>}
-            <span className={`px-3 py-1 text-xs font-semibold rounded-full border-2 ${getStatusColor(booking.bookingStatus || "pending")}`}>{getStatusLabel(booking.bookingStatus || "pending")}</span>
+            <span className={`px-3 py-1 text-xs font-semibold rounded-full border-2 ${getStatusColor(booking.providerConfirmed === 0 ? "pending" : booking.providerConfirmed === 1 ? "confirmed" : "cancelled")}`}>
+              {booking.providerConfirmed === 0 ? (t("booking_status_pending") || "Chờ xác nhận") : booking.providerConfirmed === 1 ? (t("booking_status_confirmed") || "Đã xác nhận") : (t("booking_status_cancelled") || "Đã hủy")}
+            </span>
           </div>
           <div className="flex items-center gap-2 text-sm theme-text-secondary">
             <Clock className="w-4 h-4" />

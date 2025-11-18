@@ -357,7 +357,7 @@
   "payment_completed": "Đã thanh toán",
 
   "booking_list_title": "Danh sách đặt phòng",
-  "bookings_count_suffix": "đơn đặt phòng",
+  "bookings_count_suffix": "đơn chờ xác nhận",
   "customer_name": "Tên khách hàng",
   "phone_number": "Số điện thoại",
   "booking_status_pending": "Chờ xác nhận",

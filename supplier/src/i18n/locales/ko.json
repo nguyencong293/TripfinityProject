@@ -172,7 +172,7 @@
   "payment_completed": "결제 완료",
 
   "booking_list_title": "예약 목록",
-  "bookings_count_suffix": "예약",
+  "bookings_count_suffix": "대기 중인 예약",
   "customer_name": "고객 이름",
   "phone_number": "전화번호",
   "booking_status_pending": "대기 중",

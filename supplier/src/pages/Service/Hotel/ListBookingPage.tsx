@@ -191,17 +191,6 @@ const ListBookingPage: React.FC = () => {
     return colors[status] || (dark ? "bg-gray-500/20 text-gray-300" : "bg-gray-100 text-gray-700");
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      pending: t("booking_status_pending") || "Chờ xác nhận",
-      confirmed: t("booking_status_confirmed") || "Đã xác nhận",
-      completed: t("booking_status_completed") || "Hoàn thành",
-      cancelled: t("booking_status_cancelled") || "Đã hủy",
-      refunded: t("booking_status_refunded") || "Đã hoàn tiền",
-    };
-    return labels[status] || status;
-  };
-
   const cell = (b: HotelBookingDTO, key: ColumnKey): React.ReactNode => {
     const hotel = hotels.find(h => h.hotelId === b.hotelId);
     const user = userCache.get(b.userId);
@@ -240,12 +229,15 @@ const ListBookingPage: React.FC = () => {
             {t("payment_online") || "Đã thanh toán"}
           </span>
         );
-      case "bookingStatus":
+      case "bookingStatus": {
+        const providerStatus = b.providerConfirmed === 0 ? "pending" : b.providerConfirmed === 1 ? "confirmed" : "cancelled";
+        const providerLabel = b.providerConfirmed === 0 ? (t("booking_status_pending") || "Chờ xác nhận") : b.providerConfirmed === 1 ? (t("booking_status_confirmed") || "Đã xác nhận") : (t("booking_status_cancelled") || "Đã hủy");
         return (
-          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(b.bookingStatus || "pending")}`}>
-            {getStatusLabel(b.bookingStatus || "pending")}
+          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(providerStatus)}`}>
+            {providerLabel}
           </span>
         );
+      }
       case "createdAt":
         return <span className="text-sm">{formatDateTime(b.createdAt)}</span>;
       case "actions": {
@@ -352,7 +344,7 @@ const ListBookingPage: React.FC = () => {
                 {t("booking_list_title") || "Danh sách đặt phòng"}
               </h1>
               <p className={`text-sm ${dark ? "text-gray-400" : "text-gray-600"}`}>
-                {bookings.filter(b => b.providerConfirmed === 0).length} {t("bookings_count_suffix") || "đơn đặt phòng"}
+                {bookings.filter(b => b.providerConfirmed === 0).length} {t("bookings_count_suffix") || "đơn chờ xác nhận"}
               </p>
             </div>
           </div>
