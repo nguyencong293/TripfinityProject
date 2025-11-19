@@ -1,15 +1,26 @@
 package com.vn.tripfinity.backend.controller;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.vn.tripfinity.backend.dto.HotelReviewDTO;
+import com.vn.tripfinity.backend.dto.HotelReviewReplyDTO;
 import com.vn.tripfinity.backend.service.HotelReviewService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/hotel-reviews")
@@ -71,5 +82,22 @@ public class HotelReviewController {
         log.info("DELETE /api/hotel-reviews/{} - Xóa review", id);
         reviewService.deleteReview(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // === REPLY ENDPOINTS ===
+    @PostMapping("/{reviewId}/replies")
+    public ResponseEntity<HotelReviewReplyDTO> createReviewReply(
+            @PathVariable Integer reviewId,
+            @Valid @RequestBody HotelReviewReplyDTO dto) {
+        log.info("POST /api/hotel-reviews/{}/replies - Tạo reply cho review", reviewId);
+        HotelReviewReplyDTO createdReply = reviewService.createHotelReviewReply(reviewId, dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdReply);
+    }
+
+    @GetMapping("/{reviewId}/replies")
+    public ResponseEntity<List<HotelReviewReplyDTO>> getReviewReplies(@PathVariable Integer reviewId) {
+        log.info("GET /api/hotel-reviews/{}/replies - Lấy danh sách replies", reviewId);
+        List<HotelReviewReplyDTO> replies = reviewService.getHotelReviewReplies(reviewId);
+        return ResponseEntity.ok(replies);
     }
 }

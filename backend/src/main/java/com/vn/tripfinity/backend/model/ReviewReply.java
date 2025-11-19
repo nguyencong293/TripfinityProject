@@ -1,11 +1,28 @@
 package com.vn.tripfinity.backend.model;
 
-import jakarta.persistence.*;
-import lombok.*;
+import java.time.LocalDateTime;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @NoArgsConstructor
@@ -43,6 +60,9 @@ public class ReviewReply {
     @Column(name = "is_public", nullable = false)
     private Boolean isPublic;
 
+    @Column(name = "is_provider", nullable = false)
+    private Integer isProvider; // 0 = user, 1 = provider/business account
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -55,5 +75,7 @@ public class ReviewReply {
     public void prePersist() {
         if (isPublic == null)
             isPublic = true;
+        if (isProvider == null)
+            isProvider = 0;
     }
 }

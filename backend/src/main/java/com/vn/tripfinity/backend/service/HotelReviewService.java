@@ -1,23 +1,28 @@
 package com.vn.tripfinity.backend.service;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.vn.tripfinity.backend.dto.HotelReviewDTO;
+import com.vn.tripfinity.backend.dto.HotelReviewReplyDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Hotel;
 import com.vn.tripfinity.backend.model.HotelReview;
 import com.vn.tripfinity.backend.model.HotelReviewAspects;
+import com.vn.tripfinity.backend.model.ReviewReply;
 import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.HotelRepository;
 import com.vn.tripfinity.backend.repository.HotelReviewAspectsRepository;
 import com.vn.tripfinity.backend.repository.HotelReviewRepository;
+import com.vn.tripfinity.backend.repository.ReviewReplyRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +34,7 @@ public class HotelReviewService {
     private final HotelReviewAspectsRepository aspectsRepository;
     private final HotelRepository hotelRepository;
     private final UserRepository userRepository;
+    private final ReviewReplyRepository reviewReplyRepository;
 
     public List<HotelReviewDTO> getAllReviews() {
         log.debug("Lấy toàn bộ hotel reviews");
@@ -198,5 +204,59 @@ public class HotelReviewService {
         });
 
         return dto;
+    }
+
+    // === REPLY METHODS ===
+    public HotelReviewReplyDTO createHotelReviewReply(Integer reviewId, HotelReviewReplyDTO dto) {
+        log.debug("Tạo reply cho Hotel Review ID: {}", reviewId);
+        
+        HotelReview review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Review id: " + reviewId));
+        
+        User replier = userRepository.findById(dto.getReplierId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getReplierId()));
+        
+        ReviewReply reply = ReviewReply.builder()
+                .reviewType(ReviewReply.ReviewType.hotel)
+                .reviewId(reviewId)
+                .replier(replier)
+                .content(dto.getContent())
+                .isPublic(dto.getIsPublic() != null ? dto.getIsPublic() : true)
+                .isProvider(dto.getIsProvider() != null ? dto.getIsProvider() : 0)
+                .build();
+        
+        ReviewReply saved = reviewReplyRepository.save(reply);
+        
+        // Tăng reply count
+        review.setReplyCount(review.getReplyCount() == null ? 1 : review.getReplyCount() + 1);
+        reviewRepository.save(review);
+        
+        log.info("✅ Tạo reply ID: {} cho Hotel Review ID: {}", saved.getReplyId(), reviewId);
+        return toHotelReviewReplyDTO(saved);
+    }
+
+    public List<HotelReviewReplyDTO> getHotelReviewReplies(Integer reviewId) {
+        log.debug("Lấy danh sách replies của Hotel Review ID: {}", reviewId);
+        
+        List<ReviewReply> replies = reviewReplyRepository.findByReviewTypeAndReviewIdOrderByCreatedAtAsc(
+                ReviewReply.ReviewType.hotel, reviewId);
+        
+        log.info("Tìm thấy {} replies của Hotel Review ID: {}", replies.size(), reviewId);
+        return replies.stream()
+                .map(this::toHotelReviewReplyDTO)
+                .collect(Collectors.toList());
+    }
+
+    private HotelReviewReplyDTO toHotelReviewReplyDTO(ReviewReply reply) {
+        return HotelReviewReplyDTO.builder()
+                .replyId(reply.getReplyId())
+                .reviewId(reply.getReviewId())
+                .replierId(reply.getReplier().getUserId())
+                .content(reply.getContent())
+                .isPublic(reply.getIsPublic())
+                .isProvider(reply.getIsProvider())
+                .createdAt(reply.getCreatedAt())
+                .updatedAt(reply.getUpdatedAt())
+                .build();
     }
 }
