@@ -193,7 +193,7 @@ public class RestaurantService {
                 .reviewId(null)
                 .restaurant(restaurant)
                 .user(user)
-                .rating(dto.getRating())
+                .rating(dto.getRating() != null ? dto.getRating() : 0)
                 .title(dto.getTitle())
                 .content(dto.getContent())
                 .imageUrls(joinList(dto.getImageUrls()))

@@ -605,22 +605,8 @@ CREATE TABLE restaurant_rating_summaries (
     CONSTRAINT fk_rest_rating FOREIGN KEY (restaurant_id) REFERENCES restaurants(restaurant_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE hotel_rating_summaries (
-    hotel_id INT PRIMARY KEY,
-    avg_rating DECIMAL(3,2) NOT NULL DEFAULT 0.00,
-    total_reviews INT NOT NULL DEFAULT 0,
-    count_1 INT NOT NULL DEFAULT 0,
-    count_2 INT NOT NULL DEFAULT 0,
-    count_3 INT NOT NULL DEFAULT 0,
-    count_4 INT NOT NULL DEFAULT 0,
-    count_5 INT NOT NULL DEFAULT 0,
-    avg_cleanliness DECIMAL(3,2),
-    avg_service DECIMAL(3,2),
-    avg_value_for_money DECIMAL(3,2),
-    avg_location DECIMAL(3,2),
-    avg_facilities DECIMAL(3,2),
-    CONSTRAINT fk_hotel_rating FOREIGN KEY (hotel_id) REFERENCES hotels(hotel_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- hotel_rating_summaries table removed - ratings now calculated dynamically
+-- from hotel_reviews and hotel_review_aspects tables
 
 CREATE TABLE tour_rating_summaries (
     tour_id INT PRIMARY KEY,

@@ -1,5 +1,12 @@
 package com.vn.tripfinity.backend.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.vn.tripfinity.backend.dto.HotelPaymentDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.HotelBooking;
@@ -8,14 +15,9 @@ import com.vn.tripfinity.backend.model.User;
 import com.vn.tripfinity.backend.repository.HotelBookingRepository;
 import com.vn.tripfinity.backend.repository.HotelPaymentRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +55,7 @@ public class HotelPaymentService {
         log.debug("Lấy payment theo Transaction ID: {}", transactionId);
         HotelPayment payment = paymentRepository.findByTransactionId(transactionId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy Payment với transaction id: " + transactionId));
+                "Không tìm thấy Payment với transaction id: " + transactionId));
         return convertToDTO(payment);
     }
 
@@ -135,12 +137,15 @@ public class HotelPaymentService {
 
         HotelPayment.PaymentStatus oldStatus = payment.getPaymentStatus();
 
-        if (dto.getAmount() != null)
+        if (dto.getAmount() != null) {
             payment.setAmount(dto.getAmount());
-        if (dto.getCurrencyCode() != null)
+        }
+        if (dto.getCurrencyCode() != null) {
             payment.setCurrencyCode(dto.getCurrencyCode());
-        if (dto.getPaymentMethod() != null)
+        }
+        if (dto.getPaymentMethod() != null) {
             payment.setPaymentMethod(HotelPayment.PaymentMethod.valueOf(dto.getPaymentMethod()));
+        }
         if (dto.getPaymentStatus() != null) {
             HotelPayment.PaymentStatus newStatus = HotelPayment.PaymentStatus.valueOf(dto.getPaymentStatus());
             payment.setPaymentStatus(newStatus);
@@ -158,8 +163,9 @@ public class HotelPaymentService {
                 log.info("✅ Đã cập nhật Booking ID: {} sang status refunded", booking.getBookingId());
             }
         }
-        if (dto.getPaymentDate() != null)
+        if (dto.getPaymentDate() != null) {
             payment.setPaymentDate(dto.getPaymentDate());
+        }
 
         HotelPayment updatedPayment = paymentRepository.save(payment);
         log.info("Đã cập nhật Payment ID: {}", updatedPayment.getPaymentId());
@@ -179,14 +185,22 @@ public class HotelPaymentService {
         // Cập nhật booking status
         if (oldStatus != newStatus) {
             HotelBooking booking = payment.getBooking();
-            if (newStatus == HotelPayment.PaymentStatus.success) {
-                booking.setBookingStatus(HotelBooking.BookingStatus.confirmed);
-            } else if (newStatus == HotelPayment.PaymentStatus.refunded) {
-                booking.setBookingStatus(HotelBooking.BookingStatus.refunded);
-            } else if (newStatus == HotelPayment.PaymentStatus.failed) {
-                booking.setBookingStatus(HotelBooking.BookingStatus.cancelled);
+
+            HotelBooking.BookingStatus updatedStatus = switch (newStatus) {
+                case success ->
+                    HotelBooking.BookingStatus.confirmed;
+                case refunded ->
+                    HotelBooking.BookingStatus.refunded;
+                case failed ->
+                    HotelBooking.BookingStatus.cancelled;
+                default ->
+                    null; // không thay đổi
+            };
+
+            if (updatedStatus != null) {
+                booking.setBookingStatus(updatedStatus);
+                bookingRepository.save(booking);
             }
-            bookingRepository.save(booking);
         }
 
         HotelPayment updatedPayment = paymentRepository.save(payment);

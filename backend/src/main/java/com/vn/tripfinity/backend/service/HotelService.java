@@ -4,12 +4,17 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vn.tripfinity.backend.dto.HotelDTO;
+import com.vn.tripfinity.backend.dto.HotelRatingSummaryDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Area;
 import com.vn.tripfinity.backend.model.Hotel;
+import com.vn.tripfinity.backend.model.HotelReview;
+import com.vn.tripfinity.backend.model.HotelReviewAspects;
 import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.repository.AreaRepository;
 import com.vn.tripfinity.backend.repository.HotelRepository;
+import com.vn.tripfinity.backend.repository.HotelReviewAspectsRepository;
+import com.vn.tripfinity.backend.repository.HotelReviewRepository;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.service.cloudinary.CloudinaryService;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +41,8 @@ public class HotelService {
     private final AreaRepository areaRepository;
     private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper;
+    private final HotelReviewRepository hotelReviewRepository;
+    private final HotelReviewAspectsRepository hotelReviewAspectsRepository;
 
     public List<HotelDTO> getAllHotels() {
         log.debug("Lấy toàn bộ hotels");
@@ -576,5 +583,89 @@ public class HotelService {
 
     private List<String> commaStringToList(String str) {
         return str != null && !str.trim().isEmpty() ? List.of(str.split(",")) : new ArrayList<>();
+    }
+
+    /**
+     * Tính rating summary động từ hotel_reviews và hotel_review_aspects
+     * Thay thế cho bảng hotel_rating_summaries (không cần lưu DB nữa)
+     */
+    public HotelRatingSummaryDTO calculateRatingSummary(Integer hotelId) {
+        log.debug("Tính rating summary cho Hotel ID: {}", hotelId);
+
+        // Lấy tất cả reviews đã approved của hotel
+        List<HotelReview> reviews = hotelReviewRepository.findByHotelAndStatus(
+            hotelId, HotelReview.ReviewStatus.approved);
+
+        HotelRatingSummaryDTO summary = HotelRatingSummaryDTO.builder()
+            .hotelId(hotelId)
+            .totalReviews(reviews.size())
+            .build();
+
+        if (reviews.isEmpty()) {
+            // Không có review, trả về giá trị mặc định
+            summary.setAvgRating(BigDecimal.ZERO);
+            summary.setCount1(0);
+            summary.setCount2(0);
+            summary.setCount3(0);
+            summary.setCount4(0);
+            summary.setCount5(0);
+            return summary;
+        }
+
+        // Tính avg rating tổng thể
+        double avgRating = reviews.stream()
+            .mapToInt(HotelReview::getRating)
+            .average()
+            .orElse(0.0);
+        summary.setAvgRating(BigDecimal.valueOf(avgRating).setScale(2, java.math.RoundingMode.HALF_UP));
+
+        // Đếm số lượng từng loại rating
+        summary.setCount1((int) reviews.stream().filter(r -> r.getRating() == 1).count());
+        summary.setCount2((int) reviews.stream().filter(r -> r.getRating() == 2).count());
+        summary.setCount3((int) reviews.stream().filter(r -> r.getRating() == 3).count());
+        summary.setCount4((int) reviews.stream().filter(r -> r.getRating() == 4).count());
+        summary.setCount5((int) reviews.stream().filter(r -> r.getRating() == 5).count());
+
+        // Tính trung bình các aspects
+        List<Integer> reviewIds = reviews.stream()
+            .map(HotelReview::getReviewId)
+            .collect(Collectors.toList());
+
+        List<HotelReviewAspects> aspects = hotelReviewAspectsRepository.findAllById(reviewIds);
+
+        if (!aspects.isEmpty()) {
+            double avgCleanliness = aspects.stream()
+                .mapToInt(HotelReviewAspects::getCleanliness)
+                .average()
+                .orElse(0.0);
+            summary.setAvgCleanliness(BigDecimal.valueOf(avgCleanliness).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgService = aspects.stream()
+                .mapToInt(HotelReviewAspects::getService)
+                .average()
+                .orElse(0.0);
+            summary.setAvgService(BigDecimal.valueOf(avgService).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgValueForMoney = aspects.stream()
+                .mapToInt(HotelReviewAspects::getValueForMoney)
+                .average()
+                .orElse(0.0);
+            summary.setAvgValueForMoney(BigDecimal.valueOf(avgValueForMoney).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgLocation = aspects.stream()
+                .mapToInt(HotelReviewAspects::getLocation)
+                .average()
+                .orElse(0.0);
+            summary.setAvgLocation(BigDecimal.valueOf(avgLocation).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgFacilities = aspects.stream()
+                .mapToInt(HotelReviewAspects::getFacilities)
+                .average()
+                .orElse(0.0);
+            summary.setAvgFacilities(BigDecimal.valueOf(avgFacilities).setScale(2, java.math.RoundingMode.HALF_UP));
+        }
+
+        log.info("✅ Đã tính rating summary cho Hotel ID: {} với {} reviews", hotelId, reviews.size());
+        return summary;
     }
 }

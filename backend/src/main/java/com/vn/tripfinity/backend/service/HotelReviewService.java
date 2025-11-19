@@ -90,7 +90,7 @@ public class HotelReviewService {
                 .reviewId(null)
                 .hotel(hotel)
                 .user(user)
-                .rating(dto.getRating())
+                .rating(dto.getRating() != null ? dto.getRating() : 0)
                 .title(dto.getTitle())
                 .content(dto.getContent())
                 .imageUrls(dto.getImageUrls() != null ? String.join(",", dto.getImageUrls()) : null)
@@ -221,14 +221,15 @@ public class HotelReviewService {
                 .reviewId(reviewId)
                 .replier(replier)
                 .content(dto.getContent())
-                .isPublic(dto.getIsPublic() != null ? dto.getIsPublic() : true)
+                .isPublic(Boolean.TRUE.equals(dto.getIsPublic()))
                 .isProvider(dto.getIsProvider() != null ? dto.getIsProvider() : 0)
                 .build();
         
         ReviewReply saved = reviewReplyRepository.save(reply);
         
         // Tăng reply count
-        review.setReplyCount(review.getReplyCount() == null ? 1 : review.getReplyCount() + 1);
+        Integer currentCount = review.getReplyCount();
+        review.setReplyCount(currentCount == null ? 1 : currentCount + 1);
         reviewRepository.save(review);
         
         log.info("✅ Tạo reply ID: {} cho Hotel Review ID: {}", saved.getReplyId(), reviewId);

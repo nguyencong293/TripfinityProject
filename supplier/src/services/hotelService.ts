@@ -299,7 +299,7 @@ export const getHotelRatingSummaryByHotel = async (
   hotelId: number
 ): Promise<HotelRatingSummaryDTO> => {
   const res = await api.get<HotelRatingSummaryDTO>(
-    `/hotel-rating-summaries/hotel/${hotelId}`
+    `/hotels/${hotelId}/rating-summary`
   );
   return res.data;
 };

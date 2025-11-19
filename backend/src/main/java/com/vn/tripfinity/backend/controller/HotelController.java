@@ -1,16 +1,30 @@
 package com.vn.tripfinity.backend.controller;
 
+import java.io.IOException;
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.vn.tripfinity.backend.dto.HotelDTO;
+import com.vn.tripfinity.backend.dto.HotelRatingSummaryDTO;
+import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.service.HotelService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/hotels")
@@ -98,7 +112,7 @@ public class HotelController {
         try {
             HotelDTO updatedHotel = hotelService.uploadThumbnail(hotelId, file);
             return ResponseEntity.ok(updatedHotel);
-        } catch (Exception e) {
+        } catch (ResourceNotFoundException | IOException e) {
             log.error("Error uploading thumbnail for hotel {}: {}", hotelId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -110,7 +124,7 @@ public class HotelController {
         try {
             HotelDTO updatedHotel = hotelService.deleteThumbnail(hotelId);
             return ResponseEntity.ok(updatedHotel);
-        } catch (Exception e) {
+        } catch (ResourceNotFoundException | IOException e) {
             log.error("Error deleting thumbnail for hotel {}: {}", hotelId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -126,7 +140,7 @@ public class HotelController {
         try {
             HotelDTO updatedHotel = hotelService.addImages(hotelId, files);
             return ResponseEntity.ok(updatedHotel);
-        } catch (Exception e) {
+        } catch (ResourceNotFoundException | IOException e) {
             log.error("Error adding images for hotel {}: {}", hotelId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -140,7 +154,7 @@ public class HotelController {
         try {
             HotelDTO updatedHotel = hotelService.deleteImage(hotelId, imageUrl);
             return ResponseEntity.ok(updatedHotel);
-        } catch (Exception e) {
+        } catch (ResourceNotFoundException | IOException e) {
             log.error("Error deleting image for hotel {}: {}", hotelId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -152,9 +166,18 @@ public class HotelController {
         try {
             HotelDTO updatedHotel = hotelService.deleteAllImages(hotelId);
             return ResponseEntity.ok(updatedHotel);
-        } catch (Exception e) {
+        } catch (ResourceNotFoundException | IOException e) {
             log.error("Error deleting all images for hotel {}: {}", hotelId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    // ==================== RATING SUMMARY ENDPOINT ====================
+    
+    @GetMapping("/{hotelId}/rating-summary")
+    public ResponseEntity<HotelRatingSummaryDTO> getRatingSummary(@PathVariable Integer hotelId) {
+        log.info("GET /api/hotels/{}/rating-summary - Getting rating summary", hotelId);
+        HotelRatingSummaryDTO summary = hotelService.calculateRatingSummary(hotelId);
+        return ResponseEntity.ok(summary);
     }
 }

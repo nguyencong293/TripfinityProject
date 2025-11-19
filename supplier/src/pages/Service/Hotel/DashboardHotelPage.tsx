@@ -25,7 +25,7 @@ import { useHotelDashboardStatistics } from "../../../hooks/useHotelDashboardSta
 import { getProviderByUserId, getUserById } from "../../../services/providerService";
 import {
   getHotelsByProvider,
-  getHotelRatingSummariesByProvider,
+  getHotelRatingSummaryByHotel,
   getHotelReviewsByHotel,
 } from "../../../services/hotelService";
 import type {
@@ -237,8 +237,14 @@ const DashboardHotelPage: React.FC = () => {
         setUserCache(usersMap);
         console.log("👥 Users loaded:", usersMap.size);
 
-        // Fetch provider-level data
-        const summaries = await getHotelRatingSummariesByProvider(providerId);
+        // Fetch rating summaries for each hotel
+        const summaryPromises = hs.map(h => 
+          getHotelRatingSummaryByHotel(h.hotelId).catch(e => {
+            console.error(`Failed to fetch rating for hotel ${h.hotelId}:`, e);
+            return null;
+          })
+        );
+        const summaries = (await Promise.all(summaryPromises)).filter(s => s !== null) as HotelRatingSummaryDTO[];
         setRatingSummaries(summaries);
 
         // Fetch reviews for the first hotel (if available)
