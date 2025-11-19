@@ -276,6 +276,7 @@ class _DetailHotelReviewUserScreenState
       final userId = prefs.getInt('user_id');
 
       if (userId == null) {
+        if (!mounted) return;
         Navigator.pop(context); // Close loading
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -318,7 +319,7 @@ class _DetailHotelReviewUserScreenState
           'facilities': _facilitiesRating,
         },
       );
-
+      if (!mounted) return;
       Navigator.pop(context); // Close loading
 
       ScaffoldMessenger.of(context).showSnackBar(
