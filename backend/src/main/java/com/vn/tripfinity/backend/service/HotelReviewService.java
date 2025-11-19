@@ -107,15 +107,15 @@ public class HotelReviewService {
         // Save aspects if provided
         if (dto.getAspects() != null) {
             HotelReviewAspects aspects = HotelReviewAspects.builder()
-                    .reviewId(savedReview.getReviewId())
-                    .review(savedReview)
+                    .review(savedReview) // Only set review, reviewId will be auto-mapped via @MapsId
                     .cleanliness(dto.getAspects().getCleanliness())
                     .service(dto.getAspects().getService())
                     .valueForMoney(dto.getAspects().getValueForMoney())
                     .location(dto.getAspects().getLocation())
                     .facilities(dto.getAspects().getFacilities())
                     .build();
-            aspectsRepository.save(aspects);
+            HotelReviewAspects savedAspects = aspectsRepository.save(aspects);
+            log.info("✅ Tạo Review Aspects cho Review ID: {}", savedAspects.getReviewId());
         }
 
         return convertToDTO(savedReview);
@@ -178,6 +178,7 @@ public class HotelReviewService {
                 .reviewId(review.getReviewId())
                 .hotelId(review.getHotel().getHotelId())
                 .userId(review.getUser().getUserId())
+                .userName(review.getUser().getFullName()) // Add user name
                 .rating(review.getRating())
                 .title(review.getTitle())
                 .content(review.getContent())

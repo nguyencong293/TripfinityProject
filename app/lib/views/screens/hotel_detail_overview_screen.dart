@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/hotel_api_service.dart';
 import 'package:app/views/screens/hotel_booking_checkout_screen.dart';
+import 'package:app/views/screens/detail_hotel_review_user_screen.dart';
 
 // Canonical dictionaries: keep in sync with Supplier (HotelViewPage / Create/Edit)
 const Map<int, String> kHighlightsDict = {
@@ -116,6 +117,7 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
   String? _error;
   Map<String, dynamic>? _detail;
   List<Map<String, dynamic>> _reviews = [];
+  Map<String, dynamic>? _ratingSummaryData; // NEW: rating summary data
 
   int? _resolvedId;
 
@@ -300,6 +302,7 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     try {
       Map<String, dynamic>? detail;
       List<Map<String, dynamic>> reviews = [];
+      Map<String, dynamic>? ratingSummary;
 
       if (_resolvedId != null) {
         final prefs = await SharedPreferences.getInstance();
@@ -310,6 +313,10 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
         try {
           reviews = await api.getHotelReviews(_resolvedId!);
         } catch (_) {}
+        // Rating summary
+        try {
+          ratingSummary = await api.getRatingSummary(_resolvedId!);
+        } catch (_) {}
       } else {
         // No id: render fallback only
         detail = null;
@@ -318,6 +325,7 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
       setState(() {
         _detail = detail;
         _reviews = reviews;
+        _ratingSummaryData = ratingSummary;
         _loading = false;
       });
     } catch (e) {
@@ -885,31 +893,45 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
   }
 
   Widget _ratingSummary(BuildContext context, Map<String, dynamic> d) {
-    final avg = _toDouble(d['ratingAverage']) ?? 0.0;
-    final label = avg >= 4.5
-        ? 'Tuyệt vời'
-        : avg >= 4.0
-        ? 'Rất tốt'
-        : avg >= 3.5
-        ? 'Tốt'
-        : 'Khá';
+    // Use rating summary data from API if available
+    final summary = _ratingSummaryData;
+    if (summary == null) {
+      return Text(
+        'Chưa có đánh giá',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
+      );
+    }
 
-    final rows = [
-      {'label': 'Xuất sắc', 'value': 0.9},
-      {'label': 'Tốt', 'value': 0.8},
-      {'label': 'Vừa', 'value': 0.7},
-      {'label': 'Kém', 'value': 0.6},
-      {'label': 'Rất tệ', 'value': 0.5},
-    ];
+    final avgRating = _toDouble(summary['avgRating']) ?? 0.0;
+
+    // Aspects từ hotel_review_aspects
+    final avgCleanliness = _toDouble(summary['avgCleanliness']) ?? 0.0;
+    final avgService = _toDouble(summary['avgService']) ?? 0.0;
+    final avgValueForMoney = _toDouble(summary['avgValueForMoney']) ?? 0.0;
+    final avgLocation = _toDouble(summary['avgLocation']) ?? 0.0;
+    final avgFacilities = _toDouble(summary['avgFacilities']) ?? 0.0;
+
+    final label = avgRating >= 4.5
+        ? 'Xuất sắc'
+        : avgRating >= 4.0
+        ? 'Rất tốt'
+        : avgRating >= 3.5
+        ? 'Tốt'
+        : avgRating >= 2.5
+        ? 'Khá'
+        : 'Trung bình';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Left: Overall rating (từ cột rating trong hotel_reviews)
             Column(
               children: [
                 Text(
-                  avg.toStringAsFixed(1),
+                  avgRating.toStringAsFixed(1),
                   style: context.h5Style.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 32,
@@ -922,57 +944,32 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                _starsRow(context, (avg / 1.0).clamp(0, 5)),
+                _starsRow(context, avgRating),
               ],
             ),
             const SizedBox(width: 24),
+            // Right: 5 Aspects từ hotel_review_aspects
             Expanded(
               child: Column(
-                children: rows
-                    .map(
-                      (r) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 70,
-                              child: Text(
-                                r['label'] as String,
-                                style: context.captionStyle.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  minHeight: 8,
-                                  value: r['value'] as double,
-                                  backgroundColor: context.dividerColor,
-                                  valueColor: const AlwaysStoppedAnimation(
-                                    Color(0xFF23A455),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '—',
-                              style: context.captionStyle.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                    .toList(),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAspectRow(context, 'Độ sạch sẽ', avgCleanliness),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Dịch vụ', avgService),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Giá trị', avgValueForMoney),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Vị trí', avgLocation),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Tiện nghi', avgFacilities),
+                ],
               ),
             ),
           ],
         ),
+
         const SizedBox(height: 12),
+
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -982,7 +979,19 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
                 borderRadius: BorderRadius.circular(26),
               ),
             ),
-            onPressed: () {},
+            onPressed: () async {
+              // Navigate to review screen
+              if (_resolvedId != null) {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => _buildReviewScreen()),
+                );
+                // Refresh if review was submitted successfully
+                if (result == true) {
+                  _fetchDetail();
+                }
+              }
+            },
             icon: const Icon(LucideIcons.pencil),
             label: Text(
               'Viết đánh giá',
@@ -992,6 +1001,65 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildReviewScreen() {
+    final data = _data;
+    return DetailHotelReviewUserScreen(
+      hotelId: _resolvedId!,
+      hotelName: data['title']?.toString() ?? 'Khách sạn',
+      hotelLocation:
+          data['address']?.toString() ?? data['location']?.toString() ?? '',
+      hotelImage: _imageList(data).isNotEmpty
+          ? _imageList(data).first
+          : 'assets/images/onboarding1.png',
+    );
+  }
+
+  // Helper: Build aspect row with progress bar
+  Widget _buildAspectRow(BuildContext context, String label, double value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 70,
+          child: Text(
+            label,
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: (value / 5.0).clamp(0.0, 1.0),
+              backgroundColor: context.dividerColor,
+              valueColor: AlwaysStoppedAnimation(_getColorForRating(value)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 24,
+          child: Text(
+            value.toStringAsFixed(1),
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
+            textAlign: TextAlign.end,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper: Get color based on rating value
+  Color _getColorForRating(double rating) {
+    if (rating >= 4.0) {
+      return const Color(0xFF23A455); // Green
+    } else if (rating >= 3.0) {
+      return Colors.orange; // Orange
+    } else {
+      return Colors.red; // Red
+    }
   }
 
   Widget _reviewsBlock(BuildContext context) {
@@ -1034,6 +1102,22 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     final date = _formatDate(createdAt);
     final replyCount = _toInt(r['replyCount']) ?? 0;
 
+    // Parse imageUrls (comma-separated string or list)
+    List<String> imageUrls = [];
+    final imageUrlsRaw = r['imageUrls'];
+    if (imageUrlsRaw is String && imageUrlsRaw.isNotEmpty) {
+      imageUrls = imageUrlsRaw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    } else if (imageUrlsRaw is List) {
+      imageUrls = imageUrlsRaw
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
@@ -1074,6 +1158,40 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
           _starsRow(context, rating),
           const SizedBox(height: 6),
           Text(content, style: context.bodyTwoStyle.copyWith(height: 1.35)),
+
+          // Display review images
+          if (imageUrls.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 80,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: imageUrls.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      imageUrls[index],
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 80,
+                        height: 80,
+                        color: context.dividerColor,
+                        child: Icon(
+                          LucideIcons.image,
+                          color: context.textSecondaryColor,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+
           if (replyCount > 0) ...[
             const SizedBox(height: 6),
             InkWell(

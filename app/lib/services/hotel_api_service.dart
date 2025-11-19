@@ -61,4 +61,88 @@ class HotelApiService {
         : 'Get hotel reviews failed with status ${res.statusCode}';
     throw Exception(msg);
   }
+
+  /// GET /api/hotels/{hotelId}/rating-summary
+  /// Tính toán động từ hotel_reviews và hotel_review_aspects
+  Future<Map<String, dynamic>> getRatingSummary(int hotelId) async {
+    final res = await _dio.get('/hotels/$hotelId/rating-summary');
+    if (res.statusCode == 200 && res.data is Map<String, dynamic>) {
+      return res.data as Map<String, dynamic>;
+    }
+    final msg = (res.data is Map && (res.data as Map)['message'] != null)
+        ? (res.data as Map)['message'].toString()
+        : 'Get rating summary failed with status ${res.statusCode}';
+    throw Exception(msg);
+  }
+
+  /// POST /api/hotel-reviews
+  /// Tạo hotel review mới với aspects
+  Future<Map<String, dynamic>> createHotelReview({
+    required int hotelId,
+    required int userId,
+    required int rating,
+    String? title,
+    String? content,
+    List<String>? imageUrls,
+    Map<String, int>? aspects,
+  }) async {
+    final body = {
+      'hotelId': hotelId,
+      'userId': userId,
+      'rating': rating,
+      'title': title,
+      'content': content,
+      'imageUrls': imageUrls,
+      'reviewStatus': 'approved',
+    };
+
+    // Add aspects if provided
+    if (aspects != null) {
+      body['aspects'] = {
+        'cleanliness': aspects['cleanliness'] ?? 0,
+        'service': aspects['service'] ?? 0,
+        'valueForMoney': aspects['valueForMoney'] ?? 0,
+        'location': aspects['location'] ?? 0,
+        'facilities': aspects['facilities'] ?? 0,
+      };
+    }
+
+    final res = await _dio.post('/hotel-reviews', data: body);
+    if (res.statusCode == 201 && res.data is Map<String, dynamic>) {
+      return res.data as Map<String, dynamic>;
+    }
+    final msg = (res.data is Map && (res.data as Map)['message'] != null)
+        ? (res.data as Map)['message'].toString()
+        : 'Create hotel review failed with status ${res.statusCode}';
+    throw Exception(msg);
+  }
+
+  /// POST /api/hotel-reviews/upload-image
+  /// Upload hình ảnh review lên Cloudinary
+  Future<String> uploadReviewImage(String filePath) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        filePath,
+        filename: filePath.split('/').last,
+      ),
+    });
+
+    final res = await _dio.post(
+      '/hotel-reviews/upload-image',
+      data: formData,
+      options: Options(headers: {'Content-Type': 'multipart/form-data'}),
+    );
+
+    if (res.statusCode == 200 && res.data is Map<String, dynamic>) {
+      final imageUrl = res.data['imageUrl'] as String?;
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        return imageUrl;
+      }
+    }
+
+    final msg = (res.data is Map && (res.data as Map)['message'] != null)
+        ? (res.data as Map)['message'].toString()
+        : 'Upload review image failed with status ${res.statusCode}';
+    throw Exception(msg);
+  }
 }

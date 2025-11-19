@@ -1,6 +1,9 @@
 package com.vn.tripfinity.backend.controller;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,11 +15,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.vn.tripfinity.backend.dto.HotelReviewDTO;
 import com.vn.tripfinity.backend.dto.HotelReviewReplyDTO;
 import com.vn.tripfinity.backend.service.HotelReviewService;
+import com.vn.tripfinity.backend.service.cloudinary.CloudinaryService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 public class HotelReviewController {
 
     private final HotelReviewService reviewService;
+    private final CloudinaryService cloudinaryService;
 
     @GetMapping
     public ResponseEntity<List<HotelReviewDTO>> getAllReviews() {
@@ -99,5 +106,24 @@ public class HotelReviewController {
         log.info("GET /api/hotel-reviews/{}/replies - Lấy danh sách replies", reviewId);
         List<HotelReviewReplyDTO> replies = reviewService.getHotelReviewReplies(reviewId);
         return ResponseEntity.ok(replies);
+    }
+
+    // === IMAGE UPLOAD ENDPOINT ===
+    @PostMapping("/upload-image")
+    public ResponseEntity<Map<String, String>> uploadReviewImage(@RequestParam("file") MultipartFile file) {
+        log.info("POST /api/hotel-reviews/upload-image - Upload review image");
+        try {
+            Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
+            String imageUrl = (String) uploadResult.get("secure_url");
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("imageUrl", imageUrl);
+            
+            log.info("✅ Upload review image successful: {}", imageUrl);
+            return ResponseEntity.ok(response);
+        } catch (IOException e) {
+            log.error("Error uploading review image: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
