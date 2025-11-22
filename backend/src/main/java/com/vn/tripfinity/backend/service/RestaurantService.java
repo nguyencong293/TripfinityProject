@@ -262,7 +262,7 @@ public class RestaurantService {
             Integer reviewId) {
         RestaurantReview review = restaurantReviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy RestaurantReview id: " + reviewId));
-        List<ReviewReply> replies = reviewReplyRepository.findByReviewTypeAndReviewIdOrderByCreatedAtAsc(
+        List<ReviewReply> replies = reviewReplyRepository.findByReviewTypeAndReviewIdOrderByCreatedAtDesc(
                 ReviewReply.ReviewType.restaurant, review.getReviewId());
         return replies.stream().map(this::toRestaurantReviewReplyDTO)
                 .collect(java.util.stream.Collectors.toList());

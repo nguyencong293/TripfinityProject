@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Star, User, ThumbsUp } from "lucide-react";
 import { getProviderByUserId, getUserById } from "../../../services/providerService";
 import { getHotelsByProvider, getHotelReviewsByHotel } from "../../../services/hotelService";
-import { toggleReviewLike } from "../../../services/reviewService";
+import { toggleReviewLike, checkIsLiked } from "../../../services/reviewService";
 import type { HotelReviewDTO, UserDTO } from "../../../types";
 
 interface ReviewWithUser extends HotelReviewDTO {
   user?: UserDTO;
   hotelName?: string;
+  isLikedByCurrentUser?: boolean;
 }
 
 const RecentReviewsPage: React.FC = () => {
@@ -45,20 +46,37 @@ const RecentReviewsPage: React.FC = () => {
           if (!hotel.hotelId) return [];
           const hotelReviews = await getHotelReviewsByHotel(hotel.hotelId);
           
-          // Fetch user info for each review
+          // Fetch user info and like status for each review
           for (const review of hotelReviews) {
             try {
               const userData = await getUserById(review.userId);
+              
+              // Check if current user liked this review
+              let isLiked = false;
+              if (user.userId && review.reviewId) {
+                try {
+                  isLiked = await checkIsLiked(
+                    user.userId,
+                    "hotel",
+                    review.reviewId
+                  );
+                } catch (err) {
+                  console.error("Error checking like status:", err);
+                }
+              }
+              
               allReviews.push({
                 ...review,
                 user: userData,
                 hotelName: hotel.title,
+                isLikedByCurrentUser: isLiked,
               });
             } catch (error) {
               console.error(`Error fetching user ${review.userId}:`, error);
               allReviews.push({
                 ...review,
                 hotelName: hotel.title,
+                isLikedByCurrentUser: false,
               });
             }
           }
@@ -237,11 +255,11 @@ const RecentReviewsPage: React.FC = () => {
                           reviewType: "hotel",
                           reviewId: review.reviewId!,
                         });
-                        // Update review in list
+                        // Update review like status in list
                         setReviews((prev) =>
                           prev.map((r) =>
                             r.reviewId === review.reviewId
-                              ? { ...r, likesCount: result.likeCount }
+                              ? { ...r, isLikedByCurrentUser: result.isLiked }
                               : r
                           )
                         );
@@ -249,10 +267,18 @@ const RecentReviewsPage: React.FC = () => {
                         console.error("Error toggling like:", error);
                       }
                     }}
-                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+                    className={`flex items-center gap-1 text-sm transition-colors ${
+                      review.isLikedByCurrentUser
+                        ? "text-emerald-600"
+                        : "text-gray-400 hover:text-emerald-600"
+                    }`}
+                    title={review.isLikedByCurrentUser ? "Đã thích" : "Thích đánh giá"}
                   >
-                    <ThumbsUp className="w-4 h-4" />
-                    <span>{review.likesCount || 0} lượt thích</span>
+                    <ThumbsUp
+                      className={`w-4 h-4 ${
+                        review.isLikedByCurrentUser ? "fill-current" : ""
+                      }`}
+                    />
                   </button>
                   <span className="text-sm text-gray-600">
                     {review.replyCount || 0} phản hồi

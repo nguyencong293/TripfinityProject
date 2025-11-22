@@ -34,7 +34,7 @@ public class ReviewLikeController {
                 dto.getUserId(), dto.getReviewType(), dto.getReviewId());
 
         boolean isLiked = reviewLikeService.toggleLike(dto);
-        Long likeCount = reviewLikeService.getLikeCount(dto.getReviewType(), dto.getReviewId(), dto.getReplyId());
+        Long likeCount = reviewLikeService.getLikeCount(dto.getReviewType(), dto.getReviewId());
 
         Map<String, Object> response = new HashMap<>();
         response.put("isLiked", isLiked);
@@ -46,11 +46,10 @@ public class ReviewLikeController {
     @GetMapping("/count")
     public ResponseEntity<Long> getLikeCount(
             @RequestParam String reviewType,
-            @RequestParam Integer reviewId,
-            @RequestParam(required = false) Integer replyId) {
-        log.info("GET /api/review-likes/count - reviewType: {}, reviewId: {}, replyId: {}",
-                reviewType, reviewId, replyId);
-        Long count = reviewLikeService.getLikeCount(reviewType, reviewId, replyId);
+            @RequestParam Integer reviewId) {
+        log.info("GET /api/review-likes/count - reviewType: {}, reviewId: {}",
+                reviewType, reviewId);
+        Long count = reviewLikeService.getLikeCount(reviewType, reviewId);
         return ResponseEntity.ok(count);
     }
 
@@ -58,11 +57,10 @@ public class ReviewLikeController {
     public ResponseEntity<Boolean> checkLiked(
             @RequestParam Integer userId,
             @RequestParam String reviewType,
-            @RequestParam Integer reviewId,
-            @RequestParam(required = false) Integer replyId) {
-        log.info("GET /api/review-likes/check - userId: {}, reviewType: {}, reviewId: {}, replyId: {}",
-                userId, reviewType, reviewId, replyId);
-        boolean isLiked = reviewLikeService.isLiked(userId, reviewType, reviewId, replyId);
+            @RequestParam Integer reviewId) {
+        log.info("GET /api/review-likes/check - userId: {}, reviewType: {}, reviewId: {}",
+                userId, reviewType, reviewId);
+        boolean isLiked = reviewLikeService.checkIsLiked(userId, reviewType, reviewId);
         return ResponseEntity.ok(isLiked);
     }
 }

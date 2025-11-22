@@ -10,6 +10,7 @@ import 'package:app/config/app_config.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/hotel_api_service.dart';
+import 'package:app/services/review_api_service.dart';
 import 'package:app/views/screens/hotel_booking_checkout_screen.dart';
 import 'package:app/views/screens/detail_hotel_review_user_screen.dart';
 import 'package:app/views/screens/hotel_reviews_list_screen.dart';
@@ -113,7 +114,10 @@ class HotelDetailOverviewScreen extends StatefulWidget {
 
 class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
   bool _introExpanded = false;
-  bool _showAllReviews = false;
+  final Set<int> _expandedReviews = {}; // Track which reviews are expanded
+  final Set<int> _expandedReplies = {}; // Track which replies are expanded
+  final Map<int, List<Map<String, dynamic>>> _repliesCache =
+      {}; // Cache replies by reviewId
 
   // Loading state
   bool _loading = true;
@@ -342,7 +346,26 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
         // Reviews are optional; load but don't fail the whole screen
         try {
           reviews = await api.getHotelReviews(_resolvedId!);
-        } catch (_) {}
+
+          // Sort by createdAt DESC (newest first)
+          reviews.sort((a, b) {
+            final aDate = a['createdAt'] as String? ?? '';
+            final bDate = b['createdAt'] as String? ?? '';
+            return bDate.compareTo(aDate);
+          });
+
+          debugPrint(
+            '📥 Flutter loaded ${reviews.length} reviews for hotel $_resolvedId',
+          );
+          if (reviews.isNotEmpty) {
+            final first = reviews[0];
+            debugPrint(
+              '🔍 Sample review: reviewId=${first['reviewId']}, likesCount=${first['likesCount']}, replyCount=${first['replyCount']}',
+            );
+          }
+        } catch (e) {
+          debugPrint('❌ Error loading reviews: $e');
+        }
         // Rating summary
         try {
           ratingSummary = await api.getRatingSummary(_resolvedId!);
@@ -1099,27 +1122,11 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
       );
     }
 
-    final visible = _showAllReviews ? _reviews : _reviews.take(2);
+    // Show only first 3 reviews
+    final visible = _reviews.take(3).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ...visible.map((r) => _reviewItem(context, r)),
-        const SizedBox(height: 8),
-        if (_reviews.length > 2 && !_showAllReviews)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: () => setState(() => _showAllReviews = true),
-              child: Text(
-                'Xem thêm ${_reviews.length - 2} đánh giá',
-                style: context.captionStyle.copyWith(
-                  color: context.primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-      ],
+      children: [...visible.map((r) => _reviewItem(context, r))],
     );
   }
 
@@ -1130,6 +1137,13 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     final createdAt = r['createdAt']?.toString() ?? '';
     final date = _formatDate(createdAt);
     final replyCount = _toInt(r['replyCount']) ?? 0;
+    final likesCount = _toInt(r['likesCount']) ?? 0;
+    final reviewId = _toInt(r['reviewId']) ?? 0;
+    final isExpanded = _expandedReviews.contains(reviewId);
+
+    debugPrint(
+      '🔍 Flutter _reviewItem: reviewId=$reviewId, likesCount=$likesCount, replyCount=$replyCount',
+    );
 
     // Parse imageUrls (comma-separated string or list)
     List<String> imageUrls = [];
@@ -1186,7 +1200,42 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
           const SizedBox(height: 6),
           _starsRow(context, rating),
           const SizedBox(height: 6),
-          Text(content, style: context.bodyTwoStyle.copyWith(height: 1.35)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                content,
+                style: context.bodyTwoStyle.copyWith(height: 1.35),
+                maxLines: isExpanded ? null : 4,
+                overflow: isExpanded
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
+                textAlign: TextAlign.justify,
+              ),
+              if (content.length > 150) ...[
+                // Show button if content is long
+                const SizedBox(height: 4),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (isExpanded) {
+                        _expandedReviews.remove(reviewId);
+                      } else {
+                        _expandedReviews.add(reviewId);
+                      }
+                    });
+                  },
+                  child: Text(
+                    isExpanded ? 'Thu gọn' : 'Xem thêm',
+                    style: context.captionStyle.copyWith(
+                      color: context.primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
 
           // Display review images
           if (imageUrls.isNotEmpty) ...[
@@ -1221,20 +1270,224 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
             ),
           ],
 
-          if (replyCount > 0) ...[
-            const SizedBox(height: 6),
-            InkWell(
-              onTap: () {},
-              child: Text(
-                'Hiển thị phản hồi ( $replyCount )',
-                style: context.captionStyle.copyWith(
-                  fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.underline,
+          // Likes and replies count
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(
+                Icons.thumb_up_outlined,
+                size: 16,
+                color: Theme.of(context).primaryColor,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '$likesCount',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context).primaryColor,
                 ),
               ),
+              const SizedBox(width: 16),
+              Icon(Icons.comment_outlined, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Text(
+                '$replyCount phản hồi',
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+
+          // Load and display replies
+          if (replyCount > 0 && reviewId > 0) ...[
+            const SizedBox(height: 12),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadReplies(reviewId),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: snapshot.data!.map((reply) {
+                    return _buildReplyItem(context, reply);
+                  }).toList(),
+                );
+              },
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _loadReplies(int reviewId) async {
+    if (_repliesCache.containsKey(reviewId)) {
+      return _repliesCache[reviewId]!;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dio = Dio();
+      final reviewApi = ReviewApiService(dio: dio, prefs: prefs);
+
+      // Get current user ID
+      final currentUserId = prefs.getInt('user_id');
+
+      final replies = await reviewApi.getReviewReplies(
+        reviewType: 'hotel',
+        reviewId: reviewId,
+        currentUserId: currentUserId,
+      );
+
+      // Sort replies DESC (newest first)
+      replies.sort((a, b) {
+        final aDate = a['createdAt'] as String? ?? '';
+        final bDate = b['createdAt'] as String? ?? '';
+        return bDate.compareTo(aDate);
+      });
+
+      debugPrint('📝 Loaded ${replies.length} replies for review $reviewId');
+      _repliesCache[reviewId] = replies;
+      return replies;
+    } catch (e) {
+      debugPrint('❌ Error loading replies: $e');
+      return [];
+    }
+  }
+
+  Widget _buildReplyItem(BuildContext context, Map<String, dynamic> reply) {
+    final replierName = reply['replierName']?.toString() ?? 'Người trả lời';
+    final content = reply['content']?.toString() ?? '';
+    final isProvider = reply['isProvider'] == 1;
+    final replyId = _toInt(reply['replyId']) ?? 0;
+    final createdAt = reply['createdAt']?.toString() ?? '';
+    final isExpanded = _expandedReplies.contains(replyId);
+
+    // Format date
+    String formattedDate = '';
+    if (createdAt.isNotEmpty) {
+      try {
+        final date = DateTime.parse(createdAt);
+        formattedDate = '${date.day}/${date.month}/${date.year}';
+      } catch (e) {
+        formattedDate = '';
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, top: 8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isProvider ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border(
+            left: BorderSide(
+              color: isProvider ? Colors.green : Colors.grey[400]!,
+              width: 3,
+            ),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: isProvider ? Colors.green : Colors.grey[400],
+                  child: Icon(
+                    isProvider ? Icons.business : Icons.person,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            replierName,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isProvider
+                                  ? Colors.green[800]
+                                  : Colors.grey[800],
+                            ),
+                          ),
+                          if (isProvider) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'Nhà cung cấp',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (formattedDate.isNotEmpty)
+                        Text(
+                          formattedDate,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              content,
+              style: const TextStyle(fontSize: 13, height: 1.4),
+              maxLines: isExpanded ? null : 4,
+              overflow: isExpanded
+                  ? TextOverflow.visible
+                  : TextOverflow.ellipsis,
+            ),
+            if (content.length > 150) ...[
+              const SizedBox(height: 4),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    if (isExpanded) {
+                      _expandedReplies.remove(replyId);
+                    } else {
+                      _expandedReplies.add(replyId);
+                    }
+                  });
+                },
+                child: Text(
+                  isExpanded ? 'Thu gọn' : 'Hiển thị thêm',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

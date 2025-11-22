@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.vn.tripfinity.backend.dto.ReviewReplyDTO;
 import com.vn.tripfinity.backend.model.ReviewReply;
+import com.vn.tripfinity.backend.repository.HotelReviewRepository;
 import com.vn.tripfinity.backend.repository.ReviewLikeRepository;
 import com.vn.tripfinity.backend.repository.ReviewReplyRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
@@ -24,6 +25,7 @@ public class ReviewReplyService {
     private final ReviewReplyRepository reviewReplyRepository;
     private final ReviewLikeRepository reviewLikeRepository;
     private final UserRepository userRepository;
+    private final HotelReviewRepository hotelReviewRepository;
 
     @Transactional
     public ReviewReplyDTO createReply(ReviewReplyDTO dto) {
@@ -45,6 +47,18 @@ public class ReviewReplyService {
                 .build();
 
         ReviewReply saved = reviewReplyRepository.save(reply);
+        
+        // 🔥 UPDATE replyCount in hotel_reviews table
+        if ("hotel".equalsIgnoreCase(dto.getReviewType())) {
+            hotelReviewRepository.findById(dto.getReviewId()).ifPresent(review -> {
+                Integer currentCount = review.getReplyCount() != null ? review.getReplyCount() : 0;
+                review.setReplyCount(currentCount + 1);
+                hotelReviewRepository.save(review);
+                log.info("✅ Updated replyCount for hotel review {}: {} -> {}", 
+                        dto.getReviewId(), currentCount, currentCount + 1);
+            });
+        }
+        
         return convertToDTO(saved, null);
     }
 
@@ -52,7 +66,7 @@ public class ReviewReplyService {
         log.info("Getting replies for review: {} {}", reviewType, reviewId);
         
         ReviewReply.ReviewType type = ReviewReply.ReviewType.valueOf(reviewType);
-        List<ReviewReply> replies = reviewReplyRepository.findByReviewTypeAndReviewIdOrderByCreatedAtAsc(type, reviewId);
+        List<ReviewReply> replies = reviewReplyRepository.findByReviewTypeAndReviewIdOrderByCreatedAtDesc(type, reviewId);
 
         return replies.stream()
                 .map(reply -> convertToDTO(reply, currentUserId))
@@ -65,8 +79,34 @@ public class ReviewReplyService {
     }
 
     @Transactional
+    public ReviewReplyDTO updateReply(Integer replyId, String content) {
+        log.info("Updating reply: {}", replyId);
+        ReviewReply reply = reviewReplyRepository.findById(replyId)
+                .orElseThrow(() -> new RuntimeException("Reply not found: " + replyId));
+        reply.setContent(content);
+        ReviewReply updated = reviewReplyRepository.save(reply);
+        return convertToDTO(updated, null);
+    }
+
+    @Transactional
     public void deleteReply(Integer replyId) {
         log.info("Deleting reply: {}", replyId);
+        ReviewReply reply = reviewReplyRepository.findById(replyId)
+                .orElseThrow(() -> new RuntimeException("Reply not found: " + replyId));
+        
+        // Giảm replyCount trong hotel_reviews nếu là hotel reply
+        if (reply.getReviewType() == ReviewReply.ReviewType.hotel) {
+            hotelReviewRepository.findById(reply.getReviewId()).ifPresent(review -> {
+                Integer currentCount = review.getReplyCount() != null ? review.getReplyCount() : 0;
+                if (currentCount > 0) {
+                    review.setReplyCount(currentCount - 1);
+                    hotelReviewRepository.save(review);
+                    log.info("✅ Decreased replyCount for hotel review {}: {} -> {}", 
+                            reply.getReviewId(), currentCount, currentCount - 1);
+                }
+            });
+        }
+        
         reviewReplyRepository.deleteById(replyId);
     }
 
@@ -86,18 +126,6 @@ public class ReviewReplyService {
                 .replierName(replier.getFullName())
                 .replierAvatar(replier.getAvatarUrl())
                 .build();
-
-        // Get like count
-        Long likeCount = reviewLikeRepository.countByReviewTypeAndReviewIdAndReplyId(
-                reply.getReviewType().name(), reply.getReviewId(), reply.getReplyId());
-        dto.setLikeCount(likeCount.intValue());
-
-        // Check if current user liked this reply
-        if (currentUserId != null) {
-            boolean isLiked = reviewLikeRepository.findByUserIdAndReviewTypeAndReviewIdAndReplyId(
-                    currentUserId, reply.getReviewType().name(), reply.getReviewId(), reply.getReplyId()).isPresent();
-            dto.setIsLikedByCurrentUser(isLiked);
-        }
 
         return dto;
     }

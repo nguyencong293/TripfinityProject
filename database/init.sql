@@ -563,11 +563,9 @@ CREATE TABLE review_likes (
     user_id INT NOT NULL,
     review_type ENUM('hotel','restaurant','tour','attraction','provider') NOT NULL,
     review_id INT NOT NULL,
-    reply_id INT DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_review_like (user_id, review_type, review_id, reply_id),
-    CONSTRAINT fk_review_like_user FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT fk_review_like_reply FOREIGN KEY (reply_id) REFERENCES review_replies(reply_id) ON DELETE CASCADE
+    UNIQUE KEY unique_review_like (user_id, review_type, review_id),
+    CONSTRAINT fk_review_like_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 20) review reports

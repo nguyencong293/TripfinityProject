@@ -10,29 +10,16 @@ import com.vn.tripfinity.backend.model.ReviewLike;
 @Repository
 public interface ReviewLikeRepository extends JpaRepository<ReviewLike, Integer> {
     
-    // Check if user liked a review (replyId is NULL)
-    Optional<ReviewLike> findByUserIdAndReviewTypeAndReviewIdAndReplyIdIsNull(
+    // Check if user liked a review
+    Optional<ReviewLike> findByUserIdAndReviewTypeAndReviewId(
         Integer userId, String reviewType, Integer reviewId
-    );
-
-    // Check if user liked a reply
-    Optional<ReviewLike> findByUserIdAndReviewTypeAndReviewIdAndReplyId(
-        Integer userId, String reviewType, Integer reviewId, Integer replyId
     );
 
     // Count likes for a review
-    Long countByReviewTypeAndReviewIdAndReplyIdIsNull(String reviewType, Integer reviewId);
-
-    // Count likes for a reply
-    Long countByReviewTypeAndReviewIdAndReplyId(String reviewType, Integer reviewId, Integer replyId);
+    Long countByReviewTypeAndReviewId(String reviewType, Integer reviewId);
 
     // Delete like for review
-    void deleteByUserIdAndReviewTypeAndReviewIdAndReplyIdIsNull(
+    void deleteByUserIdAndReviewTypeAndReviewId(
         Integer userId, String reviewType, Integer reviewId
-    );
-
-    // Delete like for reply
-    void deleteByUserIdAndReviewTypeAndReviewIdAndReplyId(
-        Integer userId, String reviewType, Integer reviewId, Integer replyId
     );
 }

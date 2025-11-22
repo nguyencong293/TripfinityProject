@@ -22,6 +22,4 @@ public class ReviewLikeDTO {
 
     @NotNull(message = "Review ID is required")
     private Integer reviewId;
-
-    private Integer replyId; // NULL for review like, set for reply like
 }

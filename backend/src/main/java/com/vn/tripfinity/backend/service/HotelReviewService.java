@@ -192,6 +192,9 @@ public class HotelReviewService {
                 .updatedAt(review.getUpdatedAt())
                 .build();
 
+        log.debug("🔍 convertToDTO: reviewId={}, likesCount={}, replyCount={}", 
+                review.getReviewId(), review.getLikesCount(), review.getReplyCount());
+
         // Load aspects if exists
         aspectsRepository.findById(review.getReviewId()).ifPresent(aspects -> {
             HotelReviewDTO.HotelReviewAspectsDTO aspectsDTO = HotelReviewDTO.HotelReviewAspectsDTO.builder()
@@ -240,7 +243,7 @@ public class HotelReviewService {
     public List<HotelReviewReplyDTO> getHotelReviewReplies(Integer reviewId) {
         log.debug("Lấy danh sách replies của Hotel Review ID: {}", reviewId);
         
-        List<ReviewReply> replies = reviewReplyRepository.findByReviewTypeAndReviewIdOrderByCreatedAtAsc(
+        List<ReviewReply> replies = reviewReplyRepository.findByReviewTypeAndReviewIdOrderByCreatedAtDesc(
                 ReviewReply.ReviewType.hotel, reviewId);
         
         log.info("Tìm thấy {} replies của Hotel Review ID: {}", replies.size(), reviewId);
@@ -260,5 +263,32 @@ public class HotelReviewService {
                 .createdAt(reply.getCreatedAt())
                 .updatedAt(reply.getUpdatedAt())
                 .build();
+    }
+
+    // === SYNC REPLY COUNTS FROM review_replies TABLE ===
+    @Transactional
+    public int syncReplyCountsFromReplies() {
+        log.info("🔄 Syncing reply counts for all hotel reviews from review_replies table");
+        
+        List<HotelReview> allReviews = reviewRepository.findAll();
+        int updated = 0;
+        
+        for (HotelReview review : allReviews) {
+            int actualCount = reviewReplyRepository.countByReviewTypeAndReviewId(
+                    ReviewReply.ReviewType.hotel, review.getReviewId());
+            
+            Integer currentCount = review.getReplyCount() != null ? review.getReplyCount() : 0;
+            
+            if (currentCount != actualCount) {
+                review.setReplyCount(actualCount);
+                reviewRepository.save(review);
+                log.info("✅ Updated review {} replyCount: {} -> {}", 
+                        review.getReviewId(), currentCount, actualCount);
+                updated++;
+            }
+        }
+        
+        log.info("🎉 Synced reply counts for {} reviews", updated);
+        return updated;
     }
 }

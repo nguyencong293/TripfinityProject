@@ -250,7 +250,16 @@ const DashboardHotelPage: React.FC = () => {
         // Fetch reviews for the first hotel (if available)
         const firstHotelId = hs[0]?.hotelId;
         if (firstHotelId) {
+          console.log(`📥 Dashboard loading reviews for hotel ${firstHotelId}`);
           const revs = await getHotelReviewsByHotel(firstHotelId);
+          console.log(`📤 Dashboard received ${revs.length} reviews`);
+          if (revs.length > 0) {
+            console.log("🔍 Sample review:", {
+              reviewId: revs[0].reviewId,
+              likesCount: revs[0].likesCount,
+              replyCount: revs[0].replyCount
+            });
+          }
           setRecentReviews(revs.slice(0, 2));
         } else {
           setRecentReviews([]);
@@ -658,6 +667,7 @@ const DashboardHotelPage: React.FC = () => {
               key={r.reviewId}
               review={r}
               hotelName={firstHotel?.title || t("hotel")}
+              readOnly={true}
             />
           ))}
         </div>

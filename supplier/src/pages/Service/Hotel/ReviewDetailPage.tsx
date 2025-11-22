@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, ThumbsUp, Send, User } from "lucide-react";
+import { ArrowLeft, Star, ThumbsUp, Send, User, Edit2, Trash2, X, Check } from "lucide-react";
 import { getProviderByUserId, getUserById } from "../../../services/providerService";
 import { getHotelReviewById } from "../../../services/hotelService";
 import {
   createReviewReply,
   getReviewReplies,
+  updateReviewReply,
+  deleteReviewReply,
   toggleReviewLike,
   getLikeCount,
   checkIsLiked,
@@ -26,6 +28,9 @@ const ReviewDetailPage: React.FC = () => {
   const [providerId, setProviderId] = useState<number | null>(null);
   const [reviewLikeCount, setReviewLikeCount] = useState(0);
   const [isReviewLiked, setIsReviewLiked] = useState(false);
+  const [editingReplyId, setEditingReplyId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState("");
+
 
   useEffect(() => {
     const init = async () => {
@@ -100,34 +105,6 @@ const ReviewDetailPage: React.FC = () => {
     }
   };
 
-  const handleLikeReply = async (replyId: number) => {
-    if (!currentUserId) return;
-
-    try {
-      const result = await toggleReviewLike({
-        userId: currentUserId,
-        reviewType: "hotel",
-        reviewId: Number(reviewId),
-        replyId,
-      });
-
-      // Update reply in list
-      setReplies((prev) =>
-        prev.map((reply) =>
-          reply.replyId === replyId
-            ? {
-                ...reply,
-                isLikedByCurrentUser: result.isLiked,
-                likeCount: result.likeCount,
-              }
-            : reply
-        )
-      );
-    } catch (error) {
-      console.error("Error toggling reply like:", error);
-    }
-  };
-
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUserId || !reviewId || !replyContent.trim() || !providerId) return;
@@ -151,6 +128,44 @@ const ReviewDetailPage: React.FC = () => {
       alert("Có lỗi khi gửi phản hồi. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleStartEdit = (replyId: number, content: string) => {
+    setEditingReplyId(replyId);
+    setEditContent(content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReplyId(null);
+    setEditContent("");
+  };
+
+  const handleSaveEdit = async (replyId: number) => {
+    if (!editContent.trim()) return;
+
+    try {
+      const updated = await updateReviewReply(replyId, editContent.trim());
+      setReplies((prev) =>
+        prev.map((r) => (r.replyId === replyId ? { ...r, content: updated.content } : r))
+      );
+      setEditingReplyId(null);
+      setEditContent("");
+    } catch (error) {
+      console.error("Error updating reply:", error);
+      alert("Có lỗi khi cập nhật phản hồi.");
+    }
+  };
+
+  const handleDeleteReply = async (replyId: number) => {
+    if (!confirm("Bạn có chắc muốn xóa phản hồi này?")) return;
+
+    try {
+      await deleteReviewReply(replyId);
+      setReplies((prev) => prev.filter((r) => r.replyId !== replyId));
+    } catch (error) {
+      console.error("Error deleting reply:", error);
+      alert("Có lỗi khi xóa phản hồi.");
     }
   };
 
@@ -347,61 +362,101 @@ const ReviewDetailPage: React.FC = () => {
             Phản hồi ({replies.length})
           </h3>
           <div className="space-y-4">
-            {replies.map((reply) => (
-              <div
-                key={reply.replyId}
-                className={`p-4 rounded-lg ${
-                  reply.isProvider === 1
-                    ? "bg-emerald-50 border border-emerald-200"
-                    : "bg-gray-50"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                    {reply.replierName?.[0]?.toUpperCase() || <User className="w-5 h-5" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-gray-900">
-                        {reply.replierName || "Người dùng"}
-                      </span>
-                      {reply.isProvider === 1 && (
-                        <span className="px-2 py-0.5 bg-emerald-600 text-white text-xs font-medium rounded-full">
-                          Nhà cung cấp
-                        </span>
-                      )}
-                      <span className="text-sm text-gray-500">
-                        {reply.createdAt
-                          ? new Date(reply.createdAt).toLocaleDateString("vi-VN", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })
-                          : ""}
-                      </span>
+            {replies.map((reply) => {
+              const isEditing = editingReplyId === reply.replyId;
+              const isOwnReply = reply.replierId === currentUserId;
+
+              return (
+                <div
+                  key={reply.replyId}
+                  className={`p-4 rounded-lg ${
+                    reply.isProvider === 1
+                      ? "bg-emerald-50 border border-emerald-200"
+                      : "bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                      {reply.replierName?.[0]?.toUpperCase() || <User className="w-5 h-5" />}
                     </div>
-                    <p className="text-gray-700 mb-2 whitespace-pre-wrap">
-                      {reply.content}
-                    </p>
-                    <button
-                      onClick={() => handleLikeReply(reply.replyId!)}
-                      className={`flex items-center gap-1 text-sm font-medium transition-colors ${
-                        reply.isLikedByCurrentUser
-                          ? "text-emerald-600"
-                          : "text-gray-600 hover:text-emerald-600"
-                      }`}
-                    >
-                      <ThumbsUp
-                        className={`w-4 h-4 ${
-                          reply.isLikedByCurrentUser ? "fill-current" : ""
-                        }`}
-                      />
-                      {reply.likeCount || 0}
-                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-gray-900">
+                          {reply.replierName || "Người dùng"}
+                        </span>
+                        {reply.isProvider === 1 && (
+                          <span className="px-2 py-0.5 bg-emerald-600 text-white text-xs font-medium rounded-full">
+                            Nhà cung cấp
+                          </span>
+                        )}
+                        <span className="text-sm text-gray-500">
+                          {reply.createdAt
+                            ? new Date(reply.createdAt).toLocaleDateString("vi-VN", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : ""}
+                        </span>
+                      </div>
+                      
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                            rows={3}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSaveEdit(reply.replyId!)}
+                              className="px-3 py-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-1 text-sm"
+                            >
+                              <Check className="w-4 h-4" />
+                              Lưu
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 flex items-center gap-1 text-sm"
+                            >
+                              <X className="w-4 h-4" />
+                              Hủy
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-gray-700 mb-2 whitespace-pre-wrap">
+                            {reply.content}
+                          </p>
+                          <div className="flex items-center gap-3">
+                            {isOwnReply && (
+                              <>
+                                <button
+                                  onClick={() => handleStartEdit(reply.replyId!, reply.content)}
+                                  className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                  Sửa
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteReply(reply.replyId!)}
+                                  className="flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  Xóa
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "review_likes", uniqueConstraints = {
     @UniqueConstraint(name = "unique_review_like", 
-        columnNames = {"user_id", "review_type", "review_id", "reply_id"})
+        columnNames = {"user_id", "review_type", "review_id"})
 })
 public class ReviewLike {
 
@@ -40,9 +40,6 @@ public class ReviewLike {
 
     @Column(name = "review_id", nullable = false)
     private Integer reviewId;
-
-    @Column(name = "reply_id")
-    private Integer replyId; // NULL for review like, set for reply like
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -4,22 +4,30 @@ import type React from "react";
 import { useLanguage } from "../../hooks/useLanguage";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { toggleReviewLike, getLikeCount } from "../../services/reviewService";
+import { toggleReviewLike, checkIsLiked } from "../../services/reviewService";
 import { getUserById } from "../../services/providerService";
 
 // ==================== SECTION 7: REVIEW CARD COMPONENT ====================
 interface ReviewCardProps {
   review: HotelReviewDTO;
   hotelName: string;
+  readOnly?: boolean;
 }
 
-const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
+const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName, readOnly = false }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [userName, setUserName] = useState<string>("");
-  const [currentLikes, setCurrentLikes] = useState(review.likesCount || 0);
   const [isLiked, setIsLiked] = useState(false);
   const currentUserId = Number(localStorage.getItem("userId"));
+
+  console.log("🔍 ReviewCard render:", {
+    reviewId: review.reviewId,
+    likesCount: review.likesCount,
+    replyCount: review.replyCount,
+    readOnly,
+    currentUserId
+  });
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -34,6 +42,24 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
     fetchUserName();
   }, [review.userId]);
 
+  useEffect(() => {
+    const fetchLikeStatus = async () => {
+      if (!currentUserId || !review.reviewId) return;
+      try {
+        const liked = await checkIsLiked(
+          currentUserId,
+          "hotel",
+          review.reviewId
+        );
+        console.log("✅ Like status fetched:", { reviewId: review.reviewId, liked });
+        setIsLiked(liked);
+      } catch (error) {
+        console.error("❌ Error fetching like status:", error);
+      }
+    };
+    fetchLikeStatus();
+  }, [currentUserId, review.reviewId]);
+
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!currentUserId) return;
@@ -44,7 +70,6 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
         reviewType: "hotel",
         reviewId: review.reviewId!,
       });
-      setCurrentLikes(result.likeCount);
       setIsLiked(result.isLiked);
     } catch (error) {
       console.error("Error toggling like:", error);
@@ -155,18 +180,31 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName }) => {
       {/* Footer */}
       <div className="flex items-center justify-between pt-3 border-t theme-divider">
         <div className="flex items-center gap-3 text-xs">
-          <button
-            onClick={handleLike}
-            className={`flex items-center gap-1 transition-colors ${
-              isLiked ? "text-emerald-600" : "theme-text-secondary hover:text-emerald-600"
-            }`}
-          >
-            <ThumbsUp className={`w-3.5 h-3.5 ${isLiked ? "fill-current" : ""}`} />
-            <span>{currentLikes}</span>
-          </button>
-          <span className="theme-text-secondary">
-            💬 {review.replyCount || 0} {t("replies")}
-          </span>
+          {readOnly ? (
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center gap-1 ${isLiked ? "text-emerald-600" : "text-gray-400"}`}>
+                <ThumbsUp className={`w-3.5 h-3.5 ${isLiked ? "fill-current" : ""}`} />
+              </div>
+              <span className="theme-text-secondary">
+                💬 {review.replyCount || 0} phản hồi
+              </span>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={handleLike}
+                className={`flex items-center gap-1 transition-colors ${
+                  isLiked ? "text-emerald-600" : "text-gray-400 hover:text-emerald-600"
+                }`}
+                title={isLiked ? "Đã thích" : "Thích đánh giá"}
+              >
+                <ThumbsUp className={`w-3.5 h-3.5 ${isLiked ? "fill-current" : ""}`} />
+              </button>
+              <span className="theme-text-secondary">
+                💬 {review.replyCount || 0} phản hồi
+              </span>
+            </>
+          )}
         </div>
         <button
           className="text-xs font-medium transition-colors link-brand"

@@ -63,6 +63,24 @@ export const getReplyCount = async (
 };
 
 /**
+ * Update a reply
+ */
+export const updateReviewReply = async (
+  replyId: number,
+  content: string
+): Promise<ReviewReplyDTO> => {
+  const response = await api.put<ReviewReplyDTO>(`/review-replies/${replyId}`, { content });
+  return response.data;
+};
+
+/**
+ * Delete a reply
+ */
+export const deleteReviewReply = async (replyId: number): Promise<void> => {
+  await api.delete(`/review-replies/${replyId}`);
+};
+
+/**
  * Toggle like on a review or reply
  */
 export const toggleReviewLike = async (

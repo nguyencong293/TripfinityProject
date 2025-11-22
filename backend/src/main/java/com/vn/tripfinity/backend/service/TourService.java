@@ -1,33 +1,35 @@
 package com.vn.tripfinity.backend.service;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vn.tripfinity.backend.dto.TourDTO;
 import com.vn.tripfinity.backend.dto.TourReviewDTO;
 import com.vn.tripfinity.backend.dto.TourReviewReplyDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
+import com.vn.tripfinity.backend.model.Area;
 import com.vn.tripfinity.backend.model.Provider;
+import com.vn.tripfinity.backend.model.ReviewReply;
 import com.vn.tripfinity.backend.model.Tour;
 import com.vn.tripfinity.backend.model.TourReview;
 import com.vn.tripfinity.backend.model.TourReviewAspects;
 import com.vn.tripfinity.backend.model.User;
-import com.vn.tripfinity.backend.model.ReviewReply;
-import com.vn.tripfinity.backend.model.Area;
-import com.vn.tripfinity.backend.repository.ProviderRepository;
-import com.vn.tripfinity.backend.repository.TourRepository;
-import com.vn.tripfinity.backend.repository.TourReviewRepository;
-import com.vn.tripfinity.backend.repository.TourReviewAspectsRepository;
-import com.vn.tripfinity.backend.repository.UserRepository;
-import com.vn.tripfinity.backend.repository.ReviewReplyRepository;
 import com.vn.tripfinity.backend.repository.AreaRepository;
+import com.vn.tripfinity.backend.repository.ProviderRepository;
+import com.vn.tripfinity.backend.repository.ReviewReplyRepository;
+import com.vn.tripfinity.backend.repository.TourRepository;
+import com.vn.tripfinity.backend.repository.TourReviewAspectsRepository;
+import com.vn.tripfinity.backend.repository.TourReviewRepository;
+import com.vn.tripfinity.backend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -267,7 +269,7 @@ public class TourService {
         TourReview review = tourReviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy TourReview id: " + reviewId));
         List<ReviewReply> replies = reviewReplyRepository
-                .findByReviewTypeAndReviewIdOrderByCreatedAtAsc(ReviewReply.ReviewType.tour, review.getReviewId());
+                .findByReviewTypeAndReviewIdOrderByCreatedAtDesc(ReviewReply.ReviewType.tour, review.getReviewId());
         return replies.stream().map(this::toTourReviewReplyDTO).collect(Collectors.toList());
     }
 

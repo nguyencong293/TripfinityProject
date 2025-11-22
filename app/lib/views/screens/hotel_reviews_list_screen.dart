@@ -1,3 +1,4 @@
+import 'package:app/config/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,6 +23,8 @@ class _HotelReviewsListScreenState extends State<HotelReviewsListScreen> {
   List<Map<String, dynamic>> _reviews = [];
   bool _isLoading = true;
   int? _currentUserId;
+  final Set<int> _expandedReviews = {};
+  final Map<int, List<Map<String, dynamic>>> _repliesCache = {};
 
   late HotelApiService _hotelApi;
   late ReviewApiService _reviewApi;
@@ -49,6 +52,14 @@ class _HotelReviewsListScreenState extends State<HotelReviewsListScreen> {
     try {
       setState(() => _isLoading = true);
       final reviews = await _hotelApi.getHotelReviews(widget.hotelId);
+
+      // Sort by createdAt DESC (newest first)
+      reviews.sort((a, b) {
+        final aDate = a['createdAt'] as String? ?? '';
+        final bDate = b['createdAt'] as String? ?? '';
+        return bDate.compareTo(aDate);
+      });
+
       setState(() {
         _reviews = reviews;
         _isLoading = false;
@@ -56,6 +67,33 @@ class _HotelReviewsListScreenState extends State<HotelReviewsListScreen> {
     } catch (e) {
       debugPrint('Error loading reviews: $e');
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadReplies(int reviewId) async {
+    if (_repliesCache.containsKey(reviewId)) {
+      return _repliesCache[reviewId]!;
+    }
+
+    try {
+      final replies = await _reviewApi.getReviewReplies(
+        reviewType: 'hotel',
+        reviewId: reviewId,
+        currentUserId: _currentUserId,
+      );
+
+      // Sort replies DESC (newest first)
+      replies.sort((a, b) {
+        final aDate = a['createdAt'] as String? ?? '';
+        final bDate = b['createdAt'] as String? ?? '';
+        return bDate.compareTo(aDate);
+      });
+
+      _repliesCache[reviewId] = replies;
+      return replies;
+    } catch (e) {
+      debugPrint('Error loading replies: $e');
+      return [];
     }
   }
 
@@ -101,7 +139,15 @@ class _HotelReviewsListScreenState extends State<HotelReviewsListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Đánh giá ${widget.hotelName}')),
+      appBar: AppBar(
+        title: Text(
+          'Tất cả đánh giá',
+          style: TextStyle(color: context.textPrimaryColor),
+        ),
+        backgroundColor: context.backgroundColor,
+        iconTheme: IconThemeData(color: context.textPrimaryColor),
+        elevation: 1,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _reviews.isEmpty
@@ -112,12 +158,15 @@ class _HotelReviewsListScreenState extends State<HotelReviewsListScreen> {
                   Icon(
                     Icons.rate_review_outlined,
                     size: 64,
-                    color: Colors.grey[600],
+                    color: context.textPrimaryColor,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Chưa có đánh giá nào',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: context.textSecondaryColor,
+                    ),
                   ),
                 ],
               ),
@@ -293,7 +342,7 @@ class _HotelReviewsListScreenState extends State<HotelReviewsListScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '$likesCount',
+                        '$likesCount Thích',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).primaryColor,
@@ -303,24 +352,162 @@ class _HotelReviewsListScreenState extends State<HotelReviewsListScreen> {
                   ),
                 ),
                 const SizedBox(width: 24),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.comment_outlined,
-                      size: 20,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$replyCount phản hồi',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (_expandedReviews.contains(reviewId)) {
+                        _expandedReviews.remove(reviewId);
+                      } else {
+                        _expandedReviews.add(reviewId);
+                      }
+                    });
+                  },
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.comment_outlined,
+                        size: 20,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$replyCount phản hồi',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
+            // Replies section
+            if (_expandedReviews.contains(reviewId) && replyCount > 0) ...[
+              const SizedBox(height: 12),
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: _loadReplies(reviewId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Column(
+                    children: snapshot.data!
+                        .map((reply) => _buildReplyItem(reply))
+                        .toList(),
+                  );
+                },
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildReplyItem(Map<String, dynamic> reply) {
+    final replierName = reply['replierName']?.toString() ?? 'Người trả lời';
+    final content = reply['content']?.toString() ?? '';
+    final isProvider = reply['isProvider'] == 1;
+    final createdAt = reply['createdAt']?.toString() ?? '';
+
+    // Format date
+    String formattedDate = '';
+    if (createdAt.isNotEmpty) {
+      try {
+        final date = DateTime.parse(createdAt);
+        formattedDate = '${date.day}/${date.month}/${date.year}';
+      } catch (e) {
+        formattedDate = '';
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 12, left: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isProvider ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: BorderSide(
+            color: isProvider ? Colors.green : Colors.grey[400]!,
+            width: 3,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: isProvider ? Colors.green : Colors.grey[400],
+                child: Icon(
+                  isProvider ? Icons.business : Icons.person,
+                  size: 16,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          replierName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isProvider
+                                ? Colors.green[800]
+                                : Colors.grey[800],
+                          ),
+                        ),
+                        if (isProvider) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'Nhà cung cấp',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (formattedDate.isNotEmpty)
+                      Text(
+                        formattedDate,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(content, style: const TextStyle(fontSize: 13, height: 1.4)),
+        ],
       ),
     );
   }

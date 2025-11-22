@@ -54,8 +54,14 @@ public class HotelReviewController {
 
     @GetMapping("/hotel/{hotelId}")
     public ResponseEntity<List<HotelReviewDTO>> getReviewsByHotel(@PathVariable Integer hotelId) {
-        log.info("GET /api/hotel-reviews/hotel/{} - Lấy reviews của hotel", hotelId);
+        log.info("📥 GET /api/hotel-reviews/hotel/{} - Lấy reviews của hotel", hotelId);
         List<HotelReviewDTO> reviews = reviewService.getReviewsByHotel(hotelId);
+        log.info("📤 Trả về {} reviews cho hotel {}", reviews.size(), hotelId);
+        if (!reviews.isEmpty()) {
+            HotelReviewDTO first = reviews.get(0);
+            log.info("🔍 Sample review: reviewId={}, likesCount={}, replyCount={}", 
+                    first.getReviewId(), first.getLikesCount(), first.getReplyCount());
+        }
         return ResponseEntity.ok(reviews);
     }
 
@@ -89,6 +95,17 @@ public class HotelReviewController {
         log.info("DELETE /api/hotel-reviews/{} - Xóa review", id);
         reviewService.deleteReview(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // === SYNC REPLY COUNT ===
+    @PostMapping("/sync-reply-counts")
+    public ResponseEntity<Map<String, Object>> syncReplyCounts() {
+        log.info("POST /api/hotel-reviews/sync-reply-counts - Sync reply counts from review_replies");
+        int updated = reviewService.syncReplyCountsFromReplies();
+        Map<String, Object> response = new HashMap<>();
+        response.put("updated", updated);
+        response.put("message", "Synced reply counts for " + updated + " reviews");
+        return ResponseEntity.ok(response);
     }
 
     // === REPLY ENDPOINTS ===
