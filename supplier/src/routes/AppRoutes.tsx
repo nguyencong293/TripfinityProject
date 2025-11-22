@@ -23,6 +23,7 @@ import ListBookingPage from "../pages/Service/Hotel/ListBookingPage";
 import HotelBookingViewPage from "../pages/Service/Hotel/HotelBookingViewPage";
 import AllReviewsPage from "../pages/Service/Hotel/AllReviewsPage";
 import RecentReviewsPage from "../pages/Service/Hotel/RecentReviewsPage";
+import ReviewDetailPage from "../pages/Service/Hotel/ReviewDetailPage";
 import ScrollToTop from "../components/ScrollToTop";
 
 const AppRoutes: React.FC = () => {
@@ -57,6 +58,7 @@ const AppRoutes: React.FC = () => {
             <Route path="service/hotel/list" element={<ListHotelPage />} />
             <Route path="service/hotel/all-reviews" element={<AllReviewsPage />} />
             <Route path="service/hotel/recent-reviews" element={<RecentReviewsPage />} />
+            <Route path="service/hotel/reviews/:reviewId" element={<ReviewDetailPage />} />
             <Route path="service/hotel/bookings" element={<ListBookingPage />} />
             <Route path="service/hotel/bookings/:bookingId" element={<HotelBookingViewPage />} />
             <Route path="service/hotel/create" element={<HotelCreatePage />} />

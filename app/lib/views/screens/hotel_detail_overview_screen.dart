@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/hotel_api_service.dart';
 import 'package:app/views/screens/hotel_booking_checkout_screen.dart';
 import 'package:app/views/screens/detail_hotel_review_user_screen.dart';
+import 'package:app/views/screens/hotel_reviews_list_screen.dart';
 
 // Canonical dictionaries: keep in sync with Supplier (HotelViewPage / Create/Edit)
 const Map<int, String> kHighlightsDict = {
@@ -284,7 +285,34 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
                 // Reviews
                 _sectionWrapper(
                   context,
-                  title: 'Tất cả đánh giá',
+                  title: 'Đánh giá',
+                  trailing: _reviews.isNotEmpty
+                      ? TextButton(
+                          onPressed: () {
+                            if (widget.hotelId != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => HotelReviewsListScreen(
+                                    hotelId: widget.hotelId!,
+                                    hotelName:
+                                        data['title']?.toString() ??
+                                        'Khách sạn',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(
+                            'Xem tất cả',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          ),
+                        )
+                      : null,
                   child: _reviewsBlock(context),
                 ),
 

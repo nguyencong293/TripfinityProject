@@ -313,3 +313,10 @@ export const getHotelReviewsByHotel = async (
   );
   return res.data;
 };
+
+export const getHotelReviewById = async (
+  reviewId: number
+): Promise<HotelReviewDTO> => {
+  const res = await api.get<HotelReviewDTO>(`/hotel-reviews/${reviewId}`);
+  return res.data;
+};

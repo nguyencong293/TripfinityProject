@@ -9,28 +9,15 @@ import {
   toggleReviewLike,
   getLikeCount,
   checkIsLiked,
+  type ReviewReplyDTO,
 } from "../../../services/reviewService";
 import type { HotelReviewDTO, UserDTO } from "../../../types";
-
-interface ReviewReplyDTO {
-  replyId?: number;
-  reviewType: string;
-  reviewId: number;
-  replierId: number;
-  replierName?: string;
-  replierAvatar?: string;
-  content: string;
-  isPublic: boolean;
-  isProvider: number;
-  likeCount?: number;
-  isLikedByCurrentUser?: boolean;
-  createdAt?: string;
-}
 
 const ReviewDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { reviewId } = useParams<{ reviewId: string }>();
   const [review, setReview] = useState<HotelReviewDTO | null>(null);
+  const [reviewUser, setReviewUser] = useState<UserDTO | null>(null);
   const [replies, setReplies] = useState<ReviewReplyDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [replyContent, setReplyContent] = useState("");
@@ -53,41 +40,47 @@ const ReviewDetailPage: React.FC = () => {
           setProviderId(provider.providerId);
         }
       } catch (error) {
-        console.error("Error loading user:", error);
+        console.error("Error initializing:", error);
       }
     };
     init();
   }, []);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadReviewData = async () => {
       if (!reviewId || !currentUserId) return;
 
       try {
         setLoading(true);
-        
+
         // Load review
         const reviewData = await getHotelReviewById(parseInt(reviewId));
         setReview(reviewData);
+
+        // Load review user
+        if (reviewData.userId) {
+          const userData = await getUserById(reviewData.userId);
+          setReviewUser(userData);
+        }
 
         // Load replies
         const repliesData = await getReviewReplies("hotel", parseInt(reviewId), currentUserId);
         setReplies(repliesData);
 
-        // Load review like status
-        const likeCount = await getLikeCount("hotel", parseInt(reviewId), null);
+        // Load review like count and status
+        const likeCount = await getLikeCount("hotel", parseInt(reviewId));
         setReviewLikeCount(likeCount);
 
-        const isLiked = await checkIsLiked(currentUserId, "hotel", parseInt(reviewId), null);
+        const isLiked = await checkIsLiked(currentUserId, "hotel", parseInt(reviewId));
         setIsReviewLiked(isLiked);
       } catch (error) {
-        console.error("Error loading review:", error);
+        console.error("Error loading review data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadData();
+    loadReviewData();
   }, [reviewId, currentUserId]);
 
   const handleLikeReview = async () => {
@@ -98,33 +91,38 @@ const ReviewDetailPage: React.FC = () => {
         userId: currentUserId,
         reviewType: "hotel",
         reviewId: parseInt(reviewId),
-        replyId: null,
       });
 
       setIsReviewLiked(result.isLiked);
       setReviewLikeCount(result.likeCount);
     } catch (error) {
-      console.error("Error toggling review like:", error);
+      console.error("Error toggling like:", error);
     }
   };
 
   const handleLikeReply = async (replyId: number) => {
-    if (!currentUserId || !reviewId) return;
+    if (!currentUserId) return;
 
     try {
       const result = await toggleReviewLike({
         userId: currentUserId,
         reviewType: "hotel",
-        reviewId: parseInt(reviewId),
-        replyId: replyId,
+        reviewId: Number(reviewId),
+        replyId,
       });
 
-      // Update reply like status
-      setReplies(replies.map(r =>
-        r.replyId === replyId
-          ? { ...r, isLikedByCurrentUser: result.isLiked, likeCount: result.likeCount }
-          : r
-      ));
+      // Update reply in list
+      setReplies((prev) =>
+        prev.map((reply) =>
+          reply.replyId === replyId
+            ? {
+                ...reply,
+                isLikedByCurrentUser: result.isLiked,
+                likeCount: result.likeCount,
+              }
+            : reply
+        )
+      );
     } catch (error) {
       console.error("Error toggling reply like:", error);
     }
@@ -132,7 +130,7 @@ const ReviewDetailPage: React.FC = () => {
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUserId || !reviewId || !replyContent.trim()) return;
+    if (!currentUserId || !reviewId || !replyContent.trim() || !providerId) return;
 
     try {
       setSubmitting(true);
@@ -143,14 +141,14 @@ const ReviewDetailPage: React.FC = () => {
         replierId: currentUserId,
         content: replyContent.trim(),
         isPublic: true,
-        isProvider: providerId ? 1 : 0,
+        isProvider: 1, // Supplier reply
       });
 
-      setReplies([...replies, newReply]);
+      setReplies((prev) => [...prev, newReply]);
       setReplyContent("");
     } catch (error) {
       console.error("Error submitting reply:", error);
-      alert("Lỗi khi gửi phản hồi");
+      alert("Có lỗi khi gửi phản hồi. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -158,20 +156,22 @@ const ReviewDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
     );
   }
 
   if (!review) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500">Không tìm thấy đánh giá</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Không tìm thấy đánh giá
+          </h2>
           <button
             onClick={() => navigate(-1)}
-            className="mt-4 text-blue-600 hover:underline"
+            className="text-emerald-600 hover:text-emerald-700"
           >
             Quay lại
           </button>
@@ -181,33 +181,49 @@ const ReviewDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
+    <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="mb-6">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Quay lại
         </button>
-        <h1 className="text-2xl font-bold">Chi tiết đánh giá</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Chi tiết đánh giá</h1>
       </div>
 
-      {/* Review Card */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      {/* Review Detail */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         {/* User info */}
-        <div className="flex items-start gap-4 mb-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
-            {review.userName?.[0]?.toUpperCase() || <User className="w-6 h-6" />}
+        <div className="flex items-start gap-4 mb-6">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+            {reviewUser?.fullName?.[0]?.toUpperCase() || <User className="w-8 h-8" />}
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-gray-900">{review.userName || "Khách hàng"}</h3>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {reviewUser?.fullName || "Khách hàng"}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {review.createdAt
+                    ? new Date(review.createdAt).toLocaleDateString("vi-VN", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : ""}
+                </p>
+              </div>
               <div className="flex items-center gap-1">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
                     key={i}
-                    className={`w-4 h-4 ${
+                    className={`w-6 h-6 ${
                       i < (review.rating || 0)
                         ? "fill-yellow-400 text-yellow-400"
                         : "text-gray-300"
@@ -216,33 +232,29 @@ const ReviewDetailPage: React.FC = () => {
                 ))}
               </div>
             </div>
-            <p className="text-sm text-gray-500">
-              {review.createdAt
-                ? new Date(review.createdAt).toLocaleDateString("vi-VN", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
-                : ""}
-            </p>
           </div>
         </div>
 
         {/* Review content */}
         {review.title && (
-          <h4 className="font-semibold text-gray-900 mb-2">{review.title}</h4>
+          <h3 className="text-xl font-semibold text-gray-900 mb-3">
+            {review.title}
+          </h3>
         )}
-        <p className="text-gray-700 mb-4 whitespace-pre-wrap">{review.content}</p>
+        <p className="text-gray-700 mb-6 whitespace-pre-wrap leading-relaxed">
+          {review.content}
+        </p>
 
         {/* Review images */}
         {review.imageUrls && review.imageUrls.length > 0 && (
-          <div className="flex gap-2 mb-4 overflow-x-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             {review.imageUrls.map((url, idx) => (
               <img
                 key={idx}
                 src={url}
                 alt={`Review ${idx + 1}`}
-                className="h-24 w-24 rounded-lg object-cover flex-shrink-0"
+                className="w-full h-40 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => window.open(url, "_blank")}
               />
             ))}
           </div>
@@ -250,65 +262,75 @@ const ReviewDetailPage: React.FC = () => {
 
         {/* Review aspects */}
         {review.aspects && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-4">
-            <p className="text-sm font-semibold text-gray-700 mb-3">Đánh giá chi tiết:</p>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Vệ sinh:</span>
-                <span className="font-medium text-gray-900">{review.aspects.cleanliness}/5</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Dịch vụ:</span>
-                <span className="font-medium text-gray-900">{review.aspects.service}/5</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Giá trị:</span>
-                <span className="font-medium text-gray-900">{review.aspects.valueForMoney}/5</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Vị trí:</span>
-                <span className="font-medium text-gray-900">{review.aspects.location}/5</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Tiện nghi:</span>
-                <span className="font-medium text-gray-900">{review.aspects.facilities}/5</span>
-              </div>
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <h4 className="font-semibold text-gray-900 mb-3">Đánh giá chi tiết</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                { label: "Vệ sinh", value: review.aspects.cleanliness },
+                { label: "Dịch vụ", value: review.aspects.service },
+                { label: "Giá trị", value: review.aspects.valueForMoney },
+                { label: "Vị trí", value: review.aspects.location },
+                { label: "Tiện nghi", value: review.aspects.facilities },
+              ].map((aspect) => (
+                <div key={aspect.label} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">{aspect.label}</span>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`w-4 h-4 ${
+                          i < (aspect.value || 0)
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
         {/* Like button */}
-        <button
-          onClick={handleLikeReview}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            isReviewLiked
-              ? "bg-blue-100 text-blue-600"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
-        >
-          <ThumbsUp className={`w-4 h-4 ${isReviewLiked ? "fill-current" : ""}`} />
-          <span className="text-sm font-medium">{reviewLikeCount} lượt thích</span>
-        </button>
+        <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
+          <button
+            onClick={handleLikeReview}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              isReviewLiked
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            <ThumbsUp className={`w-5 h-5 ${isReviewLiked ? "fill-current" : ""}`} />
+            {reviewLikeCount} Thích
+          </button>
+          <span className="text-sm text-gray-600">
+            {replies.length} phản hồi
+          </span>
+        </div>
       </div>
 
-      {/* Reply form (for supplier only) */}
+      {/* Reply form (only for supplier/provider) */}
       {providerId && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Trả lời đánh giá</h3>
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Phản hồi đánh giá
+          </h3>
           <form onSubmit={handleSubmitReply}>
             <textarea
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
-              placeholder="Nhập phản hồi của bạn..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              placeholder="Viết phản hồi của bạn..."
               rows={4}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
               disabled={submitting}
             />
             <div className="flex justify-end mt-3">
               <button
                 type="submit"
                 disabled={submitting || !replyContent.trim()}
-                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send className="w-4 h-4" />
                 {submitting ? "Đang gửi..." : "Gửi phản hồi"}
@@ -319,54 +341,70 @@ const ReviewDetailPage: React.FC = () => {
       )}
 
       {/* Replies list */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="font-semibold text-gray-900 mb-4">
-          Phản hồi ({replies.length})
-        </h3>
-
-        {replies.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">Chưa có phản hồi nào</p>
-        ) : (
+      {replies.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Phản hồi ({replies.length})
+          </h3>
           <div className="space-y-4">
             {replies.map((reply) => (
-              <div key={reply.replyId} className="border-l-2 border-blue-500 pl-4 py-2">
-                <div className="flex items-start gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center text-white text-sm font-semibold">
+              <div
+                key={reply.replyId}
+                className={`p-4 rounded-lg ${
+                  reply.isProvider === 1
+                    ? "bg-emerald-50 border border-emerald-200"
+                    : "bg-gray-50"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
                     {reply.replierName?.[0]?.toUpperCase() || <User className="w-5 h-5" />}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-900">{reply.replierName || "Người dùng"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-gray-900">
+                        {reply.replierName || "Người dùng"}
+                      </span>
                       {reply.isProvider === 1 && (
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                        <span className="px-2 py-0.5 bg-emerald-600 text-white text-xs font-medium rounded-full">
                           Nhà cung cấp
                         </span>
                       )}
+                      <span className="text-sm text-gray-500">
+                        {reply.createdAt
+                          ? new Date(reply.createdAt).toLocaleDateString("vi-VN", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : ""}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      {reply.createdAt
-                        ? new Date(reply.createdAt).toLocaleDateString("vi-VN")
-                        : ""}
+                    <p className="text-gray-700 mb-2 whitespace-pre-wrap">
+                      {reply.content}
                     </p>
+                    <button
+                      onClick={() => handleLikeReply(reply.replyId!)}
+                      className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+                        reply.isLikedByCurrentUser
+                          ? "text-emerald-600"
+                          : "text-gray-600 hover:text-emerald-600"
+                      }`}
+                    >
+                      <ThumbsUp
+                        className={`w-4 h-4 ${
+                          reply.isLikedByCurrentUser ? "fill-current" : ""
+                        }`}
+                      />
+                      {reply.likeCount || 0}
+                    </button>
                   </div>
                 </div>
-                <p className="text-gray-700 mb-2 whitespace-pre-wrap">{reply.content}</p>
-                <button
-                  onClick={() => reply.replyId && handleLikeReply(reply.replyId)}
-                  className={`flex items-center gap-1 px-3 py-1 rounded text-sm transition-colors ${
-                    reply.isLikedByCurrentUser
-                      ? "bg-blue-100 text-blue-600"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  <ThumbsUp className={`w-3 h-3 ${reply.isLikedByCurrentUser ? "fill-current" : ""}`} />
-                  <span>{reply.likeCount || 0}</span>
-                </button>
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

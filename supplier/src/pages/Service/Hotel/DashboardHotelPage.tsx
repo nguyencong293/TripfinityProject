@@ -259,7 +259,18 @@ const DashboardHotelPage: React.FC = () => {
         console.error("❌ Error loading dashboard data:", e);
       }
     };
+    
     load();
+
+    // Reload data when window gains focus (user returns from detail page)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        load();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [providerId]);
 
   const revenueChartData = useMemo(() => {

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, User } from "lucide-react";
+import { ArrowLeft, Star, User, ThumbsUp } from "lucide-react";
 import { getProviderByUserId, getUserById } from "../../../services/providerService";
 import { getHotelsByProvider, getHotelReviewsByHotel } from "../../../services/hotelService";
+import { toggleReviewLike } from "../../../services/reviewService";
 import type { HotelReviewDTO, UserDTO } from "../../../types";
 
 interface ReviewWithUser extends HotelReviewDTO {
@@ -15,6 +16,17 @@ const RecentReviewsPage: React.FC = () => {
   const [reviews, setReviews] = useState<ReviewWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStar, setSelectedStar] = useState<number | "all">("all");
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const init = async () => {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return;
+      const user = JSON.parse(userStr);
+      setCurrentUserId(user.userId);
+    };
+    init();
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -215,11 +227,41 @@ const RecentReviewsPage: React.FC = () => {
 
               {/* Footer */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                  <span>{review.likesCount || 0} lượt thích</span>
-                  <span>{review.replyCount || 0} phản hồi</span>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={async () => {
+                      if (!currentUserId) return;
+                      try {
+                        const result = await toggleReviewLike({
+                          userId: currentUserId,
+                          reviewType: "hotel",
+                          reviewId: review.reviewId!,
+                        });
+                        // Update review in list
+                        setReviews((prev) =>
+                          prev.map((r) =>
+                            r.reviewId === review.reviewId
+                              ? { ...r, likesCount: result.likeCount }
+                              : r
+                          )
+                        );
+                      } catch (error) {
+                        console.error("Error toggling like:", error);
+                      }
+                    }}
+                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+                  >
+                    <ThumbsUp className="w-4 h-4" />
+                    <span>{review.likesCount || 0} lượt thích</span>
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    {review.replyCount || 0} phản hồi
+                  </span>
                 </div>
-                <button className="text-emerald-600 hover:text-emerald-700 font-medium text-sm">
+                <button
+                  onClick={() => navigate(`/supplier/service/hotel/reviews/${review.reviewId}`)}
+                  className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+                >
                   Xem chi tiết →
                 </button>
               </div>
