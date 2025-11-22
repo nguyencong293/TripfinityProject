@@ -4,7 +4,7 @@ import axios from "axios";
 
 const ServerErrorPage: React.FC = () => {
   const [retrying, setRetrying] = useState(false);
-  const [countdown, setCountdown] = useState(10);
+  const [countdown, setCountdown] = useState(3);
   const [autoRetry, setAutoRetry] = useState(true);
 
   const checkServerStatus = useCallback(async (): Promise<boolean> => {
@@ -63,7 +63,7 @@ const ServerErrorPage: React.FC = () => {
     } else {
       console.log("Server still offline, resetting countdown");
       setRetrying(false);
-      setCountdown(10); // Reset countdown
+      setCountdown(3); // Reset countdown
     }
   }, [checkServerStatus]);
 

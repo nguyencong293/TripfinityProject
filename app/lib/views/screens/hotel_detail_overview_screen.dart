@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+import 'package:app/config/app_config.dart';
 
 // NEW: API
 import 'package:dio/dio.dart';
@@ -519,10 +521,9 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
         Wrap(
           spacing: 16,
           children: [
-            _inlineAction(context, 'Truy cập trang web'),
-            _inlineAction(context, 'Gọi'),
-            _inlineAction(context, 'Viết đánh giá'),
-            _inlineAction(context, 'Email'),
+            _inlineAction(context, 'Gọi', _data),
+            _inlineAction(context, 'Viết đánh giá', _data),
+            _inlineAction(context, 'Email', _data),
           ],
         ),
       ],
@@ -1565,9 +1566,13 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     );
   }
 
-  Widget _inlineAction(BuildContext context, String label) {
+  Widget _inlineAction(
+    BuildContext context,
+    String label,
+    Map<String, dynamic> data,
+  ) {
     return InkWell(
-      onTap: () {},
+      onTap: () => _handleAction(context, label, data),
       child: Text(
         label,
         style: context.captionStyle.copyWith(
@@ -1575,6 +1580,145 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
           decoration: TextDecoration.underline,
         ),
       ),
+    );
+  }
+
+  Future<void> _handleAction(
+    BuildContext context,
+    String action,
+    Map<String, dynamic> data,
+  ) async {
+    // Debug: Print hotel data to see what we have
+    debugPrint('=== Hotel Data ===');
+    debugPrint('hotelId: ${_resolvedId}');
+    debugPrint('providerId: ${data['providerId']}');
+    debugPrint('title: ${data['title']}');
+    debugPrint('location: ${data['location']}');
+    debugPrint('==================');
+
+    if (action == 'Gọi') {
+      // Get provider contact phone from providerId
+      final providerId = data['providerId'];
+      if (providerId == null) {
+        _showError('Không tìm thấy thông tin nhà cung cấp');
+        return;
+      }
+
+      final phone = await _getProviderPhone(providerId);
+      if (phone != null && phone.isNotEmpty) {
+        final uri = Uri.parse('tel:$phone');
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (e) {
+          debugPrint('Error launching dialer: $e');
+          _showError('Không thể mở ứng dụng gọi điện');
+        }
+      } else {
+        _showError('Không tìm thấy số điện thoại');
+      }
+    } else if (action == 'Viết đánh giá') {
+      // Navigate to review screen
+      if (_resolvedId == null) {
+        _showError('Không tìm thấy ID khách sạn');
+        return;
+      }
+
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DetailHotelReviewUserScreen(
+            hotelId: _resolvedId!,
+            hotelName: data['title']?.toString() ?? '',
+            hotelLocation: data['location']?.toString() ?? '',
+            hotelImage: _imageList(data).isNotEmpty
+                ? _imageList(data).first
+                : '',
+          ),
+        ),
+      );
+
+      // Refresh if review was submitted
+      if (result == true) {
+        _fetchDetail();
+      }
+    } else if (action == 'Email') {
+      // Get provider contact email from providerId
+      final providerId = data['providerId'];
+      if (providerId == null) {
+        _showError('Không tìm thấy thông tin nhà cung cấp');
+        return;
+      }
+
+      final email = await _getProviderEmail(providerId);
+      if (email != null && email.isNotEmpty) {
+        final uri = Uri.parse('mailto:$email');
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (e) {
+          debugPrint('Error launching email: $e');
+          _showError('Không thể mở ứng dụng email');
+        }
+      } else {
+        _showError('Không tìm thấy email');
+      }
+    }
+  }
+
+  Future<String?> _getProviderPhone(dynamic providerId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dio = Dio();
+      final response = await dio.get(
+        '${AppConfig.baseUrl}/providers/${providerId.toString()}',
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            if (prefs.getString('user_token') != null)
+              'Authorization': 'Bearer ${prefs.getString('user_token')}',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        final phone = response.data['contactPhone']?.toString();
+        debugPrint('Provider phone: $phone');
+        return phone;
+      }
+    } catch (e) {
+      debugPrint('Error fetching provider phone: $e');
+    }
+    return null;
+  }
+
+  Future<String?> _getProviderEmail(dynamic providerId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dio = Dio();
+      final response = await dio.get(
+        '${AppConfig.baseUrl}/providers/${providerId.toString()}',
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            if (prefs.getString('user_token') != null)
+              'Authorization': 'Bearer ${prefs.getString('user_token')}',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        final email = response.data['contactEmail']?.toString();
+        debugPrint('Provider email: $email');
+        return email;
+      }
+    } catch (e) {
+      debugPrint('Error fetching provider email: $e');
+    }
+    return null;
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
