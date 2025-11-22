@@ -602,7 +602,7 @@ const DashboardHotelPage: React.FC = () => {
           </h2>
           <button
             className="link-brand flex items-center gap-1"
-            onClick={() => console.log("View all reviews")}
+            onClick={() => navigate("/supplier/service/hotel/all-reviews")}
           >
             {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
@@ -631,7 +631,7 @@ const DashboardHotelPage: React.FC = () => {
           </h2>
           <button
             className="link-brand flex items-center gap-1"
-            onClick={() => console.log("View all reviews")}
+            onClick={() => navigate("/supplier/service/hotel/recent-reviews")}
           >
             {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
