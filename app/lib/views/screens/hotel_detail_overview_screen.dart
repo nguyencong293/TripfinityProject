@@ -1589,12 +1589,12 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     Map<String, dynamic> data,
   ) async {
     // Debug: Print hotel data to see what we have
-    debugPrint('=== Hotel Data ===');
-    debugPrint('hotelId: ${_resolvedId}');
-    debugPrint('providerId: ${data['providerId']}');
-    debugPrint('title: ${data['title']}');
-    debugPrint('location: ${data['location']}');
-    debugPrint('==================');
+    // debugPrint('=== Hotel Data ===');
+    // debugPrint('hotelId: ${_resolvedId}');
+    // debugPrint('providerId: ${data['providerId']}');
+    // debugPrint('title: ${data['title']}');
+    // debugPrint('location: ${data['location']}');
+    // debugPrint('==================');
 
     if (action == 'Gọi') {
       // Get provider contact phone from providerId
