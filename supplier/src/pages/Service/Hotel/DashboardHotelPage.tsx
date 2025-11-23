@@ -22,7 +22,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useHotelDashboardStatistics } from "../../../hooks/useHotelDashboardStatistics";
-import { getProviderByUserId, getUserById } from "../../../services/providerService";
+import {
+  getProviderByUserId,
+  getUserById,
+} from "../../../services/providerService";
 import {
   getHotelsByProvider,
   getHotelRatingSummaryByHotel,
@@ -70,7 +73,9 @@ const DashboardHotelPage: React.FC = () => {
     type: "confirm" | "cancel";
     bookingId: number | null;
   }>({ isOpen: false, type: "confirm", bookingId: null });
-  const [revenueFilter, setRevenueFilter] = useState<"day" | "week" | "month" | "year">("day");
+  const [revenueFilter, setRevenueFilter] = useState<
+    "day" | "week" | "month" | "year"
+  >("day");
 
   const executeAction = async () => {
     if (!modalState.bookingId) return;
@@ -81,13 +86,17 @@ const DashboardHotelPage: React.FC = () => {
       } else {
         await api.patch(`/hotel-bookings/${modalState.bookingId}/cancel`);
       }
-      
+
       // Refresh booking data
-      const response = await api.get<HotelBookingDTO>(`/hotel-bookings/${modalState.bookingId}`);
-      setBookings(prev => prev.map(booking => 
-        booking.bookingId === modalState.bookingId ? response.data : booking
-      ));
-      
+      const response = await api.get<HotelBookingDTO>(
+        `/hotel-bookings/${modalState.bookingId}`
+      );
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.bookingId === modalState.bookingId ? response.data : booking
+        )
+      );
+
       setModalState({ isOpen: false, type: "confirm", bookingId: null });
     } catch (error) {
       console.error(`❌ Error ${modalState.type}ing booking:`, error);
@@ -116,28 +125,32 @@ const DashboardHotelPage: React.FC = () => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
-    const confirmedBookings = bookings.filter(b => b.providerConfirmed === 1);
-    
+
+    const confirmedBookings = bookings.filter((b) => b.providerConfirmed === 1);
+
     const currentMonthRevenue = confirmedBookings
-      .filter(b => {
+      .filter((b) => {
         if (!b.createdAt) return false;
         const date = new Date(b.createdAt);
-        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+        return (
+          date.getMonth() === currentMonth && date.getFullYear() === currentYear
+        );
       })
       .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-    
+
     const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
     const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-    
+
     const lastMonthRevenue = confirmedBookings
-      .filter(b => {
+      .filter((b) => {
         if (!b.createdAt) return false;
         const date = new Date(b.createdAt);
-        return date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear;
+        return (
+          date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear
+        );
       })
       .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-    
+
     // Nếu tháng trước = 0 mà tháng nay > 0 thì tăng >100%
     if (lastMonthRevenue === 0 && currentMonthRevenue > 0) {
       return { value: 100, isPositive: true, isOver100: true };
@@ -146,9 +159,14 @@ const DashboardHotelPage: React.FC = () => {
     if (lastMonthRevenue === 0 && currentMonthRevenue === 0) {
       return { value: 0, isPositive: true, isOver100: false };
     }
-    
-    const growthPercent = ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
-    return { value: Math.abs(growthPercent), isPositive: growthPercent >= 0, isOver100: false };
+
+    const growthPercent =
+      ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+    return {
+      value: Math.abs(growthPercent),
+      isPositive: growthPercent >= 0,
+      isOver100: false,
+    };
   }, [bookings]);
 
   // Calculate month-over-month booking count growth
@@ -156,26 +174,28 @@ const DashboardHotelPage: React.FC = () => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
-    const confirmedBookings = bookings.filter(b => b.providerConfirmed === 1);
-    
-    const currentMonthCount = confirmedBookings
-      .filter(b => {
-        if (!b.createdAt) return false;
-        const date = new Date(b.createdAt);
-        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-      }).length;
-    
+
+    const confirmedBookings = bookings.filter((b) => b.providerConfirmed === 1);
+
+    const currentMonthCount = confirmedBookings.filter((b) => {
+      if (!b.createdAt) return false;
+      const date = new Date(b.createdAt);
+      return (
+        date.getMonth() === currentMonth && date.getFullYear() === currentYear
+      );
+    }).length;
+
     const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
     const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-    
-    const lastMonthCount = confirmedBookings
-      .filter(b => {
-        if (!b.createdAt) return false;
-        const date = new Date(b.createdAt);
-        return date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear;
-      }).length;
-    
+
+    const lastMonthCount = confirmedBookings.filter((b) => {
+      if (!b.createdAt) return false;
+      const date = new Date(b.createdAt);
+      return (
+        date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear
+      );
+    }).length;
+
     // Nếu tháng trước = 0 mà tháng nay > 0 thì tăng >100%
     if (lastMonthCount === 0 && currentMonthCount > 0) {
       return { value: 100, isPositive: true, isOver100: true };
@@ -184,9 +204,14 @@ const DashboardHotelPage: React.FC = () => {
     if (lastMonthCount === 0 && currentMonthCount === 0) {
       return { value: 0, isPositive: true, isOver100: false };
     }
-    
-    const growthPercent = ((currentMonthCount - lastMonthCount) / lastMonthCount) * 100;
-    return { value: Math.abs(growthPercent), isPositive: growthPercent >= 0, isOver100: false };
+
+    const growthPercent =
+      ((currentMonthCount - lastMonthCount) / lastMonthCount) * 100;
+    return {
+      value: Math.abs(growthPercent),
+      isPositive: growthPercent >= 0,
+      isOver100: false,
+    };
   }, [bookings]);
 
   useEffect(() => {
@@ -209,11 +234,11 @@ const DashboardHotelPage: React.FC = () => {
       if (!providerId) return;
       try {
         console.log("🔍 Loading data for providerId:", providerId);
-        
+
         const hs = await getHotelsByProvider(providerId);
         console.log("🏨 Hotels found:", hs.length, hs);
         setHotels(hs);
-        
+
         const bRes = await api.get<HotelBookingDTO[]>(
           `/hotel-bookings/provider/${providerId}`
         );
@@ -222,7 +247,9 @@ const DashboardHotelPage: React.FC = () => {
         setBookings(bRes.data || []);
 
         // Fetch user info for all bookings
-        const uniqueUserIds = Array.from(new Set((bRes.data || []).map(b => b.userId)));
+        const uniqueUserIds = Array.from(
+          new Set((bRes.data || []).map((b) => b.userId))
+        );
         const usersMap = new Map<number, UserDTO>();
         await Promise.all(
           uniqueUserIds.map(async (userId) => {
@@ -238,13 +265,15 @@ const DashboardHotelPage: React.FC = () => {
         console.log("👥 Users loaded:", usersMap.size);
 
         // Fetch rating summaries for each hotel
-        const summaryPromises = hs.map(h => 
-          getHotelRatingSummaryByHotel(h.hotelId).catch(e => {
+        const summaryPromises = hs.map((h) =>
+          getHotelRatingSummaryByHotel(h.hotelId!).catch((e) => {
             console.error(`Failed to fetch rating for hotel ${h.hotelId}:`, e);
             return null;
           })
         );
-        const summaries = (await Promise.all(summaryPromises)).filter(s => s !== null) as HotelRatingSummaryDTO[];
+        const summaries = (await Promise.all(summaryPromises)).filter(
+          (s) => s !== null
+        ) as HotelRatingSummaryDTO[];
         setRatingSummaries(summaries);
 
         // Fetch reviews for the first hotel (if available)
@@ -257,7 +286,7 @@ const DashboardHotelPage: React.FC = () => {
             console.log("🔍 Sample review:", {
               reviewId: revs[0].reviewId,
               likesCount: revs[0].likesCount,
-              replyCount: revs[0].replyCount
+              replyCount: revs[0].replyCount,
             });
           }
           setRecentReviews(revs.slice(0, 2));
@@ -268,7 +297,7 @@ const DashboardHotelPage: React.FC = () => {
         console.error("❌ Error loading dashboard data:", e);
       }
     };
-    
+
     load();
 
     // Reload data when window gains focus (user returns from detail page)
@@ -277,15 +306,16 @@ const DashboardHotelPage: React.FC = () => {
         load();
       }
     };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [providerId]);
 
   const revenueChartData = useMemo(() => {
     // Only count confirmed bookings (providerConfirmed === 1)
-    const confirmedBookings = bookings.filter(b => b.providerConfirmed === 1);
-    
+    const confirmedBookings = bookings.filter((b) => b.providerConfirmed === 1);
+
     if (revenueFilter === "day") {
       const map = new Map<number, number>();
       confirmedBookings.forEach((b) => {
@@ -307,7 +337,11 @@ const DashboardHotelPage: React.FC = () => {
       });
       return Array.from({ length: 4 }, (_, i) => {
         const week = i + 1;
-        return { day: week, label: `Tuần ${week}`, revenue: map.get(week) || 0 };
+        return {
+          day: week,
+          label: `Tuần ${week}`,
+          revenue: map.get(week) || 0,
+        };
       });
     } else if (revenueFilter === "month") {
       const map = new Map<number, number>();
@@ -371,13 +405,17 @@ const DashboardHotelPage: React.FC = () => {
         <StatCard
           icon={<BarChart3 className="w-5 h-5 icon-brand" />}
           label={t("hotel_dashboard_total_revenue")}
-          value={`${formatCompactCurrency(bookings.filter(b => b.providerConfirmed === 1).reduce((sum, b) => sum + (b.totalPrice || 0), 0))} VND`}
+          value={`${formatCompactCurrency(
+            bookings
+              .filter((b) => b.providerConfirmed === 1)
+              .reduce((sum, b) => sum + (b.totalPrice || 0), 0)
+          )} VND`}
           trend={calculateMonthGrowth}
         />
         <StatCard
           icon={<Hotel className="w-5 h-5 icon-brand" />}
           label={t("hotel_dashboard_total_bookings")}
-          value={bookings.filter(b => b.providerConfirmed === 1).length}
+          value={bookings.filter((b) => b.providerConfirmed === 1).length}
           trend={calculateBookingGrowth}
         />
         <StatCard
@@ -458,7 +496,6 @@ const DashboardHotelPage: React.FC = () => {
             description={t("hotel_dashboard_action_manage_hotel_desc")}
             onClick={() => console.log("Manage Hotel")}
           />
-
         </div>
       </div>
 
@@ -520,9 +557,12 @@ const DashboardHotelPage: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" />
               <YAxis tickFormatter={(value) => formatCompactCurrency(value)} />
-              <Tooltip 
-                formatter={(value: number) => [`${value.toLocaleString('vi-VN')} VND`, '']}
-                labelStyle={{ fontWeight: 'bold' }}
+              <Tooltip
+                formatter={(value: number) => [
+                  `${value.toLocaleString("vi-VN")} VND`,
+                  "",
+                ]}
+                labelStyle={{ fontWeight: "bold" }}
               />
               <Bar dataKey="revenue" fill="#34A853" />
             </BarChart>
@@ -572,11 +612,11 @@ const DashboardHotelPage: React.FC = () => {
             className="link-brand text-sm font-medium flex items-center gap-1"
             onClick={() => navigate("/supplier/service/hotel/bookings")}
           >
-            {t("view_all")} 
+            {t("view_all")}
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        {bookings.filter(b => b.providerConfirmed === 0).length === 0 ? (
+        {bookings.filter((b) => b.providerConfirmed === 0).length === 0 ? (
           <div className="text-center py-8 theme-text-secondary">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>{t("hotel_dashboard_no_bookings") || "Chưa có đặt phòng nào"}</p>
@@ -584,7 +624,7 @@ const DashboardHotelPage: React.FC = () => {
         ) : (
           <div className="flex flex-col gap-3">
             {[...bookings]
-              .filter(b => b.providerConfirmed === 0)
+              .filter((b) => b.providerConfirmed === 0)
               .sort((a, b) => {
                 const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
                 const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -594,7 +634,7 @@ const DashboardHotelPage: React.FC = () => {
               .map((b) => {
                 const hotel = hotels.find((h) => h.hotelId === b.hotelId);
                 const user = userCache.get(b.userId);
-                return (  
+                return (
                   <div key={b.bookingId} className="relative">
                     <div className="m-auto">
                       <BookingRow
@@ -602,9 +642,25 @@ const DashboardHotelPage: React.FC = () => {
                         hotelName={hotel?.title}
                         userName={user?.fullName}
                         userPhone={user?.phoneNumber}
-                        onView={() => navigate(`/supplier/service/hotel/bookings/${b.bookingId}`)}
-                        onConfirm={() => setModalState({ isOpen: true, type: "confirm", bookingId: b.bookingId || null })}
-                        onCancel={() => setModalState({ isOpen: true, type: "cancel", bookingId: b.bookingId || null })}
+                        onView={() =>
+                          navigate(
+                            `/supplier/service/hotel/bookings/${b.bookingId}`
+                          )
+                        }
+                        onConfirm={() =>
+                          setModalState({
+                            isOpen: true,
+                            type: "confirm",
+                            bookingId: b.bookingId || null,
+                          })
+                        }
+                        onCancel={() =>
+                          setModalState({
+                            isOpen: true,
+                            type: "cancel",
+                            bookingId: b.bookingId || null,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -615,7 +671,7 @@ const DashboardHotelPage: React.FC = () => {
       </div>
 
       {/* SECTION 7: Thống kê & đánh giá */}
-     <div className="rounded-xl border theme-border theme-bg-card p-6">
+      <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary mb-4">
             {t("hotel_dashboard_rating_overview")}
@@ -640,8 +696,6 @@ const DashboardHotelPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      
 
       {/* SECTION 8: Nhận xét gần đây */}
       <div className="rounded-xl border theme-border theme-bg-card p-6">
@@ -676,7 +730,9 @@ const DashboardHotelPage: React.FC = () => {
       {/* Confirm Modal */}
       <ConfirmModal
         isOpen={modalState.isOpen}
-        onClose={() => setModalState({ isOpen: false, type: "confirm", bookingId: null })}
+        onClose={() =>
+          setModalState({ isOpen: false, type: "confirm", bookingId: null })
+        }
         onConfirm={executeAction}
         title={
           modalState.type === "confirm"
@@ -685,8 +741,10 @@ const DashboardHotelPage: React.FC = () => {
         }
         message={
           modalState.type === "confirm"
-            ? t("confirm_booking_message") || "Bạn có chắc chắn muốn xác nhận đặt phòng này không?"
-            : t("confirm_cancel_booking") || "Bạn có chắc chắn muốn hủy đặt phòng này không?"
+            ? t("confirm_booking_message") ||
+              "Bạn có chắc chắn muốn xác nhận đặt phòng này không?"
+            : t("confirm_cancel_booking") ||
+              "Bạn có chắc chắn muốn hủy đặt phòng này không?"
         }
         confirmText={
           modalState.type === "confirm"
