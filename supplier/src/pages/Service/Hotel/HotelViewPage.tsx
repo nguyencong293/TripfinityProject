@@ -16,6 +16,7 @@ import {
   Award,
   Image as ImageIcon,
   Clock,
+  Hotel,
 } from "lucide-react";
 import { useHotelView } from "../../../hooks/useHotelView";
 import { useLanguage } from "../../../hooks/useLanguage";
@@ -343,7 +344,17 @@ const HotelViewPage: React.FC = () => {
                 <div className={labelCls}>{t("hotel_view_capacity")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Building2 className="w-4 h-4" />
-                  {hotel.capacity} {t("hotel_view_rooms")}
+                  {hotel.capacity} người
+                </div>
+              </div>
+            )}
+
+            {hotel.totalRooms && (
+              <div>
+                <div className={labelCls}>Tổng số phòng</div>
+                <div className={valueCls + " flex items-center gap-2 mt-1"}>
+                  <Hotel className="w-4 h-4" />
+                  {hotel.totalRooms} phòng
                 </div>
               </div>
             )}

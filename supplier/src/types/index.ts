@@ -111,6 +111,9 @@ export interface HotelDTO {
   capacity?: number;
   // Max beds per room (>=1)
   maxBedsPerRoom?: number;
+  totalRooms?: number; // Total rooms available
+  availableRooms?: number; // Calculated: totalRooms - bookedRooms
+  availableCapacity?: number; // Calculated: capacity - bookedCapacity
   minParticipants?: number;
   maxParticipants?: number;
   thumbnailUrl?: string;

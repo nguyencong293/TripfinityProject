@@ -365,6 +365,7 @@
   "booking_status_completed": "Hoàn thành",
   "booking_status_cancelled": "Đã hủy",
   "booking_status_refunded": "Đã hoàn tiền",
+  "booking_status_checked_out": "Đã trả phòng",
 
   "hotel_name": "Khách sạn",
   "customer_info": "Thông tin khách hàng",

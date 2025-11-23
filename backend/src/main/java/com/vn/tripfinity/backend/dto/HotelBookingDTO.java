@@ -45,6 +45,10 @@ public class HotelBookingDTO {
     @JsonAlias("num_adults")
     private Integer numAdults;
 
+    @Min(value = 1, message = "rooms phải >= 1")
+    @Builder.Default
+    private Integer rooms = 1;
+
     @NotNull(message = "totalPrice không được để trống")
     @DecimalMin(value = "0.00", message = "totalPrice phải >= 0")
     @JsonAlias("total_price")

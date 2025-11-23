@@ -177,9 +177,10 @@
   "phone_number": "전화번호",
   "booking_status_pending": "대기 중",
   "booking_status_confirmed": "확인됨",
-  "booking_status_completed": "완료",
+  "booking_status_completed": "완료됨",
   "booking_status_cancelled": "취소됨",
   "booking_status_refunded": "환불됨",
+  "booking_status_checked_out": "체크아웃됨",
 
   "hotel_name": "호텔",
   "customer_info": "고객 정보",

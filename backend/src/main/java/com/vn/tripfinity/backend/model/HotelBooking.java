@@ -35,7 +35,7 @@ import lombok.ToString;
 public class HotelBooking {
 
     public enum BookingStatus {
-        pending, confirmed, cancelled, completed, refunded
+        pending, confirmed, cancelled, completed, refunded, checked_out
     }
 
     @Id
@@ -66,6 +66,9 @@ public class HotelBooking {
 
     @Column(name = "num_adults", nullable = false)
     private Integer numAdults;
+
+    @Column(name = "rooms", nullable = false)
+    private Integer rooms;
 
     @Column(name = "total_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalPrice;
@@ -121,6 +124,8 @@ public class HotelBooking {
             bookingDate = LocalDateTime.now();
         if (numAdults == null)
             numAdults = 1;
+        if (rooms == null)
+            rooms = 1;
         if (bookingStatus == null)
             bookingStatus = BookingStatus.pending;
         if (currencyCode == null)

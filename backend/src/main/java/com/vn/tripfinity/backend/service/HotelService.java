@@ -43,6 +43,7 @@ public class HotelService {
     private final ObjectMapper objectMapper;
     private final HotelReviewRepository hotelReviewRepository;
     private final HotelReviewAspectsRepository hotelReviewAspectsRepository;
+    private final com.vn.tripfinity.backend.repository.HotelBookingRepository hotelBookingRepository;
 
     public List<HotelDTO> getAllHotels() {
         log.debug("Lấy toàn bộ hotels");
@@ -140,6 +141,7 @@ public class HotelService {
                 .currencyCode(dto.getCurrencyCode())
                 .capacity(dto.getCapacity())
                 .maxBedsPerRoom(dto.getMaxBedsPerRoom())
+                .totalRooms(dto.getTotalRooms())
                 .minParticipants(dto.getMinParticipants())
                 .maxParticipants(dto.getMaxParticipants())
                 .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
@@ -218,6 +220,8 @@ public class HotelService {
             hotel.setCapacity(dto.getCapacity());
         if (dto.getMaxBedsPerRoom() != null)
             hotel.setMaxBedsPerRoom(dto.getMaxBedsPerRoom());
+        if (dto.getTotalRooms() != null)
+            hotel.setTotalRooms(dto.getTotalRooms());
         if (dto.getMinParticipants() != null)
             hotel.setMinParticipants(dto.getMinParticipants());
         if (dto.getMaxParticipants() != null)
@@ -465,6 +469,10 @@ public class HotelService {
     }
 
     private HotelDTO convertToDTO(Hotel hotel) {
+        // Calculate available rooms and capacity
+        Integer availableRooms = calculateAvailableRooms(hotel.getHotelId(), hotel.getTotalRooms());
+        Integer availableCapacity = calculateAvailableCapacity(hotel.getHotelId(), hotel.getCapacity());
+        
         return HotelDTO.builder()
                 .hotelId(hotel.getHotelId())
                 .providerId(hotel.getProvider() != null ? hotel.getProvider().getProviderId() : null)
@@ -478,6 +486,9 @@ public class HotelService {
                 .pricePerNight(hotel.getPricePerNight())
                 .currencyCode(hotel.getCurrencyCode())
                 .capacity(hotel.getCapacity())
+                .totalRooms(hotel.getTotalRooms())
+                .availableRooms(availableRooms)
+                .availableCapacity(availableCapacity)
                 .maxBedsPerRoom(hotel.getMaxBedsPerRoom())
                 .minParticipants(hotel.getMinParticipants())
                 .maxParticipants(hotel.getMaxParticipants())
@@ -504,6 +515,52 @@ public class HotelService {
                 .createdAt(hotel.getCreatedAt())
                 .updatedAt(hotel.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * Tính số phòng còn lại của hotel
+     * totalRooms - SUM(rooms) của TẤT CẢ booking active (pending, confirmed, completed)
+     * KHÔNG tính: cancelled, refunded, checked_out
+     */
+    private Integer calculateAvailableRooms(Integer hotelId, Integer totalRooms) {
+        if (totalRooms == null || totalRooms <= 0) {
+            return null; // Hotel chưa set total rooms
+        }
+        
+        // Tính tổng số phòng đã book (TẤT CẢ booking active, không tính cancelled/refunded/checked_out)
+        Integer bookedRooms = hotelBookingRepository.sumRoomsByHotelActive(hotelId);
+        if (bookedRooms == null) {
+            bookedRooms = 0;
+        }
+        
+        Integer available = totalRooms - bookedRooms;
+        log.debug("Hotel {}: totalRooms={}, bookedRooms={}, availableRooms={}", 
+                hotelId, totalRooms, bookedRooms, available);
+        
+        return Math.max(0, available); // Không cho âm
+    }
+
+    /**
+     * Tính sức chứa còn lại của hotel
+     * capacity - SUM(numAdults) của TẤT CẢ booking active (pending, confirmed, completed)
+     * KHÔNG tính: cancelled, refunded, checked_out
+     */
+    private Integer calculateAvailableCapacity(Integer hotelId, Integer capacity) {
+        if (capacity == null || capacity <= 0) {
+            return null; // Hotel chưa set capacity
+        }
+        
+        // Tính tổng số người đã book (TẤT CẢ booking active, không tính cancelled/refunded/checked_out)
+        Integer bookedCapacity = hotelBookingRepository.sumGuestsByHotelActive(hotelId);
+        if (bookedCapacity == null) {
+            bookedCapacity = 0;
+        }
+        
+        Integer available = capacity - bookedCapacity;
+        log.debug("Hotel {}: capacity={}, bookedCapacity={}, availableCapacity={}", 
+                hotelId, capacity, bookedCapacity, available);
+        
+        return Math.max(0, available); // Không cho âm
     }
 
     /**

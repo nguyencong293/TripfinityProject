@@ -36,6 +36,7 @@ class HotelBookingApiService {
     required DateTime endDate,
     required int numAdults,
     int numChildren = 0,
+    int rooms = 1, // Số phòng đặt
     required num totalPrice,
     required String currencyCode,
     String? channel,
@@ -50,6 +51,7 @@ class HotelBookingApiService {
       'end_date': _formatDate(endDate),
       'num_adults': numAdults,
       'num_children': numChildren,
+      'rooms': rooms, // Gửi số phòng vào field riêng
       'total_price': totalPrice,
       'currency_code': currencyCode,
       if (channel != null && channel.isNotEmpty) 'channel': channel,

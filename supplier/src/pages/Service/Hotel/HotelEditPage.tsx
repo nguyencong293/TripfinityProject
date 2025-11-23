@@ -559,7 +559,7 @@ const HotelEditPage: React.FC = () => {
 
         <div className="grid md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Sức chứa (số phòng)</label>
+            <label className={labelCls}>Sức chứa (số khách)</label>
             <input
               type="number"
               value={formData.capacity || ""}
@@ -572,6 +572,25 @@ const HotelEditPage: React.FC = () => {
             />
           </div>
 
+          <div className="flex flex-col gap-2">
+            <label className={labelCls}>Tổng số phòng</label>
+            <input
+              type="number"
+              value={formData.totalRooms || ""}
+              onChange={(e) =>
+                updateField("totalRooms", Number(e.target.value) || null)
+              }
+              className={baseInput}
+              placeholder="VD: 50"
+              min="0"
+            />
+            <span className="theme-text-secondary text-caption-mobile">
+              Số phòng tối đa có thể bán (tùy chọn)
+            </span>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-2">
             <label className={labelCls}>
               Số giường tối đa / phòng{" "}
@@ -609,7 +628,9 @@ const HotelEditPage: React.FC = () => {
               Đơn vị tiền tệ mặc định
             </span>
           </div>
+        </div>
 
+        <div className="grid md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-2">
             <label className={labelCls}>Số lượng tối thiểu</label>
             <input

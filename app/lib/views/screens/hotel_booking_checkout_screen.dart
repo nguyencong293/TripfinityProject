@@ -759,6 +759,7 @@ class _HotelBookingCheckoutScreenState
             _dateRange.end.day,
           ),
           numAdults: _people,
+          rooms: _rooms, // Gửi số phòng
           totalPrice: total,
           currencyCode: (widget.currencyCode ?? 'VND').toUpperCase(),
           providerNotes: _buildProviderNotes(),

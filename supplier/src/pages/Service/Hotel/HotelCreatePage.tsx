@@ -708,6 +708,27 @@ const HotelCreatePage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-2">
+            <label className={labelCls}>Tổng số phòng</label>
+            <input
+              type="number"
+              value={formData.totalRooms || ""}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const val = raw === "" ? null : Math.max(0, Number(raw) || 0);
+                updateField("totalRooms", val);
+              }}
+              className={baseInput}
+              placeholder="VD: 50"
+              min="0"
+            />
+            <span className="theme-text-secondary text-caption-mobile">
+              Số phòng tối đa có thể bán (tùy chọn)
+            </span>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-2">
             <label className={labelCls}>Đơn vị tiền tệ</label>
             <input
               value={formData.currencyCode || "VND"}

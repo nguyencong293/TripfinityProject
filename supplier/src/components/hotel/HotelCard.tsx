@@ -94,6 +94,14 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel, onView, onEdit }) => {
               </span>
             </div>
           )}
+          {hotel.totalRooms && (
+            <div className="flex items-center gap-2 text-sm">
+              <HotelIcon className="w-4 h-4 icon-disabled" />
+              <span className="theme-text-secondary">
+                {hotel.totalRooms} phòng
+              </span>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-sm">
             <DollarSign className="w-4 h-4 icon-disabled" />
             <span className="font-semibold theme-text-brand">

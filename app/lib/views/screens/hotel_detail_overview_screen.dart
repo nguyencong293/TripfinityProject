@@ -381,6 +381,13 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
         _ratingSummaryData = ratingSummary;
         _loading = false;
       });
+
+      // Debug log để kiểm tra availableRooms
+      if (detail != null) {
+        debugPrint(
+          '🏨 Hotel Detail: totalRooms=${detail['totalRooms']}, availableRooms=${detail['availableRooms']}, capacity=${detail['capacity']}, availableCapacity=${detail['availableCapacity']}',
+        );
+      }
     } catch (e) {
       setState(() {
         _loading = false;
@@ -619,6 +626,44 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
         ? (d['price']?.toString() ?? '—')
         : _formatPrice(total, currency);
 
+    // Lấy số phòng còn trống từ API (khai báo ở đầu để dùng trong toàn bộ widget)
+    int? availableRooms;
+    int? totalRooms;
+
+    final availableRaw = d['availableRooms'] ?? d['available_rooms'];
+    if (availableRaw is int) {
+      availableRooms = availableRaw;
+    } else if (availableRaw != null) {
+      availableRooms = int.tryParse(availableRaw.toString());
+    }
+
+    final totalRaw = d['totalRooms'] ?? d['total_rooms'];
+    if (totalRaw is int) {
+      totalRooms = totalRaw;
+    } else if (totalRaw != null) {
+      totalRooms = int.tryParse(totalRaw.toString());
+    }
+
+    // Nếu không có availableRooms, fallback về totalRooms hoặc capacity
+    if (availableRooms == null) {
+      availableRooms = totalRooms;
+    }
+    if (availableRooms == null) {
+      final capRaw = d['capacity'];
+      if (capRaw is num) {
+        availableRooms = capRaw.toInt();
+      } else if (capRaw != null) {
+        availableRooms = int.tryParse(capRaw.toString());
+      }
+    }
+
+    // Debug log
+    debugPrint(
+      '🎯 Button render: availableRooms=$availableRooms, _rooms=$_rooms, totalRooms=$totalRooms',
+    );
+    final isSoldOut = availableRooms != null && availableRooms <= 0;
+    debugPrint('🚫 isSoldOut=$isSoldOut');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -635,120 +680,134 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF23A455),
+              backgroundColor: isSoldOut
+                  ? Colors.grey
+                  : const Color(0xFF23A455),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(26),
               ),
               elevation: 0,
             ),
-            onPressed: () {
-              // Prepare date range: use user's selection if any.
-              // Otherwise, default to tonight→tomorrow to ensure at least 1 night.
-              final now = DateTime.now();
-              final range =
-                  _dateRange ??
-                  DateTimeRange(
-                    start: DateTime(now.year, now.month, now.day),
-                    end: DateTime(
-                      now.year,
-                      now.month,
-                      now.day,
-                    ).add(const Duration(days: 1)),
-                  );
+            onPressed: isSoldOut
+                ? null
+                : () {
+                    // Prepare date range: use user's selection if any.
+                    // Otherwise, default to tonight→tomorrow to ensure at least 1 night.
+                    final now = DateTime.now();
+                    final range =
+                        _dateRange ??
+                        DateTimeRange(
+                          start: DateTime(now.year, now.month, now.day),
+                          end: DateTime(
+                            now.year,
+                            now.month,
+                            now.day,
+                          ).add(const Duration(days: 1)),
+                        );
 
-              // Resolve fields
-              final hotelId =
-                  _resolvedId ??
-                  (_tryParseInt(d['hotelId']) ?? _tryParseInt(d['id']));
-              final title =
-                  d['title']?.toString() ??
-                  d['name']?.toString() ??
-                  'Khách sạn';
-              final currency = d['currencyCode']?.toString();
-              num basePrice = 0;
-              final price = d['price'];
-              if (price is num) {
-                basePrice = price;
-              } else if (price != null) {
-                basePrice = num.tryParse(price.toString()) ?? 0;
-              }
-              num? extraPerNight;
-              final extraRaw = d['pricePerNight'];
-              if (extraRaw is num) {
-                extraPerNight = extraRaw;
-              } else if (extraRaw != null) {
-                extraPerNight = num.tryParse(extraRaw.toString());
-              }
+                    // Resolve fields
+                    final hotelId =
+                        _resolvedId ??
+                        (_tryParseInt(d['hotelId']) ?? _tryParseInt(d['id']));
+                    final title =
+                        d['title']?.toString() ??
+                        d['name']?.toString() ??
+                        'Khách sạn';
+                    final currency = d['currencyCode']?.toString();
+                    num basePrice = 0;
+                    final price = d['price'];
+                    if (price is num) {
+                      basePrice = price;
+                    } else if (price != null) {
+                      basePrice = num.tryParse(price.toString()) ?? 0;
+                    }
+                    num? extraPerNight;
+                    final extraRaw = d['pricePerNight'];
+                    if (extraRaw is num) {
+                      extraPerNight = extraRaw;
+                    } else if (extraRaw != null) {
+                      extraPerNight = num.tryParse(extraRaw.toString());
+                    }
 
-              // Constraints
-              int? minParticipants;
-              final minRaw = d['minParticipants'] ?? d['min_participants'];
-              if (minRaw is num) {
-                minParticipants = minRaw.toInt();
-              } else if (minRaw != null) {
-                minParticipants = int.tryParse(minRaw.toString());
-              }
+                    // Constraints
+                    int? minParticipants;
+                    final minRaw =
+                        d['minParticipants'] ?? d['min_participants'];
+                    if (minRaw is num) {
+                      minParticipants = minRaw.toInt();
+                    } else if (minRaw != null) {
+                      minParticipants = int.tryParse(minRaw.toString());
+                    }
 
-              int? maxParticipants;
-              final maxRaw = d['maxParticipants'] ?? d['max_participants'];
-              if (maxRaw is num) {
-                maxParticipants = maxRaw.toInt();
-              } else if (maxRaw != null) {
-                maxParticipants = int.tryParse(maxRaw.toString());
-              }
+                    int? maxParticipants;
+                    final maxRaw =
+                        d['maxParticipants'] ?? d['max_participants'];
+                    if (maxRaw is num) {
+                      maxParticipants = maxRaw.toInt();
+                    } else if (maxRaw != null) {
+                      maxParticipants = int.tryParse(maxRaw.toString());
+                    }
 
-              int? maxBedsPerRoom;
-              final bedsRaw = d['maxBedsPerRoom'] ?? d['max_beds_per_room'];
-              if (bedsRaw is num) {
-                maxBedsPerRoom = bedsRaw.toInt();
-              } else if (bedsRaw != null) {
-                maxBedsPerRoom = int.tryParse(bedsRaw.toString());
-              }
+                    int? maxBedsPerRoom;
+                    final bedsRaw =
+                        d['maxBedsPerRoom'] ?? d['max_beds_per_room'];
+                    if (bedsRaw is num) {
+                      maxBedsPerRoom = bedsRaw.toInt();
+                    } else if (bedsRaw != null) {
+                      maxBedsPerRoom = int.tryParse(bedsRaw.toString());
+                    }
 
-              int? capacityRooms;
-              final capRaw = d['capacity'];
-              if (capRaw is num) {
-                capacityRooms = capRaw.toInt();
-              } else if (capRaw != null) {
-                capacityRooms = int.tryParse(capRaw.toString());
-              }
+                    if (hotelId == null) {
+                      final messenger = ScaffoldMessenger.maybeOf(context);
+                      messenger?.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Không xác định được khách sạn để đặt.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
 
-              if (hotelId == null) {
-                final messenger = ScaffoldMessenger.maybeOf(context);
-                messenger?.showSnackBar(
-                  const SnackBar(
-                    content: Text('Không xác định được khách sạn để đặt.'),
-                  ),
-                );
-                return;
-              }
+                    // Kiểm tra còn phòng trống không
+                    if (availableRooms != null && availableRooms <= 0) {
+                      // Không còn phòng trống
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Khách sạn đã hết phòng trống!'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
 
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => HotelBookingCheckoutScreen(
-                    hotelId: hotelId,
-                    hotelTitle: title,
-                    imageUrl: _imageList(d).isNotEmpty
-                        ? _imageList(d).first
-                        : null,
-                    basePrice: basePrice,
-                    extraPricePerNight: extraPerNight,
-                    currencyCode: currency,
-                    dateRange: range,
-                    rooms: _rooms,
-                    people: _peopleCount,
-                    minParticipants: minParticipants,
-                    maxParticipants: maxParticipants,
-                    maxBedsPerRoom: maxBedsPerRoom,
-                    maxRooms: capacityRooms,
-                  ),
-                ),
-              );
-            },
-            child: const Text(
-              'Đặt khách sạn',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => HotelBookingCheckoutScreen(
+                          hotelId: hotelId,
+                          hotelTitle: title,
+                          imageUrl: _imageList(d).isNotEmpty
+                              ? _imageList(d).first
+                              : null,
+                          basePrice: basePrice,
+                          extraPricePerNight: extraPerNight,
+                          currencyCode: currency,
+                          dateRange: range,
+                          rooms: _rooms,
+                          people: _peopleCount,
+                          minParticipants: minParticipants,
+                          maxParticipants: maxParticipants,
+                          maxBedsPerRoom: maxBedsPerRoom,
+                          maxRooms:
+                              availableRooms, // Sử dụng availableRooms thay vì capacity
+                        ),
+                      ),
+                    );
+                  },
+            child: Text(
+              isSoldOut ? 'Đã hết phòng' : 'Đặt khách sạn',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
         ),
@@ -1549,11 +1608,45 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
   // primary image helper removed; using PageView gallery instead
 
   List<String> _imageList(Map<String, dynamic> d) {
-    final raw = d['imageUrls'];
-    if (raw is List) {
-      return raw.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+    final List<String> images = [];
+
+    // 1. Thêm thumbnail_url (ảnh chính)
+    final thumbnail = d['thumbnail_url'] ?? d['thumbnailUrl'];
+    if (thumbnail != null && thumbnail.toString().isNotEmpty) {
+      images.add(thumbnail.toString());
     }
-    return const [];
+
+    // 2. Thêm image_urls (mảng ảnh phụ)
+    final imageUrlsRaw = d['image_urls'] ?? d['imageUrls'];
+    if (imageUrlsRaw is List) {
+      for (final url in imageUrlsRaw) {
+        final urlStr = url.toString();
+        if (urlStr.isNotEmpty && !images.contains(urlStr)) {
+          images.add(urlStr);
+        }
+      }
+    } else if (imageUrlsRaw is String && imageUrlsRaw.isNotEmpty) {
+      // Nếu là string phân tách bằng dấu phẩy
+      final urls = imageUrlsRaw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty);
+      for (final url in urls) {
+        if (!images.contains(url)) {
+          images.add(url);
+        }
+      }
+    }
+
+    // 3. Fallback: nếu không có ảnh nào, thử lấy từ imageUrls (legacy)
+    if (images.isEmpty) {
+      final raw = d['imageUrls'];
+      if (raw is List) {
+        return raw.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+      }
+    }
+
+    return images;
   }
 
   List<int> _listOfInt(dynamic v) {
@@ -1638,6 +1731,37 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     final d = _data;
     final minPeople = _toInt(d['minParticipants']) ?? 1;
     final maxPeople = _toInt(d['maxParticipants']) ?? (minPeople + 8);
+
+    // Lấy số phòng còn trống từ API (availableRooms = totalRooms - bookedRooms)
+    int? availableRooms;
+    final availableRaw = d['availableRooms'] ?? d['available_rooms'];
+    if (availableRaw is int) {
+      availableRooms = availableRaw;
+    } else if (availableRaw != null) {
+      availableRooms = int.tryParse(availableRaw.toString());
+    }
+
+    // Fallback về totalRooms nếu không có availableRooms
+    if (availableRooms == null) {
+      final totalRaw = d['totalRooms'] ?? d['total_rooms'];
+      if (totalRaw is int) {
+        availableRooms = totalRaw;
+      } else if (totalRaw != null) {
+        availableRooms = int.tryParse(totalRaw.toString());
+      }
+    }
+
+    // Nếu vẫn null, fallback về capacity
+    if (availableRooms == null) {
+      final capRaw = d['capacity'];
+      if (capRaw is num) {
+        availableRooms = capRaw.toInt();
+      } else if (capRaw != null) {
+        availableRooms = int.tryParse(capRaw.toString());
+      }
+    }
+
+    final maxRooms = availableRooms ?? 10; // Default 10 nếu không có giới hạn
 
     await showModalBottomSheet(
       context: context,
@@ -1727,8 +1851,11 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
                       if (rooms > 1) setLocal(() => rooms--);
                     },
                     () {
-                      setLocal(() => rooms++);
+                      if (rooms < maxRooms) setLocal(() => rooms++);
                     },
+                    hint: availableRooms != null
+                        ? 'Còn $availableRooms phòng trống'
+                        : null,
                   ),
                   row(
                     'Số người',

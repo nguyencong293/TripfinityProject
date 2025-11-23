@@ -128,12 +128,33 @@ public class HotelBookingService {
 
     public HotelBookingDTO createBooking(HotelBookingDTO dto) {
         log.debug("Tạo Booking: {}", dto);
+        log.info("🔍 Booking request - userId: {}, hotelId: {}, rooms: {}, numAdults: {}", 
+            dto.getUserId(), dto.getHotelId(), dto.getRooms(), dto.getNumAdults());
 
         User user = userRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getUserId()));
 
         Hotel hotel = hotelRepository.findById(dto.getHotelId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Hotel id: " + dto.getHotelId()));
+
+        log.info("🏨 Hotel info - hotelId: {}, title: {}, totalRooms: {}, capacity: {}", 
+            hotel.getHotelId(), hotel.getTitle(), hotel.getTotalRooms(), hotel.getCapacity());
+
+        // Đặt giá trị mặc định cho rooms nếu null
+        if (dto.getRooms() == null) {
+            // Thử parse từ provider_notes nếu có (để tương thích với data cũ)
+            Integer roomsFromNotes = parseRoomsFromNotes(dto.getProviderNotes());
+            if (roomsFromNotes != null) {
+                log.warn("⚠️ Field 'rooms' is null, parsed from provider_notes: {}", roomsFromNotes);
+                dto.setRooms(roomsFromNotes);
+            } else {
+                log.warn("⚠️ Field 'rooms' is null, setting default to 1");
+                dto.setRooms(1);
+            }
+        }
+
+        // Validate số phòng và sức chứa còn lại
+        validateAvailability(hotel, dto.getRooms(), dto.getNumAdults());
 
         // AUTO-FIX: Tự động lấy providerId từ hotel nếu không được cung cấp
         Provider provider = null;
@@ -159,6 +180,7 @@ public class HotelBookingService {
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
                 .numAdults(dto.getNumAdults())
+                .rooms(dto.getRooms() != null ? dto.getRooms() : 1)
                 .totalPrice(dto.getTotalPrice())
                 .currencyCode(dto.getCurrencyCode())
                 .bookingStatus(bookingStatus)
@@ -178,6 +200,91 @@ public class HotelBookingService {
         createPaymentRecord(savedBooking, dto.getPaymentMethod());
 
         return convertToDTO(savedBooking);
+    }
+
+    /**
+     * Validate số phòng và sức chứa còn lại trước khi tạo booking
+     */
+    private void validateAvailability(Hotel hotel, Integer requestedRooms, Integer requestedGuests) {
+        Integer hotelId = hotel.getHotelId();
+        
+        log.info("🔍 Starting validation for Hotel ID: {}, requested rooms: {}, requested guests: {}", 
+            hotelId, requestedRooms, requestedGuests);
+        
+        // Tính tổng số phòng đã book (tính TẤT CẢ booking active: pending, confirmed, completed)
+        // KHÔNG tính: cancelled, refunded, checked_out
+        Integer bookedRooms = bookingRepository.sumRoomsByHotelActive(hotelId);
+        if (bookedRooms == null) bookedRooms = 0;
+        
+        log.info("📊 Current booked rooms: {}", bookedRooms);
+        
+        // Tính tổng số người đã book (tính TẤT CẢ booking active: pending, confirmed, completed)
+        // KHÔNG tính: cancelled, refunded, checked_out
+        Integer bookedCapacity = bookingRepository.sumGuestsByHotelActive(hotelId);
+        if (bookedCapacity == null) bookedCapacity = 0;
+        
+        log.info("📊 Current booked capacity: {}", bookedCapacity);
+        
+        // Validate số phòng
+        if (hotel.getTotalRooms() != null && hotel.getTotalRooms() > 0) {
+            Integer availableRooms = hotel.getTotalRooms() - bookedRooms;
+            log.info("🏨 Total rooms: {}, Booked: {}, Available: {}, Requested: {}", 
+                hotel.getTotalRooms(), bookedRooms, availableRooms, requestedRooms);
+            
+            if (requestedRooms > availableRooms) {
+                String errorMsg = String.format("Khách sạn '%s' không đủ phòng trống! Hiện còn %d phòng, bạn đang yêu cầu %d phòng.", 
+                    hotel.getTitle(), availableRooms, requestedRooms);
+                log.error("❌ Validation failed: {}", errorMsg);
+                throw new IllegalArgumentException(errorMsg);
+            }
+        } else {
+            log.warn("⚠️ Hotel totalRooms is null or 0, skipping room validation");
+        }
+        
+        // Validate sức chứa
+        if (hotel.getCapacity() != null && hotel.getCapacity() > 0) {
+            Integer availableCapacity = hotel.getCapacity() - bookedCapacity;
+            log.info("👥 Total capacity: {}, Booked: {}, Available: {}, Requested: {}", 
+                hotel.getCapacity(), bookedCapacity, availableCapacity, requestedGuests);
+            
+            if (requestedGuests > availableCapacity) {
+                String errorMsg = String.format("Khách sạn '%s' không đủ chỗ! Hiện còn chỗ cho %d người, bạn đang yêu cầu %d người.", 
+                    hotel.getTitle(), availableCapacity, requestedGuests);
+                log.error("❌ Validation failed: {}", errorMsg);
+                throw new IllegalArgumentException(errorMsg);
+            }
+        } else {
+            log.warn("⚠️ Hotel capacity is null or 0, skipping capacity validation");
+        }
+        
+        log.info("✅ Validation passed: Hotel {}, rooms {}/{}, guests {}/{}", 
+            hotelId, requestedRooms, hotel.getTotalRooms(), requestedGuests, hotel.getCapacity());
+    }
+
+    /**
+     * Parse rooms từ provider_notes (format: "rooms=2; beds=1")
+     * Để tương thích với Flutter app hiện tại
+     */
+    private Integer parseRoomsFromNotes(String providerNotes) {
+        if (providerNotes == null || providerNotes.isEmpty()) {
+            return null;
+        }
+        
+        try {
+            // Format: "rooms=2; beds=1" hoặc "rooms=39; beds=1"
+            String[] parts = providerNotes.split(";");
+            for (String part : parts) {
+                part = part.trim();
+                if (part.startsWith("rooms=")) {
+                    String roomsStr = part.substring(6).trim();
+                    return Integer.parseInt(roomsStr);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse rooms from provider_notes: {}", providerNotes, e);
+        }
+        
+        return null;
     }
 
     /**
@@ -356,6 +463,7 @@ public class HotelBookingService {
                 .startDate(booking.getStartDate())
                 .endDate(booking.getEndDate())
                 .numAdults(booking.getNumAdults())
+                .rooms(booking.getRooms())
                 .totalPrice(booking.getTotalPrice())
                 .currencyCode(booking.getCurrencyCode())
                 .bookingStatus(booking.getBookingStatus() != null ? booking.getBookingStatus().name() : null)

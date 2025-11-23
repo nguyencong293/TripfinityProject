@@ -153,6 +153,8 @@ CREATE TABLE hotels (
     highlights_json JSON DEFAULT NULL,
     amenities_json JSON DEFAULT NULL,
     policies_text TEXT DEFAULT NULL,
+    
+    total_rooms INT NULL,
 
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -259,11 +261,12 @@ CREATE TABLE hotel_bookings (
     num_adults INT NOT NULL DEFAULT 1,
     total_price DECIMAL(12,2) NOT NULL,
     currency_code CHAR(3) NOT NULL,
-    booking_status ENUM('pending','confirmed','cancelled','completed','refunded') NOT NULL DEFAULT 'pending',
+    booking_status ENUM('pending', 'confirmed', 'cancelled', 'completed', 'refunded', 'checked_out') NOT NULL DEFAULT 'pending',
     provider_confirmed TINYINT NOT NULL DEFAULT 0 COMMENT '0=pending, 1=confirmed, 2=cancelled',
     provider_confirmed_at DATETIME DEFAULT NULL,
     e_ticket_url VARCHAR(512) DEFAULT NULL,
     qr_code_data TEXT DEFAULT NULL,
+    rooms INT NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_hotel_booking_user FOREIGN KEY (user_id) REFERENCES users(user_id),

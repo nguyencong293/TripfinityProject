@@ -186,6 +186,7 @@
   "booking_status_completed": "Completed",
   "booking_status_cancelled": "Cancelled",
   "booking_status_refunded": "Refunded",
+  "booking_status_checked_out": "Checked Out",
 
   "hotel_name": "Hotel",
   "customer_info": "Customer Information",

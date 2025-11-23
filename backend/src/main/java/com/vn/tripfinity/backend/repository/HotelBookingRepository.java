@@ -1,13 +1,15 @@
 package com.vn.tripfinity.backend.repository;
 
-import com.vn.tripfinity.backend.model.HotelBooking;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.vn.tripfinity.backend.model.HotelBooking;
 
 @Repository
 public interface HotelBookingRepository extends JpaRepository<HotelBooking, Integer> {
@@ -36,4 +38,24 @@ public interface HotelBookingRepository extends JpaRepository<HotelBooking, Inte
 
     @Query("SELECT b FROM HotelBooking b WHERE b.bookingStatus = 'pending' AND b.holdUntil < :currentTime")
     List<HotelBooking> findExpiredPendingBookings(@Param("currentTime") LocalDateTime currentTime);
+
+    // Tìm booking cần check-out (đã completed và quá end_date + 1 ngày)
+    @Query("SELECT b FROM HotelBooking b WHERE b.bookingStatus = 'completed' AND b.endDate < :cutoffDate")
+    List<HotelBooking> findBookingsToCheckOut(@Param("cutoffDate") LocalDate cutoffDate);
+
+    // Tính tổng số phòng đã book của 1 hotel (chỉ tính booking đã confirmed)
+    @Query("SELECT COALESCE(SUM(b.rooms), 0) FROM HotelBooking b WHERE b.hotel.hotelId = :hotelId AND b.providerConfirmed = 1")
+    Integer sumRoomsByHotelAndConfirmed(@Param("hotelId") Integer hotelId);
+
+    // Tính tổng số người đã book của 1 hotel (chỉ tính booking đã confirmed)
+    @Query("SELECT COALESCE(SUM(b.numAdults), 0) FROM HotelBooking b WHERE b.hotel.hotelId = :hotelId AND b.providerConfirmed = 1")
+    Integer sumGuestsByHotelAndConfirmed(@Param("hotelId") Integer hotelId);
+
+    // Tính tổng số phòng đã book của 1 hotel (tính TẤT CẢ booking active, không tính cancelled/refunded/checked_out)
+    @Query("SELECT COALESCE(SUM(b.rooms), 0) FROM HotelBooking b WHERE b.hotel.hotelId = :hotelId AND b.bookingStatus NOT IN ('cancelled', 'refunded', 'checked_out')")
+    Integer sumRoomsByHotelActive(@Param("hotelId") Integer hotelId);
+
+    // Tính tổng số người đã book của 1 hotel (tính TẤT CẢ booking active, không tính cancelled/refunded/checked_out)
+    @Query("SELECT COALESCE(SUM(b.numAdults), 0) FROM HotelBooking b WHERE b.hotel.hotelId = :hotelId AND b.bookingStatus NOT IN ('cancelled', 'refunded', 'checked_out')")
+    Integer sumGuestsByHotelActive(@Param("hotelId") Integer hotelId);
 }

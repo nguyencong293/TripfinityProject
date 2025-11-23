@@ -30,6 +30,7 @@ interface HotelFormData {
   endDate: string;
   capacity: number | null;
   maxBedsPerRoom: number | null;
+  totalRooms: number | null;
   minParticipants: number | null;
   maxParticipants: number | null;
   starRating: number | null;
@@ -102,6 +103,7 @@ export const useHotelEdit = (
     endDate: "",
     capacity: null,
     maxBedsPerRoom: 1,
+    totalRooms: null,
     minParticipants: null,
     maxParticipants: null,
     starRating: null,
@@ -180,6 +182,7 @@ export const useHotelEdit = (
           endDate: hotelData.endDate || "",
           capacity: hotelData.capacity || null,
           maxBedsPerRoom: hotelData.maxBedsPerRoom ?? 1,
+          totalRooms: hotelData.totalRooms || null,
           minParticipants: hotelData.minParticipants || null,
           maxParticipants: hotelData.maxParticipants || null,
           starRating: hotelData.starRating || null,
@@ -361,6 +364,8 @@ export const useHotelEdit = (
         if (formData.capacity) hotelData.capacity = formData.capacity;
         if (formData.maxBedsPerRoom)
           hotelData.maxBedsPerRoom = formData.maxBedsPerRoom;
+        if (formData.totalRooms)
+          hotelData.totalRooms = formData.totalRooms;
         if (formData.minParticipants)
           hotelData.minParticipants = formData.minParticipants;
         if (formData.maxParticipants)

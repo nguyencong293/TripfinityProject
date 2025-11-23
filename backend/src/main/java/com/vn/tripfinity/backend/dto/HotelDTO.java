@@ -1,17 +1,24 @@
 package com.vn.tripfinity.backend.dto;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonAlias;
+
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -60,6 +67,18 @@ public class HotelDTO {
     private String currencyCode;
 
     private Integer capacity;
+
+    // Tổng số phòng của khách sạn
+    @JsonAlias("total_rooms")
+    private Integer totalRooms;
+
+    // Số phòng còn lại (calculated field, not in database)
+    @JsonAlias("available_rooms")
+    private Integer availableRooms;
+
+    // Sức chứa còn lại (calculated field, not in database)
+    @JsonAlias("available_capacity")
+    private Integer availableCapacity;
 
     // Số giường tối đa trên 1 phòng (>=1)
     @Min(value = 1, message = "maxBedsPerRoom phải >= 1")

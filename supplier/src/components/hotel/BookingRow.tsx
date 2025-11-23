@@ -23,6 +23,7 @@ const BookingRow: React.FC<BookingRowProps> = ({ booking, hotelName, userName, u
       completed: "bg-green-100 text-green-700 border-green-300",
       cancelled: "bg-red-100 text-red-700 border-red-300",
       refunded: "bg-purple-100 text-purple-700 border-purple-300",
+      checked_out: "bg-gray-100 text-gray-700 border-gray-300",
     };
     return colors[status] || "theme-bg-secondary theme-text-secondary theme-border";
   };

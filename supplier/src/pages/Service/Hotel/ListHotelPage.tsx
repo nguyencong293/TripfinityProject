@@ -49,6 +49,7 @@ const ListHotelPage: React.FC = () => {
     | "location"
     | "address"
     | "capacity"
+    | "totalRooms"
     | "minParticipants"
     | "maxParticipants"
     | "createdAt"
@@ -70,6 +71,7 @@ const ListHotelPage: React.FC = () => {
       { key: "location", label: t("hotel_list_col_location") },
       { key: "address", label: t("hotel_list_col_address") },
       { key: "capacity", label: t("hotel_list_col_capacity") },
+      { key: "totalRooms", label: "Tổng số phòng" },
       { key: "minParticipants", label: t("hotel_list_col_min_participants") },
       { key: "maxParticipants", label: t("hotel_list_col_max_participants") },
       { key: "createdAt", label: t("hotel_list_col_created_at") },
@@ -157,6 +159,8 @@ const ListHotelPage: React.FC = () => {
         return h.address ?? "";
       case "capacity":
         return h.capacity ?? "";
+      case "totalRooms":
+        return h.totalRooms ?? "";
       case "minParticipants":
         return h.minParticipants ?? "";
       case "maxParticipants":
