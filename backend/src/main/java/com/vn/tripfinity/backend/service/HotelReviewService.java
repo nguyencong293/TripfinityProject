@@ -291,4 +291,15 @@ public class HotelReviewService {
         log.info("🎉 Synced reply counts for {} reviews", updated);
         return updated;
     }
+
+    // === GET TOTAL REVIEWS COUNT BY PROVIDER ===
+    public Long getTotalReviewsByProvider(Integer providerId) {
+        log.debug("Lấy tổng số reviews của Provider ID: {}", providerId);
+        Long count = reviewRepository.countByHotel_Provider_ProviderId(providerId);
+        if (count == null) {
+            count = 0L;
+        }
+        log.info("Tìm thấy {} reviews của Provider ID: {}", count, providerId);
+        return count;
+    }
 }

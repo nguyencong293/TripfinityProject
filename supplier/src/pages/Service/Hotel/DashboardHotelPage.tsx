@@ -21,7 +21,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useHotelDashboardStatistics } from "../../../hooks/useHotelDashboardStatistics";
 import {
   getProviderByUserId,
   getUserById,
@@ -30,6 +29,7 @@ import {
   getHotelsByProvider,
   getHotelRatingSummaryByHotel,
   getHotelReviewsByHotel,
+  getHotelReviewsCountByProvider,
 } from "../../../services/hotelService";
 import type {
   HotelDTO,
@@ -58,7 +58,6 @@ import type { Notification } from "../../../components/hotel/NotificationItem";
 // Main Dashboard
 const DashboardHotelPage: React.FC = () => {
   const navigate = useNavigate();
-  const { statistics } = useHotelDashboardStatistics(undefined);
   const { t } = useLanguage();
   const [providerId, setProviderId] = useState<number | undefined>();
   const [hotels, setHotels] = useState<HotelDTO[]>([]);
@@ -67,6 +66,7 @@ const DashboardHotelPage: React.FC = () => {
     HotelRatingSummaryDTO[]
   >([]);
   const [recentReviews, setRecentReviews] = useState<HotelReviewDTO[]>([]);
+  const [totalReviews, setTotalReviews] = useState<number>(0);
   const [userCache, setUserCache] = useState<Map<number, UserDTO>>(new Map());
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -266,10 +266,15 @@ const DashboardHotelPage: React.FC = () => {
 
         // Fetch rating summaries for each hotel
         const summaryPromises = hs.map((h) =>
-          getHotelRatingSummaryByHotel(h.hotelId!).catch((e) => {
-            console.error(`Failed to fetch rating for hotel ${h.hotelId}:`, e);
-            return null;
-          })
+          h.hotelId
+            ? getHotelRatingSummaryByHotel(h.hotelId).catch((e) => {
+                console.error(
+                  `Failed to fetch rating for hotel ${h.hotelId}:`,
+                  e
+                );
+                return null;
+              })
+            : Promise.resolve(null)
         );
         const summaries = (await Promise.all(summaryPromises)).filter(
           (s) => s !== null
@@ -293,6 +298,11 @@ const DashboardHotelPage: React.FC = () => {
         } else {
           setRecentReviews([]);
         }
+
+        // Fetch total reviews count for provider
+        const reviewsCount = await getHotelReviewsCountByProvider(providerId);
+        console.log("📊 Total reviews for provider:", reviewsCount);
+        setTotalReviews(reviewsCount);
       } catch (e) {
         console.error("❌ Error loading dashboard data:", e);
       }
@@ -421,7 +431,7 @@ const DashboardHotelPage: React.FC = () => {
         <StatCard
           icon={<Calendar className="w-5 h-5 icon-brand" />}
           label={t("hotel_dashboard_total_reviews")}
-          value={statistics?.totalReviews || 0}
+          value={totalReviews}
           // badge={{ text: t("increase"), variant: "info" }}
         />
         <StatCard

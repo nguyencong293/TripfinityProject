@@ -314,6 +314,15 @@ export const getHotelReviewsByHotel = async (
   return res.data;
 };
 
+export const getHotelReviewsCountByProvider = async (
+  providerId: number
+): Promise<number> => {
+  const res = await api.get<{ totalReviews: number }>(
+    `/hotel-reviews/provider/${providerId}/count`
+  );
+  return res.data.totalReviews;
+};
+
 export const getHotelReviewById = async (
   reviewId: number
 ): Promise<HotelReviewDTO> => {

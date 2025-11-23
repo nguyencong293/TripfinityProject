@@ -18,4 +18,7 @@ public interface HotelReviewRepository extends JpaRepository<HotelReview, Intege
     @Query("SELECT r FROM HotelReview r WHERE r.hotel.hotelId = :hotelId AND r.reviewStatus = :status ORDER BY r.createdAt DESC")
     List<HotelReview> findByHotelAndStatus(@Param("hotelId") Integer hotelId,
             @Param("status") HotelReview.ReviewStatus status);
+
+    @Query("SELECT COUNT(r) FROM HotelReview r WHERE r.hotel.provider.providerId = :providerId")
+    Long countByHotel_Provider_ProviderId(@Param("providerId") Integer providerId);
 }

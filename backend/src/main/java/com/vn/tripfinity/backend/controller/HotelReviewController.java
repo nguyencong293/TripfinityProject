@@ -65,6 +65,16 @@ public class HotelReviewController {
         return ResponseEntity.ok(reviews);
     }
 
+    @GetMapping("/provider/{providerId}/count")
+    public ResponseEntity<Map<String, Long>> getReviewsCountByProvider(@PathVariable Integer providerId) {
+        log.info("📥 GET /api/hotel-reviews/provider/{}/count - Lấy tổng số reviews của provider", providerId);
+        Long count = reviewService.getTotalReviewsByProvider(providerId);
+        Map<String, Long> response = new HashMap<>();
+        response.put("totalReviews", count);
+        log.info("📤 Trả về tổng số {} reviews cho provider {}", count, providerId);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/hotel/{hotelId}/status/{status}")
     public ResponseEntity<List<HotelReviewDTO>> getReviewsByHotelAndStatus(
             @PathVariable Integer hotelId,
