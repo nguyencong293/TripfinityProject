@@ -367,14 +367,19 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
   const validateForm = useCallback((): boolean => {
     const newErrors: ValidationErrors = {};
 
+    // Required fields
     if (!formData.title.trim()) newErrors.title = "Tiêu đề là bắt buộc";
     if (!formData.areaId) newErrors.areaId = "Khu vực là bắt buộc";
     if (!formData.price || formData.price <= 0)
       newErrors.price = "Giá phải lớn hơn 0";
+    
+    // Optional but must be valid if provided
     if (formData.pricePerNight != null && formData.pricePerNight < 0)
       newErrors.pricePerNight = "Giá mỗi đêm không hợp lệ";
-    if (formData.maxBedsPerRoom == null || formData.maxBedsPerRoom < 1)
-      newErrors.maxBedsPerRoom = "Số giường/ phòng phải >= 1";
+    
+    // maxBedsPerRoom is optional, but if provided must be >= 1
+    if (formData.maxBedsPerRoom != null && formData.maxBedsPerRoom < 1)
+      newErrors.maxBedsPerRoom = "Số giường/phòng phải >= 1";
 
     if (
       formData.starRating &&
@@ -400,6 +405,9 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
       newErrors.startDate = "Ngày bắt đầu không được sau ngày kết thúc";
     }
 
+    console.log("🔍 Validation errors:", newErrors);
+    console.log("🔍 Validation result:", Object.keys(newErrors).length === 0);
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
