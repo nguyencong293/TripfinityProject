@@ -753,8 +753,8 @@ CREATE TABLE points (
 CREATE TABLE notifications (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    notification_type ENUM('in_app','email','push','sms') NOT NULL,
-    category ENUM('booking_confirmation','price_alert','promo','system_alert','social') NOT NULL,
+    notification_type VARCHAR(50) NOT NULL,
+    category VARCHAR(100) NOT NULL,
     title VARCHAR(255) DEFAULT NULL,
     content TEXT NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
