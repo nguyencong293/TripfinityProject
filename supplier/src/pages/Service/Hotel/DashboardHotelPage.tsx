@@ -52,7 +52,17 @@ import { useLanguage } from "../../../hooks/useLanguage";
 import ConfirmModal from "../../../components/common/ConfirmModal";
 
 // Notification types for this page context
-import type { Notification } from "../../../components/hotel/NotificationItem";
+import type { Notification, NotificationType } from "../../../components/hotel/NotificationItem";
+
+interface BackendNotification {
+  notificationId: number;
+  title: string;
+  content: string;
+  sentAt: string;
+  isRead: boolean;
+  category: string;
+}
+
 // merged into hotelService
 
 // Main Dashboard
@@ -76,6 +86,8 @@ const DashboardHotelPage: React.FC = () => {
   const [revenueFilter, setRevenueFilter] = useState<
     "day" | "week" | "month" | "year"
   >("day");
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [newNotificationsCount, setNewNotificationsCount] = useState<number>(0);
 
   const executeAction = async () => {
     if (!modalState.bookingId) return;
@@ -382,25 +394,56 @@ const DashboardHotelPage: React.FC = () => {
     }
   }, [bookings, revenueFilter]);
 
-  const newNotificationsCount = 2;
-  const notifications: Notification[] = [
-    {
-      id: "1",
-      type: "new_booking",
-      title: t("hotel_dashboard_notif_new_booking_title"),
-      message: t("hotel_dashboard_notif_new_booking_message"),
-      time: `5 ${t("minutes_ago_suffix")}`,
-      isNew: true,
-    },
-    {
-      id: "2",
-      type: "payment_success",
-      title: t("hotel_dashboard_notif_payment_success_title"),
-      message: t("hotel_dashboard_notif_payment_success_message"),
-      time: `15 ${t("minutes_ago_suffix")}`,
-      isNew: true,
-    },
-  ];
+  // Fetch notifications from API
+  useEffect(() => {
+    const formatNotificationTime = (dateString: string): string => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMins < 1) return t("just_now") || "Vừa xong";
+      if (diffMins < 60)
+        return `${diffMins} ${t("minutes_ago_suffix") || "phút trước"}`;
+      if (diffHours < 24)
+        return `${diffHours} ${t("hours_ago_suffix") || "giờ trước"}`;
+      return `${diffDays} ${t("days_ago_suffix") || "ngày trước"}`;
+    };
+
+    const fetchNotifications = async () => {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return;
+
+      const user = JSON.parse(userStr);
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/notifications/user/${user.userId}/recent?limit=3`
+        );
+        if (response.ok) {
+          const data: BackendNotification[] = await response.json();
+          // Map backend notification to frontend format
+          const mapped: Notification[] = data.map((n: BackendNotification) => ({
+            id: n.notificationId.toString(),
+            type: n.category as NotificationType,
+            title: n.title,
+            message: n.content,
+            time: formatNotificationTime(n.sentAt),
+            isNew: !n.isRead,
+          }));
+          setNotifications(mapped);
+          setNewNotificationsCount(
+            data.filter((n: BackendNotification) => !n.isRead).length
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      }
+    };
+
+    fetchNotifications();
+  }, [t]);
 
   // Derived selections
   const firstHotel = hotels[0];
@@ -457,19 +500,26 @@ const DashboardHotelPage: React.FC = () => {
           </div>
           <button
             className="link-brand text-sm font-medium flex items-center gap-1"
-            onClick={() => console.log("View all notifications")}
+            onClick={() => navigate("/supplier/notifications")}
           >
             {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-2">
-          {notifications.map((n) => (
-            <NotificationItem
-              key={n.id}
-              notification={n}
-              onClick={() => console.log("Clicked", n.id)}
-            />
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {notifications.length === 0 ? (
+            <div className="col-span-full text-center py-8 theme-text-secondary">
+              <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>{t("no_notifications") || "Không có thông báo mới"}</p>
+            </div>
+          ) : (
+            notifications.map((n) => (
+              <NotificationItem
+                key={n.id}
+                notification={n}
+                onClick={() => console.log("Clicked", n.id)}
+              />
+            ))
+          )}
         </div>
       </div>
 

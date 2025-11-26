@@ -44,6 +44,7 @@ public class HotelService {
     private final HotelReviewRepository hotelReviewRepository;
     private final HotelReviewAspectsRepository hotelReviewAspectsRepository;
     private final com.vn.tripfinity.backend.repository.HotelBookingRepository hotelBookingRepository;
+    private final NotificationService notificationService;
 
     public List<HotelDTO> getAllHotels() {
         log.debug("Lấy toàn bộ hotels");
@@ -172,6 +173,14 @@ public class HotelService {
         log.info("✅ Tạo Hotel ID: {} với hotelStatus={}, publishedAt={}",
                 savedHotel.getHotelId(), savedHotel.getHotelStatus(), savedHotel.getPublishedAt());
 
+        // Tạo thông báo cho supplier
+        try {
+            Integer userId = provider.getUser().getUserId();
+            notificationService.notifyHotelCreated(userId, savedHotel.getTitle());
+        } catch (Exception e) {
+            log.error("⚠️ Không thể tạo thông báo cho Hotel ID: {}", savedHotel.getHotelId(), e);
+        }
+
         return convertToDTO(savedHotel);
     }
 
@@ -275,6 +284,14 @@ public class HotelService {
 
         Hotel updatedHotel = hotelRepository.save(hotel);
         log.info("Đã cập nhật Hotel ID: {}", updatedHotel.getHotelId());
+
+        // Tạo thông báo cho supplier
+        try {
+            Integer userId = updatedHotel.getProvider().getUser().getUserId();
+            notificationService.notifyHotelUpdated(userId, updatedHotel.getTitle());
+        } catch (Exception e) {
+            log.error("⚠️ Không thể tạo thông báo cho Hotel ID: {}", updatedHotel.getHotelId(), e);
+        }
 
         return convertToDTO(updatedHotel);
     }

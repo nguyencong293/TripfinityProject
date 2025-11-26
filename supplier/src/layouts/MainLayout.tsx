@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -278,6 +278,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     useLanguage();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebarCollapsed");
     return saved === "true";
@@ -286,6 +287,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<Set<number>>(new Set());
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{
+    notificationId: number;
+    title: string;
+    content: string;
+    sentAt: string;
+    isRead: boolean;
+  }>>([]);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   // Save sidebar collapsed state to localStorage
   useEffect(() => {
@@ -327,8 +337,63 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     };
 
     window.addEventListener("storage", handleStorageChange);
+
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
+
+  // Fetch unread notification count and recent notifications
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!authUser?.userId) return;
+
+      try {
+        // Fetch unread count
+        const countResponse = await fetch(
+          `http://localhost:8080/api/notifications/user/${authUser.userId}/unread/count`
+        );
+        if (countResponse.ok) {
+          const countData = await countResponse.json();
+          setUnreadCount(countData.count || 0);
+        }
+
+        // Fetch recent notifications for popup
+        const notifResponse = await fetch(
+          `http://localhost:8080/api/notifications/user/${authUser.userId}/recent?limit=5`
+        );
+        if (notifResponse.ok) {
+          const notifData = await notifResponse.json();
+          setNotifications(notifData);
+        }
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      }
+    };
+
+    fetchNotifications();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [authUser]);
+
+  // Close notification popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node)
+      ) {
+        setNotificationMenuOpen(false);
+      }
+    };
+
+    if (notificationMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [notificationMenuOpen]);
 
   // Close menus if not authenticated
   useEffect(() => {
@@ -336,6 +401,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       setUserMenuOpen(false);
       setLanguageMenuOpen(false);
       setQuickCreateOpen(false);
+      setNotificationMenuOpen(false);
     }
   }, [authUser]);
 
@@ -361,6 +427,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       setUserMenuOpen(false);
       setLanguageMenuOpen(false);
       setQuickCreateOpen(false);
+      setNotificationMenuOpen(false);
       navigate("/supplier/login", { replace: true });
     }
   };
@@ -389,6 +456,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       newOpenDropdowns.add(index);
     }
     setOpenDropdowns(newOpenDropdowns);
+  };
+
+  // Format notification time
+  const formatNotificationTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return t("just_now") || "Vừa xong";
+    if (diffMins < 60) return `${diffMins} ${t("minutes_ago_suffix") || "phút trước"}`;
+    if (diffHours < 24) return `${diffHours} ${t("hours_ago_suffix") || "giờ trước"}`;
+    return `${diffDays} ${t("days_ago_suffix") || "ngày trước"}`;
   };
 
   // Handle quick create
@@ -755,12 +837,97 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </div>
 
               {/* Notifications */}
-              <button className="relative p-2 rounded-full hover:theme-bg-secondary transition-colors theme-text-secondary hover:theme-text-primary focus-ring-primary">
-                <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 theme-bg-error theme-text-error text-caption-mobile md:text-caption-tablet lg:text-caption-desktop rounded-full flex items-center justify-center">
-                  3
-                </span>
-              </button>
+              <div className="relative" ref={notificationRef}>
+                <button
+                  onClick={() => setNotificationMenuOpen(!notificationMenuOpen)}
+                  className="relative p-2 rounded-full hover:theme-bg-secondary transition-colors theme-text-secondary hover:theme-text-primary focus-ring-primary"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 theme-bg-error theme-text-error text-caption-mobile md:text-caption-tablet lg:text-caption-desktop rounded-full flex items-center justify-center">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+                {notificationMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-96 theme-bg-card border theme-border rounded-2xl shadow-lg z-50 overflow-hidden">
+                    {/* Header */}
+                    <div className="px-4 py-3 border-b theme-border flex items-center justify-between">
+                      <h3 className="text-lg font-semibold theme-text-primary">
+                        {t("notifications") || "Thông báo"}
+                      </h3>
+                      {unreadCount > 0 && (
+                        <span className="px-2 py-0.5 text-xs font-medium theme-bg-primary theme-text-button rounded-full">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    {/* Notification List */}
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-8 text-center">
+                          <Bell className="w-12 h-12 theme-text-tertiary mx-auto mb-2" />
+                          <p className="theme-text-secondary text-sm">
+                            {t("no_notifications") || "Không có thông báo mới"}
+                          </p>
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <button
+                            key={notif.notificationId}
+                            onClick={() => {
+                              if (!notif.isRead) {
+                                fetch(
+                                  `http://localhost:8080/api/notifications/${notif.notificationId}/read`,
+                                  { method: "PATCH" }
+                                );
+                              }
+                              setNotificationMenuOpen(false);
+                              navigate("/supplier/notifications");
+                            }}
+                            className={`w-full px-4 py-3 text-left hover:theme-bg-secondary transition-colors border-b theme-border last:border-b-0 ${
+                              !notif.isRead ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="text-sm font-semibold theme-text-primary truncate">
+                                    {notif.title}
+                                  </h4>
+                                  {!notif.isRead && (
+                                    <span className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                                  )}
+                                </div>
+                                <p className="text-sm theme-text-secondary line-clamp-2">
+                                  {notif.content}
+                                </p>
+                                <p className="text-xs theme-text-tertiary mt-1">
+                                  {formatNotificationTime(notif.sentAt)}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                    {/* Footer */}
+                    {notifications.length > 0 && (
+                      <div className="px-4 py-3 border-t theme-border">
+                        <button
+                          onClick={() => {
+                            setNotificationMenuOpen(false);
+                            navigate("/supplier/notifications");
+                          }}
+                          className="w-full text-center text-sm font-medium link-brand hover:underline"
+                        >
+                          {t("view_all_notifications") || "Xem tất cả thông báo"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* User Menu */}
               <div className="relative">

@@ -543,5 +543,8 @@
   "payment_method_N/A": "Chưa thanh toán",
   "created_at": "Tạo lúc",
   "back": "Quay lại",
-  "hotel_dashboard_no_bookings": "Chưa có đặt phòng nào"
+  "hotel_dashboard_no_bookings": "Chưa có đặt phòng nào",
+  "notifications": "Thông báo",
+  "no_notifications": "Chưa có thông báo nào",
+  "view_all_notifications": "Xem tất cả thông báo"
 }

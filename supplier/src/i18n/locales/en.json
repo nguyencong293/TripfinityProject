@@ -356,5 +356,8 @@
   "payment_method_N/A": "Not Paid",
   "created_at": "Created at",
   "back": "Back",
-  "hotel_dashboard_no_bookings": "No bookings yet"
+  "hotel_dashboard_no_bookings": "No bookings yet",
+  "notifications": "Notifications",
+  "no_notifications": "No notifications yet",
+  "view_all_notifications": "View all notifications"
 }
