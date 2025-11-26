@@ -445,11 +445,16 @@ const DashboardHotelPage: React.FC = () => {
     fetchNotifications();
   }, [t]);
 
-  // Derived selections
-  const firstHotel = hotels[0];
-  const ratingSummary =
-    ratingSummaries.find((s) => s.hotelId === firstHotel?.hotelId) ||
-    ratingSummaries[0];
+  // Derived selections - get 2 most recent hotels
+  const recentHotels = useMemo(() => {
+    return [...hotels]
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Newest first
+      })
+      .slice(0, 2);
+  }, [hotels]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-6">
@@ -744,15 +749,23 @@ const DashboardHotelPage: React.FC = () => {
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {ratingSummary ? (
-            <RatingSummaryCard
-              summary={ratingSummary}
-              hotelName={firstHotel?.title || t("hotel")}
-            />
-          ) : (
+          {recentHotels.length === 0 ? (
             <div className="theme-text-secondary text-sm">
               {t("hotel_dashboard_no_rating_data")}
             </div>
+          ) : (
+            recentHotels.map((hotel) => {
+              const summary = ratingSummaries.find(
+                (s) => s.hotelId === hotel.hotelId
+              );
+              return summary ? (
+                <RatingSummaryCard
+                  key={hotel.hotelId}
+                  summary={summary}
+                  hotelName={hotel.title || t("hotel")}
+                />
+              ) : null;
+            })
           )}
         </div>
       </div>
@@ -776,14 +789,17 @@ const DashboardHotelPage: React.FC = () => {
               {t("hotel_dashboard_no_reviews")}
             </div>
           )}
-          {recentReviews.map((r) => (
-            <ReviewCard
-              key={r.reviewId}
-              review={r}
-              hotelName={firstHotel?.title || t("hotel")}
-              readOnly={true}
-            />
-          ))}
+          {recentReviews.map((r) => {
+            const reviewHotel = hotels.find((h) => h.hotelId === r.hotelId);
+            return (
+              <ReviewCard
+                key={r.reviewId}
+                review={r}
+                hotelName={reviewHotel?.title || t("hotel")}
+                readOnly={true}
+              />
+            );
+          })}
         </div>
       </div>
 
