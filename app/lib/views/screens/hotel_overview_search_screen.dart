@@ -684,49 +684,6 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
                             ),
 
                             const SizedBox(height: 12),
-
-                            // Policies and other toggles
-                            _sectionTitle(
-                              ctx,
-                              LucideIcons.checkCircle2,
-                              'options'.tr,
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                _toggleChip(
-                                  ctx,
-                                  'free_cancellation'.tr,
-                                  _freeCancellation,
-                                  (v) => setSheetState(
-                                    () => _freeCancellation = v,
-                                  ),
-                                ),
-                                _toggleChip(
-                                  ctx,
-                                  'pay_at_hotel'.tr,
-                                  _payAtHotel,
-                                  (v) => setSheetState(() => _payAtHotel = v),
-                                ),
-                                _toggleChip(
-                                  ctx,
-                                  'breakfast_included'.tr,
-                                  _breakfastIncluded,
-                                  (v) => setSheetState(
-                                    () => _breakfastIncluded = v,
-                                  ),
-                                ),
-                                _toggleChip(
-                                  ctx,
-                                  'in_stock_only'.tr,
-                                  _inStockOnly,
-                                  (v) => setSheetState(() => _inStockOnly = v),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
                           ],
                         ),
                       ),
@@ -855,35 +812,6 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
     }
     final rev = buf.toString().split('').reversed.join();
     return '$rev đ';
-  }
-
-  Widget _toggleChip(
-    BuildContext ctx,
-    String label,
-    bool selected,
-    ValueChanged<bool> onTap,
-  ) {
-    return FilterChip(
-      selected: selected,
-      showCheckmark: false,
-      label: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: context.bodyTwoStyle.copyWith(
-          color: selected
-              ? context.buttonTextColor
-              : context.textSecondaryColor,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      backgroundColor: context.cardBackgroundColor,
-      selectedColor: context.primaryColor,
-      side: BorderSide(
-        color: selected ? context.primaryColor : context.dividerColor,
-      ),
-      onSelected: (_) => onTap(!selected),
-    );
   }
 
   Widget _pill(
