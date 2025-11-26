@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
   Loader2,
   Upload,
   Trash2,
+  ArrowLeft,
 } from "lucide-react";
 import { useHotelCreate } from "../../../hooks/useHotels";
 
@@ -281,6 +283,7 @@ MultiSelectCheckboxString.displayName = "MultiSelectCheckboxString";
 
 /* ================= Component ================= */
 const HotelCreatePage: React.FC = () => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const {
     formData,
@@ -1119,6 +1122,13 @@ const HotelCreatePage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col gap-8">
       <div>
+        <button
+          onClick={() => navigate(-1)}
+          className="btn-outline px-4 py-2 mb-4 flex items-center gap-2 hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Quay lại
+        </button>
         <h1 className={pageTitle}>Tạo khách sạn mới</h1>
         <p className="theme-text-secondary text-body1-mobile sm:text-body1-tablet mt-2">
           Các trường có dấu <span className="theme-text-error">*</span> là bắt
