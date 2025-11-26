@@ -492,19 +492,19 @@ const DashboardHotelPage: React.FC = () => {
             icon={<List className="w-6 h-6" />}
             label={t("hotel_dashboard_action_manage_bookings")}
             description={t("hotel_dashboard_action_manage_bookings_desc")}
-            onClick={() => console.log("Bookings")}
+            onClick={() => navigate("/supplier/service/hotel/bookings")}
           />
           <QuickAction
             icon={<MessageSquare className="w-6 h-6" />}
             label={t("hotel_dashboard_action_manage_reviews")}
             description={t("hotel_dashboard_action_manage_reviews_desc")}
-            onClick={() => console.log("Reviews")}
+            onClick={() => navigate("/supplier/service/hotel/all-reviews")}
           />
           <QuickAction
             icon={<BarChart2 className="w-6 h-6" />}
             label={t("hotel_dashboard_action_manage_hotel")}
             description={t("hotel_dashboard_action_manage_hotel_desc")}
-            onClick={() => console.log("Manage Hotel")}
+            onClick={() => navigate("/supplier/service/hotel/list")}
           />
         </div>
       </div>
