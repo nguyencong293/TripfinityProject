@@ -1,18 +1,18 @@
 import { useEffect, useState, useCallback } from "react";
-import { Bell, Check, CheckCheck, Trash2, ArrowLeft } from "lucide-react";
+import { Bell, Check, CheckCheck, Trash2, ArrowLeft, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Notification {
-  notificationId: number;
-  userId: number;
-  notificationType: string;
+  notification_id: number;
+  user_id: number;
+  notification_type: string;
   category: string;
   title: string;
   content: string;
-  isRead: boolean;
-  readAt: string | null;
-  sentAt: string;
-  createdAt: string;
+  is_read: boolean;
+  read_at: string | null;
+  sent_at: string;
+  created_at: string;
 }
 
 const NotificationListPage = () => {
@@ -20,6 +20,10 @@ const NotificationListPage = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Get user from localStorage
   const getUserId = (): number | null => {
@@ -68,8 +72,8 @@ const NotificationListPage = () => {
       if (response.ok) {
         setNotifications((prev) =>
           prev.map((n) =>
-            n.notificationId === notificationId
-              ? { ...n, isRead: true, readAt: new Date().toISOString() }
+            n.notification_id === notificationId
+              ? { ...n, is_read: true, read_at: new Date().toISOString() }
               : n
           )
         );
@@ -110,7 +114,7 @@ const NotificationListPage = () => {
 
       if (response.ok) {
         setNotifications((prev) =>
-          prev.filter((n) => n.notificationId !== notificationId)
+          prev.filter((n) => n.notification_id !== notificationId)
         );
       }
     } catch (error) {
@@ -160,12 +164,43 @@ const NotificationListPage = () => {
     });
   };
 
-  const filteredNotifications =
-    filter === "unread"
-      ? notifications.filter((n) => !n.isRead)
-      : notifications;
+  const filteredNotifications = notifications
+    .filter((n) => {
+      // Filter by read status
+      if (filter === "unread" && n.is_read) return false;
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+      // Filter by category
+      if (categoryFilter !== "all" && n.category !== categoryFilter) return false;
+
+      // Filter by search query
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        return (
+          n.title.toLowerCase().includes(query) ||
+          n.content.toLowerCase().includes(query)
+        );
+      }
+
+      return true;
+    });
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  // Pagination
+  const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedNotifications = filteredNotifications.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchQuery, categoryFilter]);
+
+  // Get unique categories for filter dropdown
+  const categories = Array.from(new Set(notifications.map((n) => n.category)));
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -190,12 +225,6 @@ const NotificationListPage = () => {
           </div>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => setFilter(filter === "all" ? "unread" : "all")}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-          >
-            {filter === "all" ? "Chỉ chưa đọc" : "Tất cả"}
-          </button>
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
@@ -208,6 +237,92 @@ const NotificationListPage = () => {
         </div>
       </div>
 
+      {/* Filters & Search */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="flex flex-wrap gap-4 items-center">
+          {/* Search */}
+          <div className="flex-1 min-w-[250px]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm thông báo..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Read Status Filter */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-4 py-2 rounded-lg transition ${
+                filter === "all"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Tất cả ({notifications.length})
+            </button>
+            <button
+              onClick={() => setFilter("unread")}
+              className={`px-4 py-2 rounded-lg transition ${
+                filter === "unread"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Chưa đọc ({unreadCount})
+            </button>
+          </div>
+
+          {/* Category Filter */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-gray-600" />
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">Tất cả danh mục</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {getCategoryText(cat)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Active filters summary */}
+        {(searchQuery || categoryFilter !== "all") && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+            <span>Đang lọc:</span>
+            {searchQuery && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                "{searchQuery}"
+              </span>
+            )}
+            {categoryFilter !== "all" && (
+              <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                {getCategoryText(categoryFilter)}
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setCategoryFilter("all");
+              }}
+              className="ml-2 text-blue-600 hover:underline"
+            >
+              Xóa bộ lọc
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Notification List */}
       {loading ? (
         <div className="text-center py-12">
@@ -218,72 +333,149 @@ const NotificationListPage = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
           <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-600 text-lg">
-            {filter === "unread" ? "Không có thông báo chưa đọc" : "Chưa có thông báo nào"}
+            {searchQuery || categoryFilter !== "all"
+              ? "Không tìm thấy thông báo phù hợp"
+              : filter === "unread"
+              ? "Không có thông báo chưa đọc"
+              : "Chưa có thông báo nào"}
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filteredNotifications.map((notification) => (
-            <div
-              key={notification.notificationId}
-              className={`relative bg-white rounded-lg shadow-sm border transition-all hover:shadow-md ${
-                notification.isRead
-                  ? "border-gray-200"
-                  : "border-blue-300 bg-blue-50/30"
-              }`}
-            >
-              {/* Category Badge (top-left) */}
-              <div className="absolute top-3 left-3">
-                {getCategoryBadge(notification.category)}
-              </div>
+        <>
+          {/* Results summary */}
+          <div className="mb-4 text-sm text-gray-600">
+            Hiển thị {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredNotifications.length)} trong tổng số {filteredNotifications.length} thông báo
+          </div>
 
-              {/* Unread Indicator (red dot) */}
-              {!notification.isRead && (
-                <div className="absolute top-3 right-3">
-                  <span className="flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                  </span>
+          <div className="space-y-3">
+            {paginatedNotifications.map((notification) => (
+              <div
+                key={notification.notification_id}
+                className={`relative bg-white rounded-lg shadow-sm border transition-all hover:shadow-md ${
+                  notification.is_read
+                    ? "border-gray-200"
+                    : "border-blue-300 bg-blue-50/30"
+                }`}
+              >
+                {/* Category Badge (top-left) */}
+                <div className="absolute top-3 left-3">
+                  {getCategoryBadge(notification.category)}
                 </div>
-              )}
 
-              <div className="p-4 pt-10">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  {notification.title}
-                </h3>
-                <p className="text-gray-700 mb-3">{notification.content}</p>
+                {/* Unread Indicator (red dot) */}
+                {!notification.is_read && (
+                  <div className="absolute top-3 right-3">
+                    <span className="flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                  </div>
+                )}
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">
-                    {formatDate(notification.sentAt)}
-                  </span>
+                <div className="p-4 pt-10">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                    {notification.title}
+                  </h3>
+                  <p className="text-gray-700 mb-3">{notification.content}</p>
 
-                  <div className="flex gap-2">
-                    {!notification.isRead && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">
+                      {formatDate(notification.sent_at)}
+                    </span>
+
+                    <div className="flex gap-2">
+                      {!notification.is_read && (
+                        <button
+                          onClick={() => markAsRead(notification.notification_id)}
+                          className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition flex items-center gap-1 text-sm"
+                        >
+                          <Check className="w-4 h-4" />
+                          Đánh dấu đã đọc
+                        </button>
+                      )}
                       <button
-                        onClick={() => markAsRead(notification.notificationId)}
-                        className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition flex items-center gap-1 text-sm"
+                        onClick={() => deleteNotification(notification.notification_id)}
+                        className="px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition flex items-center gap-1 text-sm"
                       >
-                        <Check className="w-4 h-4" />
-                        Đánh dấu đã đọc
+                        <Trash2 className="w-4 h-4" />
+                        Xóa
                       </button>
-                    )}
-                    <button
-                      onClick={() => deleteNotification(notification.notificationId)}
-                      className="px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition flex items-center gap-1 text-sm"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Xóa
-                    </button>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Trước
+              </button>
+
+              <div className="flex gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-4 py-2 rounded-lg transition ${
+                        currentPage === pageNum
+                          ? "bg-blue-600 text-white"
+                          : "border border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sau
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
+};
+
+const getCategoryText = (category: string): string => {
+  const map: Record<string, string> = {
+    service_hotel_new: "Khách sạn mới",
+    service_hotel_update: "Cập nhật khách sạn",
+    service_hotel_booking: "Đặt phòng",
+    service_tour_new: "Tour mới",
+    service_tour_update: "Cập nhật tour",
+    service_tour_booking: "Đặt tour",
+    payment_success: "Thanh toán thành công",
+    payment_failed: "Thanh toán thất bại",
+    system_alert: "Cảnh báo hệ thống",
+    promotion: "Khuyến mãi",
+  };
+  return map[category] || category;
 };
 
 export default NotificationListPage;

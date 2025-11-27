@@ -289,11 +289,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<Array<{
-    notificationId: number;
+    notification_id: number;
     title: string;
     content: string;
-    sentAt: string;
-    isRead: boolean;
+    sent_at: string;
+    is_read: boolean;
   }>>([]);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -874,11 +874,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       ) : (
                         notifications.map((notif) => (
                           <button
-                            key={notif.notificationId}
+                            key={notif.notification_id}
                             onClick={() => {
-                              if (!notif.isRead) {
+                              if (!notif.is_read) {
                                 fetch(
-                                  `http://localhost:8080/api/notifications/${notif.notificationId}/read`,
+                                  `http://localhost:8080/api/notifications/${notif.notification_id}/read`,
                                   { method: "PATCH" }
                                 );
                               }
@@ -886,7 +886,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                               navigate("/supplier/notifications");
                             }}
                             className={`w-full px-4 py-3 text-left hover:theme-bg-secondary transition-colors border-b theme-border last:border-b-0 ${
-                              !notif.isRead ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
+                              !notif.is_read ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
                             }`}
                           >
                             <div className="flex items-start gap-3">
@@ -895,7 +895,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                                   <h4 className="text-sm font-semibold theme-text-primary truncate">
                                     {notif.title}
                                   </h4>
-                                  {!notif.isRead && (
+                                  {!notif.is_read && (
                                     <span className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full"></span>
                                   )}
                                 </div>
@@ -903,7 +903,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                                   {notif.content}
                                 </p>
                                 <p className="text-xs theme-text-tertiary mt-1">
-                                  {formatNotificationTime(notif.sentAt)}
+                                  {formatNotificationTime(notif.sent_at)}
                                 </p>
                               </div>
                             </div>

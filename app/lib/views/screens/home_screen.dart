@@ -1,6 +1,7 @@
 import 'package:app/routes/app_router.dart';
 import 'package:app/services/area_api_service.dart';
 import 'package:app/services/search_api_service.dart';
+import 'package:app/services/notification_api_service.dart';
 import 'package:app/views/screens/attractions_overview_search_screen.dart';
 import 'package:app/views/screens/general_search_screen.dart';
 import 'package:app/views/screens/hotel_overview_search_screen.dart';
@@ -372,12 +373,7 @@ class _HomeContent extends StatelessWidget {
                   color: context.textPrimaryColor,
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: Icon(LucideIcons.bell, color: context.textPrimaryColor),
-                  onPressed: () {
-                    context.push(AppRouter.notifications);
-                  },
-                ),
+                _NotificationBellIcon(user: user),
                 IconButton(
                   icon: Icon(LucideIcons.menu, color: context.textPrimaryColor),
                   onPressed: () => Scaffold.maybeOf(context)?.openDrawer(),
@@ -829,6 +825,90 @@ class _DrawerTile extends StatelessWidget {
         color: context.textPrimaryColor,
       ),
       onTap: onTap,
+    );
+  }
+}
+
+/// Bell icon với badge hiển thị số thông báo chưa đọc
+class _NotificationBellIcon extends StatefulWidget {
+  final dynamic user;
+  const _NotificationBellIcon({required this.user});
+
+  @override
+  State<_NotificationBellIcon> createState() => _NotificationBellIconState();
+}
+
+class _NotificationBellIconState extends State<_NotificationBellIcon> {
+  int _unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnreadCount();
+    // Auto refresh every 30 seconds
+    Future.delayed(const Duration(seconds: 30), () {
+      if (mounted) _loadUnreadCount();
+    });
+  }
+
+  Future<void> _loadUnreadCount() async {
+    if (widget.user == null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dio = Dio();
+      final service = NotificationApiService(dio: dio, prefs: prefs);
+
+      // Lấy userId từ UserDTO
+      final userId = widget.user.userId;
+      if (userId == null) return;
+
+      final count = await service.getUnreadCount(userId);
+      if (mounted) {
+        setState(() => _unreadCount = count);
+      }
+    } catch (e) {
+      // Không hiển thị lỗi, giữ badge = 0
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        IconButton(
+          icon: Icon(LucideIcons.bell, color: context.textPrimaryColor),
+          onPressed: () {
+            context.push(AppRouter.notifications);
+            // Reset badge sau khi vào trang notification
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) _loadUnreadCount();
+            });
+          },
+        ),
+        if (_unreadCount > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Text(
+                _unreadCount > 99 ? '99+' : _unreadCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

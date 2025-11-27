@@ -34,6 +34,8 @@ public class HotelBookingService {
     private final UserRepository userRepository;
     private final HotelRepository hotelRepository;
     private final ProviderRepository providerRepository;
+    private final NotificationService notificationService;
+    private final EmailService emailService;
 
     public List<HotelBookingDTO> getAllBookings() {
         log.debug("Lấy toàn bộ hotel bookings");
@@ -198,6 +200,79 @@ public class HotelBookingService {
 
         // Auto-create payment record
         createPaymentRecord(savedBooking, dto.getPaymentMethod());
+
+        // 📧 GỬI THÔNG BÁO VÀ EMAIL CHO USER
+        try {
+            String bookingCode = "BK" + savedBooking.getBookingId();
+            String customerName = user.getFullName() != null ? user.getFullName() : user.getEmail();
+            String hotelTitle = hotel.getTitle();
+            String checkIn = dto.getStartDate().toString();
+            String checkOut = dto.getEndDate().toString();
+            String totalPrice = String.format("%,.0f", dto.getTotalPrice());
+            String paymentMethod = dto.getPaymentMethod() != null ? dto.getPaymentMethod() : "counter";
+
+            // Thông báo in-app cho user
+            notificationService.notifyUserBookingCreated(
+                user.getUserId(), 
+                hotelTitle, 
+                bookingCode
+            );
+            log.info("📬 User notification created for userId: {}", user.getUserId());
+
+            // Gửi email cho user
+            if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                emailService.sendBookingConfirmationEmail(
+                    user.getEmail(),
+                    customerName,
+                    hotelTitle,
+                    bookingCode,
+                    checkIn,
+                    checkOut,
+                    totalPrice,
+                    paymentMethod
+                );
+                log.info("📧 Confirmation email sent to: {}", user.getEmail());
+            }
+
+            // Thông báo in-app cho supplier
+            if (provider != null && provider.getUser() != null) {
+                Integer supplierId = provider.getUser().getUserId();
+                notificationService.notifySupplierNewBooking(
+                    supplierId,
+                    hotelTitle,
+                    bookingCode,
+                    customerName
+                );
+                log.info("📬 Supplier notification created for supplierId: {}", supplierId);
+                
+                // Gửi email cho supplier
+                String supplierEmail = provider.getUser().getEmail();
+                String supplierName = provider.getUser().getFullName() != null 
+                    ? provider.getUser().getFullName() 
+                    : "Supplier";
+                
+                if (supplierEmail != null && !supplierEmail.isEmpty()) {
+                    emailService.sendSupplierNewBookingEmail(
+                        supplierEmail,
+                        supplierName,
+                        hotelTitle,
+                        bookingCode,
+                        customerName,
+                        checkIn,
+                        checkOut,
+                        totalPrice,
+                        paymentMethod,
+                        dto.getRooms() != null ? dto.getRooms() : 1,
+                        dto.getNumAdults()
+                    );
+                    log.info("📧 Supplier booking email sent to: {}", supplierEmail);
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send notifications/email: {}", e.getMessage());
+            // Không throw exception để không block booking creation
+        }
 
         return convertToDTO(savedBooking);
     }
@@ -415,6 +490,41 @@ public class HotelBookingService {
         HotelBooking updated = bookingRepository.save(booking);
         log.info("Đã xác nhận Booking ID: {} lúc {}", bookingId, updated.getProviderConfirmedAt());
 
+        // 📧 GỬI THÔNG BÁO VÀ EMAIL CHO USER
+        try {
+            User user = booking.getUser();
+            Hotel hotel = booking.getHotel();
+            String bookingCode = "BK" + bookingId;
+            String customerName = user.getFullName() != null ? user.getFullName() : user.getEmail();
+            String hotelTitle = hotel.getTitle();
+            String checkIn = booking.getStartDate().toString();
+            String checkOut = booking.getEndDate().toString();
+
+            // Thông báo in-app cho user
+            notificationService.notifyUserBookingConfirmed(
+                user.getUserId(),
+                hotelTitle,
+                bookingCode
+            );
+            log.info("📬 Booking confirmed notification sent to userId: {}", user.getUserId());
+
+            // Gửi email cho user
+            if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                emailService.sendBookingApprovedEmail(
+                    user.getEmail(),
+                    customerName,
+                    hotelTitle,
+                    bookingCode,
+                    checkIn,
+                    checkOut
+                );
+                log.info("📧 Booking approved email sent to: {}", user.getEmail());
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send confirm notifications/email: {}", e.getMessage());
+        }
+
         return convertToDTO(updated);
     }
 
@@ -428,6 +538,37 @@ public class HotelBookingService {
         booking.setBookingStatus(HotelBooking.BookingStatus.cancelled);
         HotelBooking updatedBooking = bookingRepository.save(booking);
         log.info("Đã hủy Booking ID: {} lúc {}", bookingId, updatedBooking.getProviderConfirmedAt());
+
+        // 📧 GỬI THÔNG BÁO VÀ EMAIL CHO USER
+        try {
+            User user = booking.getUser();
+            Hotel hotel = booking.getHotel();
+            String bookingCode = "BK" + bookingId;
+            String customerName = user.getFullName() != null ? user.getFullName() : user.getEmail();
+            String hotelTitle = hotel.getTitle();
+
+            // Thông báo in-app cho user
+            notificationService.notifyUserBookingCancelled(
+                user.getUserId(),
+                hotelTitle,
+                bookingCode
+            );
+            log.info("📬 Booking cancelled notification sent to userId: {}", user.getUserId());
+
+            // Gửi email cho user
+            if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                emailService.sendBookingCancelledEmail(
+                    user.getEmail(),
+                    customerName,
+                    hotelTitle,
+                    bookingCode
+                );
+                log.info("📧 Booking cancelled email sent to: {}", user.getEmail());
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send cancel notifications/email: {}", e.getMessage());
+        }
 
         return convertToDTO(updatedBooking);
     }

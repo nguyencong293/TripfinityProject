@@ -55,11 +55,11 @@ import ConfirmModal from "../../../components/common/ConfirmModal";
 import type { Notification, NotificationType } from "../../../components/hotel/NotificationItem";
 
 interface BackendNotification {
-  notificationId: number;
+  notification_id: number;
   title: string;
   content: string;
-  sentAt: string;
-  isRead: boolean;
+  sent_at: string;
+  is_read: boolean;
   category: string;
 }
 
@@ -425,16 +425,16 @@ const DashboardHotelPage: React.FC = () => {
           const data: BackendNotification[] = await response.json();
           // Map backend notification to frontend format
           const mapped: Notification[] = data.map((n: BackendNotification) => ({
-            id: n.notificationId.toString(),
+            id: n.notification_id.toString(),
             type: n.category as NotificationType,
             title: n.title,
             message: n.content,
-            time: formatNotificationTime(n.sentAt),
-            isNew: !n.isRead,
+            time: formatNotificationTime(n.sent_at),
+            isNew: !n.is_read,
           }));
           setNotifications(mapped);
           setNewNotificationsCount(
-            data.filter((n: BackendNotification) => !n.isRead).length
+            data.filter((n: BackendNotification) => !n.is_read).length
           );
         }
       } catch (error) {

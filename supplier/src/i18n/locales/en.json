@@ -359,5 +359,6 @@
   "hotel_dashboard_no_bookings": "No bookings yet",
   "notifications": "Notifications",
   "no_notifications": "No notifications yet",
-  "view_all_notifications": "View all notifications"
+  "view_all_notifications": "View all notifications",
+  "days_ago_suffix": "days ago"
 }

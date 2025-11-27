@@ -352,5 +352,6 @@
   "hotel_dashboard_no_bookings": "예약이 없습니다",
   "notifications": "알림",
   "no_notifications": "알림이 없습니다",
-  "view_all_notifications": "모든 알림 보기"
+  "view_all_notifications": "모든 알림 보기",
+  "days_ago_suffix": "일 전"
 }

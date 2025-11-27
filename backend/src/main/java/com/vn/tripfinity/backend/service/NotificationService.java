@@ -146,4 +146,60 @@ public class NotificationService {
                 "Khách sạn đã được cập nhật",
                 String.format("Thông tin khách sạn '%s' đã được cập nhật thành công.", hotelTitle));
     }
+
+    /**
+     * Helper: Thông báo cho user khi đặt phòng thành công
+     */
+    @Transactional
+    public void notifyUserBookingCreated(Integer userId, String hotelTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_hotel_booking",
+                "Đặt phòng thành công",
+                String.format("Bạn đã đặt phòng '%s' thành công (Mã: %s). Vui lòng đợi 1-2 tiếng để đội ngũ liên hệ xác nhận.", 
+                    hotelTitle, bookingCode));
+    }
+
+    /**
+     * Helper: Thông báo cho supplier khi có booking mới
+     */
+    @Transactional
+    public void notifySupplierNewBooking(Integer supplierId, String hotelTitle, String bookingCode, String customerName) {
+        createNotification(
+                supplierId,
+                Notification.TYPE_IN_APP,
+                "service_hotel_booking",
+                "Đơn đặt phòng mới",
+                String.format("Có đơn đặt phòng mới cho '%s' (Mã: %s) từ khách hàng %s. Vui lòng xác nhận đơn hàng.", 
+                    hotelTitle, bookingCode, customerName));
+    }
+
+    /**
+     * Helper: Thông báo cho user khi booking được xác nhận
+     */
+    @Transactional
+    public void notifyUserBookingConfirmed(Integer userId, String hotelTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_hotel_booking",
+                "Đặt phòng đã được xác nhận",
+                String.format("Đơn đặt phòng '%s' (Mã: %s) của bạn đã được xác nhận. Chúng tôi rất mong được phục vụ bạn!", 
+                    hotelTitle, bookingCode));
+    }
+
+    /**
+     * Helper: Thông báo cho user khi booking bị hủy
+     */
+    @Transactional
+    public void notifyUserBookingCancelled(Integer userId, String hotelTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_hotel_booking",
+                "Đặt phòng đã bị hủy",
+                String.format("Rất tiếc, đơn đặt phòng '%s' (Mã: %s) của bạn đã bị hủy. Vui lòng liên hệ để biết thêm chi tiết.", 
+                    hotelTitle, bookingCode));
+    }
 }
