@@ -353,5 +353,6 @@
   "notifications": "알림",
   "no_notifications": "알림이 없습니다",
   "view_all_notifications": "모든 알림 보기",
-  "days_ago_suffix": "일 전"
+  "days_ago_suffix": "일 전",
+  "confirm_booking_message": "이 예약을 확정하시겠습니까?"
 }

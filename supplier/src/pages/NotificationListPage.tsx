@@ -19,6 +19,8 @@ const NotificationListPage = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<number | null>(null); // Track which notification is being actioned
+  const [markAllLoading, setMarkAllLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -61,6 +63,7 @@ const NotificationListPage = () => {
   }, [fetchNotifications]);
 
   const markAsRead = async (notificationId: number) => {
+    setActionLoading(notificationId);
     try {
       const response = await fetch(
         `http://localhost:8080/api/notifications/${notificationId}/read`,
@@ -80,6 +83,8 @@ const NotificationListPage = () => {
       }
     } catch (error) {
       console.error("Failed to mark as read:", error);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -87,6 +92,7 @@ const NotificationListPage = () => {
     const userId = getUserId();
     if (!userId) return;
 
+    setMarkAllLoading(true);
     try {
       const response = await fetch(
         `http://localhost:8080/api/notifications/user/${userId}/read-all`,
@@ -100,10 +106,13 @@ const NotificationListPage = () => {
       }
     } catch (error) {
       console.error("Failed to mark all as read:", error);
+    } finally {
+      setMarkAllLoading(false);
     }
   };
 
   const deleteNotification = async (notificationId: number) => {
+    setActionLoading(notificationId);
     try {
       const response = await fetch(
         `http://localhost:8080/api/notifications/${notificationId}`,
@@ -119,6 +128,8 @@ const NotificationListPage = () => {
       }
     } catch (error) {
       console.error("Failed to delete notification:", error);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -228,10 +239,20 @@ const NotificationListPage = () => {
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+              disabled={markAllLoading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <CheckCheck className="w-4 h-4" />
-              Đánh dấu tất cả đã đọc
+              {markAllLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  Đang xử lý...
+                </>
+              ) : (
+                <>
+                  <CheckCheck className="w-4 h-4" />
+                  Đánh dấu tất cả đã đọc
+                </>
+              )}
             </button>
           )}
         </div>
@@ -387,18 +408,38 @@ const NotificationListPage = () => {
                       {!notification.is_read && (
                         <button
                           onClick={() => markAsRead(notification.notification_id)}
-                          className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition flex items-center gap-1 text-sm"
+                          disabled={actionLoading === notification.notification_id}
+                          className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition flex items-center gap-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <Check className="w-4 h-4" />
-                          Đánh dấu đã đọc
+                          {actionLoading === notification.notification_id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-700 border-t-transparent"></div>
+                              Đang xử lý...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4" />
+                              Đánh dấu đã đọc
+                            </>
+                          )}
                         </button>
                       )}
                       <button
                         onClick={() => deleteNotification(notification.notification_id)}
-                        className="px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition flex items-center gap-1 text-sm"
+                        disabled={actionLoading === notification.notification_id}
+                        className="px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition flex items-center gap-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Trash2 className="w-4 h-4" />
-                        Xóa
+                        {actionLoading === notification.notification_id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-red-700 border-t-transparent"></div>
+                            Đang xóa...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="w-4 h-4" />
+                            Xóa
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>

@@ -22,6 +22,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   List<NotificationDTO> _notifications = [];
   List<NotificationDTO> _filteredNotifications = [];
   bool _isLoading = true;
+  bool _isActionLoading = false; // Loading for actions (mark as read, delete)
   String _errorMessage = '';
   int _filterIndex = 0; // 0=All, 1=Latest, 2=Unread
 
@@ -101,15 +102,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Future<void> _markAsRead(NotificationDTO notification) async {
     if (notification.isRead) return;
 
+    setState(() => _isActionLoading = true);
     final success = await _notificationService.markAsRead(
       notification.notificationId,
     );
     if (success) {
       _loadNotifications(); // Reload để cập nhật UI
     }
+    setState(() => _isActionLoading = false);
   }
 
   Future<void> _deleteNotification(NotificationDTO notification) async {
+    setState(() => _isActionLoading = true);
     final success = await _notificationService.deleteNotification(
       notification.notificationId,
     );
@@ -120,10 +124,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
         );
         _applyFilter();
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Đã xóa thông báo')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã xóa thông báo')));
+      }
     }
+    setState(() => _isActionLoading = false);
   }
 
   Future<void> _markAllAsRead() async {
@@ -131,51 +138,79 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final user = authController.currentUser;
     if (user == null || user.userId == null) return;
 
+    setState(() => _isActionLoading = true);
     final userId = user.userId!;
     final success = await _notificationService.markAllAsRead(userId);
     if (success) {
       _loadNotifications();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã đánh dấu tất cả là đã đọc')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã đánh dấu tất cả là đã đọc')),
+        );
+      }
     }
+    setState(() => _isActionLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: context.backgroundColor,
-        elevation: 0,
-        iconTheme: IconThemeData(color: context.textPrimaryColor),
-        title: Text('notifications_title'.tr, style: context.h5Style),
-        actions: [
-          if (_notifications.any((n) => !n.isRead))
-            IconButton(
-              icon: const Icon(Icons.done_all),
-              tooltip: 'Đánh dấu tất cả là đã đọc',
-              onPressed: _markAllAsRead,
-            ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadNotifications,
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadNotifications,
-        child: SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              _buildTabs(),
-              const SizedBox(height: 8),
-              Expanded(child: _buildContent()),
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: context.backgroundColor,
+          appBar: AppBar(
+            backgroundColor: context.backgroundColor,
+            elevation: 0,
+            iconTheme: IconThemeData(color: context.textPrimaryColor),
+            title: Text('notifications_title'.tr, style: context.h5Style),
+            actions: [
+              if (_notifications.any((n) => !n.isRead))
+                IconButton(
+                  icon: const Icon(Icons.done_all),
+                  tooltip: 'Đánh dấu tất cả là đã đọc',
+                  onPressed: _isActionLoading ? null : _markAllAsRead,
+                ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _isActionLoading ? null : _loadNotifications,
+              ),
             ],
           ),
+          body: RefreshIndicator(
+            onRefresh: _loadNotifications,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+                  _buildTabs(),
+                  const SizedBox(height: 8),
+                  Expanded(child: _buildContent()),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
+        // Loading overlay
+        if (_isActionLoading)
+          Container(
+            color: Colors.black26,
+            child: const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Đang xử lý...'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 

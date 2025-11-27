@@ -78,6 +78,7 @@ const DashboardHotelPage: React.FC = () => {
   const [recentReviews, setRecentReviews] = useState<HotelReviewDTO[]>([]);
   const [totalReviews, setTotalReviews] = useState<number>(0);
   const [userCache, setUserCache] = useState<Map<number, UserDTO>>(new Map());
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     type: "confirm" | "cancel";
@@ -93,6 +94,8 @@ const DashboardHotelPage: React.FC = () => {
     if (!modalState.bookingId) return;
 
     try {
+      setActionLoading(modalState.bookingId);
+      
       if (modalState.type === "confirm") {
         await api.patch(`/hotel-bookings/${modalState.bookingId}/confirm`);
       } else {
@@ -117,6 +120,8 @@ const DashboardHotelPage: React.FC = () => {
           ? t("booking_confirmed_error") || "Lỗi khi xác nhận đặt phòng"
           : t("booking_cancelled_error") || "Lỗi khi hủy đặt phòng"
       );
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -829,6 +834,7 @@ const DashboardHotelPage: React.FC = () => {
         }
         cancelText={t("back") || "Quay lại"}
         type={modalState.type === "cancel" ? "danger" : "confirm"}
+        loading={actionLoading === modalState.bookingId}
       />
     </div>
   );
