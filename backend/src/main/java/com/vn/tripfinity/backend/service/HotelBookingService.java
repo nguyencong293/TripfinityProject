@@ -36,6 +36,7 @@ public class HotelBookingService {
     private final ProviderRepository providerRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
+    private final FCMService fcmService;
 
     public List<HotelBookingDTO> getAllBookings() {
         log.debug("Lấy toàn bộ hotel bookings");
@@ -244,6 +245,22 @@ public class HotelBookingService {
                     customerName
                 );
                 log.info("📬 Supplier notification created for supplierId: {}", supplierId);
+                
+                // GỬI FCM PUSH NOTIFICATION ĐẾN SUPPLIER
+                String supplierFcmToken = provider.getUser().getFcmToken();
+                if (supplierFcmToken != null && !supplierFcmToken.isEmpty()) {
+                    fcmService.sendNotificationToDevice(
+                        supplierFcmToken,
+                        "Đơn đặt phòng mới",
+                        "Khách hàng " + customerName + " vừa đặt phòng " + hotelTitle,
+                        java.util.Map.of(
+                            "type", "new_booking",
+                            "bookingId", savedBooking.getBookingId().toString(),
+                            "hotelId", hotel.getHotelId().toString()
+                        )
+                    );
+                    log.info("📱 FCM notification sent to supplier");
+                }
                 
                 // Gửi email cho supplier
                 String supplierEmail = provider.getUser().getEmail();
@@ -508,6 +525,16 @@ public class HotelBookingService {
             );
             log.info("📬 Booking confirmed notification sent to userId: {}", user.getUserId());
 
+            // 📱 GỬI FCM PUSH NOTIFICATION ĐẾN USER
+            if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
+                String pushTitle = "Đặt phòng đã được xác nhận";
+                String pushBody = String.format("Đơn đặt phòng '%s' (Mã: %s) của bạn đã được xác nhận. Chúng tôi rất mong được phục vụ bạn!", hotelTitle, bookingCode);
+                fcmService.sendNotificationToDevice(user.getFcmToken(), pushTitle, pushBody, null);
+                log.info("📱 FCM push notification sent to user {}, token: {}...", user.getUserId(), user.getFcmToken().substring(0, 20));
+            } else {
+                log.warn("⚠️ User {} has no FCM token, skipping push notification", user.getUserId());
+            }
+
             // Gửi email cho user
             if (user.getEmail() != null && !user.getEmail().isEmpty()) {
                 emailService.sendBookingApprovedEmail(
@@ -554,6 +581,16 @@ public class HotelBookingService {
                 bookingCode
             );
             log.info("📬 Booking cancelled notification sent to userId: {}", user.getUserId());
+
+            // 📱 GỬI FCM PUSH NOTIFICATION ĐẾN USER
+            if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
+                String pushTitle = "Đặt phòng đã bị hủy";
+                String pushBody = String.format("Rất tiếc, đơn đặt phòng '%s' (Mã: %s) của bạn đã bị hủy bởi nhà cung cấp. Vui lòng liên hệ để biết thêm chi tiết.", hotelTitle, bookingCode);
+                fcmService.sendNotificationToDevice(user.getFcmToken(), pushTitle, pushBody, null);
+                log.info("📱 FCM cancellation push notification sent to user {}, token: {}...", user.getUserId(), user.getFcmToken().substring(0, 20));
+            } else {
+                log.warn("⚠️ User {} has no FCM token, skipping push notification", user.getUserId());
+            }
 
             // Gửi email cho user
             if (user.getEmail() != null && !user.getEmail().isEmpty()) {

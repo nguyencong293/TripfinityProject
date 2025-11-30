@@ -17,11 +17,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}
-    show-sql: ${JPA_SHOW_SQL:true}
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
-        "[format_sql]": true
+        "[format_sql]": false
         connection:
           useUnicode: true
           characterEncoding: UTF-8
@@ -103,9 +103,9 @@ logging:
     "[com.company.student_backend]": ${LOG_LEVEL:DEBUG}
     "[org.springframework.web]": ${LOG_LEVEL_WEB:DEBUG}
     "[org.springframework.security]": ${LOG_LEVEL_SECURITY:INFO}
-    "[org.hibernate.SQL]": DEBUG
-    "[org.hibernate.type.descriptor.sql.BasicBinder]": TRACE
-    "[org.hibernate.orm.jdbc.bind]": TRACE
+    "[org.hibernate.SQL]": INFO
+    "[org.hibernate.type.descriptor.sql.BasicBinder]": WARN
+    "[org.hibernate.orm.jdbc.bind]": WARN
   pattern:
     console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

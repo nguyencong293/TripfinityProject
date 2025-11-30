@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "173444476399",
+    "project_id": "tripfinity-466014",
+    "storage_bucket": "tripfinity-466014.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:173444476399:android:7dce88bfe1c7c3cd989a1a",
+        "android_client_info": {
+          "package_name": "com.vn.tripfinity.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "173444476399-srrjbrmg2c0rsatfd4498t0499gmn104.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtWXYSZbPy-6ffPZY0JO55XQC_WDdSw3M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "173444476399-srrjbrmg2c0rsatfd4498t0499gmn104.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "173444476399-jbcv4644evd91i21eou9db5l92a139ei.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.vn.tripfinity.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

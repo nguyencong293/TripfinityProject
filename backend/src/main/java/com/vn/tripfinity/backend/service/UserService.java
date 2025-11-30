@@ -354,6 +354,7 @@ public class UserService {
                 userDTO.getFullName(),
                 userDTO.getPhoneNumber(),
                 userDTO.getAvatarUrl(),
+                null, // fcmToken - will be set separately via FCM API
                 User.AccountRole.valueOf(userDTO.getAccountRole()),
                 User.AccountStatus.valueOf(userDTO.getAccountStatus()),
                 userDTO.getDateOfBirth(),

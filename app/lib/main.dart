@@ -2,20 +2,80 @@ import 'package:app/providers/theme_provider.dart';
 import 'package:app/routes/app_router.dart';
 import 'package:app/services/auth_service.dart';
 import 'package:app/services/user_service.dart';
+import 'package:app/services/fcm_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'firebase_options.dart';
 
 import 'config/theme/app_theme.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/language_controller.dart';
 import 'controllers/user_controller.dart';
 
+// Instance cho local notifications
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+/// Background message handler - MUST be top-level function
+/// Xử lý FCM notification khi app đóng hoặc background
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint('📱 Background notification: ${message.data['title']}');
+
+  // Hiển thị notification từ data payload
+  if (message.data.containsKey('title') && message.data.containsKey('body')) {
+    await _showNotification(
+      title: message.data['title']!,
+      body: message.data['body']!,
+    );
+  }
+}
+
+/// Hiển thị local notification
+Future<void> _showNotification({
+  required String title,
+  required String body,
+}) async {
+  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    'tripfinity_notifications',
+    'TripFinity Notifications',
+    channelDescription: 'Notifications for booking updates',
+    importance: Importance.high,
+    priority: Priority.high,
+  );
+
+  await flutterLocalNotificationsPlugin.show(
+    DateTime.now().millisecond,
+    title,
+    body,
+    const NotificationDetails(android: androidDetails),
+  );
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize Local Notifications
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/launcher_icon');
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+  // Register background message handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   PackageInfo packageInfo = await PackageInfo.fromPlatform();
   debugPrint('Package name: ${packageInfo.packageName}');
@@ -33,6 +93,13 @@ void main() async {
   final authController = AuthController(authService: authService, prefs: prefs);
   final userService = UserService(dio: dio);
   final userController = UserController(userService: userService);
+
+  // Initialize FCM Service với authController
+  final fcmService = FCMService(authController: authController);
+  await fcmService.initialize();
+
+  // Kết nối FCMService với AuthController
+  authController.setFCMService(fcmService);
 
   runApp(
     MultiProvider(

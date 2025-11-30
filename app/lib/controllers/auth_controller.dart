@@ -10,10 +10,12 @@ import '../dto/auth/login_response.dart';
 import '../dto/user_dto.dart';
 import '../exceptions/api_exceptions.dart';
 import '../services/auth_service.dart';
+import '../services/fcm_service.dart';
 
 class AuthController with ChangeNotifier {
   final AuthService _authService;
   final SharedPreferences _prefs;
+  FCMService? _fcmService;
 
   String? _rawToken;
   UserDTO? _currentUser;
@@ -28,11 +30,18 @@ class AuthController with ChangeNotifier {
     _loadFromPrefs();
   }
 
+  /// Set FCM service sau khi khởi tạo
+  void setFCMService(FCMService fcmService) {
+    _fcmService = fcmService;
+  }
+
   bool get isLoading => _isLoading;
 
   String? get errorMessage => _errorMessage;
 
   UserDTO? get currentUser => _currentUser;
+
+  String? get rawToken => _rawToken;
 
   void clearError() {
     _errorMessage = null;
@@ -68,6 +77,23 @@ class AuthController with ChangeNotifier {
       final req = LoginRequest(email: email, password: password);
       final resp = await _authService.login(req);
       await _saveUserData(resp);
+
+      // Gửi FCM token lên backend sau khi login thành công
+      debugPrint('🔑 Login successful, sending FCM token to backend...');
+      if (_fcmService != null) {
+        debugPrint('✅ FCM service is available');
+        final token = await _fcmService!.getFCMToken();
+        debugPrint('📱 FCM Token: ${token?.substring(0, 20)}...');
+        if (token != null) {
+          await _fcmService!.sendTokenToBackend(token);
+          debugPrint('✅ FCM token sent to backend');
+        } else {
+          debugPrint('⚠️ FCM token is null');
+        }
+      } else {
+        debugPrint('❌ FCM service is null!');
+      }
+
       return true;
     } on ApiException catch (e) {
       _errorMessage = e.message;
@@ -111,6 +137,11 @@ class AuthController with ChangeNotifier {
 
   Future<void> logout() async {
     try {
+      // Xóa FCM token khỏi backend trước khi logout
+      if (_fcmService != null) {
+        await _fcmService!.clearTokenFromBackend();
+      }
+
       await _authService.logout();
     } finally {
       _rawToken = null;
@@ -146,6 +177,15 @@ class AuthController with ChangeNotifier {
 
       final resp = await _authService.googleLogin(idToken);
       await _saveUserData(resp);
+
+      // Gửi FCM token lên backend sau khi Google login thành công
+      if (_fcmService != null) {
+        final token = await _fcmService!.getFCMToken();
+        if (token != null) {
+          await _fcmService!.sendTokenToBackend(token);
+        }
+      }
+
       return true;
     } on PlatformException catch (e) {
       _errorMessage = 'Lỗi Google Sign-In: [${e.code}] ${e.message}';
