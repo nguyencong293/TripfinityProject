@@ -114,4 +114,25 @@ class UserService {
       );
     }
   }
+
+  /// Lấy thông tin user đầy đủ theo ID
+  Future<UserDTO> getUserById(int userId, String authToken) async {
+    try {
+      final response = await _dio.get(
+        '${AppConfig.users}/$userId',
+        options: Options(headers: {'Authorization': 'Bearer $authToken'}),
+      );
+
+      if (response.statusCode == 200) {
+        return UserDTO.fromJson(response.data);
+      } else {
+        throw ApiException('Không thể lấy thông tin user', response.statusCode);
+      }
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.data?['message'] ?? 'Lỗi kết nối server',
+        e.response?.statusCode,
+      );
+    }
+  }
 }

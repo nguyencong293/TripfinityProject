@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
 
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+import 'package:app/controllers/auth_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:app/services/hotel_booking_api_service.dart';
@@ -73,24 +75,44 @@ class _HotelBookingCheckoutScreenState
 
   Future<void> _loadUserInfo() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final name =
-          prefs.getString('user_name') ?? prefs.getString('full_name') ?? '';
-      final email =
-          prefs.getString('user_email') ?? prefs.getString('email') ?? '';
-      final phone =
-          prefs.getString('user_phone') ??
-          prefs.getString('phone_number') ??
-          '';
+      // Lấy user data từ AuthController (đã có full info từ API)
+      final authController = context.read<AuthController>();
+      final user = authController.currentUser;
 
-      if (mounted) {
-        setState(() {
-          _nameCtrl.text = name;
-          _emailCtrl.text = email;
-          _phoneCtrl.text = phone;
-        });
+      if (user != null) {
+        if (mounted) {
+          setState(() {
+            _nameCtrl.text = user.fullName ?? '';
+            _emailCtrl.text = user.email ?? '';
+            _phoneCtrl.text = user.phoneNumber ?? '';
+          });
+        }
+        debugPrint(
+          '✅ Loaded user info from AuthController: phone=${user.phoneNumber}',
+        );
+      } else {
+        // Fallback: Lấy từ SharedPreferences nếu chưa có user
+        final prefs = await SharedPreferences.getInstance();
+        final name =
+            prefs.getString('user_name') ?? prefs.getString('full_name') ?? '';
+        final email =
+            prefs.getString('user_email') ?? prefs.getString('email') ?? '';
+        final phone =
+            prefs.getString('user_phone') ??
+            prefs.getString('phone_number') ??
+            '';
+
+        if (mounted) {
+          setState(() {
+            _nameCtrl.text = name;
+            _emailCtrl.text = email;
+            _phoneCtrl.text = phone;
+          });
+        }
+        debugPrint('⚠️ Loaded user info from SharedPreferences (fallback)');
       }
     } catch (e) {
+      debugPrint('❌ Error loading user info: $e');
       // Silent fail - user can input manually
     }
   }

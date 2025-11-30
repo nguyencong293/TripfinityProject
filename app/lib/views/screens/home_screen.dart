@@ -874,41 +874,50 @@ class _NotificationBellIconState extends State<_NotificationBellIcon> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        IconButton(
-          icon: Icon(LucideIcons.bell, color: context.textPrimaryColor),
-          onPressed: () {
-            context.push(AppRouter.notifications);
-            // Reset badge sau khi vào trang notification
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (mounted) _loadUnreadCount();
-            });
-          },
-        ),
-        if (_unreadCount > 0)
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-              child: Text(
-                _unreadCount > 99 ? '99+' : _unreadCount.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: () {
+        context.push(AppRouter.notifications);
+        // Reset badge sau khi vào trang notification
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _loadUnreadCount();
+        });
+      },
+      child: Stack(
+        children: [
+          IconButton(
+            icon: Icon(LucideIcons.bell, color: context.textPrimaryColor),
+            onPressed: () {
+              context.push(AppRouter.notifications);
+              // Reset badge sau khi vào trang notification
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (mounted) _loadUnreadCount();
+              });
+            },
+          ),
+          if (_unreadCount > 0)
+            Positioned(
+              right: 8,
+              top: 8,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
                 ),
-                textAlign: TextAlign.center,
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  _unreadCount > 99 ? '99+' : _unreadCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

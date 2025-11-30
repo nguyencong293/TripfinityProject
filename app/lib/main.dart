@@ -90,8 +90,12 @@ void main() async {
 
   final dio = Dio();
   final authService = AuthService(dio: dio, prefs: prefs);
-  final authController = AuthController(authService: authService, prefs: prefs);
   final userService = UserService(dio: dio);
+  final authController = AuthController(
+    authService: authService,
+    prefs: prefs,
+    userService: userService,
+  );
   final userController = UserController(userService: userService);
 
   // Initialize FCM Service với authController

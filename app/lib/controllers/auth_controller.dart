@@ -11,10 +11,12 @@ import '../dto/user_dto.dart';
 import '../exceptions/api_exceptions.dart';
 import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
+import '../services/user_service.dart';
 
 class AuthController with ChangeNotifier {
   final AuthService _authService;
   final SharedPreferences _prefs;
+  final UserService _userService;
   FCMService? _fcmService;
 
   String? _rawToken;
@@ -25,8 +27,10 @@ class AuthController with ChangeNotifier {
   AuthController({
     required AuthService authService,
     required SharedPreferences prefs,
+    required UserService userService,
   }) : _authService = authService,
-       _prefs = prefs {
+       _prefs = prefs,
+       _userService = userService {
     _loadFromPrefs();
   }
 
@@ -108,15 +112,30 @@ class AuthController with ChangeNotifier {
 
   Future<void> _saveUserData(LoginResponse resp) async {
     _rawToken = resp.token;
-    _currentUser = UserDTO(
-      userId: resp.userId,
-      email: resp.email,
-      fullName: resp.name,
-    );
+
+    // Lưu token và basic info vào prefs
     await _prefs.setString('user_token', resp.token);
     await _prefs.setInt('user_id', resp.userId);
     await _prefs.setString('user_email', resp.email);
     await _prefs.setString('user_name', resp.name);
+
+    // Load FULL user data từ API (bao gồm phone, dob, gender)
+    try {
+      debugPrint('📥 Loading full user data from API...');
+      final fullUser = await _userService.getUserById(resp.userId, resp.token);
+      _currentUser = fullUser;
+      debugPrint(
+        '✅ Full user data loaded: phone=${fullUser.phoneNumber}, dob=${fullUser.dateOfBirth}',
+      );
+    } catch (e) {
+      debugPrint('⚠️ Failed to load full user data, using token data: $e');
+      // Fallback: Sử dụng thông tin từ token nếu API fail
+      _currentUser = UserDTO(
+        userId: resp.userId,
+        email: resp.email,
+        fullName: resp.name,
+      );
+    }
   }
 
   Future<void> _loadFromPrefs() async {
@@ -127,7 +146,17 @@ class AuthController with ChangeNotifier {
       final email = _prefs.getString('user_email');
       final name = _prefs.getString('user_name');
       if (id != null && email != null && name != null && isTokenValid) {
-        _currentUser = UserDTO(userId: id, email: email, fullName: name);
+        // Load FULL user data từ API thay vì chỉ dùng cache
+        try {
+          debugPrint('📥 Loading full user data from API on app start...');
+          final fullUser = await _userService.getUserById(id, token);
+          _currentUser = fullUser;
+          debugPrint('✅ Full user data loaded: phone=${fullUser.phoneNumber}');
+        } catch (e) {
+          debugPrint('⚠️ Failed to load full user, using cached data: $e');
+          // Fallback: Sử dụng data từ prefs nếu API fail
+          _currentUser = UserDTO(userId: id, email: email, fullName: name);
+        }
       } else {
         await logout();
       }
