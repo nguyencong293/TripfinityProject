@@ -93,6 +93,24 @@ const STAR_RATINGS = [1, 2, 3, 4, 5];
 // Price constraints for hotel price input
 const MAX_PRICE = 1000000000; // 1,000,000,000 VND
 
+// Helper function to match province from address string
+const matchAreaFromAddress = (address: string): number | null => {
+  const normalizedAddress = address.toLowerCase();
+  
+  // Tìm tỉnh/thành phố trong danh sách AREAS
+  for (const area of AREAS) {
+    const areaName = area.name.toLowerCase();
+    // Remove "thành phố" prefix for matching
+    const areaNameSimple = areaName.replace(/^(thành phố|tp\.?)\s*/i, '').trim();
+    
+    if (normalizedAddress.includes(areaName) || normalizedAddress.includes(areaNameSimple)) {
+      return area.id;
+    }
+  }
+  
+  return null;
+};
+
 // Highlights Dictionary (ID-based)
 const HIGHLIGHTS_OPTIONS = [
   { id: 1, label: "View biển" },
@@ -456,6 +474,17 @@ const HotelCreatePage: React.FC = () => {
                 const newAreaId = Number(e.target.value) || null;
                 console.log(`🔄 Area changed to: ${newAreaId}`);
                 updateField("areaId", newAreaId);
+                
+                // Tự động set location field với tên tỉnh
+                if (newAreaId) {
+                  const selectedArea = AREAS.find(a => a.id === newAreaId);
+                  if (selectedArea) {
+                    updateField("location", selectedArea.name);
+                    console.log(`✅ Auto-set location: ${selectedArea.name}`);
+                  }
+                } else {
+                  updateField("location", "");
+                }
               }}
               className={baseInput}
             >
@@ -623,18 +652,31 @@ const HotelCreatePage: React.FC = () => {
                 updateField("address", data.address);
                 updateField("latitude", data.latitude);
                 updateField("longitude", data.longitude);
-                // Extract city/area from address for location field
-                const locationPart = data.address.split(",").slice(-2).join(",").trim();
-                updateField("location", locationPart);
+                
+                // Tự động match và set areaId từ address
+                const matchedAreaId = matchAreaFromAddress(data.address);
+                if (matchedAreaId) {
+                  console.log(`✅ Auto-matched area ID: ${matchedAreaId}`);
+                  updateField("areaId", matchedAreaId);
+                  
+                  // Cũng set location field
+                  const matchedArea = AREAS.find(a => a.id === matchedAreaId);
+                  if (matchedArea) {
+                    updateField("location", matchedArea.name);
+                  }
+                } else {
+                  console.log(`⚠️ No matching area found for: ${data.address}`);
+                }
               }}
               initialLocation={
                 formData.latitude && formData.longitude
                   ? {
                       address: formData.address || "",
+                      location: "", // Không dùng location từ MapPicker
                       latitude: formData.latitude,
                       longitude: formData.longitude,
                     }
-                  : null
+                  : undefined
               }
             />
             {formData.address && (

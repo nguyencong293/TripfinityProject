@@ -30,7 +30,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
   int _searchPeople = 2;
 
   RangeValues _priceRange = const RangeValues(800000, 3500000);
-  static const double _minPrice = 0;
+  static const double _minPrice = 500; // Fix: Minimum 500 to prevent errors
   static const double _maxPrice = 10000000;
 
   final Set<int> _selectedStars = {}; // 1..5

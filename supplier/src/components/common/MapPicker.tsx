@@ -1,25 +1,43 @@
-import React, { useState, useCallback, useRef } from "react";
-import {
-  GoogleMap,
-  LoadScript,
-  Marker,
-  Autocomplete,
-} from "@react-google-maps/api";
-import { MapPin, Loader2, Search } from "lucide-react";
+import React, { useState, useRef, useEffect } from 'react';
+import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import type { Libraries } from '@react-google-maps/api';
+import { MapPin, Search, Loader2 } from 'lucide-react';
+import axios from 'axios';
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBEHT1sEuXBrx5zV5KG2nUOAXV1EtqbLB0";
-const LIBRARIES: ("places")[] = ["places"];
+export interface LocationData {
+  address: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+}
 
-// Default center (Vietnam)
-const DEFAULT_CENTER = {
-  lat: 16.0544,
-  lng: 108.2022,
-};
+interface MapPickerProps {
+  onLocationSelect: (location: LocationData) => void;
+  initialLocation?: LocationData;
+  className?: string;
+}
+
+interface NominatimResult {
+  place_id: number;
+  lat: string;
+  lon: string;
+  display_name: string;
+  address?: {
+    road?: string;
+    suburb?: string;
+    city?: string;
+    state?: string;
+    province?: string;
+    country?: string;
+  };
+}
+
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+const LIBRARIES: Libraries = [];
 
 const MAP_CONTAINER_STYLE = {
-  width: "100%",
-  height: "400px",
-  borderRadius: "8px",
+  width: '100%',
+  height: '400px',
 };
 
 const MAP_OPTIONS = {
@@ -30,112 +48,158 @@ const MAP_OPTIONS = {
   fullscreenControl: true,
 };
 
-export interface LocationData {
-  address: string;
-  latitude: number;
-  longitude: number;
-}
-
-interface MapPickerProps {
-  onLocationSelect: (data: LocationData) => void;
-  initialLocation?: LocationData | null;
-  className?: string;
-}
+const DEFAULT_CENTER = {
+  lat: 16.0544, // Da Nang, Vietnam
+  lng: 108.2022,
+};
 
 const MapPicker: React.FC<MapPickerProps> = ({
   onLocationSelect,
   initialLocation,
-  className = "",
+  className = '',
 }) => {
-  const [selectedPosition, setSelectedPosition] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(
-    initialLocation
-      ? { lat: initialLocation.latitude, lng: initialLocation.longitude }
-      : null
+  const [selectedPosition, setSelectedPosition] = useState<google.maps.LatLngLiteral | null>(
+    initialLocation ? { lat: initialLocation.latitude, lng: initialLocation.longitude } : null
   );
-
-  const [address, setAddress] = useState<string>(
-    initialLocation?.address || ""
-  );
-  
-  const [searchInput, setSearchInput] = useState<string>("");
-  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const [address, setAddress] = useState(initialLocation?.address || '');
+  const [location, setLocation] = useState(initialLocation?.location || '');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchResults, setSearchResults] = useState<NominatimResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
-  // Setup Autocomplete
-  const onLoadAutocomplete = useCallback((autocompleteInstance: google.maps.places.Autocomplete) => {
-    setAutocomplete(autocompleteInstance);
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput.trim().length > 2) {
+        searchNominatim(searchInput);
+      } else {
+        setSearchResults([]);
+        setShowResults(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Click outside to close results
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (resultsRef.current && !resultsRef.current.contains(event.target as Node) &&
+          searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const onPlaceChanged = useCallback(() => {
-    if (autocomplete) {
-      const place = autocomplete.getPlace();
-      
-      if (place.geometry && place.geometry.location) {
-        const lat = place.geometry.location.lat();
-        const lng = place.geometry.location.lng();
-        const formattedAddress = place.formatted_address || "";
+  const searchNominatim = async (query: string) => {
+    setIsSearching(true);
+    try {
+      const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+        params: {
+          q: query,
+          format: 'json',
+          'accept-language': 'vi',
+          countrycodes: 'vn',
+          limit: 5,
+        },
+        headers: {
+          'User-Agent': 'TripfinitySupplier/1.0',
+        },
+      });
+      setSearchResults(response.data);
+      setShowResults(true);
+    } catch (error) {
+      console.error('Nominatim search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
-        setSelectedPosition({ lat, lng });
-        setAddress(formattedAddress);
-        setSearchInput(formattedAddress);
+  const extractLocation = (nominatimAddress?: NominatimResult['address']): string => {
+    if (!nominatimAddress) return '';
+    // Priority: city > state > province
+    return nominatimAddress.city || nominatimAddress.state || nominatimAddress.province || '';
+  };
+
+  const selectSearchResult = (result: NominatimResult) => {
+    const position = {
+      lat: parseFloat(result.lat),
+      lng: parseFloat(result.lon),
+    };
+    const extractedLocation = extractLocation(result.address);
+    
+    setSelectedPosition(position);
+    setAddress(result.display_name);
+    setLocation(extractedLocation);
+    setSearchInput(result.display_name);
+    setShowResults(false);
+
+    onLocationSelect({
+      address: result.display_name,
+      location: extractedLocation,
+      latitude: position.lat,
+      longitude: position.lng,
+    });
+  };
+
+  const onMapClick = async (e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      const position = { lat, lng };
+
+      setSelectedPosition(position);
+
+      // Reverse geocoding with Nominatim
+      try {
+        const response = await axios.get('https://nominatim.openstreetmap.org/reverse', {
+          params: {
+            lat: lat,
+            lon: lng,
+            format: 'json',
+            'accept-language': 'vi',
+          },
+          headers: {
+            'User-Agent': 'TripfinitySupplier/1.0',
+          },
+        });
+
+        const addressText = response.data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        const extractedLocation = extractLocation(response.data.address);
+        
+        setAddress(addressText);
+        setLocation(extractedLocation);
+        setSearchInput(addressText); // Update search input với địa chỉ từ map
 
         onLocationSelect({
-          address: formattedAddress,
+          address: addressText,
+          location: extractedLocation,
           latitude: lat,
           longitude: lng,
         });
+      } catch (error) {
+        console.error('Reverse geocoding error:', error);
+        const fallbackAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        setAddress(fallbackAddress);
+        setLocation('');
+        setSearchInput(fallbackAddress); // Update search input với tọa độ
 
-        console.log("✅ Đã chọn địa điểm:", formattedAddress, lat, lng);
-      }
-    }
-  }, [autocomplete, onLocationSelect]);
-
-  // Handle map click
-  const onMapClick = useCallback(
-    (e: google.maps.MapMouseEvent) => {
-      if (e.latLng) {
-        const lat = e.latLng.lat();
-        const lng = e.latLng.lng();
-
-        setSelectedPosition({ lat, lng });
-
-        // Sử dụng Geocoding API để lấy địa chỉ
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-          if (status === "OK" && results && results[0]) {
-            const formattedAddress = results[0].formatted_address;
-            setAddress(formattedAddress);
-            setSearchInput(formattedAddress);
-
-            onLocationSelect({
-              address: formattedAddress,
-              latitude: lat,
-              longitude: lng,
-            });
-
-            console.log("✅ Đã chọn vị trí:", formattedAddress, lat, lng);
-          } else {
-            // Fallback nếu Geocoding API lỗi
-            const coordsText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-            setAddress(coordsText);
-            setSearchInput(coordsText);
-
-            onLocationSelect({
-              address: coordsText,
-              latitude: lat,
-              longitude: lng,
-            });
-
-            console.warn("⚠️ Không lấy được địa chỉ, dùng tọa độ:", coordsText);
-          }
+        onLocationSelect({
+          address: fallbackAddress,
+          location: '',
+          latitude: lat,
+          longitude: lng,
         });
       }
-    },
-    [onLocationSelect]
-  );
+    }
+  };
 
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
@@ -150,24 +214,45 @@ const MapPicker: React.FC<MapPickerProps> = ({
         }
       >
         <div className="flex flex-col gap-3">
-          {/* Search Box */}
+          {/* Search Box with Nominatim */}
           <div className="relative">
-            <Autocomplete
-              onLoad={onLoadAutocomplete}
-              onPlaceChanged={onPlaceChanged}
-            >
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 icon-secondary pointer-events-none" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Tìm kiếm địa điểm..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border theme-border bg-light-surface dark:bg-dark-surface theme-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 icon-secondary pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setShowResults(true)}
+                placeholder="Tìm kiếm địa điểm..."
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border theme-border bg-light-surface dark:bg-dark-surface theme-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+              />
+              {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 animate-spin icon-brand" />
+              )}
+            </div>
+
+            {/* Search Results Dropdown */}
+            {showResults && searchResults.length > 0 && (
+              <div
+                ref={resultsRef}
+                className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border theme-border rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto"
+                style={{ backgroundColor: 'var(--color-surface, #ffffff)' }}
+              >
+                {searchResults.map((result) => (
+                  <button
+                    key={result.place_id}
+                    onClick={() => selectSearchResult(result)}
+                    className="w-full px-4 py-3 text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-b theme-border last:border-b-0 transition-colors"
+                  >
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 icon-brand mt-0.5 flex-shrink-0" />
+                      <p className="text-body2-mobile theme-text-primary">{result.display_name}</p>
+                    </div>
+                  </button>
+                ))}
               </div>
-            </Autocomplete>
+            )}
           </div>
 
           {/* Instruction text */}
@@ -201,8 +286,13 @@ const MapPicker: React.FC<MapPickerProps> = ({
                 <p className="font-medium theme-text-primary text-body2-mobile sm:text-body2-tablet">
                   Vị trí đã chọn:
                 </p>
+                {location && (
+                  <p className="theme-text-secondary text-caption-mobile sm:text-caption-tablet">
+                    <strong>Khu vực:</strong> {location}
+                  </p>
+                )}
                 <p className="theme-text-secondary text-caption-mobile sm:text-caption-tablet">
-                  {address}
+                  <strong>Địa chỉ:</strong> {address}
                 </p>
                 <p className="theme-text-tertiary text-caption-mobile">
                   Latitude: {selectedPosition.lat.toFixed(6)}, Longitude: {selectedPosition.lng.toFixed(6)}

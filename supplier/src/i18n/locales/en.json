@@ -361,5 +361,6 @@
   "no_notifications": "No notifications yet",
   "view_all_notifications": "View all notifications",
   "days_ago_suffix": "days ago",
-  "confirm_booking_message": "Are you sure you want to confirm this booking?"
+  "confirm_booking_message": "Are you sure you want to confirm this booking?",
+  "hours_ago_suffix": "hours ago"
 }

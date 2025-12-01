@@ -548,5 +548,6 @@
   "no_notifications": "Chưa có thông báo nào",
   "view_all_notifications": "Xem tất cả thông báo",
   "days_ago_suffix": "ngày trước",
-  "confirm_booking_message": "Bạn có chắc chắn muốn xác nhận đặt phòng này?"
+  "confirm_booking_message": "Bạn có chắc chắn muốn xác nhận đặt phòng này?",
+  "hours_ago_suffix": "giờ trước"
 }

@@ -523,6 +523,8 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
 
         console.log("🎉 Hotel creation completed successfully!");
         navigate("/supplier/service/hotel");
+        // Reload trang để map không bị loading
+        setTimeout(() => window.location.reload(), 100);
       } catch (err) {
         console.error("❌ Error creating hotel:", err);
         setErrors({

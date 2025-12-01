@@ -10,8 +10,7 @@ import {
 } from "lucide-react";
 import { useHotelEdit } from "../../../hooks/useHotelEdit";
 import type { HotelDTO } from "../../../types";
-import MapPicker from "../../../components/common/MapPicker";
-import type { LocationData } from "../../../components/common/MapPicker";
+import MapPicker, { type LocationData } from "../../../components/common/MapPicker";
 
 /* ================= Type definitions ================= */
 type PropertyType = NonNullable<HotelDTO["propertyType"]>;
@@ -98,6 +97,24 @@ const STAR_RATINGS = [1, 2, 3, 4, 5];
 
 // Price constraints for hotel price input
 const MAX_PRICE = 1000000000; // 1,000,000,000 VND
+
+// Helper function to match province from address string
+const matchAreaFromAddress = (address: string): number | null => {
+  const normalizedAddress = address.toLowerCase();
+  
+  // Tìm tỉnh/thành phố trong danh sách AREAS
+  for (const area of AREAS) {
+    const areaName = area.name.toLowerCase();
+    // Remove "thành phố" prefix for matching
+    const areaNameSimple = areaName.replace(/^(thành phố|tp\.?)\s*/i, '').trim();
+    
+    if (normalizedAddress.includes(areaName) || normalizedAddress.includes(areaNameSimple)) {
+      return area.id;
+    }
+  }
+  
+  return null;
+};
 
 // Highlights Dictionary (ID-based)
 const HIGHLIGHTS_OPTIONS = [
@@ -389,9 +406,20 @@ const HotelEditPage: React.FC = () => {
             </label>
             <select
               value={formData.areaId || ""}
-              onChange={(e) =>
-                updateField("areaId", Number(e.target.value) || null)
-              }
+              onChange={(e) => {
+                const newAreaId = Number(e.target.value) || null;
+                updateField("areaId", newAreaId);
+                
+                // Tự động set location field với tên tỉnh
+                if (newAreaId) {
+                  const selectedArea = AREAS.find(a => a.id === newAreaId);
+                  if (selectedArea) {
+                    updateField("location", selectedArea.name);
+                  }
+                } else {
+                  updateField("location", "");
+                }
+              }}
               className={baseInput}
             >
               <option value="">-- Chọn khu vực --</option>
@@ -535,17 +563,35 @@ const HotelEditPage: React.FC = () => {
                 updateField("address", data.address);
                 updateField("latitude", data.latitude);
                 updateField("longitude", data.longitude);
+                
+                // Tự động match và set areaId từ address
+                const matchedAreaId = matchAreaFromAddress(data.address);
+                if (matchedAreaId) {
+                  updateField("areaId", matchedAreaId);
+                  
+                  // Cũng set location field
+                  const matchedArea = AREAS.find(a => a.id === matchedAreaId);
+                  if (matchedArea) {
+                    updateField("location", matchedArea.name);
+                  }
+                }
               }}
               initialLocation={
                 formData.latitude && formData.longitude
                   ? {
                       address: formData.address || "",
+                      location: "", // Không dùng location từ MapPicker
                       latitude: formData.latitude,
                       longitude: formData.longitude,
                     }
-                  : null
+                  : undefined
               }
             />
+            {formData.address && (
+              <div className="text-caption-mobile theme-text-secondary">
+                <strong>Địa chỉ:</strong> {formData.address}
+              </div>
+            )}
           </div>
 
           {/* Service Description */}
