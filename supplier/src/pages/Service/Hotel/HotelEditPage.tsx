@@ -116,6 +116,24 @@ const matchAreaFromAddress = (address: string): number | null => {
   return null;
 };
 
+// Helper function to generate slug from title
+const generateSlugFromTitle = (title: string): string => {
+  if (!title || !title.trim()) return '';
+  
+  const slugBase = title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\u0111/g, 'd')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  
+  const randomDigits = Math.floor(100000000 + Math.random() * 900000000);
+  return `${slugBase}-${randomDigits}`;
+};
+
 // Highlights Dictionary (ID-based)
 const HIGHLIGHTS_OPTIONS = [
   { id: 1, label: "View biển" },
@@ -391,7 +409,16 @@ const HotelEditPage: React.FC = () => {
             </label>
             <input
               value={formData.title || ""}
-              onChange={(e) => updateField("title", e.target.value)}
+              onChange={(e) => {
+                const newTitle = e.target.value;
+                updateField("title", newTitle);
+                
+                // Tự động tạo slug mới từ title
+                if (newTitle.trim()) {
+                  const autoSlug = generateSlugFromTitle(newTitle);
+                  updateField("slug", autoSlug);
+                }
+              }}
               className={baseInput}
               placeholder="VD: Khách sạn Biển Xanh"
               maxLength={255}
@@ -495,7 +522,9 @@ const HotelEditPage: React.FC = () => {
 
           {/* Property Type */}
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Loại hình</label>
+            <label className={labelCls}>
+              Loại hình <span className="theme-text-error">*</span>
+            </label>
             <select
               value={formData.propertyType || "hotel"}
               onChange={(e) => {
@@ -510,11 +539,16 @@ const HotelEditPage: React.FC = () => {
                 </option>
               ))}
             </select>
+            {errors.propertyType && (
+              <span className={errorText}>{errors.propertyType}</span>
+            )}
           </div>
 
           {/* Star Rating */}
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Hạng sao</label>
+            <label className={labelCls}>
+              Hạng sao <span className="theme-text-error">*</span>
+            </label>
             <select
               value={formData.starRating || ""}
               onChange={(e) =>
@@ -596,7 +630,9 @@ const HotelEditPage: React.FC = () => {
 
           {/* Service Description */}
           <div className="flex flex-col gap-2 md:col-span-2">
-            <label className={labelCls}>Mô tả dịch vụ</label>
+            <label className={labelCls}>
+              Mô tả dịch vụ <span className="theme-text-error">*</span>
+            </label>
             <textarea
               value={formData.serviceDescription || ""}
               onChange={(e) =>
@@ -610,6 +646,9 @@ const HotelEditPage: React.FC = () => {
             <span className="theme-text-secondary text-caption-mobile ml-auto">
               {(formData.serviceDescription || "").length}/5000
             </span>
+            {errors.serviceDescription && (
+              <span className={errorText}>{errors.serviceDescription}</span>
+            )}
           </div>
         </div>
       </div>
@@ -945,16 +984,18 @@ const HotelEditPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Đường dẫn (Slug)</label>
+            <label className={labelCls}>Đường dẫn (Slug)
+              <span className="ml-2 text-xs theme-text-secondary">(Tự động tạo)</span>
+            </label>
             <input
               value={formData.slug || ""}
-              onChange={(e) => updateField("slug", e.target.value)}
-              className={baseInput}
-              placeholder="VD: khach-san-bien-xanh"
-              maxLength={255}
+              className={`${baseInput} bg-gray-100 dark:bg-gray-800 cursor-not-allowed`}
+              placeholder="Tự động tạo từ tên khách sạn"
+              disabled
+              readOnly
             />
             <span className="theme-text-secondary text-caption-mobile">
-              URL thân thiện cho SEO
+              Slug tự động cập nhật: tên-khách-sạn-123456789 (9 số ngẫu nhiên)
             </span>
           </div>
 

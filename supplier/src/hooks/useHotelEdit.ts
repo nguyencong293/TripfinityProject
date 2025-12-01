@@ -291,14 +291,56 @@ export const useHotelEdit = (
   const validateForm = useCallback((): boolean => {
     const newErrors: ValidationErrors = {};
 
-    if (!formData.title.trim()) newErrors.title = "Tiêu đề là bắt buộc";
-    if (!formData.areaId) newErrors.areaId = "Khu vực là bắt buộc";
+    // Required fields - Bắt buộc
+    if (!formData.title.trim()) 
+      newErrors.title = "Tiêu đề là bắt buộc";
+    if (!formData.areaId) 
+      newErrors.areaId = "Khu vực là bắt buộc";
     if (!formData.price || formData.price <= 0)
       newErrors.price = "Giá phải lớn hơn 0";
+    if (!formData.propertyType)
+      newErrors.propertyType = "Loại hình là bắt buộc";
+    if (!formData.serviceDescription.trim())
+      newErrors.serviceDescription = "Mô tả dịch vụ là bắt buộc";
+    if (!formData.location.trim())
+      newErrors.location = "Khu vực/địa phương là bắt buộc";
+    if (!formData.address.trim())
+      newErrors.address = "Địa chỉ là bắt buộc";
+    if (!formData.latitude || !formData.longitude)
+      newErrors.address = "Vị trí bản đồ là bắt buộc";
+    if (!formData.startDate)
+      newErrors.startDate = "Ngày bắt đầu là bắt buộc";
+    if (!formData.endDate)
+      newErrors.endDate = "Ngày kết thúc là bắt buộc";
+    if (!formData.capacity || formData.capacity <= 0)
+      newErrors.capacity = "Sức chứa là bắt buộc";
+    if (!formData.maxBedsPerRoom || formData.maxBedsPerRoom < 1)
+      newErrors.maxBedsPerRoom = "Số giường/phòng là bắt buộc";
+    if (!formData.totalRooms || formData.totalRooms <= 0)
+      newErrors.totalRooms = "Tổng số phòng là bắt buộc";
+    if (!formData.starRating)
+      newErrors.starRating = "Xếp hạng sao là bắt buộc";
+    if (!formData.checkinTime.trim())
+      newErrors.checkinTime = "Giờ check-in là bắt buộc";
+    if (!formData.checkoutTime.trim())
+      newErrors.checkoutTime = "Giờ check-out là bắt buộc";
+    if (!formData.policiesText.trim())
+      newErrors.policiesText = "Chính sách là bắt buộc";
+    
+    // Validation logic
     if (formData.pricePerNight != null && formData.pricePerNight < 0)
       newErrors.pricePerNight = "Giá mỗi đêm không hợp lệ";
-    if (formData.maxBedsPerRoom == null || formData.maxBedsPerRoom < 1)
-      newErrors.maxBedsPerRoom = "Số giường/ phòng phải >= 1";
+    
+    if (formData.starRating && (formData.starRating < 1 || formData.starRating > 5))
+      newErrors.starRating = "Đánh giá sao phải từ 1-5";
+
+    if (formData.minParticipants && formData.maxParticipants && 
+        formData.minParticipants > formData.maxParticipants)
+      newErrors.minParticipants = "Số lượng tối thiểu không được lớn hơn tối đa";
+
+    if (formData.startDate && formData.endDate && 
+        new Date(formData.startDate) > new Date(formData.endDate))
+      newErrors.startDate = "Ngày bắt đầu không được sau ngày kết thúc";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -311,17 +353,40 @@ export const useHotelEdit = (
           ...prev,
           general: "Vui lòng kiểm tra lại các trường bắt buộc",
         }));
+        // Hiển thị popup xác nhận reload để fix map loading
+        const shouldReload = window.confirm(
+          "❌ Vui lòng điền đầy đủ các trường bắt buộc!\n\n" +
+          "Bản đồ đang bị lỗi hiển thị. Bạn có muốn tải lại trang để tiếp tục không?\n\n" +
+          "(Các thay đổi chưa lưu sẽ bị mất)"
+        );
+        if (shouldReload) {
+          window.location.reload();
+        }
         return;
       }
 
       if (!hotel?.hotelId) {
         setErrors({ general: "Không tìm thấy thông tin khách sạn" });
+        const shouldReload = window.confirm(
+          "❌ Không tìm thấy thông tin khách sạn!\n\n" +
+          "Bạn có muốn tải lại trang để thử lại không?"
+        );
+        if (shouldReload) {
+          window.location.reload();
+        }
         return;
       }
 
       // ✅ FIX: Kiểm tra providerId trước khi submit
       if (!providerId) {
         setErrors({ general: "Không tìm thấy thông tin nhà cung cấp" });
+        const shouldReload = window.confirm(
+          "❌ Không tìm thấy thông tin nhà cung cấp!\n\n" +
+          "Bạn có muốn tải lại trang để thử lại không?"
+        );
+        if (shouldReload) {
+          window.location.reload();
+        }
         return;
       }
 

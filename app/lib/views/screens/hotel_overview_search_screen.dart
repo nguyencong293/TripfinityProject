@@ -30,7 +30,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
   int _searchPeople = 2;
 
   RangeValues _priceRange = const RangeValues(800000, 3500000);
-  static const double _minPrice = 500; // Fix: Minimum 500 to prevent errors
+  static const double _minPrice = 0; // Min có thể là 0
   static const double _maxPrice = 10000000;
 
   final Set<int> _selectedStars = {}; // 1..5
@@ -794,10 +794,32 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
   }
 
   RangeValues _normalizeRange(RangeValues v) {
-    if (v.end - v.start < 100000) {
-      final mid = (v.start + v.end) / 2;
-      return RangeValues(mid - 50000, mid + 50000);
+    // Rule: Nếu start = 0 thì end phải >= 500
+    // Rule: Nếu end < 500 thì start phải > 0
+    // Điều này đảm bảo không có range nào có khoảng < 500 bao gồm 0
+
+    if (v.start == 0 && v.end < 500) {
+      // Start = 0 nhưng end < 500 → force end = 500
+      return RangeValues(0, 500);
     }
+
+    if (v.end < 500 && v.start < (v.end - 100000).clamp(0, _maxPrice)) {
+      // End < 500 thì đảm bảo range đủ rộng
+      final minStart = (v.end - 100000).clamp(0, _maxPrice).toDouble();
+      if (v.start < minStart) {
+        return RangeValues(minStart, v.end);
+      }
+    }
+
+    // Đảm bảo khoảng cách tối thiểu 100k (trừ trường hợp start=0, end=500)
+    if (v.end - v.start < 100000 && !(v.start == 0 && v.end >= 500)) {
+      final mid = (v.start + v.end) / 2;
+      return RangeValues(
+        (mid - 50000).clamp(_minPrice, _maxPrice),
+        (mid + 50000).clamp(_minPrice, _maxPrice),
+      );
+    }
+
     return v;
   }
 

@@ -443,17 +443,24 @@ const HotelCreatePage: React.FC = () => {
                 console.log(`🔄 Title changed to: "${newTitle}"`);
                 updateField("title", newTitle);
 
-                // Auto-generate slug from title
-                if (!formData.slug || formData.slug === "") {
-                  const slug = newTitle
+                // Tự động tạo slug từ title + 9 số random
+                if (newTitle.trim()) {
+                  const slugBase = newTitle
                     .toLowerCase()
                     .normalize("NFD")
-                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[\u0300-\u036f]/g, "") // Remove accents
                     .replace(/đ/g, "d")
-                    .replace(/[^a-z0-9]+/g, "-")
-                    .replace(/(^-|-$)/g, "");
-                  console.log(`🔄 Auto-generated slug: "${slug}"`);
+                    .replace(/[^a-z0-9\s-]/g, "")
+                    .replace(/\s+/g, "-")
+                    .replace(/-+/g, "-")
+                    .replace(/^-|-$/g, "");
+                  
+                  // Generate 9 random digits
+                  const randomDigits = Math.floor(100000000 + Math.random() * 900000000);
+                  const slug = `${slugBase}-${randomDigits}`;
+                  
                   updateField("slug", slug);
+                  console.log(`✨ Auto-generated slug: ${slug}`);
                 }
               }}
               className={baseInput}
@@ -594,7 +601,9 @@ const HotelCreatePage: React.FC = () => {
 
           {/* Property Type */}
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Loại hình</label>
+            <label className={labelCls}>
+              Loại hình <span className="theme-text-error">*</span>
+            </label>
             <select
               value={formData.propertyType || "hotel"}
               onChange={(e) => {
@@ -617,14 +626,16 @@ const HotelCreatePage: React.FC = () => {
                 </option>
               ))}
             </select>
-            <span className="theme-text-secondary text-caption-mobile">
-              Mặc định: Khách sạn
-            </span>
+            {errors.propertyType && (
+              <span className={errorText}>{errors.propertyType}</span>
+            )}
           </div>
 
           {/* Star Rating */}
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Hạng sao</label>
+            <label className={labelCls}>
+              Hạng sao <span className="theme-text-error">*</span>
+            </label>
             <select
               value={formData.starRating || ""}
               onChange={(e) => {
@@ -641,11 +652,16 @@ const HotelCreatePage: React.FC = () => {
                 </option>
               ))}
             </select>
+            {errors.starRating && (
+              <span className={errorText}>{errors.starRating}</span>
+            )}
           </div>
 
           {/* Location & Address - Map Picker */}
           <div className="flex flex-col gap-2 md:col-span-2">
-            <label className={labelCls}>Vị trí & Địa chỉ</label>
+            <label className={labelCls}>
+              Vị trí & Địa chỉ <span className="theme-text-error">*</span>
+            </label>
             <MapPicker
               onLocationSelect={(data: LocationData) => {
                 console.log(`🔄 Location selected from map:`, data);
@@ -684,11 +700,19 @@ const HotelCreatePage: React.FC = () => {
                 <strong>Địa chỉ:</strong> {formData.address}
               </div>
             )}
+            {errors.address && (
+              <span className={errorText}>{errors.address}</span>
+            )}
+            {errors.location && (
+              <span className={errorText}>{errors.location}</span>
+            )}
           </div>
 
           {/* Service Description */}
           <div className="flex flex-col gap-2 md:col-span-2">
-            <label className={labelCls}>Mô tả dịch vụ</label>
+            <label className={labelCls}>
+              Mô tả dịch vụ <span className="theme-text-error">*</span>
+            </label>
             <textarea
               value={formData.serviceDescription || ""}
               onChange={(e) => {
@@ -705,6 +729,9 @@ const HotelCreatePage: React.FC = () => {
             <span className="theme-text-secondary text-caption-mobile ml-auto">
               {(formData.serviceDescription || "").length}/5000
             </span>
+            {errors.serviceDescription && (
+              <span className={errorText}>{errors.serviceDescription}</span>
+            )}
           </div>
         </div>
       </div>
@@ -725,7 +752,9 @@ const HotelCreatePage: React.FC = () => {
 
         <div className="grid md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Sức chứa (số khách)</label>
+            <label className={labelCls}>
+              Sức chứa (số khách) <span className="theme-text-error">*</span>
+            </label>
             <input
               type="number"
               value={formData.capacity || ""}
@@ -751,10 +780,15 @@ const HotelCreatePage: React.FC = () => {
               placeholder="VD: 100"
               min="0"
             />
+            {errors.capacity && (
+              <span className={errorText}>{errors.capacity}</span>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Tổng số phòng</label>
+            <label className={labelCls}>
+              Tổng số phòng <span className="theme-text-error">*</span>
+            </label>
             <input
               type="number"
               value={formData.totalRooms || ""}
@@ -767,9 +801,9 @@ const HotelCreatePage: React.FC = () => {
               placeholder="VD: 50"
               min="0"
             />
-            <span className="theme-text-secondary text-caption-mobile">
-              Số phòng tối đa có thể bán (tùy chọn)
-            </span>
+            {errors.totalRooms && (
+              <span className={errorText}>{errors.totalRooms}</span>
+            )}
           </div>
         </div>
 
@@ -840,7 +874,9 @@ const HotelCreatePage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Ngày bắt đầu hoạt động</label>
+            <label className={labelCls}>
+              Ngày bắt đầu hoạt động <span className="theme-text-error">*</span>
+            </label>
             <input
               type="date"
               value={formData.startDate || ""}
@@ -850,10 +886,15 @@ const HotelCreatePage: React.FC = () => {
               }}
               className={baseInput}
             />
+            {errors.startDate && (
+              <span className={errorText}>{errors.startDate}</span>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Ngày kết thúc hoạt động</label>
+            <label className={labelCls}>
+              Ngày kết thúc hoạt động <span className="theme-text-error">*</span>
+            </label>
             <input
               type="date"
               value={formData.endDate || ""}
@@ -863,10 +904,15 @@ const HotelCreatePage: React.FC = () => {
               }}
               className={baseInput}
             />
+            {errors.endDate && (
+              <span className={errorText}>{errors.endDate}</span>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Giờ check-in</label>
+            <label className={labelCls}>
+              Giờ check-in <span className="theme-text-error">*</span>
+            </label>
             <input
               type="time"
               value={formData.checkinTime || ""}
@@ -876,10 +922,15 @@ const HotelCreatePage: React.FC = () => {
               }}
               className={baseInput}
             />
+            {errors.checkinTime && (
+              <span className={errorText}>{errors.checkinTime}</span>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Giờ check-out</label>
+            <label className={labelCls}>
+              Giờ check-out <span className="theme-text-error">*</span>
+            </label>
             <input
               type="time"
               value={formData.checkoutTime || ""}
@@ -889,6 +940,9 @@ const HotelCreatePage: React.FC = () => {
               }}
               className={baseInput}
             />
+            {errors.checkoutTime && (
+              <span className={errorText}>{errors.checkoutTime}</span>
+            )}
           </div>
         </div>
       </div>
@@ -1045,7 +1099,9 @@ const HotelCreatePage: React.FC = () => {
 
         <div className="grid gap-6">
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Chính sách & Quy định</label>
+            <label className={labelCls}>
+              Chính sách & Quy định <span className="theme-text-error">*</span>
+            </label>
             <textarea
               value={formData.policiesText || ""}
               onChange={(e) => {
@@ -1058,22 +1114,24 @@ const HotelCreatePage: React.FC = () => {
               rows={5}
               placeholder="Các chính sách hủy đặt phòng, quy định về thời gian nhận/trả phòng..."
             />
+            {errors.policiesText && (
+              <span className={errorText}>{errors.policiesText}</span>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className={labelCls}>Đường dẫn (Slug)</label>
+            <label className={labelCls}>Đường dẫn (Slug)
+              <span className="ml-2 text-xs theme-text-secondary">(Tự động tạo)</span>
+            </label>
             <input
               value={formData.slug || ""}
-              onChange={(e) => {
-                console.log(`🔄 Slug changed to: "${e.target.value}"`);
-                updateField("slug", e.target.value);
-              }}
-              className={baseInput}
-              placeholder="khach-san-bien-xanh"
-              maxLength={255}
+              className={`${baseInput} bg-gray-100 dark:bg-gray-800 cursor-not-allowed`}
+              placeholder="Tự động tạo từ tên khách sạn"
+              disabled
+              readOnly
             />
             <span className="theme-text-secondary text-caption-mobile">
-              Tự động tạo từ tên khách sạn
+              Slug sẽ được tạo tự động: tên-khách-sạn-123456789 (9 số ngẫu nhiên)
             </span>
           </div>
 
