@@ -130,6 +130,8 @@ export interface HotelDTO {
     | "guesthouse"
     | "homestay";
   address?: string;
+  latitude?: number; // Latitude coordinate (BigDecimal in backend)
+  longitude?: number; // Longitude coordinate (BigDecimal in backend)
   checkinTime?: string; // HH:mm:ss
   checkoutTime?: string; // HH:mm:ss
 
@@ -144,7 +146,7 @@ export interface HotelDTO {
   isFeatured?: boolean;
 
   // Raw JSON string from backend (you can parse into bookingSettings if needed)
-  bookingSettingsJson?: string;
+
 
   // Timestamps
   publishedAt?: string; // ISO datetime

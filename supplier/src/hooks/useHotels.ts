@@ -179,6 +179,8 @@ interface HotelFormData {
   serviceDescription: string;
   location: string;
   address: string;
+  latitude?: number | null; // Coordinate for map
+  longitude?: number | null; // Coordinate for map
   startDate: string;
   endDate: string;
   capacity: number | null;
@@ -240,6 +242,8 @@ const initialFormData: HotelFormData = {
   serviceDescription: "",
   location: "",
   address: "",
+  latitude: null,
+  longitude: null,
   startDate: "",
   endDate: "",
   capacity: null,
@@ -459,6 +463,10 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
           hotelData.location = formData.location.trim();
         if (formData.address.trim())
           hotelData.address = formData.address.trim();
+        if (formData.latitude !== null && formData.latitude !== undefined)
+          hotelData.latitude = formData.latitude;
+        if (formData.longitude !== null && formData.longitude !== undefined)
+          hotelData.longitude = formData.longitude;
         if (formData.slug.trim()) hotelData.slug = formData.slug.trim();
         if (formData.seoTitle.trim())
           hotelData.seoTitle = formData.seoTitle.trim();
@@ -486,6 +494,15 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
           hotelData.checkoutTime = formData.checkoutTime;
 
         console.log("🔍 Final hotel payload:", hotelData);
+        console.log("📋 Payload details:", {
+          providerId: hotelData.providerId,
+          areaId: hotelData.areaId,
+          title: hotelData.title,
+          price: hotelData.price,
+          latitude: hotelData.latitude,
+          longitude: hotelData.longitude,
+          address: hotelData.address,
+        });
 
         const createdHotel = await createHotel(hotelData);
         console.log("✅ Hotel created:", createdHotel);

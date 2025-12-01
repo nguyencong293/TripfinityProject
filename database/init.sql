@@ -138,7 +138,6 @@ CREATE TABLE hotels (
     seo_title VARCHAR(255) DEFAULT NULL,
     seo_description VARCHAR(512) DEFAULT NULL,
     is_featured TINYINT(1) NOT NULL DEFAULT 0,
-    booking_settings_json JSON DEFAULT NULL,
     published_at DATETIME DEFAULT NULL,
 
     -- Visibility (đã điều chỉnh sang public_/private_)
@@ -148,6 +147,8 @@ CREATE TABLE hotels (
     star_rating TINYINT CHECK (star_rating BETWEEN 1 AND 5),
     property_type ENUM('hotel','resort','apartment','villa','hostel','guesthouse','homestay') DEFAULT 'hotel',
     address VARCHAR(255) DEFAULT NULL,
+    latitude DECIMAL(10,8) DEFAULT NULL COMMENT 'Latitude coordinate for map location',
+    longitude DECIMAL(11,8) DEFAULT NULL COMMENT 'Longitude coordinate for map location',
     checkin_time TIME DEFAULT NULL,
     checkout_time TIME DEFAULT NULL,
     highlights_json JSON DEFAULT NULL,
@@ -164,7 +165,8 @@ CREATE TABLE hotels (
 
     UNIQUE KEY uq_hotels_slug (slug),
     INDEX idx_hotels_provider (provider_id),
-    INDEX idx_hotels_status (hotel_status)
+    INDEX idx_hotels_status (hotel_status),
+    INDEX idx_hotels_location (latitude, longitude)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -783,7 +785,6 @@ ALTER TABLE tours
   ADD COLUMN seo_title VARCHAR(255) DEFAULT NULL,
   ADD COLUMN seo_description VARCHAR(512) DEFAULT NULL,
   ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0,
-  ADD COLUMN booking_settings_json JSON DEFAULT NULL,
   ADD COLUMN published_at DATETIME DEFAULT NULL,
   ADD COLUMN visibility ENUM('public','private') NOT NULL DEFAULT 'public',
   ADD UNIQUE KEY uq_tours_slug (slug),
@@ -807,7 +808,6 @@ ALTER TABLE attractions
   ADD COLUMN seo_title VARCHAR(255) DEFAULT NULL,
   ADD COLUMN seo_description VARCHAR(512) DEFAULT NULL,
   ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0,
-  ADD COLUMN booking_settings_json JSON DEFAULT NULL,
   ADD COLUMN published_at DATETIME DEFAULT NULL,
   ADD COLUMN visibility ENUM('public','private') NOT NULL DEFAULT 'public',
   ADD UNIQUE KEY uq_attractions_slug (slug),

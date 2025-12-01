@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useHotelEdit } from "../../../hooks/useHotelEdit";
 import type { HotelDTO } from "../../../types";
+import MapPicker from "../../../components/common/MapPicker";
+import type { LocationData } from "../../../components/common/MapPicker";
 
 /* ================= Type definitions ================= */
 type PropertyType = NonNullable<HotelDTO["propertyType"]>;
@@ -522,6 +524,27 @@ const HotelEditPage: React.FC = () => {
               className={baseInput}
               placeholder="Số nhà, tên đường..."
               maxLength={255}
+            />
+          </div>
+
+          {/* Map Picker */}
+          <div className="flex flex-col gap-2 md:col-span-2">
+            <label className={labelCls}>Vị trí & Địa chỉ</label>
+            <MapPicker
+              onLocationSelect={(data: LocationData) => {
+                updateField("address", data.address);
+                updateField("latitude", data.latitude);
+                updateField("longitude", data.longitude);
+              }}
+              initialLocation={
+                formData.latitude && formData.longitude
+                  ? {
+                      address: formData.address || "",
+                      latitude: formData.latitude,
+                      longitude: formData.longitude,
+                    }
+                  : null
+              }
             />
           </div>
 

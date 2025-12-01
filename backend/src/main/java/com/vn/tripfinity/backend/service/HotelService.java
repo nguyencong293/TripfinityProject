@@ -151,6 +151,8 @@ public class HotelService {
                 .starRating(dto.getStarRating())
                 .propertyType(dto.getPropertyType() != null ? Hotel.PropertyType.valueOf(dto.getPropertyType()) : null)
                 .address(dto.getAddress())
+                .latitude(dto.getLatitude())
+                .longitude(dto.getLongitude())
                 .checkinTime(dto.getCheckinTime())
                 .checkoutTime(dto.getCheckoutTime())
                 .highlightsJson(integerListToJson(dto.getHighlightsJson()))
@@ -160,7 +162,6 @@ public class HotelService {
                 .seoTitle(dto.getSeoTitle())
                 .seoDescription(dto.getSeoDescription())
                 .isFeatured(dto.getIsFeatured() != null ? dto.getIsFeatured() : false)
-                .bookingSettingsJson(dto.getBookingSettingsJson())
                 .publishedAt(publishedAt)
                 .visibility(dto.getVisibility() != null ? Hotel.Visibility.valueOf(dto.getVisibility())
                         : Hotel.Visibility.public_)
@@ -259,6 +260,10 @@ public class HotelService {
             hotel.setPropertyType(Hotel.PropertyType.valueOf(dto.getPropertyType()));
         if (dto.getAddress() != null)
             hotel.setAddress(dto.getAddress());
+        if (dto.getLatitude() != null)
+            hotel.setLatitude(dto.getLatitude());
+        if (dto.getLongitude() != null)
+            hotel.setLongitude(dto.getLongitude());
         if (dto.getCheckinTime() != null)
             hotel.setCheckinTime(dto.getCheckinTime());
         if (dto.getCheckoutTime() != null)
@@ -277,8 +282,7 @@ public class HotelService {
             hotel.setSeoDescription(dto.getSeoDescription());
         if (dto.getIsFeatured() != null)
             hotel.setIsFeatured(dto.getIsFeatured());
-        if (dto.getBookingSettingsJson() != null)
-            hotel.setBookingSettingsJson(dto.getBookingSettingsJson());
+
         if (dto.getVisibility() != null)
             hotel.setVisibility(Hotel.Visibility.valueOf(dto.getVisibility()));
 
@@ -517,6 +521,8 @@ public class HotelService {
                 .starRating(hotel.getStarRating())
                 .propertyType(hotel.getPropertyType() != null ? hotel.getPropertyType().name() : null)
                 .address(hotel.getAddress())
+                .latitude(hotel.getLatitude())
+                .longitude(hotel.getLongitude())
                 .checkinTime(hotel.getCheckinTime())
                 .checkoutTime(hotel.getCheckoutTime())
                 .highlightsJson(jsonToIntegerList(hotel.getHighlightsJson()))
@@ -526,7 +532,6 @@ public class HotelService {
                 .seoTitle(hotel.getSeoTitle())
                 .seoDescription(hotel.getSeoDescription())
                 .isFeatured(hotel.getIsFeatured())
-                .bookingSettingsJson(hotel.getBookingSettingsJson())
                 .publishedAt(hotel.getPublishedAt())
                 .visibility(hotel.getVisibility() != null ? hotel.getVisibility().name() : null)
                 .createdAt(hotel.getCreatedAt())

@@ -120,6 +120,14 @@ public class HotelDTO {
     @Size(max = 255)
     private String address;
 
+    @DecimalMin(value = "-90.0", message = "latitude phải >= -90.0")
+    @DecimalMax(value = "90.0", message = "latitude phải <= 90.0")
+    private BigDecimal latitude;
+
+    @DecimalMin(value = "-180.0", message = "longitude phải >= -180.0")
+    @DecimalMax(value = "180.0", message = "longitude phải <= 180.0")
+    private BigDecimal longitude;
+
     @JsonAlias("checkin_time")
     private LocalTime checkinTime;
 
@@ -150,8 +158,7 @@ public class HotelDTO {
     @JsonAlias("is_featured")
     private Boolean isFeatured;
 
-    @JsonAlias("booking_settings_json")
-    private String bookingSettingsJson; // JSON string
+
 
     @JsonAlias("published_at")
     private LocalDateTime publishedAt;

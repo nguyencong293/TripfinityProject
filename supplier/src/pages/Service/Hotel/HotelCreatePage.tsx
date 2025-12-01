@@ -9,6 +9,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useHotelCreate } from "../../../hooks/useHotels";
+import MapPicker, { type LocationData } from "../../../components/common/MapPicker";
 
 /* ================= Constants ================= */
 const PROPERTY_TYPES = [
@@ -613,34 +614,34 @@ const HotelCreatePage: React.FC = () => {
             </select>
           </div>
 
-          {/* Location */}
-          <div className="flex flex-col gap-2">
-            <label className={labelCls}>Vị trí</label>
-            <input
-              value={formData.location || ""}
-              onChange={(e) => {
-                console.log(`🔄 Location changed to: "${e.target.value}"`);
-                updateField("location", e.target.value);
-              }}
-              className={baseInput}
-              placeholder="VD: Quận 1, TP.HCM"
-              maxLength={255}
-            />
-          </div>
-
-          {/* Address */}
+          {/* Location & Address - Map Picker */}
           <div className="flex flex-col gap-2 md:col-span-2">
-            <label className={labelCls}>Địa chỉ chi tiết</label>
-            <input
-              value={formData.address || ""}
-              onChange={(e) => {
-                console.log(`🔄 Address changed to: "${e.target.value}"`);
-                updateField("address", e.target.value);
+            <label className={labelCls}>Vị trí & Địa chỉ</label>
+            <MapPicker
+              onLocationSelect={(data: LocationData) => {
+                console.log(`🔄 Location selected from map:`, data);
+                updateField("address", data.address);
+                updateField("latitude", data.latitude);
+                updateField("longitude", data.longitude);
+                // Extract city/area from address for location field
+                const locationPart = data.address.split(",").slice(-2).join(",").trim();
+                updateField("location", locationPart);
               }}
-              className={baseInput}
-              placeholder="Số nhà, tên đường..."
-              maxLength={255}
+              initialLocation={
+                formData.latitude && formData.longitude
+                  ? {
+                      address: formData.address || "",
+                      latitude: formData.latitude,
+                      longitude: formData.longitude,
+                    }
+                  : null
+              }
             />
+            {formData.address && (
+              <div className="text-caption-mobile theme-text-secondary">
+                <strong>Địa chỉ:</strong> {formData.address}
+              </div>
+            )}
           </div>
 
           {/* Service Description */}

@@ -131,6 +131,12 @@ public class Hotel {
     @Column(name = "address", length = 255)
     private String address;
 
+    @Column(name = "latitude", precision = 10, scale = 8)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 11, scale = 8)
+    private BigDecimal longitude;
+
     @Column(name = "checkin_time")
     private LocalTime checkinTime;
 
@@ -159,8 +165,7 @@ public class Hotel {
     @Column(name = "is_featured", nullable = false)
     private Boolean isFeatured;
 
-    @Column(name = "booking_settings_json", columnDefinition = "JSON")
-    private String bookingSettingsJson;
+
 
     @Column(name = "published_at")
     private LocalDateTime publishedAt;

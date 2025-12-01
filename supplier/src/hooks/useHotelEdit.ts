@@ -26,6 +26,8 @@ interface HotelFormData {
   serviceDescription: string;
   location: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
   startDate: string;
   endDate: string;
   capacity: number | null;
@@ -99,6 +101,8 @@ export const useHotelEdit = (
     serviceDescription: "",
     location: "",
     address: "",
+    latitude: null,
+    longitude: null,
     startDate: "",
     endDate: "",
     capacity: null,
@@ -178,6 +182,8 @@ export const useHotelEdit = (
           serviceDescription: hotelData.serviceDescription || "",
           location: hotelData.location || "",
           address: hotelData.address || "",
+          latitude: hotelData.latitude ?? null,
+          longitude: hotelData.longitude ?? null,
           startDate: hotelData.startDate || "",
           endDate: hotelData.endDate || "",
           capacity: hotelData.capacity || null,
@@ -350,6 +356,10 @@ export const useHotelEdit = (
           hotelData.location = formData.location.trim();
         if (formData.address.trim())
           hotelData.address = formData.address.trim();
+        if (formData.latitude !== null && formData.latitude !== undefined)
+          hotelData.latitude = formData.latitude;
+        if (formData.longitude !== null && formData.longitude !== undefined)
+          hotelData.longitude = formData.longitude;
         if (formData.slug.trim()) hotelData.slug = formData.slug.trim();
         if (formData.seoTitle.trim())
           hotelData.seoTitle = formData.seoTitle.trim();
@@ -395,6 +405,8 @@ export const useHotelEdit = (
 
         console.log("🎉 Hotel update completed successfully!");
         navigate("/supplier/service/hotel");
+        // Reload trang để MapPicker hiển thị đúng vị trí mới
+        window.location.reload();
       } catch (err) {
         console.error("❌ Error updating hotel:", err);
         setErrors({
