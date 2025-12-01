@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
@@ -1556,33 +1559,125 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     final location = d['location']?.toString();
     final text = address?.isNotEmpty == true ? address! : (location ?? '');
 
+    // Lấy latitude và longitude từ backend
+    final latitude = d['latitude'];
+    final longitude = d['longitude'];
+
+    double? lat;
+    double? lng;
+
+    if (latitude != null && longitude != null) {
+      if (latitude is num) lat = latitude.toDouble();
+      if (longitude is num) lng = longitude.toDouble();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (text.isNotEmpty)
-          InkWell(
-            onTap: () {},
-            child: Text(
-              text,
-              style: context.bodyTwoStyle.copyWith(
-                color: context.primaryColor,
-                decoration: TextDecoration.underline,
-                fontWeight: FontWeight.w600,
-              ),
+        if (lat != null && lng != null)
+          FutureBuilder<String>(
+            future: _reverseGeocode(lat, lng),
+            builder: (context, snapshot) {
+              final displayAddress = snapshot.data ?? text;
+              return InkWell(
+                onTap: () {
+                  final url =
+                      'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+                  launchUrl(
+                    Uri.parse(url),
+                    mode: LaunchMode.externalApplication,
+                  );
+                },
+                child: Text(
+                  displayAddress,
+                  style: context.bodyTwoStyle.copyWith(
+                    color: context.primaryColor,
+                    decoration: TextDecoration.underline,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            },
+          )
+        else if (text.isNotEmpty)
+          Text(
+            text,
+            style: context.bodyTwoStyle.copyWith(
+              color: context.primaryColor,
+              decoration: TextDecoration.underline,
+              fontWeight: FontWeight.w600,
             ),
           ),
         const SizedBox(height: 12),
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.asset(
-            'assets/images/onboarding2.png',
-            height: 160,
+          child: SizedBox(
+            height: 200,
             width: double.infinity,
-            fit: BoxFit.cover,
+            child: lat != null && lng != null
+                ? GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(lat, lng),
+                      zoom: 15,
+                    ),
+                    markers: {
+                      Marker(
+                        markerId: const MarkerId('hotel_location'),
+                        position: LatLng(lat, lng),
+                        infoWindow: InfoWindow(
+                          title: d['title']?.toString() ?? 'Khách sạn',
+                          snippet: text,
+                        ),
+                      ),
+                    },
+                    zoomControlsEnabled: false,
+                    myLocationButtonEnabled: false,
+                    mapToolbarEnabled: false,
+                    compassEnabled: false,
+                    rotateGesturesEnabled: false,
+                    scrollGesturesEnabled: true,
+                    zoomGesturesEnabled: true,
+                    tiltGesturesEnabled: false,
+                    liteModeEnabled: true, // Chế độ lite giảm rendering
+                  )
+                : Image.asset(
+                    'assets/images/onboarding2.png',
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
           ),
         ),
       ],
     );
+  }
+
+  // Reverse Geocoding với Nominatim OpenStreetMap
+  Future<String> _reverseGeocode(double lat, double lng) async {
+    try {
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json&accept-language=vi',
+      );
+
+      final response = await http
+          .get(url, headers: {'User-Agent': 'TripfinityApp/1.0'})
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final displayName = data['display_name'] as String?;
+
+        if (displayName != null && displayName.isNotEmpty) {
+          // Trả về địa chỉ tiếng Việt từ Nominatim
+          return displayName;
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Reverse geocode error: $e');
+    }
+
+    // Fallback: hiển thị tọa độ nếu API lỗi
+    return '$lat, $lng';
   }
 
   // ===== Helpers =====
