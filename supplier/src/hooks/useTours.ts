@@ -339,7 +339,33 @@ export const useTourCreate = (): UseTourCreateReturn => {
   const updateField = useCallback(
     <K extends keyof TourFormData>(field: K, value: TourFormData[K]) => {
       // DEBUG: console.log(`🔄 updateField: ${String(field)} =`, value);
-      setFormData((prev) => ({ ...prev, [field]: value }));
+      
+      // Auto-clamp minParticipants và maxParticipants theo capacity
+      let finalValue = value;
+      if (field === 'minParticipants' || field === 'maxParticipants') {
+        const numValue = value as number | null;
+        if (numValue !== null && numValue !== undefined) {
+          setFormData((prev) => {
+            const capacity = prev.capacity;
+            if (capacity && numValue > capacity) {
+              // Tự động set về capacity nếu vượt quá
+              finalValue = capacity as TourFormData[K];
+            } else if (numValue < 1) {
+              // Tối thiểu là 1
+              finalValue = 1 as TourFormData[K];
+            }
+            return { ...prev, [field]: finalValue };
+          });
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors[field];
+            return newErrors;
+          });
+          return;
+        }
+      }
+      
+      setFormData((prev) => ({ ...prev, [field]: finalValue }));
       setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[field];
@@ -407,6 +433,31 @@ export const useTourCreate = (): UseTourCreateReturn => {
     if (!formData.capacity || formData.capacity <= 0) {
       newErrors.capacity = "Sức chứa là bắt buộc";
       missingFields.push("Sức chứa");
+    }
+
+    // Validate minParticipants và maxParticipants dựa trên capacity
+    if (formData.minParticipants !== null && formData.minParticipants !== undefined) {
+      if (formData.minParticipants < 1) {
+        newErrors.minParticipants = "Số người tối thiểu phải ít nhất là 1";
+        missingFields.push("Số người tối thiểu hợp lệ");
+      }
+      if (formData.capacity && formData.minParticipants > formData.capacity) {
+        newErrors.minParticipants = `Số người tối thiểu không được vượt quá sức chứa (${formData.capacity})`;
+        missingFields.push("Số người tối thiểu hợp lệ");
+      }
+    }
+
+    if (formData.maxParticipants !== null && formData.maxParticipants !== undefined) {
+      if (formData.capacity && formData.maxParticipants > formData.capacity) {
+        newErrors.maxParticipants = `Số người tối đa không được vượt quá sức chứa (${formData.capacity})`;
+        missingFields.push("Số người tối đa hợp lệ");
+      }
+    }
+
+    if (formData.minParticipants && formData.maxParticipants && 
+        formData.minParticipants > formData.maxParticipants) {
+      newErrors.minParticipants = "Số người tối thiểu không được lớn hơn số người tối đa";
+      missingFields.push("Số người tối thiểu/tối đa hợp lệ");
     }
 
     if (formData.startDate && formData.endDate && 

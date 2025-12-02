@@ -4,9 +4,13 @@ import type { HotelDTO, HotelFilters } from "../types";
 import {
   getHotelsByProvider,
   createHotel,
-  uploadHotelThumbnail,
-  uploadHotelImages,
 } from "../services/hotelService";
+import {
+  uploadSingleImage,
+  uploadMultipleImages,
+  deleteImage,
+  deleteMultipleImages,
+} from "../services/uploadService";
 import { getProviderByUserId } from "../services/providerService";
 
 /* ============================================
@@ -465,9 +469,25 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
       setSubmitting(true);
       setErrors({});
 
-      try {
-        // DEBUG: console.log("🚀 Submitting hotel with data (raw form):", formData);
+      let uploadedThumbnailUrl: string | null = null;
+      let uploadedImageUrls: string[] = [];
 
+      try {
+        // STEP 1: Upload thumbnail first (independent of hotel ID)
+        if (thumbnailFile) {
+          // DEBUG: console.log("📸 Uploading thumbnail...");
+          uploadedThumbnailUrl = await uploadSingleImage(thumbnailFile);
+          // DEBUG: console.log("✅ Thumbnail uploaded:", uploadedThumbnailUrl);
+        }
+
+        // STEP 2: Upload gallery images (independent of hotel ID)
+        if (imageFiles.length > 0) {
+          // DEBUG: console.log("🖼️ Uploading", imageFiles.length, "images...");
+          uploadedImageUrls = await uploadMultipleImages(imageFiles);
+          // DEBUG: console.log("✅ Images uploaded:", uploadedImageUrls);
+        }
+
+        // STEP 3: Prepare hotel data
         const hotelData: Partial<HotelDTO> = {
           providerId,
           areaId: formData.areaId!,
@@ -522,33 +542,22 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
         if (formData.checkoutTime)
           hotelData.checkoutTime = formData.checkoutTime;
 
-        // DEBUG: console.log("🔍 Final hotel payload:", hotelData);
-        // DEBUG: console.log("📋 Payload details:", {
-        //   providerId: hotelData.providerId,
-        //   areaId: hotelData.areaId,
-        //   title: hotelData.title,
-        //   price: hotelData.price,
-        //   latitude: hotelData.latitude,
-        //   longitude: hotelData.longitude,
-        //   address: hotelData.address,
-        //   slug: hotelData.slug,
-        // });
+        // STEP 4: Attach uploaded URLs to hotel data
+        if (uploadedThumbnailUrl) {
+          hotelData.thumbnailUrl = uploadedThumbnailUrl;
+        }
+        if (uploadedImageUrls.length > 0) {
+          hotelData.imageUrls = uploadedImageUrls;
+        }
 
+        // DEBUG: console.log("🔍 Final hotel payload:", hotelData);
+
+        // STEP 5: Create hotel with complete data (atomic DB operation)
         const createdHotel = await createHotel(hotelData);
         // DEBUG: console.log("✅ Hotel created:", createdHotel);
 
         if (!createdHotel.hotelId) {
           throw new Error("Hotel created but ID not returned");
-        }
-
-        if (thumbnailFile) {
-          // DEBUG: console.log("📸 Uploading thumbnail...");
-          await uploadHotelThumbnail(createdHotel.hotelId, thumbnailFile);
-        }
-
-        if (imageFiles.length > 0) {
-          // DEBUG: console.log("🖼️ Uploading", imageFiles.length, "images...");
-          await uploadHotelImages(createdHotel.hotelId, imageFiles);
         }
 
         // DEBUG: console.log("🎉 Hotel creation completed successfully!");
@@ -557,6 +566,21 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
         setTimeout(() => window.location.reload(), 100);
       } catch (err) {
         console.error("❌ Error creating hotel:", err);
+        
+        // ROLLBACK: Delete uploaded images if hotel creation failed
+        try {
+          if (uploadedThumbnailUrl) {
+            // DEBUG: console.log("🔄 Rolling back thumbnail...");
+            await deleteImage(uploadedThumbnailUrl);
+          }
+          if (uploadedImageUrls.length > 0) {
+            // DEBUG: console.log("🔄 Rolling back", uploadedImageUrls.length, "images...");
+            await deleteMultipleImages(uploadedImageUrls);
+          }
+        } catch (rollbackErr) {
+          console.error("❌ Rollback failed:", rollbackErr);
+        }
+
         setErrors({
           general: err instanceof Error ? err.message : "Lỗi tạo khách sạn",
         });
