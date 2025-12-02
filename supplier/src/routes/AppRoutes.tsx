@@ -13,6 +13,7 @@ import DashboardAttractionPage from "../pages/Service/Attraction/DashboardAttrac
 import HotelCreatePage from "../pages/Service/Hotel/HotelCreatePage";
 import HotelEditPage from "../pages/Service/Hotel/HotelEditPage";
 import TourCreatePage from "../pages/Service/Tour/TourCreatePage";
+import TourEditPage from "../pages/Service/Tour/TourEditPage";
 import ProviderInfoPage from "../pages/Auth/ProviderInfoPage";
 import ProtectedRoute from "./ProtectedRoute";
 import PublicRoute from "./PublicRoute";
@@ -58,6 +59,10 @@ const AppRoutes: React.FC = () => {
             <Route path="listings" element={<ListingsPage />} />
             <Route path="service/tour" element={<DashboardTourPage />} />
             <Route path="service/tour/create" element={<TourCreatePage />} />
+            <Route
+              path="service/tour/:tourId/edit"
+              element={<TourEditPage />}
+            />
             <Route path="service/hotel" element={<DashboardHotelPage />} />
             <Route path="service/hotel/list" element={<ListHotelPage />} />
             <Route path="service/hotel/all-reviews" element={<AllReviewsPage />} />

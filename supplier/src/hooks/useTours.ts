@@ -4,6 +4,8 @@ import type { TourDTO, TourFilters } from "../types";
 import {
   getToursByProvider,
   createTour,
+  getTourById,
+  updateTour,
 } from "../services/tourService";
 import { 
   uploadSingleImage, 
@@ -12,6 +14,26 @@ import {
   deleteMultipleImages 
 } from "../services/uploadService";
 import { getProviderByUserId } from "../services/providerService";
+
+/* ============================================
+ * HELPER FUNCTIONS
+ * ============================================ */
+
+// Helper để parse JSON array safely
+function parseJsonArray<T>(value: string | T[] | undefined | null): T[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return Array.isArray(parsed) ? (parsed as T[]) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 
 /* ============================================
  * LIST + FILTER HOOK
@@ -536,19 +558,31 @@ export const useTourCreate = (): UseTourCreateReturn => {
           difficultyLevel: formData.difficultyLevel || undefined,
           departureLocation: formData.departureLocation || undefined,
           meetingPoint: formData.meetingPoint || undefined,
-          guideLanguagesJson: formData.guideLanguagesJson.length > 0 ? formData.guideLanguagesJson : undefined,
+          guideLanguagesJson: formData.guideLanguagesJson.length > 0 
+            ? formData.guideLanguagesJson 
+            : undefined,
           itineraryOverview: formData.itineraryOverview || undefined,
           itineraryDetailsJson: formData.itineraryDetailsJson.length > 0 
             ? JSON.stringify(formData.itineraryDetailsJson) 
             : undefined,
-          includedJson: formData.includedJson.length > 0 ? formData.includedJson : undefined,
-          excludedJson: formData.excludedJson.length > 0 ? formData.excludedJson : undefined,
+          includedJson: formData.includedJson.length > 0 
+            ? formData.includedJson 
+            : undefined,
+          excludedJson: formData.excludedJson.length > 0 
+            ? formData.excludedJson 
+            : undefined,
           cancellationPolicy: formData.cancellationPolicy || undefined,
           policiesText: formData.policiesText || undefined,
           tourType: formData.tourType || undefined,
-          categoriesJson: formData.categoriesJson.length > 0 ? formData.categoriesJson : undefined,
-          servicesJson: formData.servicesJson.length > 0 ? formData.servicesJson : undefined,
-          badges: formData.badges.length > 0 ? formData.badges : undefined,
+          categoriesJson: formData.categoriesJson.length > 0 
+            ? formData.categoriesJson 
+            : undefined,
+          servicesJson: formData.servicesJson.length > 0 
+            ? formData.servicesJson 
+            : undefined,
+          badges: formData.badges.length > 0 
+            ? formData.badges 
+            : undefined,
           slug: formData.slug || undefined,
           seoTitle: formData.seoTitle || undefined,
           seoDescription: formData.seoDescription || undefined,
@@ -615,6 +649,450 @@ export const useTourCreate = (): UseTourCreateReturn => {
     loading,
     submitting,
     providerId,
+    thumbnailFile,
+    imageFiles,
+    thumbnailPreview,
+    imagePreviews,
+    updateField,
+    updateArrayField,
+    setThumbnailFile,
+    setImageFiles,
+    removeImageFile,
+    validateForm,
+    handleSubmit,
+    resetForm,
+  };
+};
+
+/* ============================================
+ * EDIT HOOK
+ * ============================================ */
+
+interface UseTourEditReturn extends Omit<UseTourCreateReturn, 'handleSubmit'> {
+  tourId: number | null;
+  existingThumbnailUrl: string | null;
+  existingImageUrls: string[];
+  handleSubmit: (status?: TourStatus) => Promise<{ success: boolean; missingFields: string[] }>;
+}
+
+export const useTourEdit = (tourIdParam: number): UseTourEditReturn => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState<TourFormData>(initialFormData);
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [providerId, setProviderId] = useState<number | null>(null);
+  const [tourId] = useState<number | null>(tourIdParam);
+  
+  // Existing images from server
+  const [existingThumbnailUrl, setExistingThumbnailUrl] = useState<string | null>(null);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
+  
+  // New files to upload
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  
+  // Previews
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  // Load tour data
+  useEffect(() => {
+    (async () => {
+      if (!tourId) {
+        setErrors({ general: "Tour ID không hợp lệ" });
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userStr = localStorage.getItem("user");
+        if (!userStr) throw new Error("User not found");
+        
+        const user = JSON.parse(userStr);
+        const providerData = await getProviderByUserId(user.userId);
+        
+        if (providerData && providerData.providerId) {
+          setProviderId(providerData.providerId);
+        } else {
+          throw new Error("Provider not found");
+        }
+
+        const tourData = await getTourById(tourId);
+        
+        // Populate form
+        setFormData({
+          title: tourData.title || "",
+          areaId: tourData.areaId || null,
+          price: tourData.price || 1,
+          currencyCode: tourData.currencyCode || "VND",
+          tourStatus: tourData.tourStatus || "draft",
+          visibility: tourData.visibility || "public",
+          isFeatured: tourData.isFeatured || false,
+          serviceDescription: tourData.serviceDescription || "",
+          location: tourData.location || "",
+          address: tourData.address || "",
+          latitude: tourData.latitude || null,
+          longitude: tourData.longitude || null,
+          startDate: tourData.startDate || "",
+          endDate: tourData.endDate || "",
+          capacity: tourData.capacity || null,
+          minParticipants: tourData.minParticipants || null,
+          maxParticipants: tourData.maxParticipants || null,
+          durationDays: tourData.durationDays || null,
+          difficultyLevel: tourData.difficultyLevel || "easy",
+          departureLocation: tourData.departureLocation || "",
+          meetingPoint: tourData.meetingPoint || "",
+          guideLanguagesJson: parseJsonArray<string>(tourData.guideLanguagesJson),
+          itineraryOverview: tourData.itineraryOverview || "",
+          itineraryDetailsJson: parseJsonArray(tourData.itineraryDetailsJson),
+          includedJson: parseJsonArray<string>(tourData.includedJson),
+          excludedJson: parseJsonArray<string>(tourData.excludedJson),
+          cancellationPolicy: tourData.cancellationPolicy || "",
+          policiesText: tourData.policiesText || "",
+          tourType: tourData.tourType || "group",
+          categoriesJson: parseJsonArray<string>(tourData.categoriesJson),
+          servicesJson: parseJsonArray<string>(tourData.servicesJson),
+          badges: parseJsonArray<string>(tourData.badges),
+          slug: tourData.slug || "",
+          seoTitle: tourData.seoTitle || "",
+          seoDescription: tourData.seoDescription || "",
+        });
+
+        // Set existing images
+        setExistingThumbnailUrl(tourData.thumbnailUrl || null);
+        setExistingImageUrls(parseJsonArray<string>(tourData.imageUrls));
+        
+      } catch (err) {
+        setErrors({
+          general: err instanceof Error ? err.message : "Không thể tải tour",
+        });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [tourId]);
+
+  useEffect(() => {
+    if (thumbnailFile) {
+      const url = URL.createObjectURL(thumbnailFile);
+      setThumbnailPreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setThumbnailPreview(null);
+    }
+  }, [thumbnailFile]);
+
+  useEffect(() => {
+    const urls = imageFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [imageFiles]);
+
+  const updateField = useCallback(
+    <K extends keyof TourFormData>(field: K, value: TourFormData[K]) => {
+      // Auto-clamp minParticipants và maxParticipants theo capacity
+      let finalValue = value;
+      if (field === 'minParticipants' || field === 'maxParticipants') {
+        const numValue = value as number | null;
+        if (numValue !== null && numValue !== undefined) {
+          setFormData((prev) => {
+            const capacity = prev.capacity;
+            if (capacity && numValue > capacity) {
+              finalValue = capacity as TourFormData[K];
+            } else if (numValue < 1) {
+              finalValue = 1 as TourFormData[K];
+            }
+            return { ...prev, [field]: finalValue };
+          });
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors[field];
+            return newErrors;
+          });
+          return;
+        }
+      }
+      
+      setFormData((prev) => ({ ...prev, [field]: finalValue }));
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    },
+    []
+  );
+
+  const updateArrayField = useCallback(
+    (
+      field: "guideLanguagesJson" | "includedJson" | "excludedJson" | "categoriesJson" | "servicesJson" | "badges",
+      value: string[]
+    ) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value.filter((v) => String(v).trim() !== ""),
+      }));
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    },
+    []
+  );
+
+  const removeImageFile = useCallback((index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const validateForm = useCallback((): { isValid: boolean; missingFields: string[] } => {
+    const newErrors: ValidationErrors = {};
+    const missingFields: string[] = [];
+
+    if (!formData.title.trim()) {
+      newErrors.title = "Tên tour là bắt buộc";
+      missingFields.push("Tên tour");
+    }
+    if (!formData.areaId) {
+      newErrors.areaId = "Vui lòng chọn khu vực";
+      missingFields.push("Khu vực");
+    }
+    if (formData.price <= 0) {
+      newErrors.price = "Giá phải lớn hơn 0";
+      missingFields.push("Giá tour");
+    }
+    if (!formData.location.trim()) {
+      newErrors.location = "Địa điểm là bắt buộc";
+      missingFields.push("Địa điểm");
+    }
+    if (!formData.address.trim()) {
+      newErrors.address = "Địa chỉ là bắt buộc";
+      missingFields.push("Địa chỉ");
+    }
+    if (!formData.serviceDescription.trim()) {
+      newErrors.serviceDescription = "Mô tả tour là bắt buộc";
+      missingFields.push("Mô tả tour");
+    }
+    if (!formData.durationDays || formData.durationDays <= 0) {
+      newErrors.durationDays = "Số ngày tour là bắt buộc";
+      missingFields.push("Số ngày");
+    }
+    if (!formData.capacity || formData.capacity <= 0) {
+      newErrors.capacity = "Sức chứa là bắt buộc";
+      missingFields.push("Sức chứa");
+    }
+
+    // Validate minParticipants và maxParticipants dựa trên capacity
+    if (formData.minParticipants !== null && formData.minParticipants !== undefined) {
+      if (formData.minParticipants < 1) {
+        newErrors.minParticipants = "Số người tối thiểu phải ít nhất là 1";
+        missingFields.push("Số người tối thiểu hợp lệ");
+      }
+      if (formData.capacity && formData.minParticipants > formData.capacity) {
+        newErrors.minParticipants = `Số người tối thiểu không được vượt quá sức chứa (${formData.capacity})`;
+        missingFields.push("Số người tối thiểu hợp lệ");
+      }
+    }
+
+    if (formData.maxParticipants !== null && formData.maxParticipants !== undefined) {
+      if (formData.capacity && formData.maxParticipants > formData.capacity) {
+        newErrors.maxParticipants = `Số người tối đa không được vượt quá sức chứa (${formData.capacity})`;
+        missingFields.push("Số người tối đa hợp lệ");
+      }
+    }
+
+    if (formData.minParticipants && formData.maxParticipants && 
+        formData.minParticipants > formData.maxParticipants) {
+      newErrors.minParticipants = "Số người tối thiểu không được lớn hơn số người tối đa";
+      missingFields.push("Số người tối thiểu/tối đa hợp lệ");
+    }
+
+    if (formData.startDate && formData.endDate && 
+        new Date(formData.startDate) > new Date(formData.endDate)) {
+      newErrors.startDate = "Ngày bắt đầu không được sau ngày kết thúc";
+      missingFields.push("Ngày bắt đầu/kết thúc hợp lệ");
+    }
+
+    setErrors(newErrors);
+    return { 
+      isValid: Object.keys(newErrors).length === 0,
+      missingFields 
+    };
+  }, [formData]);
+
+  const handleSubmit = useCallback(
+    async (status?: TourStatus) => {
+      if (!providerId) {
+        setErrors({ general: "Provider ID không hợp lệ" });
+        return { success: false, missingFields: ["Provider ID"] };
+      }
+
+      if (!tourId) {
+        setErrors({ general: "Tour ID không hợp lệ" });
+        return { success: false, missingFields: ["Tour ID"] };
+      }
+
+      const validation = validateForm();
+      if (!validation.isValid) {
+        setErrors((prev) => ({
+          ...prev,
+          general: "Vui lòng kiểm tra lại các trường bắt buộc",
+        }));
+        return { success: false, missingFields: validation.missingFields };
+      }
+
+      setSubmitting(true);
+      setErrors({});
+
+      let uploadedThumbnailUrl: string | null = null;
+      let uploadedImageUrls: string[] = [];
+
+      try {
+        // STEP 1: Upload new thumbnail if provided
+        if (thumbnailFile) {
+          uploadedThumbnailUrl = await uploadSingleImage(thumbnailFile);
+          
+          // Delete old thumbnail if exists
+          if (existingThumbnailUrl) {
+            try {
+              await deleteImage(existingThumbnailUrl);
+            } catch (err) {
+              console.warn("Failed to delete old thumbnail:", err);
+            }
+          }
+        }
+
+        // STEP 2: Upload new gallery images if provided
+        if (imageFiles.length > 0) {
+          uploadedImageUrls = await uploadMultipleImages(imageFiles);
+        }
+
+        // STEP 3: Prepare update data
+        const tourData: Partial<TourDTO> = {
+          providerId,
+          areaId: formData.areaId!,
+          title: formData.title,
+          price: formData.price,
+          currencyCode: formData.currencyCode,
+          tourStatus: status || formData.tourStatus,
+          visibility: formData.visibility,
+          isFeatured: formData.isFeatured,
+          serviceDescription: formData.serviceDescription || undefined,
+          location: formData.location || undefined,
+          address: formData.address || undefined,
+          latitude: formData.latitude ?? undefined,
+          longitude: formData.longitude ?? undefined,
+          startDate: formData.startDate || undefined,
+          endDate: formData.endDate || undefined,
+          capacity: formData.capacity ?? undefined,
+          minParticipants: formData.minParticipants ?? undefined,
+          maxParticipants: formData.maxParticipants ?? undefined,
+          durationDays: formData.durationDays ?? undefined,
+          difficultyLevel: formData.difficultyLevel,
+          departureLocation: formData.departureLocation || undefined,
+          meetingPoint: formData.meetingPoint || undefined,
+          itineraryOverview: formData.itineraryOverview || undefined,
+          cancellationPolicy: formData.cancellationPolicy || undefined,
+          policiesText: formData.policiesText || undefined,
+          tourType: formData.tourType,
+          guideLanguagesJson: formData.guideLanguagesJson.length > 0 
+            ? formData.guideLanguagesJson 
+            : undefined,
+          itineraryDetailsJson: formData.itineraryDetailsJson.length > 0 
+            ? JSON.stringify(formData.itineraryDetailsJson) 
+            : undefined,
+          includedJson: formData.includedJson.length > 0 
+            ? formData.includedJson 
+            : undefined,
+          excludedJson: formData.excludedJson.length > 0 
+            ? formData.excludedJson 
+            : undefined,
+          categoriesJson: formData.categoriesJson.length > 0 
+            ? formData.categoriesJson 
+            : undefined,
+          servicesJson: formData.servicesJson.length > 0 
+            ? formData.servicesJson 
+            : undefined,
+          badges: formData.badges.length > 0 
+            ? formData.badges 
+            : undefined,
+          slug: formData.slug || undefined,
+          seoTitle: formData.seoTitle || undefined,
+          seoDescription: formData.seoDescription || undefined,
+        };
+
+        // Attach image URLs
+        if (uploadedThumbnailUrl) {
+          tourData.thumbnailUrl = uploadedThumbnailUrl;
+        } else if (existingThumbnailUrl) {
+          tourData.thumbnailUrl = existingThumbnailUrl;
+        }
+
+        if (uploadedImageUrls.length > 0) {
+          tourData.imageUrls = [...existingImageUrls, ...uploadedImageUrls];
+        } else {
+          tourData.imageUrls = existingImageUrls;
+        }
+
+        // STEP 4: Update tour
+        await updateTour(tourId, tourData);
+
+        navigate("/supplier/service/tour");
+        setTimeout(() => window.location.reload(), 100);
+        return { success: true, missingFields: [] };
+      } catch (err) {
+        console.error("❌ Error updating tour:", err);
+        
+        // ROLLBACK: Delete newly uploaded images
+        try {
+          if (uploadedThumbnailUrl) {
+            await deleteImage(uploadedThumbnailUrl);
+          }
+          if (uploadedImageUrls.length > 0) {
+            await deleteMultipleImages(uploadedImageUrls);
+          }
+        } catch (cleanupErr) {
+          console.error("⚠️ Error cleaning up uploaded images:", cleanupErr);
+        }
+
+        setErrors({
+          general: err instanceof Error ? err.message : "Không thể cập nhật tour",
+        });
+        return { success: false, missingFields: [] };
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [
+      formData,
+      providerId,
+      tourId,
+      validateForm,
+      thumbnailFile,
+      imageFiles,
+      existingThumbnailUrl,
+      existingImageUrls,
+      navigate,
+    ]
+  );
+
+  const resetForm = useCallback(() => {
+    setFormData(initialFormData);
+    setErrors({});
+    setThumbnailFile(null);
+    setImageFiles([]);
+  }, []);
+
+  return {
+    formData,
+    errors,
+    loading,
+    submitting,
+    providerId,
+    tourId,
+    existingThumbnailUrl,
+    existingImageUrls,
     thumbnailFile,
     imageFiles,
     thumbnailPreview,
