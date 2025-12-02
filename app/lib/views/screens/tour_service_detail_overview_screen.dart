@@ -1,28 +1,70 @@
-import 'package:app/services/tour_api_service.dart';
-import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
-import 'package:app/services/localization_service.dart';
+import 'package:app/services/tour_api_service.dart';
+
+// Dictionaries for tour categories, services, languages (sync with backend)
+const Map<String, String> kCategoriesDict = {
+  'culture': 'Văn hóa',
+  'nature': 'Thiên nhiên',
+  'adventure': 'Phiêu lưu',
+  'food': 'Ẩm thực',
+  'beach': 'Biển',
+  'mountain': 'Núi',
+  'city': 'Thành phố',
+  'historical': 'Lịch sử',
+};
+
+const Map<String, String> kServicesDict = {
+  'pickup': 'Đón tại khách sạn',
+  'airport_transfer': 'Đưa đón sân bay',
+  'photography': 'Chụp ảnh chuyên nghiệp',
+  'bike_rental': 'Thuê xe đạp',
+  'special_meals': 'Bữa ăn đặc biệt',
+};
+
+const Map<String, String> kLanguagesDict = {
+  'vietnamese': 'Tiếng Việt',
+  'english': 'Tiếng Anh',
+  'chinese': 'Tiếng Trung',
+  'japanese': 'Tiếng Nhật',
+  'korean': 'Tiếng Hàn',
+  'french': 'Tiếng Pháp',
+  'german': 'Tiếng Đức',
+  'spanish': 'Tiếng Tây Ban Nha',
+};
+
+const Map<String, String> kIncludedDict = {
+  'hotel': 'Khách sạn',
+  'meals': 'Bữa ăn',
+  'transport': 'Phương tiện di chuyển',
+  'guide': 'Hướng dẫn viên',
+  'insurance': 'Bảo hiểm',
+  'entrance_fees': 'Vé tham quan',
+};
+
+const Map<String, String> kExcludedDict = {
+  'flights': 'Vé máy bay',
+  'visa': 'Visa',
+  'tips': 'Tiền tip',
+  'personal_expenses': 'Chi phí cá nhân',
+};
 
 class TourServiceDetailScreen extends StatefulWidget {
-  final int? tourId; // optional id for fetching fresh data
-  final Map<String, dynamic>? tour; // optional fallback from overview
-  final Set<String>? activeTourTypes;
-  final Set<String>? activeServices;
-  final String? activeDifficulty;
+  final int? tourId;
+  final Map<String, dynamic>? tour;
 
-  const TourServiceDetailScreen({
-    super.key,
-    this.tourId,
-    this.tour,
-    this.activeTourTypes,
-    this.activeServices,
-    this.activeDifficulty,
-  });
+  const TourServiceDetailScreen({super.key, this.tourId, this.tour})
+    : assert(
+        tourId != null || tour != null,
+        'tourId or tour fallback must be provided',
+      );
 
   @override
   State<TourServiceDetailScreen> createState() =>
@@ -31,89 +73,50 @@ class TourServiceDetailScreen extends StatefulWidget {
 
 class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
   bool _introExpanded = false;
-  bool _showAllReviews = false;
 
-  bool _loading = false;
+  // Loading state
+  bool _loading = true;
   String? _error;
-
   Map<String, dynamic>? _detail;
   List<Map<String, dynamic>> _reviews = [];
 
-  int? get _idFromFallback {
-    final t = widget.tour;
-    if (t == null) return null;
-    final v = t['tourId'] ?? t['id'] ?? t['tour_id'];
-    if (v is int) return v;
-    if (v is num) return v.toInt();
-    if (v is String) return int.tryParse(v);
-    return null;
-  }
+  int? _resolvedId;
 
-  int? get _resolvedId => widget.tourId ?? _idFromFallback;
-
-  Map<String, dynamic> get _data {
-    final base = Map<String, dynamic>.from(widget.tour ?? {});
-    if (base['title'] == null && base['name'] != null) {
-      base['title'] = base['name'];
-    }
-    if (base['thumbnailUrl'] == null && base['image'] != null) {
-      base['thumbnailUrl'] = base['image'];
-    }
-    if (_detail != null) base.addAll(_detail!);
-    return base;
-  }
+  // Image slider
+  final PageController _imageController = PageController();
+  int _imageIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _resolvedId = widget.tourId ?? _tryParseInt(widget.tour?['tourId']);
+    _fetchDetail();
   }
 
-  Future<void> _load() async {
-    final id = _resolvedId;
-    if (id == null) {
-      setState(() {
-        _loading = false;
-        _error = null;
-      });
-      return;
-    }
+  @override
+  void dispose() {
+    _imageController.dispose();
+    super.dispose();
+  }
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  int? _tryParseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final api = TourApiService(dio: Dio(), prefs: prefs);
-
-      final detail = await api.getTourById(id);
-      final reviews = await api.getTourReviews(id);
-
-      setState(() {
-        _detail = detail;
-        _reviews = reviews;
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _loading = false;
-        _error = 'error_load_tour_detail'.tr;
-      });
-    }
+  Map<String, dynamic> get _data {
+    final merged = <String, dynamic>{};
+    if (widget.tour != null) merged.addAll(widget.tour!);
+    if (_detail != null) merged.addAll(_detail!);
+    return merged;
   }
 
   @override
   Widget build(BuildContext context) {
-    final d = _data;
-    final title = (d['title'] ?? '').toString();
-    final rating = _ratingDouble(d['ratingAverage']);
-    final reviewCount = _reviews.isNotEmpty
-        ? _reviews.length
-        : _numberFromAny(d['reviewCount'] ?? d['reviews']);
-    final location =
-        d['location']?.toString() ?? d['departureLocation']?.toString() ?? '';
+    final data = _data;
 
     return Scaffold(
       backgroundColor: context.backgroundColor,
@@ -137,156 +140,406 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
       ),
       body: _loading
           ? Center(
-              child: CircularProgressIndicator(color: context.primaryColor),
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: context.primaryColor,
+                ),
+              ),
             )
           : _error != null
-          ? _errorState(context, _error!)
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  _error!,
+                  style: context.bodyOneStyle.copyWith(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
           : ListView(
               padding: EdgeInsets.zero,
               children: [
-                _heroImage(_primaryImageUrl(d)),
+                // Image Gallery (như hotel)
+                _imageGallery(_imageList(data)),
+
+                // Header Info
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: _headerInfo(
-                    context,
-                    title,
-                    rating,
-                    reviewCount,
-                    location,
-                  ),
+                  child: _headerInfo(context, data),
                 ),
+
+                // Quick Meta (duration, capacity)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _quickMeta(context, d),
+                  child: _quickMeta(context, data),
                 ),
+
                 const SizedBox(height: 12),
+
+                // Price & Action
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _priceAndAction(context, d),
+                  child: _priceAndAction(context, data),
                 ),
+
                 const SizedBox(height: 20),
-                _sectionWrapper(
-                  context,
-                  title: 'tour_intro'.tr,
-                  child: _expandableText(
+
+                // Service Description
+                if ((data['serviceDescription'] ?? '').toString().isNotEmpty)
+                  _sectionWrapper(
                     context,
-                    text:
-                        (d['serviceDescription'] ??
-                                d['itineraryOverview'] ??
-                                '—')
-                            .toString(),
-                    expanded: _introExpanded,
-                    onToggle: () =>
-                        setState(() => _introExpanded = !_introExpanded),
+                    title: 'Giới thiệu',
+                    child: _expandableText(
+                      context,
+                      text: data['serviceDescription']?.toString() ?? '',
+                      expanded: _introExpanded,
+                      onToggle: () =>
+                          setState(() => _introExpanded = !_introExpanded),
+                    ),
                   ),
-                ),
-                _tourTypeBlock(
-                  context,
-                  title: 'tour_types'.tr,
-                  selected: widget.activeTourTypes ?? {},
-                ),
-                _serviceChipsBlock(
-                  context,
-                  title: 'services_included'.tr,
-                  selected: widget.activeServices ?? {},
-                ),
+
+                // Tour Type
+                if (data['tourType'] != null)
+                  _sectionWrapper(
+                    context,
+                    title: 'Loại tour',
+                    child: _tourTypeChip(context, data['tourType']),
+                  ),
+
+                // Difficulty Level
+                if (data['difficultyLevel'] != null)
+                  _sectionWrapper(
+                    context,
+                    title: 'Độ khó',
+                    child: _difficultyChip(context, data['difficultyLevel']),
+                  ),
+
+                // Duration & Schedule
+                if (data['startDate'] != null ||
+                    data['endDate'] != null ||
+                    data['durationDays'] != null)
+                  _sectionWrapper(
+                    context,
+                    title: 'Thời gian & Lịch trình',
+                    child: _scheduleInfo(context, data),
+                  ),
+
+                // Capacity Info
+                if (data['capacity'] != null || data['minParticipants'] != null)
+                  _sectionWrapper(
+                    context,
+                    title: 'Số lượng khách',
+                    child: _capacityInfo(context, data),
+                  ),
+
+                // Departure Info
+                if ((data['departureLocation'] ?? '').toString().isNotEmpty ||
+                    (data['meetingPoint'] ?? '').toString().isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Thông tin khởi hành',
+                    child: _departureInfo(context, data),
+                  ),
+
+                // Guide Languages
+                if (_parseJsonArray(data['guideLanguagesJson']).isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Ngôn ngữ hướng dẫn',
+                    child: _languageChips(
+                      context,
+                      _parseJsonArray(data['guideLanguagesJson']),
+                    ),
+                  ),
+
+                // Categories
+                if (_parseJsonArray(data['categoriesJson']).isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Danh mục',
+                    child: _categoryChips(
+                      context,
+                      _parseJsonArray(data['categoriesJson']),
+                    ),
+                  ),
+
+                // Services
+                if (_parseJsonArray(data['servicesJson']).isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Dịch vụ đi kèm',
+                    child: _serviceChips(
+                      context,
+                      _parseJsonArray(data['servicesJson']),
+                    ),
+                  ),
+
+                // Itinerary Overview
+                if ((data['itineraryOverview'] ?? '').toString().isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Tổng quan lịch trình',
+                    child: _bulletList(
+                      context,
+                      (data['itineraryOverview'] as String)
+                          .split('\n')
+                          .where((s) => s.trim().isNotEmpty)
+                          .toList(),
+                    ),
+                  ),
+
+                // Itinerary Details (day-by-day)
+                if (_parseItineraryDetails(
+                  data['itineraryDetailsJson'],
+                ).isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Chi tiết lịch trình theo ngày',
+                    child: _itineraryDetailsSection(
+                      context,
+                      _parseItineraryDetails(data['itineraryDetailsJson']),
+                    ),
+                  ),
+
+                // Included/Excluded
+                if (_parseJsonArray(data['includedJson']).isNotEmpty ||
+                    _parseJsonArray(data['excludedJson']).isNotEmpty)
+                  _includedExcludedSection(context, data),
+
+                // Cancellation Policy
+                if ((data['cancellationPolicy'] ?? '').toString().isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Chính sách hủy tour',
+                    child: _bulletList(
+                      context,
+                      (data['cancellationPolicy'] as String)
+                          .split('\n')
+                          .where((s) => s.trim().isNotEmpty)
+                          .toList(),
+                    ),
+                  ),
+
+                // Policies Text
+                if ((data['policiesText'] ?? '').toString().isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Chính sách khác',
+                    child: _bulletList(
+                      context,
+                      (data['policiesText'] as String)
+                          .split('\n')
+                          .where((s) => s.trim().isNotEmpty)
+                          .toList(),
+                    ),
+                  ),
+
+                // Location (Address + Map)
+                if ((data['location'] ?? '').toString().isNotEmpty ||
+                    (data['address'] ?? '').toString().isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Vị trí',
+                    child: _locationBlock(context, data),
+                  ),
+
+                // Rating Summary
                 _sectionWrapper(
                   context,
-                  title: 'itinerary_detail'.tr,
-                  child: _itineraryOverview(context, d['itineraryOverview']),
+                  title: 'Đánh giá',
+                  child: _ratingSummary(context, data),
                 ),
-                _includedExcludedSection(context, d),
-                _policiesSection(context, d['cancellationPolicy']),
-                _difficultySection(
-                  context,
-                  widget.activeDifficulty ??
-                      _difficultyLabelFromCode(d['difficultyLevel']),
-                ),
-                _departureInfoSection(context, d),
+
+                // Reviews
                 _sectionWrapper(
                   context,
-                  title: 'rating_info'.tr,
-                  child: _ratingSummary(context, rating, reviewCount),
+                  title: 'Nhận xét từ khách du lịch',
+                  trailing: _reviews.isNotEmpty
+                      ? TextButton(
+                          onPressed: () {},
+                          child: Text(
+                            'Xem tất cả',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          ),
+                        )
+                      : null,
+                  child: _reviewsBlock(context),
                 ),
-                _sectionWrapper(
-                  context,
-                  title: 'all_reviews'.tr,
-                  child: _reviewsSection(context),
-                ),
+
                 const SizedBox(height: 28),
               ],
             ),
     );
   }
 
-  // ===== HERO IMAGE =====
-  Widget _heroImage(String? url) {
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (url == null || url.isEmpty || !url.startsWith('http'))
-            _imageFallback(context)
-          else
-            Image.network(
-              url,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _imageFallback(context),
-            ),
-          Positioned(
-            bottom: 12,
-            left: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: context.cardBackgroundColor.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: context.dividerColor),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    LucideIcons.image,
-                    size: 16,
-                    color: context.textSecondaryColor,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'view_more_photos'.tr,
-                    style: context.captionStyle.copyWith(
-                      color: context.textPrimaryColor,
-                      fontWeight: FontWeight.w600,
+  // ===== FETCH DETAIL (như hotel) =====
+  Future<void> _fetchDetail() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      Map<String, dynamic>? detail;
+      List<Map<String, dynamic>> reviews = [];
+
+      if (_resolvedId != null) {
+        final prefs = await SharedPreferences.getInstance();
+        final api = TourApiService(dio: Dio(), prefs: prefs);
+
+        detail = await api.getTourById(_resolvedId!);
+
+        try {
+          reviews = await api.getTourReviews(_resolvedId!);
+          reviews.sort((a, b) {
+            final aDate = a['createdAt'] as String? ?? '';
+            final bDate = b['createdAt'] as String? ?? '';
+            return bDate.compareTo(aDate);
+          });
+        } catch (e) {
+          debugPrint('❌ Error loading tour reviews: $e');
+        }
+      }
+
+      setState(() {
+        _detail = detail;
+        _reviews = reviews;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = 'Không thể tải chi tiết tour. Vui lòng thử lại.';
+      });
+    }
+  }
+
+  // ===== IMAGE GALLERY (như hotel với PageView) =====
+  Widget _imageGallery(List<String> images) {
+    final hasImages = images.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (!hasImages)
+                _imageFallback(context)
+              else
+                PageView.builder(
+                  controller: _imageController,
+                  itemCount: images.length,
+                  onPageChanged: (i) => setState(() => _imageIndex = i),
+                  itemBuilder: (_, i) {
+                    final url = images[i];
+                    final isNetwork = url.startsWith('http');
+                    if (url.isEmpty) return _imageFallback(context);
+                    return isNetwork
+                        ? Image.network(
+                            url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _imageFallback(context),
+                          )
+                        : Image.asset(
+                            url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _imageFallback(context),
+                          );
+                  },
+                ),
+
+              if (hasImages && images.length > 1)
+                Positioned(
+                  bottom: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_imageIndex + 1}/${images.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  // ===== HEADER =====
-  Widget _headerInfo(
-    BuildContext context,
-    String title,
-    double rating,
-    int? reviewCount,
-    String location,
-  ) {
+  List<String> _imageList(Map<String, dynamic> data) {
+    final List<String> result = [];
+
+    // Add thumbnail first
+    final thumbnail = data['thumbnailUrl']?.toString();
+    if (thumbnail != null && thumbnail.isNotEmpty) {
+      result.add(thumbnail);
+    }
+
+    // Add imageUrls
+    final imageUrls = data['imageUrls'];
+    if (imageUrls != null) {
+      if (imageUrls is List) {
+        for (final url in imageUrls) {
+          final urlStr = url?.toString();
+          if (urlStr != null && urlStr.isNotEmpty && !result.contains(urlStr)) {
+            result.add(urlStr);
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+  Widget _imageFallback(BuildContext context) {
+    return Container(
+      color: context.primaryColor.withOpacity(0.08),
+      alignment: Alignment.center,
+      child: Icon(LucideIcons.image, color: context.primaryColor, size: 40),
+    );
+  }
+
+  // ===== HEADER INFO =====
+  Widget _headerInfo(BuildContext context, Map<String, dynamic> data) {
+    final title = data['title']?.toString() ?? '';
+    final rating = _parseDouble(data['ratingAverage']) ?? 0.0;
+    final reviewCount = _reviews.length;
+    final location = data['location']?.toString() ?? '';
+    final badges = _parseJsonArray(data['badges']);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: context.bodyOneStyle.copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-          ),
+          style: context.h5Style.copyWith(fontWeight: FontWeight.w700),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Row(
           children: [
             _starsRow(context, rating),
@@ -298,115 +551,178 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            if ((reviewCount ?? 0) > 0) ...[
+            if (reviewCount > 0) ...[
               const SizedBox(width: 8),
               Text(
-                '${reviewCount ?? 0} ${'reviews'.tr}',
+                '$reviewCount đánh giá',
                 style: context.captionStyle.copyWith(
                   color: context.textSecondaryColor,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
-            if (location.isNotEmpty) ...[
-              const SizedBox(width: 10),
+          ],
+        ),
+        if (location.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
               Icon(
                 LucideIcons.mapPin,
                 size: 14,
                 color: context.textSecondaryColor,
               ),
               const SizedBox(width: 4),
-              Flexible(
+              Expanded(
                 child: Text(
                   location,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: context.captionStyle.copyWith(
                     color: context.textSecondaryColor,
                   ),
                 ),
               ),
             ],
-          ],
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 16,
-          children: [
-            _inlineAction(context, 'contact'.tr),
-            _inlineAction(context, 'write_review'.tr),
-            _inlineAction(context, 'share'.tr),
-          ],
-        ),
+          ),
+        ],
+        if (badges.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: badges.map((badge) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: context.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  badge,
+                  style: context.captionStyle.copyWith(
+                    color: context.primaryColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ],
     );
   }
 
   // ===== QUICK META =====
-  Widget _quickMeta(BuildContext context, Map<String, dynamic> d) {
-    final start = d['startDate']?.toString();
-    final end = d['endDate']?.toString();
-    final durationDays = _numberFromAny(d['durationDays']);
-    final dateText = start != null && end != null
-        ? '$start → $end'
-        : (durationDays != null ? '$durationDays ${'day'.tr}' : '—');
+  Widget _quickMeta(BuildContext context, Map<String, dynamic> data) {
+    final durationDays = data['durationDays'];
+    final capacity = data['capacity'] ?? data['maxParticipants'];
+
     return Row(
       children: [
-        Expanded(
-          child: _outlinedChip(
-            context,
-            icon: LucideIcons.calendar,
-            label: dateText,
-            onTap: () {},
+        if (durationDays != null)
+          Expanded(
+            child: _metaChip(
+              context,
+              icon: LucideIcons.calendar,
+              label: '$durationDays ngày',
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _outlinedChip(
-            context,
-            icon: LucideIcons.users,
-            label:
-                '${d['capacity'] ?? d['minParticipants'] ?? '2'} ${'guests_short'.tr}',
-            onTap: () {},
+        if (durationDays != null && capacity != null) const SizedBox(width: 12),
+        if (capacity != null)
+          Expanded(
+            child: _metaChip(
+              context,
+              icon: LucideIcons.users,
+              label: '$capacity người',
+            ),
           ),
-        ),
       ],
     );
   }
 
-  // ===== PRICE & ACTION =====
-  Widget _priceAndAction(BuildContext context, Map<String, dynamic> d) {
-    final price = d['price'];
-    final currency = d['currencyCode']?.toString();
-    final priceText = _formatPrice(price, currency);
+  Widget _metaChip(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: context.cardBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.dividerColor),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 16, color: context.textSecondaryColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  // ===== PRICE & ACTION =====
+  Widget _priceAndAction(BuildContext context, Map<String, dynamic> data) {
+    final price = data['price'];
+    final currency = data['currencyCode']?.toString() ?? 'VND';
+
+    String priceText = '';
+    if (price != null) {
+      if (currency == 'VND') {
+        final intVal =
+            (price is num ? price : num.tryParse(price.toString()))?.toInt() ??
+            0;
+        final formatted = intVal.toString().replaceAllMapped(
+          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]}.',
+        );
+        priceText = '$formatted đ';
+      } else {
+        priceText = '$price $currency';
+      }
+    }
+
+    return Row(
       children: [
-        Text(
-          priceText.isEmpty ? '—' : priceText,
-          style: context.bodyOneStyle.copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-            color: context.textPrimaryColor,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Giá từ',
+                style: context.captionStyle.copyWith(
+                  color: context.textSecondaryColor,
+                ),
+              ),
+              Text(
+                priceText.isEmpty ? '—' : priceText,
+                style: context.h5Style.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: context.primaryColor,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 14),
-        SizedBox(
-          width: double.infinity,
+        const SizedBox(width: 12),
+        Expanded(
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: context.primaryColor,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(26),
+                borderRadius: BorderRadius.circular(12),
               ),
               elevation: 0,
             ),
             onPressed: () {},
-            child: Text(
-              'book_now'.tr,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            child: const Text(
+              'Đặt ngay',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
         ),
@@ -414,7 +730,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     );
   }
 
-  // ===== GENERIC SECTION WRAPPER =====
+  // ===== SECTION WRAPPER =====
   Widget _sectionWrapper(
     BuildContext context, {
     required String title,
@@ -453,362 +769,552 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     required bool expanded,
     required VoidCallback onToggle,
   }) {
-    final safe = (text.isEmpty) ? '—' : text;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          safe,
+          text,
           maxLines: expanded ? null : 4,
           overflow: expanded ? null : TextOverflow.ellipsis,
-          style: context.bodyTwoStyle.copyWith(
-            height: 1.5,
-            fontWeight: FontWeight.w500,
-          ),
+          style: context.bodyTwoStyle.copyWith(height: 1.5),
         ),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: onToggle,
-          child: Text(
-            expanded ? 'read_less'.tr : 'read_more'.tr,
-            style: context.captionStyle.copyWith(
-              color: context.textPrimaryColor,
-              fontWeight: FontWeight.w600,
-              decoration: TextDecoration.underline,
+        if (text.length > 200) ...[
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: onToggle,
+            child: Text(
+              expanded ? 'Thu gọn' : 'Xem thêm',
+              style: context.captionStyle.copyWith(
+                color: context.primaryColor,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
 
-  // ===== TOUR TYPE & SERVICES
-  Widget _tourTypeBlock(
-    BuildContext context, {
-    required String title,
-    required Set<String> selected,
-  }) {
-    if (selected.isEmpty) return const SizedBox.shrink();
-    return _sectionWrapper(
-      context,
-      title: title,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: selected.map((label) {
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: context.primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: context.primaryColor),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(LucideIcons.tag, size: 14, color: context.primaryColor),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: context.captionStyle.copyWith(
-                    color: context.textPrimaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
+  // ===== TOUR TYPE CHIP =====
+  Widget _tourTypeChip(BuildContext context, dynamic type) {
+    final typeStr = type?.toString() ?? '';
+    String label = '';
 
-  Widget _serviceChipsBlock(
-    BuildContext context, {
-    required String title,
-    required Set<String> selected,
-  }) {
-    if (selected.isEmpty) return const SizedBox.shrink();
-    return _sectionWrapper(
-      context,
-      title: title,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: selected.map((label) {
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: context.primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: context.primaryColor),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(LucideIcons.check, size: 14, color: context.primaryColor),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: context.captionStyle.copyWith(
-                    color: context.textPrimaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  // ===== ITINERARY OVERVIEW =====
-  Widget _itineraryOverview(BuildContext context, dynamic overviewRaw) {
-    final overview = overviewRaw?.toString() ?? '';
-    if (overview.isEmpty) {
-      return _emptyBox(context, 'no_itinerary_info'.tr);
+    switch (typeStr.toLowerCase()) {
+      case 'group':
+        label = 'Tour nhóm';
+        break;
+      case 'private':
+        label = 'Tour riêng';
+        break;
+      case 'custom':
+        label = 'Tour tùy chỉnh';
+        break;
+      default:
+        label = typeStr;
     }
-    final items = overview
-        .split(RegExp(r'\r?\n'))
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: context.primaryColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.primaryColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(LucideIcons.tag, size: 14, color: context.primaryColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: context.captionStyle.copyWith(
+              color: context.primaryColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== DIFFICULTY CHIP =====
+  Widget _difficultyChip(BuildContext context, dynamic difficulty) {
+    final diffStr = difficulty?.toString().toLowerCase() ?? 'easy';
+
+    String label = '';
+    Color color = context.primaryColor;
+
+    switch (diffStr) {
+      case 'easy':
+        label = 'Dễ';
+        color = Colors.green;
+        break;
+      case 'moderate':
+        label = 'Trung bình';
+        color = Colors.orange;
+        break;
+      case 'hard':
+        label = 'Khó';
+        color = Colors.red;
+        break;
+      default:
+        label = difficulty?.toString() ?? 'Dễ';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(LucideIcons.trendingUp, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: context.captionStyle.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== SCHEDULE INFO =====
+  Widget _scheduleInfo(BuildContext context, Map<String, dynamic> data) {
+    final startDate = data['startDate']?.toString();
+    final endDate = data['endDate']?.toString();
+    final durationDays = data['durationDays'];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: items
-          .map(
-            (line) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (startDate != null && startDate.isNotEmpty)
+          _infoRow(context, LucideIcons.calendar, 'Ngày bắt đầu: $startDate'),
+        if (endDate != null && endDate.isNotEmpty)
+          _infoRow(
+            context,
+            LucideIcons.calendarCheck,
+            'Ngày kết thúc: $endDate',
+          ),
+        if (durationDays != null)
+          _infoRow(
+            context,
+            LucideIcons.clock,
+            'Thời lượng: $durationDays ngày',
+          ),
+      ],
+    );
+  }
+
+  // ===== CAPACITY INFO =====
+  Widget _capacityInfo(BuildContext context, Map<String, dynamic> data) {
+    final capacity = data['capacity'];
+    final minPart = data['minParticipants'];
+    final maxPart = data['maxParticipants'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (capacity != null)
+          _infoRow(context, LucideIcons.users, 'Sức chứa: $capacity người'),
+        if (minPart != null)
+          _infoRow(context, LucideIcons.userMinus, 'Tối thiểu: $minPart người'),
+        if (maxPart != null)
+          _infoRow(context, LucideIcons.userPlus, 'Tối đa: $maxPart người'),
+      ],
+    );
+  }
+
+  // ===== DEPARTURE INFO =====
+  Widget _departureInfo(BuildContext context, Map<String, dynamic> data) {
+    final departure = data['departureLocation']?.toString();
+    final meeting = data['meetingPoint']?.toString();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (departure != null && departure.isNotEmpty)
+          _infoRow(
+            context,
+            LucideIcons.navigation,
+            'Điểm khởi hành: $departure',
+          ),
+        if (meeting != null && meeting.isNotEmpty)
+          _infoRow(context, LucideIcons.mapPin, 'Điểm tập trung: $meeting'),
+      ],
+    );
+  }
+
+  Widget _infoRow(BuildContext context, IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: context.primaryColor),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: context.bodyTwoStyle)),
+        ],
+      ),
+    );
+  }
+
+  // ===== LANGUAGE CHIPS =====
+  Widget _languageChips(BuildContext context, List<String> languages) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: languages.map((lang) {
+        final label = kLanguagesDict[lang] ?? lang;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: context.cardBackgroundColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: context.dividerColor),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.globe, size: 14, color: context.primaryColor),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: context.captionStyle.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ===== CATEGORY CHIPS =====
+  Widget _categoryChips(BuildContext context, List<String> categories) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: categories.map((cat) {
+        final label = kCategoriesDict[cat] ?? cat;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: context.cardBackgroundColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: context.dividerColor),
+          ),
+          child: Text(
+            label,
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ===== SERVICE CHIPS =====
+  Widget _serviceChips(BuildContext context, List<String> services) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: services.map((service) {
+        final label = kServicesDict[service] ?? service;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: context.primaryColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: context.primaryColor),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.check, size: 14, color: context.primaryColor),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: context.captionStyle.copyWith(
+                  color: context.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ===== BULLET LIST =====
+  Widget _bulletList(BuildContext context, List<String> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: items.map((item) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 4,
+                height: 4,
+                margin: const EdgeInsets.only(top: 6),
+                decoration: BoxDecoration(
+                  color: context.primaryColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Text(item, style: context.captionStyle)),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ===== ITINERARY DETAILS SECTION (day-by-day) =====
+  Widget _itineraryDetailsSection(
+    BuildContext context,
+    List<Map<String, dynamic>> details,
+  ) {
+    return Column(
+      children: details.map((day) {
+        final dayNum = day['day'] ?? 0;
+        final title = day['title']?.toString() ?? '';
+        final activities = day['activities'];
+
+        List<String> activityList = [];
+        if (activities is List) {
+          activityList = activities.map((e) => e.toString()).toList();
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: context.cardBackgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.dividerColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  const SizedBox(width: 2),
-                  Icon(LucideIcons.dot, size: 18, color: context.primaryColor),
-                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: context.primaryColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Ngày $dayNum',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      line,
-                      style: context.captionStyle.copyWith(
-                        color: context.textPrimaryColor,
-                        fontWeight: FontWeight.w500,
+                      title,
+                      style: context.bodyTwoStyle.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
-          )
-          .toList(),
+              if (activityList.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ...activityList.map(
+                  (activity) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 4,
+                          margin: const EdgeInsets.only(top: 6),
+                          decoration: BoxDecoration(
+                            color: context.primaryColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(activity, style: context.captionStyle),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
-  // ===== INCLUDED / EXCLUDED =====
+  // ===== INCLUDED/EXCLUDED SECTION =====
   Widget _includedExcludedSection(
     BuildContext context,
-    Map<String, dynamic> d,
+    Map<String, dynamic> data,
   ) {
-    final included =
-        _stringList(d['included']) ?? _stringList(d['inclusiveItems']) ?? [];
-    final excluded =
-        _stringList(d['excluded']) ?? _stringList(d['exclusiveItems']) ?? [];
-
-    if (included.isEmpty && excluded.isEmpty) return const SizedBox.shrink();
+    final included = _parseJsonArray(data['includedJson']);
+    final excluded = _parseJsonArray(data['excludedJson']);
 
     return Column(
       children: [
         if (included.isNotEmpty)
           _sectionWrapper(
             context,
-            title: 'services_included'.tr,
+            title: 'Bao gồm',
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: included
-                  .map((e) => _bulletRow(context, e, true))
-                  .toList(),
+              children: included.map((item) {
+                final label = kIncludedDict[item] ?? item;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        LucideIcons.checkCircle2,
+                        size: 16,
+                        color: context.primaryColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(label, style: context.captionStyle)),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ),
         if (excluded.isNotEmpty)
           _sectionWrapper(
             context,
-            title: 'services_excluded'.tr,
+            title: 'Không bao gồm',
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: excluded
-                  .map((e) => _bulletRow(context, e, false))
-                  .toList(),
+              children: excluded.map((item) {
+                final label = kExcludedDict[item] ?? item;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        LucideIcons.xCircle,
+                        size: 16,
+                        color: context.errorColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(label, style: context.captionStyle)),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ),
       ],
     );
   }
 
-  Widget _bulletRow(BuildContext context, String text, bool good) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            good ? LucideIcons.checkCircle2 : LucideIcons.xCircle,
-            size: 16,
-            color: good ? context.primaryColor : context.errorColor,
+  // ===== LOCATION BLOCK (Address + Google Maps) =====
+  Widget _locationBlock(BuildContext context, Map<String, dynamic> data) {
+    final address = data['address']?.toString() ?? '';
+    final location = data['location']?.toString() ?? '';
+    final lat = _parseDouble(data['latitude']);
+    final lng = _parseDouble(data['longitude']);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (location.isNotEmpty)
+          Text(
+            location,
+            style: context.bodyTwoStyle.copyWith(fontWeight: FontWeight.w600),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: context.captionStyle.copyWith(
-                color: context.textPrimaryColor,
-                fontWeight: FontWeight.w500,
+        if (address.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(address, style: context.captionStyle),
+        ],
+        if (lat != null && lng != null) ...[
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              height: 200,
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: LatLng(lat, lng),
+                  zoom: 14,
+                ),
+                markers: {
+                  Marker(
+                    markerId: const MarkerId('tour_location'),
+                    position: LatLng(lat, lng),
+                  ),
+                },
+                zoomControlsEnabled: false,
+                myLocationButtonEnabled: false,
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // ===== POLICIES =====
-  Widget _policiesSection(BuildContext context, dynamic policyRaw) {
-    final policy = policyRaw?.toString() ?? '';
-    if (policy.isEmpty) return const SizedBox.shrink();
-    final lines = policy
-        .split(RegExp(r'\r?\n'))
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    return _sectionWrapper(
-      context,
-      title: 'tour_policies'.tr,
-      child: _bulletList(context, lines),
-    );
-  }
-
-  // ===== DIFFICULTY =====
-  Widget _difficultySection(BuildContext context, String difficultyLabel) {
-    final display = _difficultyDisplayLabel(difficultyLabel);
-    return _sectionWrapper(
-      context,
-      title: '${'difficulty'.tr}: $display',
-      child: _difficultyInfo(context, display),
-    );
-  }
-
-  String _difficultyDisplayLabel(String labelOrCode) {
-    final code = (labelOrCode.trim().toLowerCase());
-    if (code == 'easy' || labelOrCode == 'Dễ') return 'difficulty_easy'.tr;
-    if (code == 'moderate' || labelOrCode == 'Vừa') {
-      return 'difficulty_medium'.tr;
-    }
-    if (code == 'hard' || labelOrCode == 'Khó') return 'difficulty_hard'.tr;
-    return 'difficulty_easy'.tr;
-  }
-
-  Widget _difficultyInfo(BuildContext context, String difficulty) {
-    final map = <String, Map<String, Object>>{
-      'difficulty_easy'.tr: {
-        'icon': LucideIcons.smile,
-        'color': context.primaryColor,
-        'desc': 'difficulty_easy_desc'.tr,
-      },
-      'difficulty_medium'.tr: {
-        'icon': LucideIcons.meh,
-        'color': context.textSecondaryColor,
-        'desc': 'difficulty_medium_desc'.tr,
-      },
-      'difficulty_hard'.tr: {
-        'icon': LucideIcons.frown,
-        'color': context.errorColor,
-        'desc': 'difficulty_hard_desc'.tr,
-      },
-    };
-
-    final cfg = map[difficulty] ?? map['difficulty_easy'.tr]!;
-    final icon = cfg['icon'] as IconData;
-    final color = cfg['color'] as Color;
-    final desc = cfg['desc'] as String;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            desc,
-            style: context.bodyTwoStyle.copyWith(
-              color: context.textPrimaryColor,
-              height: 1.3,
-            ),
-          ),
-        ),
       ],
     );
   }
 
-  Widget _departureInfoSection(BuildContext context, Map<String, dynamic> d) {
-    final meetingPoint = d['meetingPoint']?.toString();
-    final departure = d['departureLocation']?.toString();
-    final langs = _stringList(d['guideLanguage']) ?? [];
-
-    if ((meetingPoint == null || meetingPoint.isEmpty) &&
-        (departure == null || departure.isEmpty) &&
-        langs.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return _sectionWrapper(
-      context,
-      title: 'departure_info'.tr,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (meetingPoint != null && meetingPoint.isNotEmpty)
-            _itineraryDetail(context, LucideIcons.mapPin, meetingPoint),
-          if (departure != null && departure.isNotEmpty)
-            _itineraryDetail(context, LucideIcons.navigation, departure),
-          if (langs.isNotEmpty)
-            _itineraryDetail(
-              context,
-              LucideIcons.languages,
-              '${'languages'.tr}: ${langs.join(', ')}',
-            ),
-        ],
-      ),
-    );
-  }
-
   // ===== RATING SUMMARY =====
-  Widget _ratingSummary(BuildContext context, double rating, int? count) {
+  Widget _ratingSummary(BuildContext context, Map<String, dynamic> data) {
+    final rating = _parseDouble(data['ratingAverage']) ?? 0.0;
+    final reviewCount = _reviews.length;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: 0.3)),
+        border: Border.all(color: context.dividerColor.withOpacity(0.3)),
       ),
       child: Column(
         children: [
           Row(
             children: [
               Container(
-                width: 54,
-                height: 54,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
-                  color: context.primaryColor.withValues(alpha: 0.1),
+                  color: context.primaryColor.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  rating.toStringAsFixed(1),
-                  style: context.subTitleOneStyle.copyWith(
-                    color: context.primaryColor,
-                    fontWeight: FontWeight.w700,
+                child: Center(
+                  child: Text(
+                    rating.toStringAsFixed(1),
+                    style: context.bodyTwoStyle.copyWith(
+                      color: context.primaryColor,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -816,7 +1322,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                     _starsRow(context, rating),
                     const SizedBox(height: 4),
                     Text(
-                      '${count ?? 0} ${'reviews'.tr}',
+                      '$reviewCount đánh giá',
                       style: context.captionStyle.copyWith(
                         color: context.textSecondaryColor,
                       ),
@@ -826,379 +1332,164 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              icon: Icon(
-                LucideIcons.messageSquare,
-                size: 16,
-                color: context.primaryColor,
-              ),
-              label: Text(
-                'write_review'.tr,
-                style: context.captionStyle.copyWith(
-                  color: context.primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: context.primaryColor),
-              ),
-              onPressed: () {},
-            ),
-          ),
         ],
       ),
     );
   }
 
-  // ===== REVIEWS LIST =====
-  Widget _reviewsSection(BuildContext context) {
+  // ===== REVIEWS BLOCK =====
+  Widget _reviewsBlock(BuildContext context) {
     if (_reviews.isEmpty) {
-      return _emptyBox(context, 'no_reviews'.tr);
-    }
-    final visible = _showAllReviews ? _reviews : _reviews.take(3).toList();
-    return Column(
-      children: [
-        ...visible.map((r) => _reviewItem(context, r)),
-        if (!_showAllReviews && _reviews.length > 3)
-          TextButton(
-            onPressed: () => setState(() => _showAllReviews = true),
-            child: Text(
-              'view_all_reviews'.tr,
-              style: context.captionStyle.copyWith(
-                color: context.textPrimaryColor,
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _reviewItem(BuildContext context, Map<String, dynamic> r) {
-    final rating = _numberFromAny(r['rating'])?.toDouble() ?? 0;
-    final title = r['title']?.toString();
-    final content = r['content']?.toString() ?? '';
-    final userId = r['userId'] ?? r['user_id'];
-    final date = r['createdAt']?.toString();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cardBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: context.primaryColor.withValues(alpha: 0.1),
-                child: Icon(
-                  LucideIcons.user,
-                  size: 16,
-                  color: context.primaryColor,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${'user'.tr} #${userId ?? '—'}',
-                      style: context.captionStyle.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (date != null)
-                      Text(
-                        date,
-                        style: context.captionStyle.copyWith(
-                          color: context.textSecondaryColor,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              _starsRow(context, rating),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (title != null && title.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                title,
-                style: context.bodyTwoStyle.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          Text(
-            content,
-            style: context.bodyTwoStyle.copyWith(fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===== HELPERS =====
-  Widget _imageFallback(BuildContext context) {
-    return Container(
-      color: context.primaryColor.withValues(alpha: 0.08),
-      alignment: Alignment.center,
-      child: Icon(LucideIcons.image, color: context.primaryColor, size: 40),
-    );
-  }
-
-  Widget _emptyBox(BuildContext context, String message) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cardBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor),
-      ),
-      child: Center(
-        child: Text(
-          message,
-          style: context.captionStyle.copyWith(
-            color: context.textSecondaryColor,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _itineraryDetail(BuildContext context, IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: context.primaryColor),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              style: context.captionStyle.copyWith(
-                color: context.textPrimaryColor,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bulletList(BuildContext context, List<String> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: items
-          .map(
-            (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                '• $e',
-                style: context.captionStyle.copyWith(
-                  color: context.textPrimaryColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  Widget _starsRow(BuildContext context, double rating) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (i) {
-        final starIndex = i + 1;
-        final isFull = rating >= starIndex - 0.25;
-        final isHalf = !isFull && rating >= starIndex - 0.75;
-        return Icon(
-          isFull
-              ? Icons.star_rounded
-              : isHalf
-              ? Icons.star_half_rounded
-              : Icons.star_border_rounded,
-          color: context.primaryColor,
-          size: 16,
-        );
-      }),
-    );
-  }
-
-  Widget _inlineAction(BuildContext context, String label) {
-    return InkWell(
-      onTap: () {},
-      child: Text(
-        label,
-        style: context.captionStyle.copyWith(
-          color: context.primaryColor,
-          fontWeight: FontWeight.w600,
-          decoration: TextDecoration.underline,
-        ),
-      ),
-    );
-  }
-
-  Widget _outlinedChip(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+      return Container(
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: context.cardBackgroundColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: context.dividerColor),
         ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: context.textSecondaryColor),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.bodyTwoStyle.copyWith(
-                  color: context.textPrimaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ===== Parsers/formatters =====
-  String? _primaryImageUrl(Map<String, dynamic> d) {
-    final images = d['imageUrls'];
-    if (images is List && images.isNotEmpty) {
-      final first = images.first?.toString();
-      if (first != null && first.isNotEmpty) return first;
-    }
-    final tn = d['thumbnailUrl']?.toString();
-    if (tn != null && tn.isNotEmpty) return tn;
-    final fallback = d['image']?.toString();
-    if (fallback != null && fallback.isNotEmpty) return fallback;
-    return null;
-  }
-
-  double _ratingDouble(dynamic v) {
-    if (v == null) return 0.0;
-    if (v is num) return v.toDouble();
-    return double.tryParse(v.toString()) ?? 0.0;
-  }
-
-  int? _numberFromAny(dynamic v) {
-    if (v == null) return null;
-    if (v is int) return v;
-    if (v is num) return v.toInt();
-    return int.tryParse(v.toString());
-  }
-
-  List<String>? _stringList(dynamic v) {
-    if (v == null) return null;
-    if (v is List) return v.map((e) => e.toString()).toList();
-    return null;
-  }
-
-  String _formatPrice(dynamic price, String? currency) {
-    if (price == null) return '';
-    num? n = price is num ? price : num.tryParse(price.toString());
-    if (n == null) return price.toString();
-    final c = (currency ?? '').toUpperCase();
-    if (c == 'VND' || c == 'VNĐ') {
-      final intVal = n.round();
-      final s = intVal.toString().replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-        (m) => '${m[1]}.',
-      );
-      return '$s đ';
-    }
-    if (c.isEmpty) return n.toString();
-    return '$n $c';
-  }
-
-  String _difficultyLabelFromCode(dynamic code) {
-    final c = code?.toString().toLowerCase();
-    switch (c) {
-      case 'easy':
-        return 'difficulty_easy'.tr;
-      case 'moderate':
-        return 'difficulty_medium'.tr;
-      case 'hard':
-        return 'difficulty_hard'.tr;
-      default:
-        return 'difficulty_easy'.tr;
-    }
-  }
-
-  Widget _errorState(BuildContext context, String msg) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              LucideIcons.alertCircle,
-              size: 54,
+        child: Center(
+          child: Text(
+            'Chưa có đánh giá',
+            style: context.captionStyle.copyWith(
               color: context.textSecondaryColor,
             ),
-            const SizedBox(height: 12),
-            Text(
-              'error_loading'.tr,
-              style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              msg,
-              textAlign: TextAlign.center,
-              style: context.captionStyle.copyWith(
-                color: context.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: _load,
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: context.primaryColor),
-              ),
-              child: Text(
-                'retry'.tr,
-                style: context.bodyTwoStyle.copyWith(
-                  color: context.primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+      );
+    }
+
+    final visible = _reviews.take(3).toList();
+
+    return Column(
+      children: visible.map((review) {
+        final rating = _parseDouble(review['rating']) ?? 0.0;
+        final title = review['title']?.toString();
+        final content = review['content']?.toString() ?? '';
+        final createdAt = review['createdAt']?.toString();
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: context.cardBackgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.dividerColor.withOpacity(0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: context.primaryColor.withOpacity(0.1),
+                    child: Icon(
+                      LucideIcons.user,
+                      size: 18,
+                      color: context.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Khách du lịch',
+                          style: context.bodyTwoStyle.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (createdAt != null)
+                          Text(
+                            createdAt,
+                            style: context.captionStyle.copyWith(
+                              color: context.textSecondaryColor,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  _starsRow(context, rating),
+                ],
+              ),
+              if (title != null && title.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: context.bodyTwoStyle.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Text(
+                content,
+                style: context.captionStyle,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
+  }
+
+  // ===== STARS ROW =====
+  Widget _starsRow(BuildContext context, double rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final filled = rating >= i + 1;
+        return Icon(
+          filled ? Icons.star : Icons.star_border,
+          size: 16,
+          color: context.primaryColor,
+        );
+      }),
+    );
+  }
+
+  // ===== HELPER PARSERS =====
+  double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  List<String> _parseJsonArray(dynamic value) {
+    if (value == null) return [];
+    if (value is List) {
+      return value.map((e) => e.toString()).toList();
+    }
+    if (value is String && value.isNotEmpty) {
+      try {
+        final parsed = jsonDecode(value);
+        if (parsed is List) {
+          return parsed.map((e) => e.toString()).toList();
+        }
+      } catch (_) {}
+    }
+    return [];
+  }
+
+  List<Map<String, dynamic>> _parseItineraryDetails(dynamic value) {
+    if (value == null) return [];
+    if (value is List) {
+      return value.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    if (value is String && value.isNotEmpty) {
+      try {
+        final parsed = jsonDecode(value);
+        if (parsed is List) {
+          return parsed
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
+        }
+      } catch (_) {}
+    }
+    return [];
   }
 }

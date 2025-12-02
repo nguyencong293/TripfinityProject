@@ -39,31 +39,25 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
   bool _hotelPickup = false;
   bool _inStockOnly = false;
 
+  // Backend categories from TourDTO categoriesJson
   final List<_TagOption> _tourTypes = const [
-    _TagOption('tour_type_city', LucideIcons.building2),
-    _TagOption('tour_type_nature', LucideIcons.treePine),
-    _TagOption('tour_type_culture', LucideIcons.landmark),
-    _TagOption('tour_type_food', LucideIcons.utensils),
-    _TagOption('tour_type_adventure', LucideIcons.mountain),
-    _TagOption('tour_type_island_beach', LucideIcons.umbrella),
-    _TagOption('tour_type_cruise', LucideIcons.ship),
-    _TagOption('tour_type_history', LucideIcons.bookOpen),
-    _TagOption('tour_type_wellness', LucideIcons.heartPulse),
-    _TagOption('tour_type_family', LucideIcons.users),
-    _TagOption('tour_type_nightlife', LucideIcons.moonStar),
+    _TagOption('culture', LucideIcons.landmark),
+    _TagOption('nature', LucideIcons.treePine),
+    _TagOption('adventure', LucideIcons.mountain),
+    _TagOption('food', LucideIcons.utensils),
+    _TagOption('beach', LucideIcons.umbrella),
+    _TagOption('mountain', LucideIcons.mountainSnow),
+    _TagOption('city', LucideIcons.building2),
+    _TagOption('historical', LucideIcons.bookOpen),
   ];
 
+  // Backend services from TourDTO servicesJson
   final List<_TagOption> _services = const [
-    _TagOption('svc_hotel_pickup', LucideIcons.mapPin),
-    _TagOption('svc_small_group', LucideIcons.users),
-    _TagOption('svc_private', LucideIcons.lock),
-    _TagOption('svc_guide_en', LucideIcons.messageSquare),
-    _TagOption('svc_guide_vi', LucideIcons.messageSquare),
-    _TagOption('svc_multi_language', LucideIcons.languages),
-    _TagOption('svc_entry_tickets', LucideIcons.ticket),
-    _TagOption('svc_meals_included', LucideIcons.pizza),
-    _TagOption('svc_insurance', LucideIcons.shieldCheck),
-    _TagOption('svc_wheelchair', LucideIcons.accessibility),
+    _TagOption('pickup', LucideIcons.mapPin),
+    _TagOption('airport_transfer', LucideIcons.planeTakeoff),
+    _TagOption('photography', LucideIcons.camera),
+    _TagOption('bike_rental', LucideIcons.bike),
+    _TagOption('special_meals', LucideIcons.pizza),
   ];
 
   // Dynamic data fetched from API (replaces static mock list)
@@ -217,9 +211,6 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
               ? (tour['tourId'] as num).toInt()
               : null,
           tour: tour,
-          activeTourTypes: _selectedTourTypes,
-          activeServices: _selectedServices,
-          activeDifficulty: _difficulty,
         ),
       ),
     );
@@ -541,38 +532,32 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
-                              children:
-                                  [
-                                    'difficulty_easy',
-                                    'difficulty_medium',
-                                    'difficulty_hard',
-                                  ].map((key) {
-                                    final sel = difficulty == key;
-                                    return FilterChip(
-                                      selected: sel,
-                                      showCheckmark: false,
-                                      label: Text(
-                                        key.tr,
-                                        style: context.bodyTwoStyle.copyWith(
-                                          color: sel
-                                              ? context.buttonTextColor
-                                              : context.textSecondaryColor,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      backgroundColor:
-                                          context.cardBackgroundColor,
-                                      selectedColor: context.primaryColor,
-                                      side: BorderSide(
-                                        color: sel
-                                            ? context.primaryColor
-                                            : context.dividerColor,
-                                      ),
-                                      onSelected: (_) => setSheetState(() {
-                                        difficulty = sel ? null : key;
-                                      }),
-                                    );
-                                  }).toList(),
+                              children: ['easy', 'moderate', 'hard'].map((key) {
+                                final sel = difficulty == key;
+                                return FilterChip(
+                                  selected: sel,
+                                  showCheckmark: false,
+                                  label: Text(
+                                    key.tr,
+                                    style: context.bodyTwoStyle.copyWith(
+                                      color: sel
+                                          ? context.buttonTextColor
+                                          : context.textSecondaryColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  backgroundColor: context.cardBackgroundColor,
+                                  selectedColor: context.primaryColor,
+                                  side: BorderSide(
+                                    color: sel
+                                        ? context.primaryColor
+                                        : context.dividerColor,
+                                  ),
+                                  onSelected: (_) => setSheetState(() {
+                                    difficulty = sel ? null : key;
+                                  }),
+                                );
+                              }).toList(),
                             ),
 
                             const SizedBox(height: 16),

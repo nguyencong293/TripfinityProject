@@ -969,15 +969,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => TourServiceDetailScreen(
-          tourId: id,
-          tour: tourData,
-          activeTourTypes: {
-            tour['type']?.toString() ?? 'City tour',
-          }.where((s) => s.isNotEmpty).toSet(),
-          activeServices: const {},
-          activeDifficulty: null,
-        ),
+        builder: (_) => TourServiceDetailScreen(tourId: id, tour: tourData),
       ),
     );
   }

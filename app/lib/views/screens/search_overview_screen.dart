@@ -432,13 +432,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => TourServiceDetailScreen(
-          tourId: id,
-          tour: tourData,
-          activeTourTypes: const {'City tour'},
-          activeServices: const {},
-          activeDifficulty: null,
-        ),
+        builder: (_) => TourServiceDetailScreen(tourId: id, tour: tourData),
       ),
     );
   }
