@@ -1,11 +1,15 @@
 package com.vn.tripfinity.backend.service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +31,7 @@ import com.vn.tripfinity.backend.repository.TourRepository;
 import com.vn.tripfinity.backend.repository.TourReviewAspectsRepository;
 import com.vn.tripfinity.backend.repository.TourReviewRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
+import com.vn.tripfinity.backend.service.cloudinary.CloudinaryService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +49,7 @@ public class TourService {
     private final UserRepository userRepository;
     private final ReviewReplyRepository reviewReplyRepository;
     private final AreaRepository areaRepository;
+    private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<TourDTO> getAllTours() {
@@ -75,6 +81,9 @@ public class TourService {
                 .title(dto.getTitle())
                 .serviceDescription(dto.getServiceDescription())
                 .location(dto.getLocation())
+                .address(dto.getAddress())
+                .latitude(dto.getLatitude())
+                .longitude(dto.getLongitude())
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
                 .price(dto.getPrice())
@@ -83,24 +92,39 @@ public class TourService {
                 .minParticipants(dto.getMinParticipants())
                 .maxParticipants(dto.getMaxParticipants())
                 .thumbnailUrl(dto.getThumbnailUrl())
-                .imageUrls(joinList(dto.getImageUrls()))
+                .imageUrls(writeJson(dto.getImageUrls()))
                 .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
-                .badges(joinList(dto.getBadges()))
+                .badges(writeJson(dto.getBadges()))
                 .tourStatus(dto.getTourStatus() != null ? Tour.TourStatus.valueOf(dto.getTourStatus())
                         : Tour.TourStatus.published)
-                .itineraryOverview(dto.getItineraryOverview())
-                .meetingPoint(dto.getMeetingPoint())
-                .guideLanguage(joinList(dto.getGuideLanguage()))
-                .inclusiveItems(joinList(dto.getInclusiveItems()))
-                .exclusiveItems(joinList(dto.getExclusiveItems()))
-                .cancellationPolicy(dto.getCancellationPolicy())
+                .visibility(dto.getVisibility() != null ? Tour.Visibility.valueOf(dto.getVisibility().replace("public", "public_").replace("private", "private_"))
+                        : Tour.Visibility.public_)
+                .isFeatured(dto.getIsFeatured() != null ? dto.getIsFeatured() : false)
+                .durationDays(dto.getDurationDays())
                 .difficultyLevel(
                         dto.getDifficultyLevel() != null ? Tour.DifficultyLevel.valueOf(dto.getDifficultyLevel())
                                 : null)
-                .durationDays(dto.getDurationDays())
                 .departureLocation(dto.getDepartureLocation())
-                .includedJson(writeJson(dto.getIncluded()))
-                .excludedJson(writeJson(dto.getExcluded()))
+                .meetingPoint(dto.getMeetingPoint())
+                .guideLanguage(joinList(dto.getGuideLanguage()))
+                .guideLanguagesJson(writeJson(dto.getGuideLanguagesJson()))
+                .itineraryOverview(dto.getItineraryOverview())
+                .itineraryDetailsJson(dto.getItineraryDetailsJson())
+                .inclusiveItems(joinList(dto.getInclusiveItems()))
+                .exclusiveItems(joinList(dto.getExclusiveItems()))
+                .includedJson(writeJson(dto.getIncludedJson()))
+                .excludedJson(writeJson(dto.getExcludedJson()))
+                .cancellationPolicy(dto.getCancellationPolicy())
+                .policiesText(dto.getPoliciesText())
+                .tourType(dto.getTourType() != null ? Tour.TourType.valueOf(dto.getTourType().replace("private", "private_"))
+                        : Tour.TourType.group)
+                .categoriesJson(writeJson(dto.getCategoriesJson()))
+                .servicesJson(writeJson(dto.getServicesJson()))
+                .slug(dto.getSlug())
+                .seoTitle(dto.getSeoTitle())
+                .seoDescription(dto.getSeoDescription())
+                .bookingSettingsJson(dto.getBookingSettingsJson())
+                .publishedAt(dto.getPublishedAt())
                 .build();
 
         Tour saved = tourRepository.save(entity);
@@ -133,6 +157,12 @@ public class TourService {
             existing.setServiceDescription(dto.getServiceDescription());
         if (dto.getLocation() != null)
             existing.setLocation(dto.getLocation());
+        if (dto.getAddress() != null)
+            existing.setAddress(dto.getAddress());
+        if (dto.getLatitude() != null)
+            existing.setLatitude(dto.getLatitude());
+        if (dto.getLongitude() != null)
+            existing.setLongitude(dto.getLongitude());
         if (dto.getStartDate() != null)
             existing.setStartDate(dto.getStartDate());
         if (dto.getEndDate() != null)
@@ -150,35 +180,61 @@ public class TourService {
         if (dto.getThumbnailUrl() != null)
             existing.setThumbnailUrl(dto.getThumbnailUrl());
         if (dto.getImageUrls() != null)
-            existing.setImageUrls(joinList(dto.getImageUrls()));
+            existing.setImageUrls(writeJson(dto.getImageUrls()));
         if (dto.getRatingAverage() != null)
             existing.setRatingAverage(dto.getRatingAverage());
         if (dto.getBadges() != null)
-            existing.setBadges(joinList(dto.getBadges()));
+            existing.setBadges(writeJson(dto.getBadges()));
         if (dto.getTourStatus() != null)
             existing.setTourStatus(Tour.TourStatus.valueOf(dto.getTourStatus()));
-        if (dto.getItineraryOverview() != null)
-            existing.setItineraryOverview(dto.getItineraryOverview());
+        if (dto.getVisibility() != null)
+            existing.setVisibility(Tour.Visibility.valueOf(dto.getVisibility().replace("public", "public_").replace("private", "private_")));
+        if (dto.getIsFeatured() != null)
+            existing.setIsFeatured(dto.getIsFeatured());
+        if (dto.getDurationDays() != null)
+            existing.setDurationDays(dto.getDurationDays());
+        if (dto.getDifficultyLevel() != null)
+            existing.setDifficultyLevel(Tour.DifficultyLevel.valueOf(dto.getDifficultyLevel()));
+        if (dto.getDepartureLocation() != null)
+            existing.setDepartureLocation(dto.getDepartureLocation());
         if (dto.getMeetingPoint() != null)
             existing.setMeetingPoint(dto.getMeetingPoint());
         if (dto.getGuideLanguage() != null)
             existing.setGuideLanguage(joinList(dto.getGuideLanguage()));
+        if (dto.getGuideLanguagesJson() != null)
+            existing.setGuideLanguagesJson(writeJson(dto.getGuideLanguagesJson()));
+        if (dto.getItineraryOverview() != null)
+            existing.setItineraryOverview(dto.getItineraryOverview());
+        if (dto.getItineraryDetailsJson() != null)
+            existing.setItineraryDetailsJson(dto.getItineraryDetailsJson());
         if (dto.getInclusiveItems() != null)
             existing.setInclusiveItems(joinList(dto.getInclusiveItems()));
         if (dto.getExclusiveItems() != null)
             existing.setExclusiveItems(joinList(dto.getExclusiveItems()));
+        if (dto.getIncludedJson() != null)
+            existing.setIncludedJson(writeJson(dto.getIncludedJson()));
+        if (dto.getExcludedJson() != null)
+            existing.setExcludedJson(writeJson(dto.getExcludedJson()));
         if (dto.getCancellationPolicy() != null)
             existing.setCancellationPolicy(dto.getCancellationPolicy());
-        if (dto.getDifficultyLevel() != null)
-            existing.setDifficultyLevel(Tour.DifficultyLevel.valueOf(dto.getDifficultyLevel()));
-        if (dto.getDurationDays() != null)
-            existing.setDurationDays(dto.getDurationDays());
-        if (dto.getDepartureLocation() != null)
-            existing.setDepartureLocation(dto.getDepartureLocation());
-        if (dto.getIncluded() != null)
-            existing.setIncludedJson(writeJson(dto.getIncluded()));
-        if (dto.getExcluded() != null)
-            existing.setExcludedJson(writeJson(dto.getExcluded()));
+        if (dto.getPoliciesText() != null)
+            existing.setPoliciesText(dto.getPoliciesText());
+        if (dto.getTourType() != null)
+            existing.setTourType(Tour.TourType.valueOf(dto.getTourType().replace("private", "private_")));
+        if (dto.getCategoriesJson() != null)
+            existing.setCategoriesJson(writeJson(dto.getCategoriesJson()));
+        if (dto.getServicesJson() != null)
+            existing.setServicesJson(writeJson(dto.getServicesJson()));
+        if (dto.getSlug() != null)
+            existing.setSlug(dto.getSlug());
+        if (dto.getSeoTitle() != null)
+            existing.setSeoTitle(dto.getSeoTitle());
+        if (dto.getSeoDescription() != null)
+            existing.setSeoDescription(dto.getSeoDescription());
+        if (dto.getBookingSettingsJson() != null)
+            existing.setBookingSettingsJson(dto.getBookingSettingsJson());
+        if (dto.getPublishedAt() != null)
+            existing.setPublishedAt(dto.getPublishedAt());
 
         Tour saved = tourRepository.save(existing);
         return toDTO(saved);
@@ -326,6 +382,9 @@ public class TourService {
                 .title(t.getTitle())
                 .serviceDescription(t.getServiceDescription())
                 .location(t.getLocation())
+                .address(t.getAddress())
+                .latitude(t.getLatitude())
+                .longitude(t.getLongitude())
                 .startDate(t.getStartDate())
                 .endDate(t.getEndDate())
                 .price(t.getPrice())
@@ -334,36 +393,37 @@ public class TourService {
                 .minParticipants(t.getMinParticipants())
                 .maxParticipants(t.getMaxParticipants())
                 .thumbnailUrl(t.getThumbnailUrl())
-                .imageUrls(splitList(t.getImageUrls()))
+                .imageUrls(readJsonList(t.getImageUrls()))
                 .ratingAverage(t.getRatingAverage())
-                .badges(splitList(t.getBadges()))
+                .badges(readJsonList(t.getBadges()))
                 .tourStatus(t.getTourStatus() != null ? t.getTourStatus().name() : null)
-                .itineraryOverview(t.getItineraryOverview())
+                .visibility(t.getVisibility() != null ? t.getVisibility().name().replace("public_", "public").replace("private_", "private") : null)
+                .isFeatured(t.getIsFeatured())
+                .durationDays(t.getDurationDays())
+                .difficultyLevel(t.getDifficultyLevel() != null ? t.getDifficultyLevel().name() : null)
+                .departureLocation(t.getDepartureLocation())
                 .meetingPoint(t.getMeetingPoint())
                 .guideLanguage(splitList(t.getGuideLanguage()))
+                .guideLanguagesJson(readJsonList(t.getGuideLanguagesJson()))
+                .itineraryOverview(t.getItineraryOverview())
+                .itineraryDetailsJson(t.getItineraryDetailsJson())
                 .inclusiveItems(splitList(t.getInclusiveItems()))
                 .exclusiveItems(splitList(t.getExclusiveItems()))
+                .includedJson(readJsonList(t.getIncludedJson()))
+                .excludedJson(readJsonList(t.getExcludedJson()))
                 .cancellationPolicy(t.getCancellationPolicy())
-                .difficultyLevel(t.getDifficultyLevel() != null ? t.getDifficultyLevel().name() : null)
-                .durationDays(t.getDurationDays())
-                .departureLocation(t.getDepartureLocation())
-                .included(readJsonList(t.getIncludedJson()))
-                .excluded(readJsonList(t.getExcludedJson()))
+                .policiesText(t.getPoliciesText())
+                .tourType(t.getTourType() != null ? t.getTourType().name().replace("private_", "private") : null)
+                .categoriesJson(readJsonList(t.getCategoriesJson()))
+                .servicesJson(readJsonList(t.getServicesJson()))
+                .slug(t.getSlug())
+                .seoTitle(t.getSeoTitle())
+                .seoDescription(t.getSeoDescription())
+                .bookingSettingsJson(t.getBookingSettingsJson())
+                .publishedAt(t.getPublishedAt())
                 .createdAt(t.getCreatedAt())
                 .updatedAt(t.getUpdatedAt())
                 .build();
-    }
-
-    private String joinList(List<String> list) {
-        if (list == null || list.isEmpty())
-            return null;
-        return String.join(",", list);
-    }
-
-    private List<String> splitList(String csv) {
-        if (csv == null || csv.trim().isEmpty())
-            return null;
-        return List.of(csv.split(","));
     }
 
     private String writeJson(Object obj) {
@@ -385,6 +445,170 @@ public class TourService {
         } catch (Exception e) {
             log.warn("Không thể parse JSON list: {}", json, e);
             return null;
+        }
+    }
+
+    // Helper methods for deprecated CSV fields (guideLanguage, inclusiveItems, exclusiveItems)
+    private String joinList(List<String> list) {
+        if (list == null || list.isEmpty())
+            return null;
+        return String.join(",", list);
+    }
+
+    private List<String> splitList(String csv) {
+        if (csv == null || csv.trim().isEmpty())
+            return null;
+        return List.of(csv.split(","));
+    }
+
+    // ==================== IMAGE MANAGEMENT ====================
+
+    public TourDTO uploadThumbnail(Integer tourId, MultipartFile file) throws IOException {
+        log.debug("Upload thumbnail cho Tour ID: {}", tourId);
+        Tour tour = tourRepository.findById(tourId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Tour id: " + tourId));
+
+        // Xóa thumbnail cũ nếu có
+        if (tour.getThumbnailUrl() != null && !tour.getThumbnailUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImage(tour.getThumbnailUrl());
+                log.info("Đã xóa thumbnail cũ trên Cloudinary");
+            } catch (Exception e) {
+                log.error("Lỗi khi xóa thumbnail cũ: {}", e.getMessage());
+            }
+        }
+
+        // Upload thumbnail mới
+        Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
+        String thumbnailUrl = (String) uploadResult.get("secure_url");
+
+        tour.setThumbnailUrl(thumbnailUrl);
+        Tour savedTour = tourRepository.save(tour);
+        log.info("Đã upload thumbnail cho Tour ID: {}", savedTour.getTourId());
+
+        return toDTO(savedTour);
+    }
+
+    public TourDTO deleteThumbnail(Integer tourId) throws IOException {
+        log.debug("Xóa thumbnail cho Tour ID: {}", tourId);
+        Tour tour = tourRepository.findById(tourId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Tour id: " + tourId));
+
+        if (tour.getThumbnailUrl() != null && !tour.getThumbnailUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImage(tour.getThumbnailUrl());
+                log.info("Đã xóa thumbnail trên Cloudinary");
+            } catch (Exception e) {
+                log.error("Lỗi khi xóa thumbnail trên Cloudinary: {}", e.getMessage());
+            }
+        }
+
+        tour.setThumbnailUrl(null);
+        Tour savedTour = tourRepository.save(tour);
+        log.info("Đã xóa thumbnail cho Tour ID: {}", savedTour.getTourId());
+
+        return toDTO(savedTour);
+    }
+
+    public TourDTO addImages(Integer tourId, List<MultipartFile> files) throws IOException {
+        log.debug("Thêm {} ảnh cho Tour ID: {}", files.size(), tourId);
+        Tour tour = tourRepository.findById(tourId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Tour id: " + tourId));
+
+        List<String> currentImageUrls = jsonToStringList(tour.getImageUrls());
+        List<String> newImageUrls = new ArrayList<>(currentImageUrls);
+
+        for (MultipartFile file : files) {
+            Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
+            String imageUrl = (String) uploadResult.get("secure_url");
+            newImageUrls.add(imageUrl);
+        }
+
+        tour.setImageUrls(stringListToJson(newImageUrls));
+        Tour savedTour = tourRepository.save(tour);
+        log.info("Đã thêm {} ảnh cho Tour ID: {}", files.size(), savedTour.getTourId());
+
+        return toDTO(savedTour);
+    }
+
+    public TourDTO deleteImage(Integer tourId, String imageUrl) throws IOException {
+        log.debug("Xóa ảnh cho Tour ID: {}", tourId);
+        Tour tour = tourRepository.findById(tourId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Tour id: " + tourId));
+
+        List<String> currentImageUrls = jsonToStringList(tour.getImageUrls());
+
+        if (currentImageUrls.contains(imageUrl)) {
+            try {
+                cloudinaryService.deleteImage(imageUrl);
+                log.info("Đã xóa ảnh trên Cloudinary");
+            } catch (Exception e) {
+                log.error("Lỗi khi xóa ảnh trên Cloudinary: {}", e.getMessage());
+            }
+
+            currentImageUrls.remove(imageUrl);
+            tour.setImageUrls(stringListToJson(currentImageUrls));
+            Tour savedTour = tourRepository.save(tour);
+            log.info("Đã xóa ảnh cho Tour ID: {}", savedTour.getTourId());
+
+            return toDTO(savedTour);
+        } else {
+            throw new ResourceNotFoundException("Không tìm thấy ảnh với URL: " + imageUrl);
+        }
+    }
+
+    public TourDTO deleteAllImages(Integer tourId) throws IOException {
+        log.debug("Xóa tất cả ảnh cho Tour ID: {}", tourId);
+        Tour tour = tourRepository.findById(tourId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Tour id: " + tourId));
+
+        List<String> currentImageUrls = jsonToStringList(tour.getImageUrls());
+
+        for (String imageUrl : currentImageUrls) {
+            try {
+                cloudinaryService.deleteImage(imageUrl);
+            } catch (Exception e) {
+                log.error("Lỗi khi xóa ảnh trên Cloudinary: {}", e.getMessage());
+            }
+        }
+
+        tour.setImageUrls(null);
+        Tour savedTour = tourRepository.save(tour);
+        log.info("Đã xóa tất cả ảnh cho Tour ID: {}", savedTour.getTourId());
+
+        return toDTO(savedTour);
+    }
+
+    // ==================== JSON HELPER METHODS ====================
+
+    /**
+     * Convert List<String> thành JSON string cho imageUrls
+     */
+    private String stringListToJson(List<String> list) {
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (JsonProcessingException e) {
+            log.error("Error converting string list to JSON: {}", list, e);
+            return null;
+        }
+    }
+
+    /**
+     * Convert JSON string thành List<String> cho imageUrls
+     */
+    private List<String> jsonToStringList(String json) {
+        if (json == null || json.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            List<String> list = objectMapper.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+            return list != null ? list : new ArrayList<>();
+        } catch (JsonProcessingException e) {
+            log.error("Error converting JSON to string list: {}", json, e);
+            return new ArrayList<>();
         }
     }
 }

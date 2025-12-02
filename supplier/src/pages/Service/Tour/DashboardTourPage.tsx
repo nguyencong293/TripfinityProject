@@ -50,6 +50,7 @@ import {
   NotificationItem,
   StatCard,
 } from "../../../components/shared";
+import { TourCard } from "../../../components/tour";
 import { useLanguage } from "../../../hooks/useLanguage";
 import ConfirmModal from "../../../components/common/ConfirmModal";
 import type { Notification, NotificationType } from "../../../components/shared";
@@ -70,117 +71,6 @@ interface PieEntry {
   color: string;
   [key: string]: string | number;
 }
-
-// Tour Card Component
-interface TourCardProps {
-  tour: TourDTO;
-  onView: () => void;
-  onEdit: () => void;
-}
-
-const TourCard: React.FC<TourCardProps> = ({
-  tour,
-  onView,
-  onEdit,
-}) => {
-  const getDifficultyColor = (level?: string) => {
-    switch (level) {
-      case "easy":
-        return "bg-green-100 text-green-700";
-      case "moderate":
-        return "bg-yellow-100 text-yellow-700";
-      case "hard":
-        return "bg-red-100 text-red-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
-
-  const getDifficultyLabel = (level?: string) => {
-    switch (level) {
-      case "easy":
-        return "Dễ";
-      case "moderate":
-        return "Trung bình";
-      case "hard":
-        return "Khó";
-      default:
-        return "N/A";
-    }
-  };
-
-  const getTourTypeLabel = (type?: string) => {
-    switch (type) {
-      case "group":
-        return "Nhóm";
-      case "private":
-        return "Riêng tư";
-      case "custom":
-        return "Tùy chỉnh";
-      default:
-        return "N/A";
-    }
-  };
-
-  return (
-    <div className="rounded-xl border theme-border theme-bg-card overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="aspect-video relative overflow-hidden theme-bg-secondary">
-        {tour.thumbnailUrl ? (
-          <img
-            src={tour.thumbnailUrl}
-            alt={tour.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <MapPin className="w-12 h-12 theme-text-tertiary" />
-          </div>
-        )}
-        {tour.difficultyLevel && (
-          <div className="absolute top-2 right-2">
-            <span className={`px-2 py-1 text-xs font-medium rounded ${getDifficultyColor(tour.difficultyLevel)}`}>
-              {getDifficultyLabel(tour.difficultyLevel)}
-            </span>
-          </div>
-        )}
-      </div>
-      <div className="p-4">
-        <h3 className="font-semibold theme-text-primary mb-2 line-clamp-1">
-          {tour.title}
-        </h3>
-        <p className="text-sm theme-text-secondary mb-3 line-clamp-2">
-          {tour.location || "Chưa có vị trí"}
-        </p>
-        <div className="flex items-center justify-between text-sm theme-text-secondary mb-3">
-          <span>🕐 {tour.durationDays || 0} ngày</span>
-          <span>👥 {getTourTypeLabel(tour.tourType)}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <span className="text-yellow-500">⭐</span>
-            <span className="text-sm font-medium theme-text-primary">
-              {tour.ratingAverage?.toFixed(1) || "0.0"}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={onView}
-              className="px-3 py-1.5 text-sm theme-bg-secondary theme-text-primary rounded-lg hover:theme-bg-tertiary transition-colors"
-            >
-              Xem
-            </button>
-            <button
-              onClick={onEdit}
-              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Sửa
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Tour Booking Row Component
 interface TourBookingRowProps {
