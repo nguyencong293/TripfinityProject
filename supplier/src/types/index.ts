@@ -276,3 +276,521 @@ export interface HotelRatingSummaryDTO {
   avgLocation?: number;
   avgFacilities?: number;
 }
+
+// ==========================================
+// ATTRACTION TYPES
+// ==========================================
+
+export interface AttractionDTO {
+  attractionId?: number;
+
+  // Required fields
+  providerId: number;
+  areaId: number;
+  title: string;
+  price: number;
+  currencyCode: string;
+  attractionStatus: "published" | "archived" | "disabled";
+  visibility: "public" | "private";
+
+  // Optional basic info
+  serviceDescription?: string;
+  location?: string; // Tỉnh/thành phố
+  address?: string; // Địa chỉ đầy đủ
+  latitude?: number;
+  longitude?: number;
+  
+  // Date range
+  startDate?: string; // ISO date (yyyy-MM-dd)
+  endDate?: string; // ISO date
+  
+  // Capacity
+  capacity?: number;
+  minParticipants?: number;
+  maxParticipants?: number;
+  
+  // Media
+  thumbnailUrl?: string;
+  imageUrls?: string[];
+  
+  // Rating
+  ratingAverage?: number; // 0.00 - 5.00
+  badges?: string[];
+  
+  // Attraction type
+  attractionType?: 
+    | "museum" 
+    | "park" 
+    | "temple" 
+    | "landmark" 
+    | "theme_park" 
+    | "cultural_site" 
+    | "natural_attraction" 
+    | "entertainment" 
+    | "historical_site" 
+    | "other";
+  
+  // Attraction-specific fields
+  averageVisitMinutes?: number; // Thời gian tham quan trung bình
+  visitTypesJson?: string[]; // ["guided_tour", "self_guided", "audio_guide", "virtual_tour"]
+  availableTimesJson?: string[]; // ["morning", "afternoon", "evening", "night"]
+  suitableForJson?: string[]; // ["family", "kids", "elderly", "couples", "groups", "solo", "pets"]
+  featuresJson?: number[]; // Feature IDs from attractions_features dictionary
+  openingHoursJson?: { [key: string]: string }; // {"monday":"08:00-17:00","tuesday":"08:00-17:00"}
+  highlightsJson?: number[]; // Highlight IDs
+  tipsText?: string; // Lời khuyên cho du khách
+  policiesText?: string; // Chính sách
+  
+  // SEO
+  slug?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  isFeatured?: boolean;
+  
+  // Booking settings
+  bookingSettingsJson?: string; // Raw JSON string
+  
+  // Timestamps
+  publishedAt?: string; // ISO datetime
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AttractionFilters {
+  search?: string;
+  area?: string;
+  attractionType?: string;
+  status?: AttractionDTO["attractionStatus"] | "";
+  priceMin?: number;
+  priceMax?: number;
+  visibility?: AttractionDTO["visibility"] | "";
+  suitableFor?: string; // Filter by audience
+}
+
+export interface AttractionStats {
+  totalAttractions: number;
+  publishedCount: number;
+  archivedCount: number;
+  averageRating: number;
+  totalVisitors: number;
+  averageVisitDuration: number; // minutes
+}
+
+// Attraction Booking DTO
+export interface AttractionBookingDTO {
+  bookingId?: number;
+  userId: number;
+  attractionId: number;
+  bookingDate?: string; // ISO string
+  visitDate?: string; // Ngày dự kiến tham quan
+  visitTime?: string; // Giờ tham quan (HH:mm:ss)
+  numAdults: number;
+  numChildren?: number;
+  totalPrice: number;
+  currencyCode?: string;
+  bookingStatus?: 
+    | "pending" 
+    | "confirmed" 
+    | "cancelled" 
+    | "completed" 
+    | "refunded";
+  paymentMethod?: string; // "counter", "zalopay", "momo", "vnpay", "credit_card"
+  eTicketUrl?: string;
+  qrCodeData?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  providerId?: number;
+  channel?: string;
+  holdUntil?: string;
+  providerSeen?: boolean;
+  providerNotes?: string;
+  providerConfirmed?: number; // 0=pending, 1=confirmed, 2=cancelled
+  providerConfirmedAt?: string;
+}
+
+// Attraction Review DTO
+export interface AttractionReviewDTO {
+  reviewId?: number;
+  attractionId: number;
+  userId: number;
+  rating: number; // 1-5
+  title?: string;
+  content: string;
+  imageUrls?: string[];
+  likesCount?: number;
+  replyCount?: number;
+  reviewStatus?: "approved" | "rejected";
+  aspects?: {
+    experience: number; // 1-5
+    valueForMoney: number; // 1-5
+    accessibility: number; // 1-5
+    facilities: number; // 1-5
+    staff: number; // 1-5
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Attraction Rating Summary DTO
+export interface AttractionRatingSummaryDTO {
+  attractionId: number;
+  avgRating: number; // 0.00 - 5.00
+  totalReviews: number;
+  count1: number;
+  count2: number;
+  count3: number;
+  count4: number;
+  count5: number;
+  avgExperience?: number;
+  avgValueForMoney?: number;
+  avgAccessibility?: number;
+  avgFacilities?: number;
+  avgStaff?: number;
+}
+
+// ==========================================
+// RESTAURANT TYPES
+// ==========================================
+
+export interface RestaurantDTO {
+  restaurantId?: number;
+
+  // Required fields
+  providerId: number;
+  areaId: number;
+  title: string;
+  price: number; // Giá trung bình 1 người
+  currencyCode: string;
+  restaurantStatus: "published" | "archived" | "disabled";
+  visibility: "public" | "private";
+
+  // Optional basic info
+  serviceDescription?: string;
+  location?: string; // Tỉnh/thành phố
+  address?: string; // Địa chỉ đầy đủ
+  latitude?: number;
+  longitude?: number;
+  
+  // Contact
+  phone?: string;
+  website?: string;
+  
+  // Date range (for seasonal restaurants)
+  startDate?: string; // ISO date (yyyy-MM-dd)
+  endDate?: string; // ISO date
+  
+  // Pricing
+  priceLevel?: "cheap" | "moderate" | "expensive" | "luxury";
+  
+  // Capacity
+  capacity?: number; // Số chỗ ngồi
+  minParticipants?: number; // Group booking minimum
+  maxParticipants?: number; // Group booking maximum
+  
+  // Media
+  thumbnailUrl?: string;
+  imageUrls?: string[];
+  
+  // Rating
+  ratingAverage?: number; // 0.00 - 5.00
+  badges?: string[]; // ["michelin_star", "recommended", "halal_certified"]
+  
+  // Restaurant-specific fields
+  cuisinesJson?: string[]; // ["vietnamese", "chinese", "japanese", "italian", "french"]
+  servicesJson?: string[]; // ["dine_in", "takeaway", "delivery", "reservation", "private_room"]
+  dietsJson?: string[]; // ["vegetarian", "vegan", "halal", "gluten_free"]
+  openingHoursJson?: { [key: string]: string }; // {"monday":"10:00-22:00"}
+  menuHighlightsJson?: string[]; // Signature dishes
+  ambianceTagsJson?: string[]; // ["romantic", "family_friendly", "casual", "rooftop"]
+  paymentMethodsJson?: string[]; // ["cash", "credit_card", "momo", "zalopay"]
+  policiesText?: string; // Dress code, reservation, cancellation
+  
+  // SEO
+  slug?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  isFeatured?: boolean;
+  
+  // Booking settings
+  bookingSettingsJson?: string; // Raw JSON string
+  
+  // Timestamps
+  publishedAt?: string; // ISO datetime
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RestaurantFilters {
+  search?: string;
+  area?: string;
+  cuisine?: string; // Filter by cuisine type
+  priceLevel?: string;
+  status?: RestaurantDTO["restaurantStatus"] | "";
+  priceMin?: number;
+  priceMax?: number;
+  visibility?: RestaurantDTO["visibility"] | "";
+  diet?: string; // Filter by dietary requirement
+  service?: string; // Filter by service type
+}
+
+export interface RestaurantStats {
+  totalRestaurants: number;
+  publishedCount: number;
+  archivedCount: number;
+  averageRating: number;
+  totalReservations: number;
+  averagePrice: number;
+}
+
+// Restaurant Booking DTO (đặt bàn)
+export interface RestaurantBookingDTO {
+  bookingId?: number;
+  userId: number;
+  restaurantId: number;
+  bookingDate?: string; // ISO string
+  reservationDate?: string; // Ngày đặt bàn
+  reservationTime?: string; // Giờ đặt bàn (HH:mm:ss)
+  numAdults: number;
+  numChildren?: number;
+  specialRequests?: string; // Yêu cầu đặc biệt (window seat, birthday, etc)
+  totalPrice: number;
+  currencyCode?: string;
+  bookingStatus?: 
+    | "pending" 
+    | "confirmed" 
+    | "cancelled" 
+    | "completed" 
+    | "no_show";
+  paymentMethod?: string; // "counter", "zalopay", "momo", "vnpay", "credit_card"
+  depositAmount?: number; // Tiền đặt cọc
+  createdAt?: string;
+  updatedAt?: string;
+  providerId?: number;
+  channel?: string;
+  holdUntil?: string;
+  providerSeen?: boolean;
+  providerNotes?: string;
+  providerConfirmed?: number; // 0=pending, 1=confirmed, 2=cancelled
+  providerConfirmedAt?: string;
+}
+
+// Restaurant Review DTO
+export interface RestaurantReviewDTO {
+  reviewId?: number;
+  restaurantId: number;
+  userId: number;
+  rating: number; // 1-5
+  title?: string;
+  content: string;
+  imageUrls?: string[];
+  likesCount?: number;
+  replyCount?: number;
+  reviewStatus?: "approved" | "rejected";
+  aspects?: {
+    food: number; // 1-5
+    service: number; // 1-5
+    ambiance: number; // 1-5
+    valueForMoney: number; // 1-5
+    cleanliness: number; // 1-5
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Restaurant Rating Summary DTO
+export interface RestaurantRatingSummaryDTO {
+  restaurantId: number;
+  avgRating: number; // 0.00 - 5.00
+  totalReviews: number;
+  count1: number;
+  count2: number;
+  count3: number;
+  count4: number;
+  count5: number;
+  avgFood?: number;
+  avgService?: number;
+  avgAmbiance?: number;
+  avgValueForMoney?: number;
+  avgCleanliness?: number;
+}
+
+// ==========================================
+// TOUR TYPES
+// ==========================================
+
+export interface TourDTO {
+  tourId?: number;
+
+  // Required fields
+  providerId: number;
+  areaId: number;
+  title: string;
+  price: number; // Giá tour
+  currencyCode: string;
+  tourStatus: "published" | "archived" | "disabled";
+  visibility: "public" | "private";
+
+  // Optional basic info
+  serviceDescription?: string;
+  location?: string; // Tỉnh/thành phố
+  address?: string; // Địa chỉ đầy đủ
+  
+  // Coordinates (STANDARDIZED with hotels/attractions/restaurants)
+  latitude?: number; // DECIMAL(10,8)
+  longitude?: number; // DECIMAL(11,8)
+  
+  // Date range
+  startDate?: string; // ISO date (yyyy-MM-dd)
+  endDate?: string; // ISO date
+  
+  // Capacity
+  capacity?: number; // Số chỗ tối đa
+  minParticipants?: number; // Số người tối thiểu
+  maxParticipants?: number; // Số người tối đa
+  
+  // Media
+  thumbnailUrl?: string;
+  imageUrls?: string | string[]; // JSON array of URLs
+  
+  // Rating
+  ratingAverage?: number; // 0.00 - 5.00
+  badges?: string | string[]; // JSON array: ["best_seller","eco_friendly","family_friendly","adventure"]
+  
+  // Tour-specific fields
+  durationDays?: number; // Số ngày
+  difficultyLevel?: "easy" | "moderate" | "hard"; // Độ khó
+  departureLocation?: string; // Điểm khởi hành
+  meetingPoint?: string; // Điểm tập trung
+  
+  // Guide languages (OPTIMIZED: multi-language support)
+  guideLanguage?: string; // DEPRECATED - use guideLanguagesJson
+  guideLanguagesJson?: string | string[]; // JSON array: ["vietnamese","english","chinese","japanese","korean"]
+  
+  // Itinerary
+  itineraryOverview?: string; // Tổng quan lịch trình
+  itineraryDetailsJson?: string | Array<{day: number; title: string; activities: string[]}>; // Chi tiết từng ngày
+  
+  // Included/Excluded Items (OPTIMIZED: JSON)
+  inclusiveItems?: string; // DEPRECATED - use includedJson
+  exclusiveItems?: string; // DEPRECATED - use excludedJson
+  includedJson?: string | string[]; // JSON: ["hotel","meals","transport","guide","insurance","entrance_fees"]
+  excludedJson?: string | string[]; // JSON: ["flights","visa","tips","personal_expenses"]
+  
+  // Policies
+  cancellationPolicy?: string; // Chính sách hủy
+  policiesText?: string; // Các chính sách khác
+  
+  // Tour Types & Categories (NEW)
+  tourType?: "group" | "private" | "custom"; // Loại tour
+  categoriesJson?: string | string[]; // JSON: ["culture","nature","adventure","food","beach","mountain","city","historical"]
+  
+  // Additional Services (NEW)
+  servicesJson?: string | string[]; // JSON: ["pickup","airport_transfer","photography","bike_rental","special_meals"]
+  
+  // Booking Settings
+  bookingSettingsJson?: string | Record<string, any>; // Cấu hình đặt tour
+  
+  // SEO
+  slug?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  isFeatured?: boolean;
+  
+  // Timestamps
+  publishedAt?: string; // ISO datetime
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TourFilters {
+  search?: string;
+  area?: string;
+  difficultyLevel?: string;
+  status?: TourDTO["tourStatus"] | "";
+  priceMin?: number;
+  priceMax?: number;
+  visibility?: TourDTO["visibility"] | "";
+  durationDays?: number;
+}
+
+export interface TourStats {
+  totalTours: number;
+  publishedCount: number;
+  archivedCount: number;
+  averageRating: number;
+  totalBookings: number;
+  averagePrice: number;
+}
+
+// Tour Booking DTO
+export interface TourBookingDTO {
+  bookingId?: number;
+  userId: number;
+  tourId: number;
+  bookingDate?: string; // ISO string
+  tourDate?: string; // Ngày đi tour
+  numberOfTravelers?: number; // Total travelers (used in some contexts)
+  numAdults: number;
+  numChildren?: number;
+  specialRequests?: string;
+  totalPrice: number;
+  currencyCode?: string;
+  bookingStatus?: 
+    | "pending" 
+    | "confirmed" 
+    | "cancelled" 
+    | "completed" 
+    | "no_show";
+  paymentMethod?: string;
+  depositAmount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  providerId?: number;
+  channel?: string;
+  holdUntil?: string;
+  providerSeen?: boolean;
+  providerNotes?: string;
+  providerConfirmed?: number; // 0=pending, 1=confirmed, 2=cancelled
+  providerConfirmedAt?: string;
+}
+
+// Tour Review DTO
+export interface TourReviewDTO {
+  reviewId?: number;
+  tourId: number;
+  userId: number;
+  rating: number; // 1-5
+  title?: string;
+  content: string;
+  imageUrls?: string[];
+  likesCount?: number;
+  replyCount?: number;
+  reviewStatus?: "approved" | "rejected";
+  aspects?: {
+    guideQuality: number; // 1-5 Hướng dẫn viên (DB: guide_quality)
+    itineraryQuality: number; // 1-5 Lịch trình (DB: itinerary_quality)
+    valueForMoney: number; // 1-5 Giá trị (DB: value_for_money)
+    organization: number; // 1-5 Tổ chức
+    safety: number; // 1-5 An toàn
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Tour Rating Summary DTO
+export interface TourRatingSummaryDTO {
+  tourId: number;
+  avgRating: number; // 0.00 - 5.00
+  totalReviews: number;
+  count1: number;
+  count2: number;
+  count3: number;
+  count4: number;
+  count5: number;
+  avgGuideQuality?: number; // Average guide_quality
+  avgItineraryQuality?: number; // Average itinerary_quality
+  avgValueForMoney?: number; // Average value_for_money
+  avgOrganization?: number; // Average organization
+  avgSafety?: number; // Average safety
+}
+

@@ -333,7 +333,7 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
 
   const updateField = useCallback(
     <K extends keyof HotelFormData>(field: K, value: HotelFormData[K]) => {
-      console.log(`🔄 updateField: ${String(field)} =`, value);
+      // DEBUG: console.log(`🔄 updateField: ${String(field)} =`, value);
       setFormData((prev) => ({ ...prev, [field]: value }));
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -349,7 +349,7 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
       field: "highlightsJson" | "amenitiesJson" | "badges",
       value: (number | string)[]
     ) => {
-      console.log(`🔄 updateArrayField: ${field} =`, value);
+      // DEBUG: console.log(`🔄 updateArrayField: ${field} =`, value);
       setFormData((prev) => ({
         ...prev,
         [field]:
@@ -424,8 +424,8 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
         new Date(formData.startDate) > new Date(formData.endDate))
       newErrors.startDate = "Ngày bắt đầu không được sau ngày kết thúc";
 
-    console.log("🔍 Validation errors:", newErrors);
-    console.log("🔍 Validation result:", Object.keys(newErrors).length === 0);
+    // DEBUG: console.log("🔍 Validation errors:", newErrors);
+    // DEBUG: console.log("🔍 Validation result:", Object.keys(newErrors).length === 0);
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -466,7 +466,7 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
       setErrors({});
 
       try {
-        console.log("🚀 Submitting hotel with data (raw form):", formData);
+        // DEBUG: console.log("🚀 Submitting hotel with data (raw form):", formData);
 
         const hotelData: Partial<HotelDTO> = {
           providerId,
@@ -522,36 +522,36 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
         if (formData.checkoutTime)
           hotelData.checkoutTime = formData.checkoutTime;
 
-        console.log("🔍 Final hotel payload:", hotelData);
-        console.log("📋 Payload details:", {
-          providerId: hotelData.providerId,
-          areaId: hotelData.areaId,
-          title: hotelData.title,
-          price: hotelData.price,
-          latitude: hotelData.latitude,
-          longitude: hotelData.longitude,
-          address: hotelData.address,
-          slug: hotelData.slug,
-        });
+        // DEBUG: console.log("🔍 Final hotel payload:", hotelData);
+        // DEBUG: console.log("📋 Payload details:", {
+        //   providerId: hotelData.providerId,
+        //   areaId: hotelData.areaId,
+        //   title: hotelData.title,
+        //   price: hotelData.price,
+        //   latitude: hotelData.latitude,
+        //   longitude: hotelData.longitude,
+        //   address: hotelData.address,
+        //   slug: hotelData.slug,
+        // });
 
         const createdHotel = await createHotel(hotelData);
-        console.log("✅ Hotel created:", createdHotel);
+        // DEBUG: console.log("✅ Hotel created:", createdHotel);
 
         if (!createdHotel.hotelId) {
           throw new Error("Hotel created but ID not returned");
         }
 
         if (thumbnailFile) {
-          console.log("📸 Uploading thumbnail...");
+          // DEBUG: console.log("📸 Uploading thumbnail...");
           await uploadHotelThumbnail(createdHotel.hotelId, thumbnailFile);
         }
 
         if (imageFiles.length > 0) {
-          console.log("🖼️ Uploading", imageFiles.length, "images...");
+          // DEBUG: console.log("🖼️ Uploading", imageFiles.length, "images...");
           await uploadHotelImages(createdHotel.hotelId, imageFiles);
         }
 
-        console.log("🎉 Hotel creation completed successfully!");
+        // DEBUG: console.log("🎉 Hotel creation completed successfully!");
         navigate("/supplier/service/hotel");
         // Reload trang để map không bị loading
         setTimeout(() => window.location.reload(), 100);

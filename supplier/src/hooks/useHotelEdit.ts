@@ -394,7 +394,7 @@ export const useHotelEdit = (
       setErrors({});
 
       try {
-        console.log("🔍 Update payload - providerId:", providerId);
+        // DEBUG: console.log("🔍 Update payload - providerId:", providerId);
 
         // ✅ FIX: Thêm providerId vào payload
         const hotelData: Partial<HotelDTO> = {
@@ -451,24 +451,24 @@ export const useHotelEdit = (
         if (formData.checkoutTime)
           hotelData.checkoutTime = formData.checkoutTime;
 
-        console.log("🔍 Final update payload:", hotelData);
+        // DEBUG: console.log("🔍 Final update payload:", hotelData);
 
-        const updatedHotel = await updateHotel(hotel.hotelId, hotelData);
-        console.log("✅ Hotel updated:", updatedHotel);
+        const updatedHotel = await updateHotel(hotelId, hotelData);
+        // DEBUG: console.log("✅ Hotel updated:", updatedHotel);
 
         // Upload new thumbnail if provided
         if (thumbnailFile) {
-          console.log("📸 Uploading new thumbnail...");
-          await uploadHotelThumbnail(hotel.hotelId, thumbnailFile);
+          // DEBUG: console.log("📸 Uploading new thumbnail...");
+          await uploadHotelThumbnail(hotelId, thumbnailFile);
         }
 
-        // Upload new images if provided
+        // Upload new images if any
         if (imageFiles.length > 0) {
-          console.log("🖼️ Uploading", imageFiles.length, "new images...");
-          await uploadHotelImages(hotel.hotelId, imageFiles);
+          // DEBUG: console.log("🖼️ Uploading", imageFiles.length, "new images...");
+          await uploadHotelImages(hotelId, imageFiles);
         }
 
-        console.log("🎉 Hotel update completed successfully!");
+        // DEBUG: console.log("🎉 Hotel update completed successfully!");
         navigate("/supplier/service/hotel");
         // Reload trang để MapPicker hiển thị đúng vị trí mới
         window.location.reload();

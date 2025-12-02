@@ -21,13 +21,13 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName, readOnly = f
   const [isLiked, setIsLiked] = useState(false);
   const currentUserId = Number(localStorage.getItem("userId"));
 
-  console.log("🔍 ReviewCard render:", {
-    reviewId: review.reviewId,
-    likesCount: review.likesCount,
-    replyCount: review.replyCount,
-    readOnly,
-    currentUserId
-  });
+  // DEBUG: console.log("🔍 ReviewCard render:", {
+  //   reviewId: review.reviewId,
+  //   likesCount: review.likesCount,
+  //   replyCount: review.replyCount,
+  //   readOnly,
+  //   currentUserId
+  // });
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -51,7 +51,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, hotelName, readOnly = f
           "hotel",
           review.reviewId
         );
-        console.log("✅ Like status fetched:", { reviewId: review.reviewId, liked });
+        // DEBUG: console.log("✅ Like status fetched:", { reviewId: review.reviewId, liked });
         setIsLiked(liked);
       } catch (error) {
         console.error("❌ Error fetching like status:", error);

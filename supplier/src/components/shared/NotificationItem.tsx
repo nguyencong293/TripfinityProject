@@ -24,6 +24,7 @@ export type NotificationType =
   | "system_alert"
   | "system_maintenance"
   | "promotion";
+
 export interface Notification {
   id: string;
   type: NotificationType;

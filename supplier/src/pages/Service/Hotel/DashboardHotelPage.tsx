@@ -43,6 +43,8 @@ import {
   QuickAction,
   NotificationItem,
   StatCard,
+} from "../../../components/shared";
+import {
   HotelCard,
   BookingRow,
   RatingSummaryCard,
@@ -50,9 +52,7 @@ import {
 } from "../../../components/hotel";
 import { useLanguage } from "../../../hooks/useLanguage";
 import ConfirmModal from "../../../components/common/ConfirmModal";
-
-// Notification types for this page context
-import type { Notification, NotificationType } from "../../../components/hotel/NotificationItem";
+import type { Notification, NotificationType } from "../../../components/shared";
 
 interface BackendNotification {
   notification_id: number;
@@ -250,17 +250,17 @@ const DashboardHotelPage: React.FC = () => {
     const load = async () => {
       if (!providerId) return;
       try {
-        console.log("🔍 Loading data for providerId:", providerId);
+        // DEBUG: console.log("🔍 Loading data for providerId:", providerId);
 
         const hs = await getHotelsByProvider(providerId);
-        console.log("🏨 Hotels found:", hs.length, hs);
+        // DEBUG: console.log("🏨 Hotels found:", hs.length, hs);
         setHotels(hs);
 
         const bRes = await api.get<HotelBookingDTO[]>(
           `/hotel-bookings/provider/${providerId}`
         );
-        console.log("📅 Bookings response:", bRes.data);
-        console.log("📊 Total bookings:", bRes.data?.length || 0);
+        // DEBUG: console.log("📅 Bookings response:", bRes.data);
+        // DEBUG: console.log("📊 Total bookings:", bRes.data?.length || 0);
         setBookings(bRes.data || []);
 
         // Fetch user info for all bookings
@@ -279,7 +279,7 @@ const DashboardHotelPage: React.FC = () => {
           })
         );
         setUserCache(usersMap);
-        console.log("👥 Users loaded:", usersMap.size);
+        // DEBUG: console.log("👥 Users loaded:", usersMap.size);
 
         // Fetch rating summaries for each hotel
         const summaryPromises = hs.map((h) =>
@@ -301,15 +301,15 @@ const DashboardHotelPage: React.FC = () => {
         // Fetch reviews for the first hotel (if available)
         const firstHotelId = hs[0]?.hotelId;
         if (firstHotelId) {
-          console.log(`📥 Dashboard loading reviews for hotel ${firstHotelId}`);
+          // DEBUG: console.log(`📥 Dashboard loading reviews for hotel ${firstHotelId}`);
           const revs = await getHotelReviewsByHotel(firstHotelId);
-          console.log(`📤 Dashboard received ${revs.length} reviews`);
+          // DEBUG: console.log(`📤 Dashboard received ${revs.length} reviews`);
           if (revs.length > 0) {
-            console.log("🔍 Sample review:", {
-              reviewId: revs[0].reviewId,
-              likesCount: revs[0].likesCount,
-              replyCount: revs[0].replyCount,
-            });
+            // DEBUG: console.log("🔍 Sample review:", {
+            //   reviewId: revs[0].reviewId,
+            //   likesCount: revs[0].likesCount,
+            //   replyCount: revs[0].replyCount,
+            // });
           }
           setRecentReviews(revs.slice(0, 2));
         } else {
@@ -318,7 +318,7 @@ const DashboardHotelPage: React.FC = () => {
 
         // Fetch total reviews count for provider
         const reviewsCount = await getHotelReviewsCountByProvider(providerId);
-        console.log("📊 Total reviews for provider:", reviewsCount);
+        // DEBUG: console.log("📊 Total reviews for provider:", reviewsCount);
         setTotalReviews(reviewsCount);
       } catch (e) {
         console.error("❌ Error loading dashboard data:", e);
@@ -526,7 +526,7 @@ const DashboardHotelPage: React.FC = () => {
               <NotificationItem
                 key={n.id}
                 notification={n}
-                onClick={() => console.log("Clicked", n.id)}
+                onClick={() => {/* DEBUG: console.log("Clicked", n.id) */}}
               />
             ))
           )}

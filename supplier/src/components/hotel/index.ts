@@ -1,7 +1,4 @@
-export { default as QuickAction } from "./QuickAction";
-export { default as NotificationItem } from "./NotificationItem";
-export type { Notification, NotificationType } from "./NotificationItem";
-export { default as StatCard } from "./StatCard";
+// Hotel-specific components only
 export { default as HotelCard } from "./HotelCard";
 export { default as BookingRow } from "./BookingRow";
 export { default as PriceAlertCard } from "./PriceAlertCard";

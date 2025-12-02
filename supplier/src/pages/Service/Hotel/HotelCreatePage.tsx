@@ -220,16 +220,17 @@ const MultiSelectCheckbox: React.FC<{
   selectedIds: number[];
   onChange: (selectedIds: number[]) => void;
   fieldName: string;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 }> = React.memo(({ options, selectedIds, onChange, fieldName }) => {
   const handleToggle = (id: number) => {
     const newSelectedIds = selectedIds.includes(id)
       ? selectedIds.filter((i) => i !== id)
       : [...selectedIds, id];
 
-    console.log(
-      `🔄 MultiSelect [${fieldName}] toggled ID ${id}, new array:`,
-      newSelectedIds
-    );
+    // DEBUG: console.log(
+    //   `🔄 MultiSelect [${fieldName}] toggled ID ${id}, new array:`,
+    //   newSelectedIds
+    // );
     onChange(newSelectedIds);
   };
 
@@ -263,16 +264,17 @@ const MultiSelectCheckboxString: React.FC<{
   selectedValues: string[];
   onChange: (selectedValues: string[]) => void;
   fieldName: string;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 }> = React.memo(({ options, selectedValues, onChange, fieldName }) => {
   const handleToggle = (value: string) => {
     const newSelectedValues = selectedValues.includes(value)
       ? selectedValues.filter((v) => v !== value)
       : [...selectedValues, value];
 
-    console.log(
-      `🔄 MultiSelectString [${fieldName}] toggled "${value}", new array:`,
-      newSelectedValues
-    );
+    // DEBUG: console.log(
+    //   `🔄 MultiSelectString [${fieldName}] toggled "${value}", new array:`,
+    //   newSelectedValues
+    // );
     onChange(newSelectedValues);
   };
 
@@ -322,19 +324,19 @@ const HotelCreatePage: React.FC = () => {
 
   // 🔍 DEBUG: Log formData chi tiết
   useEffect(() => {
-    console.log("📋 Current formData detailed:", {
-      title: formData.title,
-      highlightsJson: formData.highlightsJson,
-      highlightsJson_length: formData.highlightsJson?.length,
-      amenitiesJson: formData.amenitiesJson,
-      amenitiesJson_length: formData.amenitiesJson?.length,
-      badges: formData.badges,
-      badges_length: formData.badges?.length,
-      policiesText: formData.policiesText,
-      serviceDescription: formData.serviceDescription,
-      location: formData.location,
-      address: formData.address,
-    });
+    // DEBUG: console.log("📋 Current formData detailed:", {
+    //   title: formData.title,
+    //   highlightsJson: formData.highlightsJson,
+    //   highlightsJson_length: formData.highlightsJson?.length,
+    //   amenitiesJson: formData.amenitiesJson,
+    //   amenitiesJson_length: formData.amenitiesJson?.length,
+    //   badges: formData.badges,
+    //   badges_length: formData.badges?.length,
+    //   policiesText: formData.policiesText,
+    //   serviceDescription: formData.serviceDescription,
+    //   location: formData.location,
+    //   address: formData.address,
+    // });
   }, [formData]);
 
   /* ================= Image Upload Component ================= */
@@ -440,7 +442,7 @@ const HotelCreatePage: React.FC = () => {
               value={formData.title || ""}
               onChange={(e) => {
                 const newTitle = e.target.value;
-                console.log(`🔄 Title changed to: "${newTitle}"`);
+                // DEBUG: console.log(`🔄 Title changed to: "${newTitle}"`);
                 updateField("title", newTitle);
 
                 // Tự động tạo slug từ title + 9 số random
@@ -460,7 +462,7 @@ const HotelCreatePage: React.FC = () => {
                   const slug = `${slugBase}-${randomDigits}`;
                   
                   updateField("slug", slug);
-                  console.log(`✨ Auto-generated slug: ${slug}`);
+                  // DEBUG: console.log(`✨ Auto-generated slug: ${slug}`);
                 }
               }}
               className={baseInput}
@@ -479,7 +481,7 @@ const HotelCreatePage: React.FC = () => {
               value={formData.areaId || ""}
               onChange={(e) => {
                 const newAreaId = Number(e.target.value) || null;
-                console.log(`🔄 Area changed to: ${newAreaId}`);
+                // DEBUG: console.log(`🔄 Area changed to: ${newAreaId}`);
                 updateField("areaId", newAreaId);
                 
                 // Tự động set location field với tên tỉnh
@@ -487,7 +489,7 @@ const HotelCreatePage: React.FC = () => {
                   const selectedArea = AREAS.find(a => a.id === newAreaId);
                   if (selectedArea) {
                     updateField("location", selectedArea.name);
-                    console.log(`✅ Auto-set location: ${selectedArea.name}`);
+                    // DEBUG: console.log(`✅ Auto-set location: ${selectedArea.name}`);
                   }
                 } else {
                   updateField("location", "");
@@ -550,9 +552,9 @@ const HotelCreatePage: React.FC = () => {
                 }
                 const parsed = Math.floor(Number(raw));
                 const clamped = Math.min(Math.max(parsed || 0, 0), MAX_PRICE);
-                console.log(
-                  `🔄 Price changed to: ${parsed} -> clamped: ${clamped}`
-                );
+                // DEBUG: console.log(
+                //   `🔄 Price changed to: ${parsed} -> clamped: ${clamped}`
+                // );
                 updateField("price", clamped);
               }}
               className={baseInput}
@@ -615,7 +617,7 @@ const HotelCreatePage: React.FC = () => {
                   | "hostel"
                   | "guesthouse"
                   | "homestay";
-                console.log(`🔄 Property type changed to: ${value}`);
+                // DEBUG: console.log(`🔄 Property type changed to: ${value}`);
                 updateField("propertyType", value);
               }}
               className={baseInput}
@@ -640,7 +642,7 @@ const HotelCreatePage: React.FC = () => {
               value={formData.starRating || ""}
               onChange={(e) => {
                 const newStarRating = Number(e.target.value) || null;
-                console.log(`🔄 Star rating changed to: ${newStarRating}`);
+                // DEBUG: console.log(`🔄 Star rating changed to: ${newStarRating}`);
                 updateField("starRating", newStarRating);
               }}
               className={baseInput}
@@ -664,7 +666,7 @@ const HotelCreatePage: React.FC = () => {
             </label>
             <MapPicker
               onLocationSelect={(data: LocationData) => {
-                console.log(`🔄 Location selected from map:`, data);
+                // DEBUG: console.log(`🔄 Location selected from map:`, data);
                 updateField("address", data.address);
                 updateField("latitude", data.latitude);
                 updateField("longitude", data.longitude);
@@ -672,7 +674,7 @@ const HotelCreatePage: React.FC = () => {
                 // Tự động match và set areaId từ address
                 const matchedAreaId = matchAreaFromAddress(data.address);
                 if (matchedAreaId) {
-                  console.log(`✅ Auto-matched area ID: ${matchedAreaId}`);
+                  // DEBUG: console.log(`✅ Auto-matched area ID: ${matchedAreaId}`);
                   updateField("areaId", matchedAreaId);
                   
                   // Cũng set location field
@@ -681,7 +683,7 @@ const HotelCreatePage: React.FC = () => {
                     updateField("location", matchedArea.name);
                   }
                 } else {
-                  console.log(`⚠️ No matching area found for: ${data.address}`);
+                  // DEBUG: console.log(`⚠️ No matching area found for: ${data.address}`);
                 }
               }}
               initialLocation={
@@ -716,9 +718,9 @@ const HotelCreatePage: React.FC = () => {
             <textarea
               value={formData.serviceDescription || ""}
               onChange={(e) => {
-                console.log(
-                  `🔄 Service description changed, length: ${e.target.value.length}`
-                );
+                // DEBUG: console.log(
+                //   `🔄 Service description changed, length: ${e.target.value.length}`
+                // );
                 updateField("serviceDescription", e.target.value);
               }}
               className={baseTextarea}
@@ -736,6 +738,7 @@ const HotelCreatePage: React.FC = () => {
         </div>
       </div>
     ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [formData, errors, updateField]
   );
 
@@ -762,7 +765,7 @@ const HotelCreatePage: React.FC = () => {
                 const raw = e.target.value;
                 const newCapacity =
                   raw === "" ? null : Math.max(0, Number(raw) || 0);
-                console.log(`🔄 Capacity changed to: ${newCapacity}`);
+                // DEBUG: console.log(`🔄 Capacity changed to: ${newCapacity}`);
                 // Cập nhật capacity trước
                 updateField("capacity", newCapacity);
                 // Tự động điều chỉnh min/max cho phù hợp
@@ -830,7 +833,7 @@ const HotelCreatePage: React.FC = () => {
                 const cap = formData.capacity ?? 0;
                 let next = raw === "" ? null : Number(raw) || 0;
                 if (next !== null) next = Math.min(Math.max(0, next), cap);
-                console.log(`🔄 Min participants changed to: ${next}`);
+                // DEBUG: console.log(`🔄 Min participants changed to: ${next}`);
                 updateField("minParticipants", next);
                 // Đảm bảo max >= min
                 const currentMax = formData.maxParticipants ?? 0;
@@ -860,7 +863,7 @@ const HotelCreatePage: React.FC = () => {
                 let next = raw === "" ? null : Number(raw) || 0;
                 if (next !== null)
                   next = Math.min(Math.max(currentMin, next), cap);
-                console.log(`🔄 Max participants changed to: ${next}`);
+                // DEBUG: console.log(`🔄 Max participants changed to: ${next}`);
                 updateField("maxParticipants", next);
               }}
               className={baseInput}
@@ -881,7 +884,7 @@ const HotelCreatePage: React.FC = () => {
               type="date"
               value={formData.startDate || ""}
               onChange={(e) => {
-                console.log(`🔄 Start date changed to: ${e.target.value}`);
+                // DEBUG: console.log(`🔄 Start date changed to: ${e.target.value}`);
                 updateField("startDate", e.target.value);
               }}
               className={baseInput}
@@ -899,7 +902,7 @@ const HotelCreatePage: React.FC = () => {
               type="date"
               value={formData.endDate || ""}
               onChange={(e) => {
-                console.log(`🔄 End date changed to: ${e.target.value}`);
+                // DEBUG: console.log(`🔄 End date changed to: ${e.target.value}`);
                 updateField("endDate", e.target.value);
               }}
               className={baseInput}
@@ -917,7 +920,7 @@ const HotelCreatePage: React.FC = () => {
               type="time"
               value={formData.checkinTime || ""}
               onChange={(e) => {
-                console.log(`🔄 Check-in time changed to: ${e.target.value}`);
+                // DEBUG: console.log(`🔄 Check-in time changed to: ${e.target.value}`);
                 updateField("checkinTime", e.target.value);
               }}
               className={baseInput}
@@ -935,7 +938,7 @@ const HotelCreatePage: React.FC = () => {
               type="time"
               value={formData.checkoutTime || ""}
               onChange={(e) => {
-                console.log(`🔄 Check-out time changed to: ${e.target.value}`);
+                // DEBUG: console.log(`🔄 Check-out time changed to: ${e.target.value}`);
                 updateField("checkoutTime", e.target.value);
               }}
               className={baseInput}
@@ -947,7 +950,8 @@ const HotelCreatePage: React.FC = () => {
         </div>
       </div>
     ),
-    [formData, updateField]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formData, errors, updateField]
   );
 
   /* ================= STEP 3: Tiện nghi & Hình ảnh ================= */
@@ -978,7 +982,7 @@ const HotelCreatePage: React.FC = () => {
               options={HIGHLIGHTS_OPTIONS}
               selectedIds={formData.highlightsJson || []}
               onChange={(selectedIds) => {
-                console.log(`🔄 Highlights IDs changed to:`, selectedIds);
+                // DEBUG: console.log(`🔄 Highlights IDs changed to:`, selectedIds);
                 updateArrayField("highlightsJson", selectedIds);
               }}
             />
@@ -1003,7 +1007,7 @@ const HotelCreatePage: React.FC = () => {
               options={AMENITIES_OPTIONS}
               selectedIds={formData.amenitiesJson || []}
               onChange={(selectedIds) => {
-                console.log(`🔄 Amenities IDs changed to:`, selectedIds);
+                // DEBUG: console.log(`🔄 Amenities IDs changed to:`, selectedIds);
                 updateArrayField("amenitiesJson", selectedIds);
               }}
             />
@@ -1028,7 +1032,7 @@ const HotelCreatePage: React.FC = () => {
               options={BADGES_OPTIONS}
               selectedValues={formData.badges || []}
               onChange={(selectedValues) => {
-                console.log(`🔄 Badges changed to:`, selectedValues);
+                // DEBUG: console.log(`🔄 Badges changed to:`, selectedValues);
                 updateArrayField("badges", selectedValues);
               }}
             />
@@ -1042,12 +1046,12 @@ const HotelCreatePage: React.FC = () => {
             <ImageUpload
               label="Ảnh đại diện"
               onSelect={(files) => {
-                console.log(`🔄 Thumbnail selected:`, files[0]?.name);
+                // DEBUG: console.log(`🔄 Thumbnail selected:`, files[0]?.name);
                 setThumbnailFile(files[0]);
               }}
               preview={thumbnailPreview}
               onRemove={() => {
-                console.log(`🔄 Thumbnail removed`);
+                // DEBUG: console.log(`🔄 Thumbnail removed`);
                 setThumbnailFile(null);
               }}
             />
@@ -1058,15 +1062,15 @@ const HotelCreatePage: React.FC = () => {
               label="Thư viện ảnh"
               multiple
               onSelect={(files) => {
-                console.log(
-                  `🔄 Images selected:`,
-                  files.map((f) => f.name)
-                );
+                // DEBUG: console.log(
+                //   `🔄 Images selected:`,
+                //   files.map((f) => f.name)
+                // );
                 setImageFiles([...imageFiles, ...files]);
               }}
               preview={imagePreviews}
               onRemoveMultiple={(index) => {
-                console.log(`🔄 Image removed at index:`, index);
+                // DEBUG: console.log(`🔄 Image removed at index:`, index);
                 removeImageFile(index);
               }}
             />
@@ -1105,9 +1109,9 @@ const HotelCreatePage: React.FC = () => {
             <textarea
               value={formData.policiesText || ""}
               onChange={(e) => {
-                console.log(
-                  `🔄 Policies text changed, length: ${e.target.value.length}`
-                );
+                // DEBUG: console.log(
+                //   `🔄 Policies text changed, length: ${e.target.value.length}`
+                // );
                 updateField("policiesText", e.target.value);
               }}
               className={baseTextarea}
@@ -1140,7 +1144,7 @@ const HotelCreatePage: React.FC = () => {
             <input
               value={formData.seoTitle || ""}
               onChange={(e) => {
-                console.log(`🔄 SEO title changed to: "${e.target.value}"`);
+                // DEBUG: console.log(`🔄 SEO title changed to: "${e.target.value}"`);
                 updateField("seoTitle", e.target.value);
               }}
               className={baseInput}
@@ -1154,9 +1158,9 @@ const HotelCreatePage: React.FC = () => {
             <textarea
               value={formData.seoDescription || ""}
               onChange={(e) => {
-                console.log(
-                  `🔄 SEO description changed, length: ${e.target.value.length}`
-                );
+                // DEBUG: console.log(
+                //   `🔄 SEO description changed, length: ${e.target.value.length}`
+                // );
                 updateField("seoDescription", e.target.value);
               }}
               className={baseTextarea}
@@ -1179,7 +1183,7 @@ const HotelCreatePage: React.FC = () => {
                 type="checkbox"
                 checked={formData.isFeatured || false}
                 onChange={(e) => {
-                  console.log(`🔄 Is featured changed to: ${e.target.checked}`);
+                  // DEBUG: console.log(`🔄 Is featured changed to: ${e.target.checked}`);
                   updateField("isFeatured", e.target.checked);
                 }}
                 className="w-4 h-4"
@@ -1192,7 +1196,7 @@ const HotelCreatePage: React.FC = () => {
               <select
                 value={formData.visibility || "public_"}
                 onChange={(e) => {
-                  console.log(`🔄 Visibility changed to: ${e.target.value}`);
+                  // DEBUG: console.log(`🔄 Visibility changed to: ${e.target.value}`);
                   updateField(
                     "visibility",
                     e.target.value as "public_" | "private_"
@@ -1208,7 +1212,8 @@ const HotelCreatePage: React.FC = () => {
         </div>
       </div>
     ),
-    [formData, updateField]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formData, errors, updateField]
   );
 
   // Loading state
@@ -1284,7 +1289,7 @@ const HotelCreatePage: React.FC = () => {
         <div className="flex gap-3">
           <button
             onClick={() => {
-              console.log("🔄 Saving as draft...");
+              // DEBUG: console.log("🔄 Saving as draft...");
               handleSubmit("archived");
             }}
             disabled={submitting}
@@ -1305,7 +1310,7 @@ const HotelCreatePage: React.FC = () => {
           ) : (
             <button
               onClick={() => {
-                console.log("🔄 Publishing hotel...");
+                // DEBUG: console.log("🔄 Publishing hotel...");
                 handleSubmit("published");
               }}
               disabled={submitting}

@@ -196,16 +196,17 @@ const MultiSelectCheckbox: React.FC<{
   selectedIds: number[];
   onChange: (selectedIds: number[]) => void;
   fieldName: string;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 }> = React.memo(({ options, selectedIds, onChange, fieldName }) => {
   const handleToggle = (id: number) => {
     const newSelectedIds = selectedIds.includes(id)
       ? selectedIds.filter((i) => i !== id)
       : [...selectedIds, id];
 
-    console.log(
-      `🔄 MultiSelect [${fieldName}] toggled ID ${id}, new array:`,
-      newSelectedIds
-    );
+    // DEBUG: console.log(
+    //   `🔄 MultiSelect [${fieldName}] toggled ID ${id}, new array:`,
+    //   newSelectedIds
+    // );
     onChange(newSelectedIds);
   };
 
@@ -239,16 +240,17 @@ const MultiSelectCheckboxString: React.FC<{
   selectedValues: string[];
   onChange: (selectedValues: string[]) => void;
   fieldName: string;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 }> = React.memo(({ options, selectedValues, onChange, fieldName }) => {
   const handleToggle = (value: string) => {
     const newSelectedValues = selectedValues.includes(value)
       ? selectedValues.filter((v) => v !== value)
       : [...selectedValues, value];
 
-    console.log(
-      `🔄 MultiSelectString [${fieldName}] toggled "${value}", new array:`,
-      newSelectedValues
-    );
+    // DEBUG: console.log(
+    //   `🔄 MultiSelectString [${fieldName}] toggled "${value}", new array:`,
+    //   newSelectedValues
+    // );
     onChange(newSelectedValues);
   };
 
@@ -302,12 +304,12 @@ const HotelEditPage: React.FC = () => {
 
   // 🔍 DEBUG: Log formData chi tiết
   useEffect(() => {
-    console.log("📋 Current formData detailed:", {
-      title: formData.title,
-      highlightsJson: formData.highlightsJson,
-      amenitiesJson: formData.amenitiesJson,
-      badges: formData.badges,
-    });
+    // DEBUG: console.log("📋 Current formData detailed:", {
+    //   title: formData.title,
+    //   highlightsJson: formData.highlightsJson,
+    //   amenitiesJson: formData.amenitiesJson,
+    //   badges: formData.badges,
+    // });
   }, [formData]);
 
   /* ================= Image Upload Component ================= */
@@ -1054,7 +1056,8 @@ const HotelEditPage: React.FC = () => {
         </div>
       </div>
     ),
-    [formData, updateField]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formData, errors, updateField]
   );
 
   // Loading state

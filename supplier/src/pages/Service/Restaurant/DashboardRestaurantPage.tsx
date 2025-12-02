@@ -1,1276 +1,1091 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  UtensilsCrossed,
+  BarChart3,
+  Utensils,
+  Calendar,
+  Bell,
+  ChevronRight,
   Plus,
-  Search,
-  Filter,
-  Star,
-  Pencil,
-  CalendarDays,
-  Power,
-  Archive,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Tag,
-  RefreshCw,
-  History,
-  DollarSign,
-  MessageCircle,
-  XCircle,
-  TriangleAlert,
-  ShieldAlert,
-  Table2,
-  LayoutGrid,
-  ChefHat,
-  Sparkles,
-  Check,
-  Ban,
+  List,
+  BarChart2,
+  MessageSquare,
+  Zap,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  getProviderByUserId,
+  getUserById,
+} from "../../../services/providerService";
+import {
+  getRestaurantsByProvider,
+  getRestaurantReviewsByRestaurant,
+  getRestaurantReviewsCountByProvider,
+  getRestaurantBookingsByProvider,
+  getRestaurantRatingSummaryByRestaurant,
+} from "../../../services/restaurantService";
+import type {
+  RestaurantDTO,
+  RestaurantBookingDTO,
+  RestaurantRatingSummaryDTO,
+  RestaurantReviewDTO,
+  UserDTO,
+} from "../../../types";
+import api from "../../../services/api";
+import {
+  QuickAction,
+  NotificationItem,
+  StatCard,
+} from "../../../components/shared";
+import { useLanguage } from "../../../hooks/useLanguage";
+import ConfirmModal from "../../../components/common/ConfirmModal";
+import type { Notification, NotificationType } from "../../../components/shared";
 
-/* ===================== Types ===================== */
-type RestaurantStatus = "draft" | "published" | "archived" | "disabled";
-
-interface Restaurant {
-  id: number;
+interface BackendNotification {
+  notification_id: number;
   title: string;
-  slug: string;
-  area: string;
-  cuisines: string[];
-  price_level: 1 | 2 | 3 | 4; // $ - $$$$
-  opening_hours: {
-    breakfast: boolean;
-    lunch: boolean;
-    dinner: boolean;
-  };
-  status: RestaurantStatus;
-  visibility: "public" | "private";
-  thumbnail_url?: string | null;
-  rating_average: number;
-  upcoming_reservations: number;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Reservation {
-  id: number;
-  restaurant_id: number;
-  guest_name: string;
-  pax: number;
-  timeslot: string; // ISO date-time truncated to hour
-  booking_status: "pending" | "confirmed" | "cancelled" | "no_show";
-  payment_status: "pending" | "paid" | "partial";
-  avg_spend: number;
-}
-
-interface TimeslotAgg {
-  timeslot: string;
-  count: number;
-  confirmed: number;
-  pending: number;
-  no_show_risk: boolean;
-}
-
-interface TableSeat {
-  id: number;
-  label: string;
-  capacity: number;
-  status: "free" | "reserved" | "occupied" | "blocked";
-  current_reservation_id?: number;
-}
-
-interface MenuItem {
-  id: number;
-  restaurant_id: number;
-  name: string;
-  price: number;
-  currency: string;
-  category: string;
-  special: boolean;
-}
-
-interface Review {
-  id: number;
-  restaurant_id: number;
-  guest: string;
-  rating: number;
-  aspects: {
-    quality: number;
-    ambience: number;
-  };
   content: string;
-  created_at: string;
+  sent_at: string;
+  is_read: boolean;
+  category: string;
 }
 
-interface AlertItem {
-  id: number;
-  type: "high_demand" | "no_show_repeat" | "certificate_expired";
-  message: string;
-  severity: "info" | "warn" | "critical";
-  created_at: string;
+// Restaurant Card Component
+interface RestaurantCardProps {
+  restaurant: RestaurantDTO;
+  onView: () => void;
+  onEdit: () => void;
 }
 
-interface ActivityLog {
-  id: number;
-  action:
-    | "publish"
-    | "unpublish"
-    | "menu_update"
-    | "reservation_confirm"
-    | "reservation_cancel"
-    | "table_assign"
-    | "special_add";
-  restaurant_id?: number;
-  meta?: Record<string, unknown>;
-  created_at: string;
-}
-
-/* ===================== Mock Data Generators ===================== */
-const areas = ["Hà Nội", "TP.HCM", "Đà Nẵng", "Huế", "Phú Quốc"];
-const cuisinePool = [
-  "Vietnamese",
-  "Japanese",
-  "Italian",
-  "Seafood",
-  "BBQ",
-  "Vegan",
-  "Thai",
-  "French",
-];
-function rand<T>(arr: T[]) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-function randomSubset<T>(arr: T[], min = 1, max = 3) {
-  const copy = [...arr];
-  const out: T[] = [];
-  const n = Math.min(
-    max,
-    Math.max(min, Math.floor(Math.random() * (max - min + 1)) + min)
-  );
-  while (out.length < n && copy.length) {
-    const idx = Math.floor(Math.random() * copy.length);
-    out.push(copy.splice(idx, 1)[0]);
-  }
-  return out;
-}
-
-function genRestaurants(): Restaurant[] {
-  const now = Date.now();
-  const list: Restaurant[] = [];
-  for (let i = 1; i <= 16; i++) {
-    list.push({
-      id: i,
-      title: `Restaurant #${i}`,
-      slug: `restaurant-${i}`,
-      area: rand(areas),
-      cuisines: randomSubset(cuisinePool, 1, 3),
-      price_level: (1 + (i % 4)) as 1 | 2 | 3 | 4,
-      opening_hours: {
-        breakfast: Math.random() > 0.5,
-        lunch: Math.random() > 0.3,
-        dinner: Math.random() > 0.2,
-      },
-      status: rand(["published", "draft", "archived", "disabled"]),
-      visibility: Math.random() > 0.2 ? "public" : "private",
-      thumbnail_url:
-        Math.random() > 0.1
-          ? `https://picsum.photos/seed/restaurant-${i}/210/150.webp`
-          : null,
-      rating_average: parseFloat((3 + Math.random() * 2).toFixed(1)),
-      upcoming_reservations: 2 + Math.floor(Math.random() * 18),
-      created_at: new Date(now - i * 86400000).toISOString(),
-      updated_at: new Date(now - i * 3600000).toISOString(),
-    });
-  }
-  return list;
-}
-
-function genReservations(restaurants: Restaurant[]): Reservation[] {
-  const arr: Reservation[] = [];
-  const now = Date.now();
-  for (let i = 1; i <= 120; i++) {
-    const r = rand(restaurants);
-    const hoursAhead = Math.floor(Math.random() * 48); // next 48h
-    const start = new Date(now + hoursAhead * 3600000);
-    start.setMinutes(0, 0, 0);
-    arr.push({
-      id: 9000 + i,
-      restaurant_id: r.id,
-      guest_name: `Guest ${i}`,
-      pax: 2 + (i % 5),
-      timeslot: start.toISOString(),
-      booking_status: rand(["pending", "confirmed", "cancelled"]),
-      payment_status: rand(["pending", "paid", "partial"]),
-      avg_spend: 150000 + ((i * 27100) % 350000),
-    });
-  }
-  return arr;
-}
-
-function genTimeslotAgg(reservations: Reservation[]): TimeslotAgg[] {
-  const map = new Map<string, TimeslotAgg>();
-  reservations.forEach((r) => {
-    const key = r.timeslot;
-    const item =
-      map.get(key) ||
-      ({
-        timeslot: key,
-        count: 0,
-        confirmed: 0,
-        pending: 0,
-        no_show_risk: false,
-      } as TimeslotAgg);
-    item.count++;
-    if (r.booking_status === "confirmed") item.confirmed++;
-    if (r.booking_status === "pending") item.pending++;
-    item.no_show_risk = item.pending > 2 && Math.random() > 0.6;
-    map.set(key, item);
-  });
-  return Array.from(map.values())
-    .sort(
-      (a, b) => new Date(a.timeslot).getTime() - new Date(b.timeslot).getTime()
-    )
-    .slice(0, 24)
-    .sort((a, b) => b.count - a.count);
-}
-
-function genSeatMap(restaurants: Restaurant[]): TableSeat[] {
-  const tables: TableSeat[] = [];
-  restaurants.slice(0, 4).forEach((r) => {
-    for (let i = 1; i <= 10; i++) {
-      tables.push({
-        id: r.id * 100 + i,
-        label: `T${i}`,
-        capacity: 2 + (i % 4) * 2,
-        status: rand(["free", "reserved", "occupied", "free", "free"]),
-        current_reservation_id:
-          Math.random() > 0.7
-            ? 9000 + Math.floor(Math.random() * 50)
-            : undefined,
-      });
-    }
-  });
-  return tables;
-}
-
-function genMenu(restaurants: Restaurant[]): MenuItem[] {
-  const arr: MenuItem[] = [];
-  let id = 1;
-  restaurants.slice(0, 6).forEach((r) => {
-    ["Starter", "Main", "Dessert"].forEach((cat) => {
-      for (let i = 0; i < 3; i++) {
-        arr.push({
-          id: id++,
-          restaurant_id: r.id,
-          name: `${cat} #${i + 1} R${r.id}`,
-          price: 90000 + (((r.id + i) * 17000) % 120000),
-          currency: "VND",
-          category: cat,
-          special: Math.random() > 0.75,
-        });
-      }
-    });
-  });
-  return arr;
-}
-
-function genReviews(restaurants: Restaurant[]): Review[] {
-  const arr: Review[] = [];
-  let id = 1;
-  restaurants.slice(0, 6).forEach((r) => {
-    const n = 1 + (r.id % 3);
-    for (let i = 0; i < n; i++) {
-      arr.push({
-        id: id++,
-        restaurant_id: r.id,
-        guest: `Reviewer ${id}`,
-        rating: parseFloat((3 + Math.random() * 2).toFixed(1)),
-        aspects: {
-          quality: parseFloat((3 + Math.random() * 2).toFixed(1)),
-          ambience: parseFloat((3 + Math.random() * 2).toFixed(1)),
-        },
-        content: "Món ăn ngon, không gian ổn (mock).",
-        created_at: new Date(Date.now() - i * 5400000).toISOString(),
-      });
-    }
-  });
-  return arr;
-}
-
-function genAlerts(restaurants: Restaurant[]): AlertItem[] {
-  return [
-    {
-      id: 1,
-      type: "high_demand",
-      message: `Slot 19:00 hôm nay nhu cầu cao (${restaurants[0].title})`,
-      severity: "warn",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      type: "no_show_repeat",
-      message: "Khách A đã no-show 3 lần",
-      severity: "info",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 3,
-      type: "certificate_expired",
-      message: "Chứng nhận an toàn thực phẩm hết hạn",
-      severity: "critical",
-      created_at: new Date().toISOString(),
-    },
-  ];
-}
-
-function genActivities(restaurants: Restaurant[]): ActivityLog[] {
-  const actions: ActivityLog["action"][] = [
-    "publish",
-    "unpublish",
-    "menu_update",
-    "reservation_confirm",
-    "reservation_cancel",
-    "table_assign",
-    "special_add",
-  ];
-  const arr: ActivityLog[] = [];
-  for (let i = 0; i < 20; i++) {
-    const r = rand(restaurants);
-    arr.push({
-      id: i + 1,
-      action: rand(actions),
-      restaurant_id: r.id,
-      meta: { title: r.title },
-      created_at: new Date(Date.now() - i * 3600000).toISOString(),
-    });
-  }
-  return arr;
-}
-
-/* ===================== Helpers ===================== */
-const fmtCurrency = (v: number) =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    minimumFractionDigits: 0,
-  }).format(v);
-
-const cx = (...c: Array<string | false | null | undefined>) =>
-  c.filter(Boolean).join(" ");
-
-/* ===================== Main Component ===================== */
-const DashboardRestaurantPage: React.FC = () => {
-  // Seeds
-  const [restaurants] = useState<Restaurant[]>(() => genRestaurants());
-  const [reservations] = useState<Reservation[]>(() =>
-    genReservations(restaurants)
-  );
-  const [seatMap] = useState<TableSeat[]>(() => genSeatMap(restaurants));
-  const [menuItems] = useState<MenuItem[]>(() => genMenu(restaurants));
-  const [reviews] = useState<Review[]>(() => genReviews(restaurants));
-  const [alerts] = useState<AlertItem[]>(() => genAlerts(restaurants));
-  const [activities] = useState<ActivityLog[]>(() =>
-    genActivities(restaurants)
-  );
-
-  // Filters
-  const [search, setSearch] = useState("");
-  const [filterArea, setFilterArea] = useState("");
-  const [filterCuisine, setFilterCuisine] = useState("");
-  const [filterPrice, setFilterPrice] = useState("");
-  const [filterHours, setFilterHours] = useState("");
-  const [filterStatus, setFilterStatus] = useState<RestaurantStatus | "">("");
-
-  // Collapse
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const toggleCollapse = (k: string) =>
-    setCollapsed((p) => ({ ...p, [k]: !p[k] }));
-
-  // Selection
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const toggleSelectAll = (rows: Restaurant[]) => {
-    const ids = rows.map((r) => r.id);
-    const all = ids.every((id) => selectedIds.has(id));
-    setSelectedIds(all ? new Set() : new Set(ids));
-  };
-  const toggleSelectOne = (id: number) =>
-    setSelectedIds((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) {
-        n.delete(id);
-      } else {
-        n.add(id);
-      }
-      return n;
-    });
-
-  // Filtered list
-  const filteredRestaurants = useMemo(() => {
-    return restaurants.filter((r) => {
-      if (search) {
-        const q = search.toLowerCase();
-        if (
-          !r.title.toLowerCase().includes(q) &&
-          !r.slug.toLowerCase().includes(q) &&
-          !String(r.id).includes(q)
-        )
-          return false;
-      }
-      if (filterArea && r.area !== filterArea) return false;
-      if (filterCuisine && !r.cuisines.includes(filterCuisine)) return false;
-      if (filterPrice && r.price_level !== Number(filterPrice)) return false;
-      if (filterHours) {
-        if (!r.opening_hours[filterHours as keyof typeof r.opening_hours])
-          return false;
-      }
-      if (filterStatus && r.status !== filterStatus) return false;
-      return true;
-    });
-  }, [
-    restaurants,
-    search,
-    filterArea,
-    filterCuisine,
-    filterPrice,
-    filterHours,
-    filterStatus,
-  ]);
-
-  // Timeslots aggregated (for snapshot)
-  const timeslotAgg = useMemo(
-    () => genTimeslotAgg(reservations),
-    [reservations]
-  );
-
-  // Compute KPIs (mock)
-  const kpis = useMemo(() => {
-    const today = new Date().toISOString().substring(0, 10);
-    const resToday = reservations.filter((r) => r.timeslot.startsWith(today));
-    const reservationsToday = resToday.length;
-
-    // Table turnover approx: (total covers / number of distinct tables?) - mock
-    const totalPax = resToday.reduce((s, r) => s + r.pax, 0);
-    const turnover = resToday.length
-      ? totalPax / Math.max(1, resToday.length)
-      : 0;
-
-    // no-show rate: percent with status cancelled (mock treat cancelled as no-show surrogate)
-    const noShows = resToday.filter(
-      (r) => r.booking_status === "cancelled"
-    ).length;
-    const noShowRate = resToday.length ? (noShows / resToday.length) * 100 : 0;
-
-    const avgSpend =
-      resToday.length > 0
-        ? resToday.reduce((s, r) => s + r.avg_spend, 0) / resToday.length
-        : 0;
-
-    const pending = reservations.filter(
-      (r) => r.booking_status === "pending"
-    ).length;
-
-    return {
-      reservationsToday,
-      turnover,
-      noShowRate,
-      avgSpend,
-      pending,
-    };
-  }, [reservations]);
-
-  // Seat map selected restaurant
-  const [seatRestaurantId, setSeatRestaurantId] = useState<number>(() =>
-    restaurants.length ? restaurants[0].id : 0
-  );
-  const seatTables = useMemo(
-    () => seatMap.filter((t) => Math.floor(t.id / 100) === seatRestaurantId),
-    [seatMap, seatRestaurantId]
-  );
-
-  // Menu preview
-  const menuPreview = useMemo(
-    () =>
-      menuItems.filter((m) => m.restaurant_id === seatRestaurantId).slice(0, 6),
-    [menuItems, seatRestaurantId]
-  );
-
-  const reviewPreview = useMemo(() => reviews.slice(0, 5), [reviews]);
-  const alertsRecent = useMemo(() => alerts.slice(0, 6), [alerts]);
-  const activitiesRecent = useMemo(() => activities.slice(0, 10), [activities]);
-
-  // Bulk actions (mock)
-  const bulkPublish = () => {
-    console.log("Bulk publish restaurants:", Array.from(selectedIds));
-    alert("Bulk publish (mock)");
-  };
-  const bulkArchive = () => {
-    console.log("Bulk archive restaurants:", Array.from(selectedIds));
-    alert("Bulk archive (mock)");
-  };
-  const clearFilters = () => {
-    setSearch("");
-    setFilterArea("");
-    setFilterCuisine("");
-    setFilterPrice("");
-    setFilterHours("");
-    setFilterStatus("");
-  };
-
-  // Helpers
-  const statusBadge = (status: RestaurantStatus) => {
-    const map: Record<RestaurantStatus, string> = {
-      published:
-        "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-      draft:
-        "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-      archived: "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
-      disabled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-    };
-    const label: Record<RestaurantStatus, string> = {
-      published: "Đang xuất bản",
-      draft: "Nháp",
-      archived: "Lưu trữ",
-      disabled: "Ngưng",
-    };
-    return (
-      <span
-        className={cx(
-          "caption-mobile sm:caption-tablet lg:caption-desktop px-2 py-0.5 rounded font-medium inline-block",
-          map[status]
+const RestaurantCard: React.FC<RestaurantCardProps> = ({
+  restaurant,
+  onView,
+  onEdit,
+}) => {
+  return (
+    <div className="rounded-xl border theme-border theme-bg-card overflow-hidden hover:shadow-lg transition-shadow">
+      <div className="aspect-video relative overflow-hidden theme-bg-secondary">
+        {restaurant.thumbnailUrl ? (
+          <img
+            src={restaurant.thumbnailUrl}
+            alt={restaurant.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Utensils className="w-12 h-12 theme-text-tertiary" />
+          </div>
         )}
-      >
-        {label[status]}
-      </span>
-    );
-  };
-
-  const sectionHeader = (
-    title: string,
-    key: string,
-    icon?: React.ReactNode,
-    extra?: React.ReactNode
-  ) => {
-    const col = collapsed[key];
-    return (
-      <div className="flex items-center gap-2 mb-3">
-        <button
-          onClick={() => toggleCollapse(key)}
-          className="flex items-center gap-2 group"
-          type="button"
-        >
-          <span className="w-6 h-6 inline-flex items-center justify-center rounded theme-bg-secondary icon-brand">
-            {icon || <UtensilsCrossed className="w-4 h-4" />}
-          </span>
-          <h3 className="h5-mobile sm:h5-tablet lg:h5-desktop font-semibold">
-            {title}
-          </h3>
-          {col ? (
-            <ChevronDown className="w-4 h-4 theme-text-secondary group-hover:icon-brand" />
-          ) : (
-            <ChevronUp className="w-4 h-4 theme-text-secondary group-hover:icon-brand" />
-          )}
-        </button>
-        <div className="ml-auto flex items-center gap-2">{extra}</div>
       </div>
-    );
+      <div className="p-4">
+        <h3 className="font-semibold theme-text-primary mb-2 line-clamp-1">
+          {restaurant.title}
+        </h3>
+        <p className="text-sm theme-text-secondary mb-3 line-clamp-2">
+          {restaurant.location || "Chưa có địa chỉ"}
+        </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <span className="text-yellow-500">⭐</span>
+            <span className="text-sm font-medium theme-text-primary">
+              {restaurant.ratingAverage?.toFixed(1) || "0.0"}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onView}
+              className="px-3 py-1.5 text-sm theme-bg-secondary theme-text-primary rounded-lg hover:theme-bg-tertiary transition-colors"
+            >
+              Xem
+            </button>
+            <button
+              onClick={onEdit}
+              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Sửa
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Restaurant Booking Row Component
+interface RestaurantBookingRowProps {
+  booking: RestaurantBookingDTO;
+  restaurantName?: string;
+  userName?: string;
+  userPhone?: string;
+  onView: () => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const RestaurantBookingRow: React.FC<RestaurantBookingRowProps> = ({
+  booking,
+  restaurantName,
+  userName,
+  userPhone,
+  onView,
+  onConfirm,
+  onCancel,
+}) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("vi-VN");
   };
 
-  const renderKPI = (
-    label: string,
-    value: React.ReactNode,
-    icon: React.ReactNode,
-    sub?: React.ReactNode
-  ) => (
-    <div className="theme-border rounded-lg p-4 theme-bg-card flex flex-col gap-2 shadow-sm">
-      <div className="flex items-center gap-2">
-        <div className="w-9 h-9 rounded-full theme-bg-secondary flex items-center justify-center icon-brand">
-          {icon}
+  const totalGuests = (booking.numAdults || 0) + (booking.numChildren || 0);
+
+  return (
+    <div className="rounded-xl border theme-border theme-bg-card p-4 hover:shadow-md transition-shadow">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h4 className="font-semibold theme-text-primary mb-1">
+              {restaurantName || "Restaurant"}
+            </h4>
+            <p className="text-sm theme-text-secondary">
+              {userName || "Guest"} • {userPhone || "N/A"}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-semibold theme-text-primary">
+              {booking.totalPrice?.toLocaleString("vi-VN")} {booking.currencyCode || "VND"}
+            </p>
+            <p className="text-sm theme-text-secondary">
+              {totalGuests} khách
+            </p>
+          </div>
         </div>
-        <span className="overline-mobile sm:overline-tablet lg:overline-desktop font-medium theme-text-secondary">
-          {label}
+        <div className="flex items-center gap-4 text-sm theme-text-secondary">
+          <span>📅 {formatDate(booking.reservationDate)}</span>
+          <span>🕐 {booking.reservationTime || "N/A"}</span>
+        </div>
+        {booking.specialRequests && (
+          <p className="text-sm theme-text-secondary italic">
+            💬 {booking.specialRequests}
+          </p>
+        )}
+        <div className="flex gap-2 pt-2 border-t theme-border">
+          <button
+            onClick={onView}
+            className="flex-1 px-3 py-2 text-sm theme-bg-secondary theme-text-primary rounded-lg hover:theme-bg-tertiary transition-colors"
+          >
+            Xem chi tiết
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Xác nhận
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Từ chối
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Restaurant Rating Summary Card Component
+interface RestaurantRatingSummaryCardProps {
+  summary: RestaurantRatingSummaryDTO;
+  restaurantName: string;
+}
+
+const RestaurantRatingSummaryCard: React.FC<RestaurantRatingSummaryCardProps> = ({
+  summary,
+  restaurantName,
+}) => {
+  return (
+    <div className="rounded-xl border theme-border theme-bg-card p-4">
+      <h4 className="font-semibold theme-text-primary mb-3">{restaurantName}</h4>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="text-3xl font-bold theme-text-primary">
+          {summary.avgRating?.toFixed(1) || "0.0"}
+        </div>
+        <div className="flex-1">
+          <div className="text-yellow-500 mb-1">⭐⭐⭐⭐⭐</div>
+          <p className="text-sm theme-text-secondary">
+            {summary.totalReviews || 0} đánh giá
+          </p>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {summary.avgFood !== undefined && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm theme-text-secondary w-24">Món ăn:</span>
+            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-orange-500"
+                style={{ width: `${(summary.avgFood / 5) * 100}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium theme-text-primary w-8">
+              {summary.avgFood?.toFixed(1)}
+            </span>
+          </div>
+        )}
+        {summary.avgService !== undefined && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm theme-text-secondary w-24">Dịch vụ:</span>
+            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500"
+                style={{ width: `${(summary.avgService / 5) * 100}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium theme-text-primary w-8">
+              {summary.avgService?.toFixed(1)}
+            </span>
+          </div>
+        )}
+        {summary.avgAmbiance !== undefined && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm theme-text-secondary w-24">Không gian:</span>
+            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-purple-500"
+                style={{ width: `${(summary.avgAmbiance / 5) * 100}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium theme-text-primary w-8">
+              {summary.avgAmbiance?.toFixed(1)}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Restaurant Review Card Component
+interface RestaurantReviewCardProps {
+  review: RestaurantReviewDTO;
+  restaurantName: string;
+  readOnly?: boolean;
+}
+
+const RestaurantReviewCard: React.FC<RestaurantReviewCardProps> = ({
+  review,
+  restaurantName,
+}) => {
+  return (
+    <div className="rounded-xl border theme-border theme-bg-card p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h4 className="font-semibold theme-text-primary">{restaurantName}</h4>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-yellow-500">
+              {"⭐".repeat(Math.round(review.rating || 0))}
+            </span>
+            <span className="text-sm theme-text-secondary">
+              {review.rating?.toFixed(1)}
+            </span>
+          </div>
+        </div>
+        <span className="text-sm theme-text-secondary">
+          {review.createdAt
+            ? new Date(review.createdAt).toLocaleDateString("vi-VN")
+            : "N/A"}
         </span>
       </div>
-      <div className="h4-mobile sm:h4-tablet lg:h4-desktop font-bold">
-        {value}
-      </div>
-      {sub && (
-        <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-          {sub}
+      {review.title && (
+        <h5 className="font-medium theme-text-primary mb-2">{review.title}</h5>
+      )}
+      <p className="text-sm theme-text-secondary mb-3 line-clamp-3">
+        {review.content}
+      </p>
+      {review.aspects && (
+        <div className="flex flex-wrap gap-2 text-xs">
+          {review.aspects.food !== undefined && (
+            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
+              Món ăn: {review.aspects.food}/5
+            </span>
+          )}
+          {review.aspects.service !== undefined && (
+            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+              Dịch vụ: {review.aspects.service}/5
+            </span>
+          )}
+          {review.aspects.ambiance !== undefined && (
+            <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+              Không gian: {review.aspects.ambiance}/5
+            </span>
+          )}
         </div>
       )}
     </div>
   );
+};
 
-  /* ===================== JSX ===================== */
+// Main Dashboard
+const DashboardRestaurantPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+  const [providerId, setProviderId] = useState<number | undefined>();
+  const [restaurants, setRestaurants] = useState<RestaurantDTO[]>([]);
+  const [bookings, setBookings] = useState<RestaurantBookingDTO[]>([]);
+  const [ratingSummaries, setRatingSummaries] = useState<
+    RestaurantRatingSummaryDTO[]
+  >([]);
+  const [recentReviews, setRecentReviews] = useState<RestaurantReviewDTO[]>([]);
+  const [totalReviews, setTotalReviews] = useState<number>(0);
+  const [userCache, setUserCache] = useState<Map<number, UserDTO>>(new Map());
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: "confirm" | "cancel";
+    bookingId: number | null;
+  }>({ isOpen: false, type: "confirm", bookingId: null });
+  const [revenueFilter, setRevenueFilter] = useState<
+    "day" | "week" | "month" | "year"
+  >("day");
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [newNotificationsCount, setNewNotificationsCount] = useState<number>(0);
+
+  const executeAction = async () => {
+    if (!modalState.bookingId) return;
+
+    try {
+      setActionLoading(modalState.bookingId);
+      
+      if (modalState.type === "confirm") {
+        await api.patch(`/restaurant-bookings/${modalState.bookingId}/confirm`);
+      } else {
+        await api.patch(`/restaurant-bookings/${modalState.bookingId}/cancel`);
+      }
+
+      // Refresh booking data
+      const response = await api.get<RestaurantBookingDTO>(
+        `/restaurant-bookings/${modalState.bookingId}`
+      );
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.bookingId === modalState.bookingId ? response.data : booking
+        )
+      );
+
+      setModalState({ isOpen: false, type: "confirm", bookingId: null });
+    } catch (error) {
+      console.error(`❌ Error ${modalState.type}ing booking:`, error);
+      alert(
+        modalState.type === "confirm"
+          ? "Lỗi khi xác nhận đặt bàn"
+          : "Lỗi khi hủy đặt bàn"
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Helper function to format currency compactly
+  const formatCompactCurrency = (value: number): string => {
+    if (value >= 1000000000) {
+      return `${(value / 1000000000).toFixed(1)}T`;
+    } else if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}Tr`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}N`;
+    }
+    return value.toString();
+  };
+
+  // Calculate month-over-month growth percentage
+  const calculateMonthGrowth = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const confirmedBookings = bookings.filter((b) => b.providerConfirmed === 1);
+
+    const currentMonthRevenue = confirmedBookings
+      .filter((b) => {
+        if (!b.createdAt) return false;
+        const date = new Date(b.createdAt);
+        return (
+          date.getMonth() === currentMonth && date.getFullYear() === currentYear
+        );
+      })
+      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    const lastMonthRevenue = confirmedBookings
+      .filter((b) => {
+        if (!b.createdAt) return false;
+        const date = new Date(b.createdAt);
+        return (
+          date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear
+        );
+      })
+      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+    if (lastMonthRevenue === 0 && currentMonthRevenue > 0) {
+      return { value: 100, isPositive: true, isOver100: true };
+    }
+    if (lastMonthRevenue === 0 && currentMonthRevenue === 0) {
+      return { value: 0, isPositive: true, isOver100: false };
+    }
+
+    const growthPercent =
+      ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+    return {
+      value: Math.abs(growthPercent),
+      isPositive: growthPercent >= 0,
+      isOver100: false,
+    };
+  }, [bookings]);
+
+  // Calculate month-over-month booking count growth
+  const calculateBookingGrowth = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const confirmedBookings = bookings.filter((b) => b.providerConfirmed === 1);
+
+    const currentMonthCount = confirmedBookings.filter((b) => {
+      if (!b.createdAt) return false;
+      const date = new Date(b.createdAt);
+      return (
+        date.getMonth() === currentMonth && date.getFullYear() === currentYear
+      );
+    }).length;
+
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    const lastMonthCount = confirmedBookings.filter((b) => {
+      if (!b.createdAt) return false;
+      const date = new Date(b.createdAt);
+      return (
+        date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear
+      );
+    }).length;
+
+    if (lastMonthCount === 0 && currentMonthCount > 0) {
+      return { value: 100, isPositive: true, isOver100: true };
+    }
+    if (lastMonthCount === 0 && currentMonthCount === 0) {
+      return { value: 0, isPositive: true, isOver100: false };
+    }
+
+    const growthPercent =
+      ((currentMonthCount - lastMonthCount) / lastMonthCount) * 100;
+    return {
+      value: Math.abs(growthPercent),
+      isPositive: growthPercent >= 0,
+      isOver100: false,
+    };
+  }, [bookings]);
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const userStr = localStorage.getItem("user");
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        const provider = await getProviderByUserId(user.userId);
+        if (provider?.providerId) setProviderId(provider.providerId);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!providerId) return;
+      try {
+        console.log("🔍 Loading data for providerId:", providerId);
+
+        const rs = await getRestaurantsByProvider(providerId);
+        console.log("🍽️ Restaurants found:", rs.length, rs);
+        setRestaurants(rs);
+
+        const bRes = await getRestaurantBookingsByProvider(providerId);
+        console.log("📅 Bookings response:", bRes);
+        console.log("📊 Total bookings:", bRes?.length || 0);
+        setBookings(bRes || []);
+
+        // Fetch user info for all bookings
+        const uniqueUserIds = Array.from(
+          new Set((bRes || []).map((b) => b.userId))
+        );
+        const usersMap = new Map<number, UserDTO>();
+        await Promise.all(
+          uniqueUserIds.map(async (userId) => {
+            try {
+              const user = await getUserById(userId);
+              usersMap.set(userId, user);
+            } catch (e) {
+              console.error(`Failed to fetch user ${userId}:`, e);
+            }
+          })
+        );
+        setUserCache(usersMap);
+        console.log("👥 Users loaded:", usersMap.size);
+
+        // Fetch rating summaries for each restaurant
+        const summaryPromises = rs.map((r) =>
+          r.restaurantId
+            ? getRestaurantRatingSummaryByRestaurant(r.restaurantId).catch((e) => {
+                console.error(
+                  `Failed to fetch rating for restaurant ${r.restaurantId}:`,
+                  e
+                );
+                return null;
+              })
+            : Promise.resolve(null)
+        );
+        const summaries = (await Promise.all(summaryPromises)).filter(
+          (s) => s !== null
+        ) as RestaurantRatingSummaryDTO[];
+        setRatingSummaries(summaries);
+
+        // Fetch reviews for the first restaurant (if available)
+        const firstRestaurantId = rs[0]?.restaurantId;
+        if (firstRestaurantId) {
+          console.log(`📥 Dashboard loading reviews for restaurant ${firstRestaurantId}`);
+          const revs = await getRestaurantReviewsByRestaurant(firstRestaurantId);
+          console.log(`📤 Dashboard received ${revs.length} reviews`);
+          setRecentReviews(revs.slice(0, 2));
+        } else {
+          setRecentReviews([]);
+        }
+
+        // Fetch total reviews count for provider
+        const reviewsCount = await getRestaurantReviewsCountByProvider(providerId);
+        console.log("📊 Total reviews for provider:", reviewsCount);
+        setTotalReviews(reviewsCount);
+      } catch (e) {
+        console.error("❌ Error loading dashboard data:", e);
+      }
+    };
+
+    load();
+
+    // Reload data when window gains focus
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        load();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [providerId]);
+
+  const revenueChartData = useMemo(() => {
+    const confirmedBookings = bookings.filter((b) => b.providerConfirmed === 1);
+
+    if (revenueFilter === "day") {
+      const map = new Map<number, number>();
+      confirmedBookings.forEach((b) => {
+        const d = b.createdAt ? new Date(b.createdAt).getDate() : 1;
+        map.set(d, (map.get(d) || 0) + (b.totalPrice || 0));
+      });
+      return Array.from({ length: 30 }, (_, i) => {
+        const day = i + 1;
+        return { day, label: `${day}`, revenue: map.get(day) || 0 };
+      });
+    } else if (revenueFilter === "week") {
+      const map = new Map<number, number>();
+      confirmedBookings.forEach((b) => {
+        if (b.createdAt) {
+          const date = new Date(b.createdAt);
+          const week = Math.ceil(date.getDate() / 7);
+          map.set(week, (map.get(week) || 0) + (b.totalPrice || 0));
+        }
+      });
+      return Array.from({ length: 4 }, (_, i) => {
+        const week = i + 1;
+        return {
+          day: week,
+          label: `Tuần ${week}`,
+          revenue: map.get(week) || 0,
+        };
+      });
+    } else if (revenueFilter === "month") {
+      const map = new Map<number, number>();
+      confirmedBookings.forEach((b) => {
+        if (b.createdAt) {
+          const month = new Date(b.createdAt).getMonth() + 1;
+          map.set(month, (map.get(month) || 0) + (b.totalPrice || 0));
+        }
+      });
+      return Array.from({ length: 12 }, (_, i) => {
+        const month = i + 1;
+        return { day: month, label: `T${month}`, revenue: map.get(month) || 0 };
+      });
+    } else {
+      // year
+      const map = new Map<number, number>();
+      confirmedBookings.forEach((b) => {
+        if (b.createdAt) {
+          const year = new Date(b.createdAt).getFullYear();
+          map.set(year, (map.get(year) || 0) + (b.totalPrice || 0));
+        }
+      });
+      const currentYear = new Date().getFullYear();
+      return Array.from({ length: 5 }, (_, i) => {
+        const year = currentYear - 4 + i;
+        return { day: year, label: `${year}`, revenue: map.get(year) || 0 };
+      });
+    }
+  }, [bookings, revenueFilter]);
+
+  // Fetch notifications from API
+  useEffect(() => {
+    const formatNotificationTime = (dateString: string): string => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMins < 1) return t("just_now") || "Vừa xong";
+      if (diffMins < 60)
+        return `${diffMins} ${t("minutes_ago_suffix") || "phút trước"}`;
+      if (diffHours < 24)
+        return `${diffHours} ${t("hours_ago_suffix") || "giờ trước"}`;
+      return `${diffDays} ${t("days_ago_suffix") || "ngày trước"}`;
+    };
+
+    const fetchNotifications = async () => {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return;
+
+      const user = JSON.parse(userStr);
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/notifications/user/${user.userId}/recent?limit=3`
+        );
+        if (response.ok) {
+          const data: BackendNotification[] = await response.json();
+          const mapped: Notification[] = data.map((n: BackendNotification) => ({
+            id: n.notification_id.toString(),
+            type: n.category as NotificationType,
+            title: n.title,
+            message: n.content,
+            time: formatNotificationTime(n.sent_at),
+            isNew: !n.is_read,
+          }));
+          setNotifications(mapped);
+          setNewNotificationsCount(
+            data.filter((n: BackendNotification) => !n.is_read).length
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      }
+    };
+
+    fetchNotifications();
+  }, [t]);
+
+  // Derived selections - get 2 most recent restaurants
+  const recentRestaurants = useMemo(() => {
+    return [...restaurants]
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, 2);
+  }, [restaurants]);
+
   return (
-    <div className="p-6 max-w-[1900px] mx-auto flex flex-col gap-10 theme-text-primary">
-      {/* Header & Filters */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="h3-mobile sm:h3-tablet lg:h3-desktop font-bold flex items-center gap-2">
-            <UtensilsCrossed className="w-7 h-7 icon-brand" />
-            Dashboard Nhà Hàng
-          </h1>
-          <span className="body2-mobile sm:body2-tablet lg:body2-desktop theme-text-secondary">
-            Nhà cung cấp: <strong>Mock Provider Co.</strong>
-          </span>
-          <div className="ml-auto flex gap-2">
-            <button className="btn-primary btn-text-responsive flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Tạo nhà hàng
-            </button>
-            <button className="btn-outline btn-text-responsive flex items-center gap-2">
-              <ChefHat className="w-4 h-4" />
-              Thêm món đặc biệt
-            </button>
-          </div>
-        </div>
+    <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-6">
+      {/* SECTION 1: Thống kê tổng quan */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon={<BarChart3 className="w-5 h-5 icon-brand" />}
+          label="Tổng doanh thu"
+          value={`${formatCompactCurrency(
+            bookings
+              .filter((b) => b.providerConfirmed === 1)
+              .reduce((sum, b) => sum + (b.totalPrice || 0), 0)
+          )} VND`}
+          trend={calculateMonthGrowth}
+        />
+        <StatCard
+          icon={<Utensils className="w-5 h-5 icon-brand" />}
+          label="Tổng đặt bàn"
+          value={bookings.filter((b) => b.providerConfirmed === 1).length}
+          trend={calculateBookingGrowth}
+        />
+        <StatCard
+          icon={<Calendar className="w-5 h-5 icon-brand" />}
+          label="Tổng đánh giá"
+          value={totalReviews}
+        />
+        <StatCard
+          icon={<Utensils className="w-5 h-5 icon-brand" />}
+          label="Nhà hàng"
+          value={restaurants.length}
+        />
+      </div>
 
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex items-center gap-2 theme-border rounded px-2 py-1 theme-bg-card body2-mobile sm:body2-tablet lg:body2-desktop">
-            <Search className="w-4 h-4 icon-disabled" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm tên / slug / ID"
-              className="outline-none bg-transparent body2-mobile sm:body2-tablet lg:body2-desktop placeholder:theme-text-secondary"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Khu vực
-            </label>
-            <select
-              value={filterArea}
-              onChange={(e) => setFilterArea(e.target.value)}
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-            >
-              <option value="">Tất cả</option>
-              {areas.map((a) => (
-                <option key={a}>{a}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Ẩm thực
-            </label>
-            <select
-              value={filterCuisine}
-              onChange={(e) => setFilterCuisine(e.target.value)}
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-            >
-              <option value="">Tất cả</option>
-              {cuisinePool.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Price
-            </label>
-            <select
-              value={filterPrice}
-              onChange={(e) => setFilterPrice(e.target.value)}
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-            >
-              <option value="">All</option>
-              {[1, 2, 3, 4].map((p) => (
-                <option key={p} value={p}>
-                  {"$".repeat(p)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Giờ phục vụ
-            </label>
-            <select
-              value={filterHours}
-              onChange={(e) => setFilterHours(e.target.value)}
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-            >
-              <option value="">Tất cả</option>
-              <option value="breakfast">Breakfast</option>
-              <option value="lunch">Lunch</option>
-              <option value="dinner">Dinner</option>
-            </select>
-          </div>
-          <div className="flex flex-col">
-            <label className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-              Trạng thái
-            </label>
-            <select
-              value={filterStatus}
-              onChange={(e) =>
-                setFilterStatus(e.target.value as RestaurantStatus | "")
-              }
-              className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
-            >
-              <option value="">Tất cả</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-              <option value="archived">Archived</option>
-              <option value="disabled">Disabled</option>
-            </select>
+      {/* SECTION 2: Thông báo */}
+      <div className="rounded-xl border theme-border theme-bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Bell className="w-5 h-5 icon-brand" />
+            <h2 className="text-lg font-semibold theme-text-primary">
+              Thông báo mới
+            </h2>
+            {newNotificationsCount > 0 && (
+              <span className="px-2 py-0.5 text-xs font-medium theme-bg-primary theme-text-button rounded-full">
+                {newNotificationsCount}
+              </span>
+            )}
           </div>
           <button
-            onClick={clearFilters}
-            className="caption-mobile sm:caption-tablet lg:caption-desktop theme-border rounded px-3 py-1 theme-bg-card hover:opacity-80"
+            className="link-brand text-sm font-medium flex items-center gap-1"
+            onClick={() => navigate("/supplier/notifications")}
           >
-            Đặt lại
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {notifications.length === 0 ? (
+            <div className="col-span-full text-center py-8 theme-text-secondary">
+              <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>Không có thông báo mới</p>
+            </div>
+          ) : (
+            notifications.map((n) => (
+              <NotificationItem
+                key={n.id}
+                notification={n}
+                onClick={() => console.log("Clicked", n.id)}
+              />
+            ))
+          )}
         </div>
       </div>
 
-      {/* KPI */}
-      <div>
-        {sectionHeader("Chỉ số (KPI)", "kpi", <Filter className="w-4 h-4" />)}
-        {!collapsed["kpi"] && (
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-            {renderKPI(
-              "Reservation hôm nay",
-              kpis.reservationsToday,
-              <CalendarDays className="w-4 h-4" />
-            )}
-            {renderKPI(
-              "Turnover bàn (avg)",
-              kpis.turnover.toFixed(1),
-              <LayoutGrid className="w-4 h-4" />
-            )}
-            {renderKPI(
-              "No-show rate",
-              `${kpis.noShowRate.toFixed(1)}%`,
-              <TriangleAlert className="w-4 h-4" />
-            )}
-            {renderKPI(
-              "Chi tiêu TB",
-              fmtCurrency(Math.round(kpis.avgSpend)),
-              <DollarSign className="w-4 h-4" />
-            )}
-            {renderKPI("Pending", kpis.pending, <Clock className="w-4 h-4" />)}
-          </div>
-        )}
+      {/* SECTION 3: Hành động nhanh */}
+      <div className="rounded-xl border theme-border theme-bg-card p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Zap className="w-5 h-5 icon-brand" />
+          <h2 className="text-lg font-semibold theme-text-primary">
+            Hành động nhanh
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <QuickAction
+            icon={<Plus className="w-6 h-6" />}
+            label="Thêm nhà hàng"
+            description="Tạo nhà hàng mới"
+            onClick={() => navigate("/supplier/service/restaurant/create")}
+          />
+          <QuickAction
+            icon={<List className="w-6 h-6" />}
+            label="Quản lý đặt bàn"
+            description="Xem & xác nhận đặt bàn"
+            onClick={() => navigate("/supplier/service/restaurant/bookings")}
+          />
+          <QuickAction
+            icon={<MessageSquare className="w-6 h-6" />}
+            label="Quản lý đánh giá"
+            description="Phản hồi khách hàng"
+            onClick={() => navigate("/supplier/service/restaurant/all-reviews")}
+          />
+          <QuickAction
+            icon={<BarChart2 className="w-6 h-6" />}
+            label="Quản lý nhà hàng"
+            description="Xem tất cả nhà hàng"
+            onClick={() => navigate("/supplier/service/restaurant/list")}
+          />
+        </div>
       </div>
 
-      {/* Listings */}
-      <div>
-        {sectionHeader(
-          "Danh sách Nhà hàng",
-          "restaurants",
-          <UtensilsCrossed className="w-4 h-4" />,
-          <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-            {filteredRestaurants.length} kết quả
-          </span>
-        )}
-        {!collapsed["restaurants"] && (
+      {/* SECTION 4: Biểu đồ doanh thu */}
+      <div className="rounded-xl border theme-border theme-bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 icon-brand" />
+            <h2 className="text-lg font-semibold theme-text-primary">
+              Biểu đồ doanh thu
+            </h2>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setRevenueFilter("day")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                revenueFilter === "day"
+                  ? "bg-blue-600 text-white"
+                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+              }`}
+            >
+              Ngày
+            </button>
+            <button
+              onClick={() => setRevenueFilter("week")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                revenueFilter === "week"
+                  ? "bg-blue-600 text-white"
+                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+              }`}
+            >
+              Tuần
+            </button>
+            <button
+              onClick={() => setRevenueFilter("month")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                revenueFilter === "month"
+                  ? "bg-blue-600 text-white"
+                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+              }`}
+            >
+              Tháng
+            </button>
+            <button
+              onClick={() => setRevenueFilter("year")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                revenueFilter === "year"
+                  ? "bg-blue-600 text-white"
+                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+              }`}
+            >
+              Năm
+            </button>
+          </div>
+        </div>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={revenueChartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis tickFormatter={(value) => formatCompactCurrency(value)} />
+              <Tooltip
+                formatter={(value: number) => [
+                  `${value.toLocaleString("vi-VN")} VND`,
+                  "",
+                ]}
+                labelStyle={{ fontWeight: "bold" }}
+              />
+              <Bar dataKey="revenue" fill="#f97316" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* SECTION 5: Danh sách nhà hàng */}
+      <div className="rounded-xl border theme-border theme-bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold theme-text-primary">
+            Danh sách nhà hàng
+          </h2>
+          <button
+            className="link-brand flex items-center gap-1"
+            onClick={() => navigate("/supplier/service/restaurant/list")}
+          >
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {restaurants.slice(0, 3).map((r) => (
+            <RestaurantCard
+              key={r.restaurantId}
+              restaurant={r}
+              onView={() =>
+                navigate(`/supplier/service/restaurant/${r.restaurantId}/view`)
+              }
+              onEdit={() =>
+                navigate(`/supplier/service/restaurant/${r.restaurantId}/edit`)
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* SECTION 6: Đặt bàn gần đây */}
+      <div className="rounded-xl border theme-border theme-bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 icon-brand" />
+            <h2 className="text-lg font-semibold theme-text-primary">
+              Đặt bàn gần đây
+            </h2>
+          </div>
+          <button
+            className="link-brand text-sm font-medium flex items-center gap-1"
+            onClick={() => navigate("/supplier/service/restaurant/bookings")}
+          >
+            {t("view_all")}
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        {bookings.filter((b) => b.providerConfirmed === 0).length === 0 ? (
+          <div className="text-center py-8 theme-text-secondary">
+            <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>Chưa có đặt bàn nào</p>
+          </div>
+        ) : (
           <div className="flex flex-col gap-3">
-            {selectedIds.size > 0 && (
-              <div className="theme-border rounded theme-bg-card p-2 flex flex-wrap gap-2 items-center caption-mobile sm:caption-tablet lg:caption-desktop">
-                <span className="font-medium">{selectedIds.size} đã chọn</span>
-                <button
-                  onClick={bulkPublish}
-                  className="px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700"
-                >
-                  Xuất bản
-                </button>
-                <button
-                  onClick={bulkArchive}
-                  className="px-2 py-1 rounded bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-white"
-                >
-                  Lưu trữ
-                </button>
-                <button
-                  onClick={() => setSelectedIds(new Set())}
-                  className="px-2 py-1 rounded theme-border hover:opacity-80"
-                >
-                  Bỏ chọn
-                </button>
-              </div>
-            )}
-            <div className="overflow-auto theme-border rounded theme-bg-card">
-              <table className="w-full border-collapse body2-mobile sm:body2-tablet lg:body2-desktop">
-                <thead className="bg-gray-50 dark:bg-gray-800/60">
-                  <tr className="text-left theme-text-secondary caption-mobile sm:caption-tablet lg:caption-desktop">
-                    <th className="p-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          filteredRestaurants.length > 0 &&
-                          filteredRestaurants.every((r) =>
-                            selectedIds.has(r.id)
+            {[...bookings]
+              .filter((b) => b.providerConfirmed === 0)
+              .sort((a, b) => {
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return dateB - dateA;
+              })
+              .slice(0, 1)
+              .map((b) => {
+                const restaurant = restaurants.find((r) => r.restaurantId === b.restaurantId);
+                const user = userCache.get(b.userId);
+                return (
+                  <div key={b.bookingId} className="relative">
+                    <div className="m-auto">
+                      <RestaurantBookingRow
+                        booking={b}
+                        restaurantName={restaurant?.title}
+                        userName={user?.fullName}
+                        userPhone={user?.phoneNumber}
+                        onView={() =>
+                          navigate(
+                            `/supplier/service/restaurant/bookings/${b.bookingId}`
                           )
                         }
-                        onChange={() => toggleSelectAll(filteredRestaurants)}
+                        onConfirm={() =>
+                          setModalState({
+                            isOpen: true,
+                            type: "confirm",
+                            bookingId: b.bookingId || null,
+                          })
+                        }
+                        onCancel={() =>
+                          setModalState({
+                            isOpen: true,
+                            type: "cancel",
+                            bookingId: b.bookingId || null,
+                          })
+                        }
                       />
-                    </th>
-                    <th className="p-2">Ảnh</th>
-                    <th className="p-2">Tiêu đề / Slug</th>
-                    <th className="p-2">Ẩm thực</th>
-                    <th className="p-2">Price</th>
-                    <th className="p-2">Giờ</th>
-                    <th className="p-2">Rating</th>
-                    <th className="p-2">Resv sắp tới</th>
-                    <th className="p-2">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRestaurants.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="border-t theme-border hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
-                    >
-                      <td className="p-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(r.id)}
-                          onChange={() => toggleSelectOne(r.id)}
-                        />
-                      </td>
-                      <td className="p-2">
-                        <div className="w-20 h-14 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden flex items-center justify-center">
-                          {r.thumbnail_url ? (
-                            <img
-                              src={r.thumbnail_url}
-                              alt={r.title}
-                              className="object-cover w-full h-full"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                              Không ảnh
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-2 align-top">
-                        <div className="flex flex-col gap-0.5">
-                          <button className="text-blue-600 dark:text-blue-400 hover:underline font-medium caption-mobile sm:caption-tablet lg:caption-desktop text-left">
-                            {r.title}
-                          </button>
-                          <span className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                            {r.slug}
-                          </span>
-                          {statusBadge(r.status)}
-                        </div>
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        <div className="flex flex-wrap gap-1">
-                          {r.cuisines.map((c) => (
-                            <span
-                              key={c}
-                              className="px-2 py-0.5 rounded bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 overline-mobile sm:overline-tablet lg:overline-desktop"
-                            >
-                              {c}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {"$".repeat(r.price_level)}
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {["breakfast", "lunch", "dinner"]
-                          .filter(
-                            (k) =>
-                              r.opening_hours[k as keyof typeof r.opening_hours]
-                          )
-                          .join(" / ") || "—"}
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {r.rating_average.toFixed(1)}
-                      </td>
-                      <td className="p-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                        {r.upcoming_reservations}
-                      </td>
-                      <td className="p-2 align-top">
-                        <div className="flex flex-wrap gap-1">
-                          {[
-                            { ic: Pencil, t: "Menu" },
-                            { ic: CalendarDays, t: "Reservations" },
-                            { ic: Table2, t: "Tables" },
-                            { ic: Power, t: "Publish" },
-                            { ic: Archive, t: "Archive" },
-                          ].map((a, i) => {
-                            const Icon = a.ic;
-                            return (
-                              <button
-                                key={i}
-                                className="p-1 hover:text-blue-600 dark:hover:text-blue-400"
-                                title={a.t}
-                              >
-                                <Icon className="w-4 h-4" />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredRestaurants.length === 0 && (
-                    <tr>
-                      <td
-                        className="p-4 text-center caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary"
-                        colSpan={9}
-                      >
-                        Không tìm thấy nhà hàng
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Reservations Snapshot (Timeslots) */}
-      <div>
-        {sectionHeader(
-          "Timeslot đặt chỗ (48h)",
-          "reservations",
-          <Clock className="w-4 h-4" />,
-          <button className="caption-mobile sm:caption-tablet lg:caption-desktop flex items-center gap-1 px-2 py-1 rounded theme-border hover:opacity-80">
-            <RefreshCw className="w-3 h-3" />
-            Làm mới
-          </button>
-        )}
-        {!collapsed["reservations"] && (
-          <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-4">
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {timeslotAgg.slice(0, 9).map((t) => {
-                const date = new Date(t.timeslot);
-                const label = `${date.toISOString().substring(5, 10)} ${date
-                  .toISOString()
-                  .substring(11, 16)}`;
-                return (
-                  <div
-                    key={t.timeslot}
-                    className={cx(
-                      "theme-border rounded p-3 flex flex-col gap-2 bg-gray-50 dark:bg-gray-800/40 caption-mobile sm:caption-tablet lg:caption-desktop",
-                      t.no_show_risk
-                        ? "border-amber-300"
-                        : t.count > 6
-                        ? "border-green-300"
-                        : ""
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">{label}</span>
-                      <span
-                        className={cx(
-                          "px-2 py-0.5 rounded overline-mobile sm:overline-tablet lg:overline-desktop",
-                          t.count > 6
-                            ? "bg-green-200 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                            : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                        )}
-                      >
-                        {t.count}
-                      </span>
-                    </div>
-                    <div className="flex gap-3 overline-mobile sm:overline-tablet lg:overline-desktop">
-                      <span>Conf: {t.confirmed}</span>
-                      <span>Pending: {t.pending}</span>
-                    </div>
-                    {t.no_show_risk && (
-                      <span className="overline-mobile sm:overline-tablet lg:overline-desktop text-amber-600 dark:text-amber-400">
-                        Nguy cơ no-show
-                      </span>
-                    )}
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      <button className="px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700 overline-mobile sm:overline-tablet lg:overline-desktop flex items-center gap-1">
-                        <Check className="w-3 h-3" /> Confirm
-                      </button>
-                      <button className="px-2 py-0.5 rounded bg-red-600 text-white hover:bg-red-700 overline-mobile sm:overline-tablet lg:overline-desktop flex items-center gap-1">
-                        <Ban className="w-3 h-3" /> Cancel
-                      </button>
-                      <button className="px-2 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 overline-mobile sm:overline-tablet lg:overline-desktop">
-                        Waitlist
-                      </button>
-                      <button className="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 overline-mobile sm:overline-tablet lg:overline-desktop">
-                        <MessageCircle className="w-3 h-3" />
-                      </button>
-                      <button className="px-2 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 overline-mobile sm:overline-tablet lg:overline-desktop flex items-center gap-1">
-                        <Table2 className="w-3 h-3" /> Assign
-                      </button>
                     </div>
                   </div>
                 );
               })}
-              {timeslotAgg.length === 0 && (
-                <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                  Không có dữ liệu timeslot
-                </div>
-              )}
-            </div>
           </div>
         )}
       </div>
 
-      {/* Seat Map Mini */}
-      <div>
-        {sectionHeader(
-          "Sơ đồ bàn (mini)",
-          "seatmap",
-          <Table2 className="w-4 h-4" />,
-          <select
-            value={seatRestaurantId}
-            onChange={(e) => setSeatRestaurantId(Number(e.target.value))}
-            className="theme-border rounded px-2 py-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-bg-card"
+      {/* SECTION 7: Thống kê & đánh giá */}
+      <div className="rounded-xl border theme-border theme-bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold theme-text-primary mb-4">
+            Tổng quan đánh giá
+          </h2>
+          <button
+            className="link-brand flex items-center gap-1"
+            onClick={() => navigate("/supplier/service/restaurant/all-reviews")}
           >
-            {restaurants.slice(0, 8).map((r) => (
-              <option key={r.id} value={r.id}>
-                #{r.id} {r.title.slice(0, 22)}
-              </option>
-            ))}
-          </select>
-        )}
-        {!collapsed["seatmap"] && (
-          <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-4">
-            <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
-              {seatTables.map((t) => {
-                const cls =
-                  t.status === "free"
-                    ? "bg-green-200 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-                    : t.status === "reserved"
-                    ? "bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-                    : t.status === "occupied"
-                    ? "bg-red-200 text-red-800 dark:bg-red-900/40 dark:text-red-300"
-                    : "bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300";
-                return (
-                  <div
-                    key={t.id}
-                    className={cx(
-                      "h-16 rounded flex flex-col items-center justify-center relative cursor-pointer hover:ring-2 ring-light-focus dark:ring-dark-focus transition caption-mobile sm:caption-tablet lg:caption-desktop font-medium",
-                      cls
-                    )}
-                    title={t.label}
-                  >
-                    <span>{t.label}</span>
-                    <span className="overline-mobile sm:overline-tablet lg:overline-desktop">
-                      {t.capacity}
-                    </span>
-                    {t.current_reservation_id && (
-                      <span className="absolute bottom-1 right-1 overline-mobile sm:overline-tablet lg:overline-desktop bg-black/30 text-white px-1 rounded">
-                        R
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-              {seatTables.length === 0 && (
-                <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                  Không có dữ liệu bàn
-                </div>
-              )}
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {recentRestaurants.length === 0 ? (
+            <div className="theme-text-secondary text-sm">
+              Chưa có dữ liệu đánh giá
             </div>
-            <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-              (Giả lập) — sau này click bàn để gán / bỏ gán / block bảo trì.
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Menu & Specials */}
-      <div>
-        {sectionHeader(
-          "Menu & Specials",
-          "menu",
-          <ChefHat className="w-4 h-4" />
-        )}
-        {!collapsed["menu"] && (
-          <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-4">
-            <div className="flex flex-wrap gap-2">
-              <button className="btn-primary btn-text-responsive flex items-center gap-2">
-                <Plus className="w-4 h-4" /> Thêm món
-              </button>
-              <button className="btn-outline btn-text-responsive flex items-center gap-2">
-                <Sparkles className="w-4 h-4" /> Thêm special
-              </button>
-              <button className="btn-outline btn-text-responsive flex items-center gap-2">
-                <Tag className="w-4 h-4" /> Test promo
-              </button>
-            </div>
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {menuPreview.map((m) => (
-                <div
-                  key={m.id}
-                  className="theme-border rounded p-3 bg-gray-50 dark:bg-gray-800/40 flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold line-clamp-1">{m.name}</span>
-                    <span className="overline-mobile sm:overline-tablet lg:overline-desktop">
-                      {fmtCurrency(m.price)}
-                    </span>
-                  </div>
-                  <div className="overline-mobile sm:overline-tablet lg:overline-desktop">
-                    {m.category} {m.special && "• Special"}
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <button className="flex-1 px-2 py-0.5 rounded theme-border hover:opacity-80">
-                      Sửa
-                    </button>
-                    <button className="flex-1 px-2 py-0.5 rounded theme-border hover:opacity-80">
-                      Giá
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {menuPreview.length === 0 && (
-                <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                  Không có món
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Reviews */}
-      <div>
-        {sectionHeader(
-          "Đánh giá & Rating",
-          "reviews",
-          <Star className="w-4 h-4" />
-        )}
-        {!collapsed["reviews"] && (
-          <div className="theme-border rounded theme-bg-card p-4 grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {reviewPreview.map((r) => {
-              const rest = restaurants.find((x) => x.id === r.restaurant_id)!;
-              return (
-                <div
-                  key={r.id}
-                  className="theme-border rounded p-3 flex flex-col gap-2 bg-gray-50 dark:bg-gray-800/40"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="caption-mobile sm:caption-tablet lg:caption-desktop font-semibold line-clamp-1">
-                      {rest.title}
-                    </span>
-                    <span className="flex items-center gap-1 caption-mobile sm:caption-tablet lg:caption-desktop">
-                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                      {r.rating.toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 overline-mobile sm:overline-tablet lg:overline-desktop">
-                    <span>Quality {r.aspects.quality.toFixed(1)}</span>
-                    <span>Ambience {r.aspects.ambience.toFixed(1)}</span>
-                  </div>
-                  <div className="body2-mobile sm:body2-tablet lg:body2-desktop theme-text-secondary line-clamp-3">
-                    {r.content}
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="flex-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-border rounded px-2 py-0.5 hover:opacity-80">
-                      Trả lời
-                    </button>
-                    <button className="flex-1 caption-mobile sm:caption-tablet lg:caption-desktop theme-border rounded px-2 py-0.5 hover:opacity-80">
-                      Gắn cờ
-                    </button>
-                  </div>
-                </div>
+          ) : (
+            recentRestaurants.map((restaurant) => {
+              const summary = ratingSummaries.find(
+                (s) => s.restaurantId === restaurant.restaurantId
               );
-            })}
-            {reviewPreview.length === 0 && (
-              <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary col-span-full">
-                Không có đánh giá
-              </div>
-            )}
-          </div>
-        )}
+              return summary ? (
+                <RestaurantRatingSummaryCard
+                  key={restaurant.restaurantId}
+                  summary={summary}
+                  restaurantName={restaurant.title || "Nhà hàng"}
+                />
+              ) : null;
+            })
+          )}
+        </div>
       </div>
 
-      {/* Alerts & Activity */}
-      <div>
-        {sectionHeader(
-          "Cảnh báo & Hoạt động",
-          "alertsActivity",
-          <ShieldAlert className="w-4 h-4" />
-        )}
-        {!collapsed["alertsActivity"] && (
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-              <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                Cảnh báo
-              </h4>
-              <div className="flex flex-col gap-1 caption-mobile sm:caption-tablet lg:caption-desktop">
-                {alertsRecent.length === 0 && (
-                  <span className="theme-text-secondary">
-                    Không có cảnh báo
-                  </span>
-                )}
-                {alertsRecent.map((a) => {
-                  const cls =
-                    a.severity === "critical"
-                      ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300"
-                      : a.severity === "warn"
-                      ? "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300"
-                      : "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300";
-                  return (
-                    <div
-                      key={a.id}
-                      className={cx(
-                        "theme-border rounded px-2 py-1 flex items-center gap-2",
-                        cls
-                      )}
-                    >
-                      {a.severity === "critical" ? (
-                        <XCircle className="w-3 h-3" />
-                      ) : a.severity === "warn" ? (
-                        <TriangleAlert className="w-3 h-3" />
-                      ) : (
-                        <ShieldAlert className="w-3 h-3" />
-                      )}
-                      <span className="flex-1 line-clamp-1">{a.message}</span>
-                      <button className="px-2 py-0.5 rounded bg-white/70 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 border border-white/60 dark:border-white/20">
-                        Xem
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+      {/* SECTION 8: Nhận xét gần đây */}
+      <div className="rounded-xl border theme-border theme-bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold theme-text-primary">
+            Nhận xét gần đây
+          </h2>
+          <button
+            className="link-brand flex items-center gap-1"
+            onClick={() => navigate("/supplier/service/restaurant/recent-reviews")}
+          >
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {recentReviews.length === 0 && (
+            <div className="theme-text-secondary text-sm">
+              Chưa có đánh giá nào
             </div>
-            <div className="theme-border rounded theme-bg-card p-4 flex flex-col gap-3">
-              <h4 className="h6-mobile sm:h6-tablet lg:h6-desktop font-semibold">
-                Hoạt động gần đây
-              </h4>
-              <div className="flex flex-col gap-2 caption-mobile sm:caption-tablet lg:caption-desktop">
-                {activitiesRecent.map((act) => {
-                  const r = restaurants.find((x) => x.id === act.restaurant_id);
-                  return (
-                    <div
-                      key={act.id}
-                      className="theme-border rounded px-2 py-1 bg-gray-50 dark:bg-gray-800/40 flex items-center gap-2"
-                    >
-                      <History className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                      <span className="flex-1 line-clamp-1">
-                        {act.action} {r ? `(${r.title})` : ""}
-                      </span>
-                      <span className="overline-mobile sm:overline-tablet lg:overline-desktop theme-text-secondary">
-                        {act.created_at.slice(11, 16)}
-                      </span>
-                    </div>
-                  );
-                })}
-                {activitiesRecent.length === 0 && (
-                  <span className="theme-text-secondary">
-                    Không có hoạt động
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+          {recentReviews.map((r) => {
+            const reviewRestaurant = restaurants.find((rest) => rest.restaurantId === r.restaurantId);
+            return (
+              <RestaurantReviewCard
+                key={r.reviewId}
+                review={r}
+                restaurantName={reviewRestaurant?.title || "Nhà hàng"}
+                readOnly={true}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      {/* Footer */}
-      <div className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary flex flex-wrap gap-4">
-        <span>UI tĩnh • dữ liệu mock • tích hợp API sau.</span>
-        <span>
-          Legend seat map: Xanh=free • Vàng=reserved • Đỏ=occupied •
-          Xám=blocked.
-        </span>
-      </div>
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={modalState.isOpen}
+        onClose={() =>
+          setModalState({ isOpen: false, type: "confirm", bookingId: null })
+        }
+        onConfirm={executeAction}
+        title={
+          modalState.type === "confirm"
+            ? "Xác nhận đặt bàn"
+            : "Hủy đặt bàn"
+        }
+        message={
+          modalState.type === "confirm"
+            ? "Bạn có chắc chắn muốn xác nhận đặt bàn này không?"
+            : "Bạn có chắc chắn muốn hủy đặt bàn này không?"
+        }
+        confirmText={
+          modalState.type === "confirm"
+            ? "Xác nhận"
+            : "Hủy đặt bàn"
+        }
+        cancelText="Quay lại"
+        type={modalState.type === "cancel" ? "danger" : "confirm"}
+        loading={actionLoading === modalState.bookingId}
+      />
     </div>
   );
 };
