@@ -25,7 +25,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
 
   static const double _minPrice = 0;
   static const double _maxPrice = 10_000_000;
-  RangeValues _priceRange = const RangeValues(500000, 3_500_000);
+  RangeValues _priceRange = const RangeValues(0, 3_500_000);
 
   static const double _minDays = 1;
   static const double _maxDays = 10;
@@ -764,10 +764,28 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
   }
 
   RangeValues _normalizePriceRange(RangeValues v) {
-    if (v.end - v.start < 100000) {
-      final mid = (v.start + v.end) / 2;
-      return RangeValues(mid - 50000, mid + 50000);
+    // Rule: Nếu start = 0 thì end phải >= 500
+    // Rule: Nếu end < 500 thì start phải > 0
+    if (v.start == 0 && v.end < 500) {
+      return RangeValues(0, 500);
     }
+
+    if (v.end < 500 && v.start < (v.end - 100000).clamp(0, _maxPrice)) {
+      final minStart = (v.end - 100000).clamp(0, _maxPrice).toDouble();
+      if (v.start < minStart) {
+        return RangeValues(minStart, v.end);
+      }
+    }
+
+    // Đảm bảo khoảng cách tối thiểu 100k (trừ trường hợp start=0, end>=500)
+    if (v.end - v.start < 100000 && !(v.start == 0 && v.end >= 500)) {
+      final mid = (v.start + v.end) / 2;
+      return RangeValues(
+        (mid - 50000).clamp(_minPrice, _maxPrice),
+        (mid + 50000).clamp(_minPrice, _maxPrice),
+      );
+    }
+
     return v;
   }
 

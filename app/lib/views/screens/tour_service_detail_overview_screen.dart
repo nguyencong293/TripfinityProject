@@ -464,29 +464,76 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
               if (hasImages && images.length > 1)
                 Positioned(
                   bottom: 12,
-                  right: 12,
+                  left: 12,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                    child: Text(
-                      '${_imageIndex + 1}/${images.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          LucideIcons.image,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_imageIndex + 1} / ${images.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
             ],
           ),
         ),
+        if (hasImages && images.length > 1)
+          SizedBox(
+            height: 64,
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, i) {
+                final url = images[i];
+                final selected = i == _imageIndex;
+                return InkWell(
+                  onTap: () => _imageController.animateToPage(
+                    i,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                  ),
+                  child: Container(
+                    width: 86,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: selected
+                            ? context.primaryColor
+                            : context.dividerColor,
+                        width: selected ? 2 : 1,
+                      ),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: url.startsWith('http')
+                        ? Image.network(url, fit: BoxFit.cover)
+                        : Image.asset(url, fit: BoxFit.cover),
+                  ),
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemCount: images.length,
+            ),
+          ),
       ],
     );
   }
@@ -607,6 +654,15 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
             }).toList(),
           ),
         ],
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 16,
+          children: [
+            _inlineAction(context, 'Gọi', data),
+            _inlineAction(context, 'Viết đánh giá', data),
+            _inlineAction(context, 'Email', data),
+          ],
+        ),
       ],
     );
   }
@@ -1491,5 +1547,117 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
       } catch (_) {}
     }
     return [];
+  }
+
+  // ===== INLINE ACTIONS =====
+  Widget _inlineAction(
+    BuildContext context,
+    String label,
+    Map<String, dynamic> data,
+  ) {
+    return InkWell(
+      onTap: () => _handleAction(context, label, data),
+      child: Text(
+        label,
+        style: context.captionStyle.copyWith(
+          fontWeight: FontWeight.w600,
+          decoration: TextDecoration.underline,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAction(
+    BuildContext context,
+    String action,
+    Map<String, dynamic> data,
+  ) async {
+    if (action == 'Gọi') {
+      final providerId = data['providerId'];
+      if (providerId == null) {
+        _showError('Không tìm thấy thông tin nhà cung cấp');
+        return;
+      }
+
+      final phone = await _getProviderPhone(providerId);
+      if (phone != null && phone.isNotEmpty) {
+        _showError('Gọi: $phone');
+      } else {
+        _showError('Không tìm thấy số điện thoại');
+      }
+    } else if (action == 'Viết đánh giá') {
+      if (_resolvedId == null) {
+        _showError('Không tìm thấy ID tour');
+        return;
+      }
+      _showError('Chức năng đánh giá đang được phát triển');
+    } else if (action == 'Email') {
+      final providerId = data['providerId'];
+      if (providerId == null) {
+        _showError('Không tìm thấy thông tin nhà cung cấp');
+        return;
+      }
+
+      final email = await _getProviderEmail(providerId);
+      if (email != null && email.isNotEmpty) {
+        _showError('Email: $email');
+      } else {
+        _showError('Không tìm thấy email');
+      }
+    }
+  }
+
+  Future<String?> _getProviderPhone(dynamic providerId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dio = Dio();
+      final response = await dio.get(
+        'http://localhost:8080/api/providers/${providerId.toString()}',
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            if (prefs.getString('user_token') != null)
+              'Authorization': 'Bearer ${prefs.getString('user_token')}',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        return response.data['contactPhone']?.toString();
+      }
+    } catch (e) {
+      debugPrint('Error fetching provider phone: $e');
+    }
+    return null;
+  }
+
+  Future<String?> _getProviderEmail(dynamic providerId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dio = Dio();
+      final response = await dio.get(
+        'http://localhost:8080/api/providers/${providerId.toString()}',
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            if (prefs.getString('user_token') != null)
+              'Authorization': 'Bearer ${prefs.getString('user_token')}',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        return response.data['contactEmail']?.toString();
+      }
+    } catch (e) {
+      debugPrint('Error fetching provider email: $e');
+    }
+    return null;
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 }
