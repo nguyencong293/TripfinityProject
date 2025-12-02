@@ -292,10 +292,8 @@ export const useHotelEdit = (
     const newErrors: ValidationErrors = {};
 
     // Required fields - Bắt buộc
-    if (!formData.title.trim()) 
-      newErrors.title = "Tiêu đề là bắt buộc";
-    if (!formData.areaId) 
-      newErrors.areaId = "Khu vực là bắt buộc";
+    if (!formData.title.trim()) newErrors.title = "Tiêu đề là bắt buộc";
+    if (!formData.areaId) newErrors.areaId = "Khu vực là bắt buộc";
     if (!formData.price || formData.price <= 0)
       newErrors.price = "Giá phải lớn hơn 0";
     if (!formData.propertyType)
@@ -304,42 +302,48 @@ export const useHotelEdit = (
       newErrors.serviceDescription = "Mô tả dịch vụ là bắt buộc";
     if (!formData.location.trim())
       newErrors.location = "Khu vực/địa phương là bắt buộc";
-    if (!formData.address.trim())
-      newErrors.address = "Địa chỉ là bắt buộc";
+    if (!formData.address.trim()) newErrors.address = "Địa chỉ là bắt buộc";
     if (!formData.latitude || !formData.longitude)
       newErrors.address = "Vị trí bản đồ là bắt buộc";
-    if (!formData.startDate)
-      newErrors.startDate = "Ngày bắt đầu là bắt buộc";
-    if (!formData.endDate)
-      newErrors.endDate = "Ngày kết thúc là bắt buộc";
+    if (!formData.startDate) newErrors.startDate = "Ngày bắt đầu là bắt buộc";
+    if (!formData.endDate) newErrors.endDate = "Ngày kết thúc là bắt buộc";
     if (!formData.capacity || formData.capacity <= 0)
       newErrors.capacity = "Sức chứa là bắt buộc";
     if (!formData.maxBedsPerRoom || formData.maxBedsPerRoom < 1)
       newErrors.maxBedsPerRoom = "Số giường/phòng là bắt buộc";
     if (!formData.totalRooms || formData.totalRooms <= 0)
       newErrors.totalRooms = "Tổng số phòng là bắt buộc";
-    if (!formData.starRating)
-      newErrors.starRating = "Xếp hạng sao là bắt buộc";
+    if (!formData.starRating) newErrors.starRating = "Xếp hạng sao là bắt buộc";
     if (!formData.checkinTime.trim())
       newErrors.checkinTime = "Giờ check-in là bắt buộc";
     if (!formData.checkoutTime.trim())
       newErrors.checkoutTime = "Giờ check-out là bắt buộc";
     if (!formData.policiesText.trim())
       newErrors.policiesText = "Chính sách là bắt buộc";
-    
+
     // Validation logic
     if (formData.pricePerNight != null && formData.pricePerNight < 0)
       newErrors.pricePerNight = "Giá mỗi đêm không hợp lệ";
-    
-    if (formData.starRating && (formData.starRating < 1 || formData.starRating > 5))
+
+    if (
+      formData.starRating &&
+      (formData.starRating < 1 || formData.starRating > 5)
+    )
       newErrors.starRating = "Đánh giá sao phải từ 1-5";
 
-    if (formData.minParticipants && formData.maxParticipants && 
-        formData.minParticipants > formData.maxParticipants)
-      newErrors.minParticipants = "Số lượng tối thiểu không được lớn hơn tối đa";
+    if (
+      formData.minParticipants &&
+      formData.maxParticipants &&
+      formData.minParticipants > formData.maxParticipants
+    )
+      newErrors.minParticipants =
+        "Số lượng tối thiểu không được lớn hơn tối đa";
 
-    if (formData.startDate && formData.endDate && 
-        new Date(formData.startDate) > new Date(formData.endDate))
+    if (
+      formData.startDate &&
+      formData.endDate &&
+      new Date(formData.startDate) > new Date(formData.endDate)
+    )
       newErrors.startDate = "Ngày bắt đầu không được sau ngày kết thúc";
 
     setErrors(newErrors);
@@ -348,45 +352,43 @@ export const useHotelEdit = (
 
   const handleSubmit = useCallback(
     async (status: HotelStatus = "published") => {
+      // Ép hotelId vào biến riêng cho dễ quản lý
+      const hotelId = hotel?.hotelId;
+
       if (!validateForm()) {
         setErrors((prev) => ({
           ...prev,
           general: "Vui lòng kiểm tra lại các trường bắt buộc",
         }));
-        // Hiển thị popup xác nhận reload để fix map loading
+
         const shouldReload = window.confirm(
           "❌ Vui lòng điền đầy đủ các trường bắt buộc!\n\n" +
-          "Bản đồ đang bị lỗi hiển thị. Bạn có muốn tải lại trang để tiếp tục không?\n\n" +
-          "(Các thay đổi chưa lưu sẽ bị mất)"
+            "Bản đồ đang bị lỗi hiển thị. Bạn có muốn tải lại trang để tiếp tục không?\n\n" +
+            "(Các thay đổi chưa lưu sẽ bị mất)"
         );
-        if (shouldReload) {
-          window.location.reload();
-        }
+        if (shouldReload) window.location.reload();
         return;
       }
 
-      if (!hotel?.hotelId) {
+      if (!hotelId) {
         setErrors({ general: "Không tìm thấy thông tin khách sạn" });
+
         const shouldReload = window.confirm(
           "❌ Không tìm thấy thông tin khách sạn!\n\n" +
-          "Bạn có muốn tải lại trang để thử lại không?"
+            "Bạn có muốn tải lại trang để thử lại không?"
         );
-        if (shouldReload) {
-          window.location.reload();
-        }
+        if (shouldReload) window.location.reload();
         return;
       }
 
-      // ✅ FIX: Kiểm tra providerId trước khi submit
       if (!providerId) {
         setErrors({ general: "Không tìm thấy thông tin nhà cung cấp" });
+
         const shouldReload = window.confirm(
           "❌ Không tìm thấy thông tin nhà cung cấp!\n\n" +
-          "Bạn có muốn tải lại trang để thử lại không?"
+            "Bạn có muốn tải lại trang để thử lại không?"
         );
-        if (shouldReload) {
-          window.location.reload();
-        }
+        if (shouldReload) window.location.reload();
         return;
       }
 
@@ -394,11 +396,8 @@ export const useHotelEdit = (
       setErrors({});
 
       try {
-        // DEBUG: console.log("🔍 Update payload - providerId:", providerId);
-
-        // ✅ FIX: Thêm providerId vào payload
         const hotelData: Partial<HotelDTO> = {
-          providerId: providerId, // ✅ BẮT BUỘC
+          providerId: providerId,
           areaId: formData.areaId!,
           title: formData.title,
           price: formData.price,
@@ -421,9 +420,8 @@ export const useHotelEdit = (
           hotelData.location = formData.location.trim();
         if (formData.address.trim())
           hotelData.address = formData.address.trim();
-        if (formData.latitude !== null && formData.latitude !== undefined)
-          hotelData.latitude = formData.latitude;
-        if (formData.longitude !== null && formData.longitude !== undefined)
+        if (formData.latitude != null) hotelData.latitude = formData.latitude;
+        if (formData.longitude != null)
           hotelData.longitude = formData.longitude;
         if (formData.slug.trim()) hotelData.slug = formData.slug.trim();
         if (formData.seoTitle.trim())
@@ -439,8 +437,7 @@ export const useHotelEdit = (
         if (formData.capacity) hotelData.capacity = formData.capacity;
         if (formData.maxBedsPerRoom)
           hotelData.maxBedsPerRoom = formData.maxBedsPerRoom;
-        if (formData.totalRooms)
-          hotelData.totalRooms = formData.totalRooms;
+        if (formData.totalRooms) hotelData.totalRooms = formData.totalRooms;
         if (formData.minParticipants)
           hotelData.minParticipants = formData.minParticipants;
         if (formData.maxParticipants)
@@ -451,26 +448,18 @@ export const useHotelEdit = (
         if (formData.checkoutTime)
           hotelData.checkoutTime = formData.checkoutTime;
 
-        // DEBUG: console.log("🔍 Final update payload:", hotelData);
+        // Không cần lưu biến updatedHotel nếu không dùng
+        await updateHotel(Number(hotelId), hotelData);
 
-        const updatedHotel = await updateHotel(hotelId, hotelData);
-        // DEBUG: console.log("✅ Hotel updated:", updatedHotel);
-
-        // Upload new thumbnail if provided
         if (thumbnailFile) {
-          // DEBUG: console.log("📸 Uploading new thumbnail...");
-          await uploadHotelThumbnail(hotelId, thumbnailFile);
+          await uploadHotelThumbnail(Number(hotelId), thumbnailFile);
         }
 
-        // Upload new images if any
         if (imageFiles.length > 0) {
-          // DEBUG: console.log("🖼️ Uploading", imageFiles.length, "new images...");
-          await uploadHotelImages(hotelId, imageFiles);
+          await uploadHotelImages(Number(hotelId), imageFiles);
         }
 
-        // DEBUG: console.log("🎉 Hotel update completed successfully!");
         navigate("/supplier/service/hotel");
-        // Reload trang để MapPicker hiển thị đúng vị trí mới
         window.location.reload();
       } catch (err) {
         console.error("❌ Error updating hotel:", err);
