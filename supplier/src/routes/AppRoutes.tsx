@@ -14,6 +14,8 @@ import HotelCreatePage from "../pages/Service/Hotel/HotelCreatePage";
 import HotelEditPage from "../pages/Service/Hotel/HotelEditPage";
 import TourCreatePage from "../pages/Service/Tour/TourCreatePage";
 import TourEditPage from "../pages/Service/Tour/TourEditPage";
+import TourListPage from "../pages/Service/Tour/TourListPage";
+import TourViewPage from "../pages/Service/Tour/TourViewPage";
 import ProviderInfoPage from "../pages/Auth/ProviderInfoPage";
 import ProtectedRoute from "./ProtectedRoute";
 import PublicRoute from "./PublicRoute";
@@ -58,10 +60,15 @@ const AppRoutes: React.FC = () => {
             <Route path="notifications" element={<NotificationListPage />} />
             <Route path="listings" element={<ListingsPage />} />
             <Route path="service/tour" element={<DashboardTourPage />} />
+            <Route path="service/tour/list" element={<TourListPage />} />
             <Route path="service/tour/create" element={<TourCreatePage />} />
             <Route
               path="service/tour/:tourId/edit"
               element={<TourEditPage />}
+            />
+            <Route
+              path="service/tour/:tourId/view"
+              element={<TourViewPage />}
             />
             <Route path="service/hotel" element={<DashboardHotelPage />} />
             <Route path="service/hotel/list" element={<ListHotelPage />} />
