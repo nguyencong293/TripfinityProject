@@ -45,6 +45,7 @@ import {
   NotificationItem,
   StatCard,
 } from "../../../components/shared";
+import { RestaurantCard } from "../../../components/restaurant";
 import { useLanguage } from "../../../hooks/useLanguage";
 import ConfirmModal from "../../../components/common/ConfirmModal";
 import type { Notification, NotificationType } from "../../../components/shared";
@@ -57,67 +58,6 @@ interface BackendNotification {
   is_read: boolean;
   category: string;
 }
-
-// Restaurant Card Component
-interface RestaurantCardProps {
-  restaurant: RestaurantDTO;
-  onView: () => void;
-  onEdit: () => void;
-}
-
-const RestaurantCard: React.FC<RestaurantCardProps> = ({
-  restaurant,
-  onView,
-  onEdit,
-}) => {
-  return (
-    <div className="rounded-xl border theme-border theme-bg-card overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="aspect-video relative overflow-hidden theme-bg-secondary">
-        {restaurant.thumbnailUrl ? (
-          <img
-            src={restaurant.thumbnailUrl}
-            alt={restaurant.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Utensils className="w-12 h-12 theme-text-tertiary" />
-          </div>
-        )}
-      </div>
-      <div className="p-4">
-        <h3 className="font-semibold theme-text-primary mb-2 line-clamp-1">
-          {restaurant.title}
-        </h3>
-        <p className="text-sm theme-text-secondary mb-3 line-clamp-2">
-          {restaurant.location || "Chưa có địa chỉ"}
-        </p>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <span className="text-yellow-500">⭐</span>
-            <span className="text-sm font-medium theme-text-primary">
-              {restaurant.ratingAverage?.toFixed(1) || "0.0"}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={onView}
-              className="px-3 py-1.5 text-sm theme-bg-secondary theme-text-primary rounded-lg hover:theme-bg-tertiary transition-colors"
-            >
-              Xem
-            </button>
-            <button
-              onClick={onEdit}
-              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Sửa
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Restaurant Booking Row Component
 interface RestaurantBookingRowProps {

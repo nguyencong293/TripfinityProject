@@ -9,6 +9,8 @@ import ListingsPage from "../pages/Service/ListingsPage";
 import DashboardTourPage from "../pages/Service/Tour/DashboardTourPage";
 import DashboardHotelPage from "../pages/Service/Hotel/DashboardHotelPage";
 import DashboardRestaurantPage from "../pages/Service/Restaurant/DashboardRestaurantPage";
+import RestaurantCreatePage from "../pages/Service/Restaurant/RestaurantCreatePage";
+import RestaurantEditPage from "../pages/Service/Restaurant/RestaurantEditPage";
 import DashboardAttractionPage from "../pages/Service/Attraction/DashboardAttractionPage";
 import AttractionCreatePage from "../pages/Service/Attraction/AttractionCreatePage";
 import AttractionEditPage from "../pages/Service/Attraction/AttractionEditPage";
@@ -103,6 +105,14 @@ const AppRoutes: React.FC = () => {
             <Route
               path="service/restaurant"
               element={<DashboardRestaurantPage />}
+            />
+            <Route
+              path="service/restaurant/create"
+              element={<RestaurantCreatePage />}
+            />
+            <Route
+              path="service/restaurant/:restaurantId/edit"
+              element={<RestaurantEditPage />}
             />
           </Route>
         </Route>

@@ -462,7 +462,7 @@ export interface RestaurantDTO {
   price: number; // Giá trung bình 1 người
   currencyCode: string;
   restaurantStatus: "published" | "archived" | "disabled";
-  visibility: "public" | "private";
+  visibility: "public_" | "private_";
 
   // Optional basic info
   serviceDescription?: string;
@@ -493,6 +493,7 @@ export interface RestaurantDTO {
   
   // Rating
   ratingAverage?: number; // 0.00 - 5.00
+  totalReviews?: number; // Total review count
   badges?: string[]; // ["michelin_star", "recommended", "halal_certified"]
   
   // Restaurant-specific fields
@@ -579,13 +580,21 @@ export interface RestaurantReviewDTO {
   reviewId?: number;
   restaurantId: number;
   userId: number;
+  userName?: string; // User display name
   rating: number; // 1-5
   title?: string;
-  content: string;
+  content?: string; // Optional text review
+  comment?: string; // Alias for content
   imageUrls?: string[];
   likesCount?: number;
   replyCount?: number;
   reviewStatus?: "approved" | "rejected";
+  // Individual aspect ratings
+  foodQuality?: number; // 1-5
+  service?: number; // 1-5
+  ambiance?: number; // 1-5
+  valueForMoney?: number; // 1-5
+  // Legacy aspects object
   aspects?: {
     food: number; // 1-5
     service: number; // 1-5
@@ -601,6 +610,7 @@ export interface RestaurantReviewDTO {
 export interface RestaurantRatingSummaryDTO {
   restaurantId: number;
   avgRating: number; // 0.00 - 5.00
+  avgOverall?: number; // Alias for avgRating
   totalReviews: number;
   count1: number;
   count2: number;
@@ -608,6 +618,7 @@ export interface RestaurantRatingSummaryDTO {
   count4: number;
   count5: number;
   avgFood?: number;
+  avgFoodQuality?: number; // Alias for avgFood
   avgService?: number;
   avgAmbiance?: number;
   avgValueForMoney?: number;

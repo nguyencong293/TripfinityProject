@@ -2,7 +2,6 @@ package com.vn.tripfinity.backend.service;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -75,28 +74,43 @@ public class RestaurantService {
                 .title(dto.getTitle())
                 .serviceDescription(dto.getServiceDescription())
                 .location(dto.getLocation())
+                .address(dto.getAddress())
+                .latitude(dto.getLatitude())
+                .longitude(dto.getLongitude())
+                .phone(dto.getPhone())
+                .website(dto.getWebsite())
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
                 .price(dto.getPrice())
                 .currencyCode(dto.getCurrencyCode())
+                .priceLevel(dto.getPriceLevel() != null ? Restaurant.PriceLevel.valueOf(dto.getPriceLevel()) : null)
                 .capacity(dto.getCapacity())
                 .minParticipants(dto.getMinParticipants())
                 .maxParticipants(dto.getMaxParticipants())
                 .thumbnailUrl(dto.getThumbnailUrl())
-                .imageUrls(joinList(dto.getImageUrls()))
+                .imageUrls(writeJson(dto.getImageUrls()))
                 .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
-                .badges(joinList(dto.getBadges()))
+                .badges(writeJson(dto.getBadges()))
                 .restaurantStatus(dto.getRestaurantStatus() != null
                         ? Restaurant.RestaurantStatus.valueOf(dto.getRestaurantStatus())
                         : Restaurant.RestaurantStatus.published)
-                .priceLevel(dto.getPriceLevel() != null ? Restaurant.PriceLevel.valueOf(dto.getPriceLevel()) : null)
-                .phone(dto.getPhone())
-                .website(dto.getWebsite())
-                .address(dto.getAddress())
-                .cuisinesJson(writeJson(dto.getCuisines()))
-                .servicesJson(writeJson(dto.getServices()))
-                .dietsJson(writeJson(dto.getDiets()))
-                .openingHoursJson(writeJson(dto.getOpeningHours()))
+                .visibility(dto.getVisibility() != null
+                        ? Restaurant.Visibility.valueOf(dto.getVisibility())
+                        : Restaurant.Visibility.public_)
+                .isFeatured(dto.getIsFeatured() != null && dto.getIsFeatured())
+                .cuisinesJson(writeJson(dto.getCuisinesJson()))
+                .servicesJson(writeJson(dto.getServicesJson()))
+                .dietsJson(writeJson(dto.getDietsJson()))
+                .openingHoursJson(writeJson(dto.getOpeningHoursJson()))
+                .menuHighlightsJson(writeJson(dto.getMenuHighlightsJson()))
+                .ambianceTagsJson(writeJson(dto.getAmbianceTagsJson()))
+                .paymentMethodsJson(writeJson(dto.getPaymentMethodsJson()))
+                .policiesText(dto.getPoliciesText())
+                .slug(dto.getSlug())
+                .seoTitle(dto.getSeoTitle())
+                .seoDescription(dto.getSeoDescription())
+                .bookingSettingsJson(writeJson(dto.getBookingSettingsJson()))
+                .publishedAt(dto.getPublishedAt())
                 .build();
 
         Restaurant saved = restaurantRepository.save(entity);
@@ -129,6 +143,16 @@ public class RestaurantService {
             existing.setServiceDescription(dto.getServiceDescription());
         if (dto.getLocation() != null)
             existing.setLocation(dto.getLocation());
+        if (dto.getAddress() != null)
+            existing.setAddress(dto.getAddress());
+        if (dto.getLatitude() != null)
+            existing.setLatitude(dto.getLatitude());
+        if (dto.getLongitude() != null)
+            existing.setLongitude(dto.getLongitude());
+        if (dto.getPhone() != null)
+            existing.setPhone(dto.getPhone());
+        if (dto.getWebsite() != null)
+            existing.setWebsite(dto.getWebsite());
         if (dto.getStartDate() != null)
             existing.setStartDate(dto.getStartDate());
         if (dto.getEndDate() != null)
@@ -137,6 +161,8 @@ public class RestaurantService {
             existing.setPrice(dto.getPrice());
         if (dto.getCurrencyCode() != null)
             existing.setCurrencyCode(dto.getCurrencyCode());
+        if (dto.getPriceLevel() != null)
+            existing.setPriceLevel(Restaurant.PriceLevel.valueOf(dto.getPriceLevel()));
         if (dto.getCapacity() != null)
             existing.setCapacity(dto.getCapacity());
         if (dto.getMinParticipants() != null)
@@ -146,29 +172,43 @@ public class RestaurantService {
         if (dto.getThumbnailUrl() != null)
             existing.setThumbnailUrl(dto.getThumbnailUrl());
         if (dto.getImageUrls() != null)
-            existing.setImageUrls(joinList(dto.getImageUrls()));
+            existing.setImageUrls(writeJson(dto.getImageUrls()));
         if (dto.getRatingAverage() != null)
             existing.setRatingAverage(dto.getRatingAverage());
         if (dto.getBadges() != null)
-            existing.setBadges(joinList(dto.getBadges()));
+            existing.setBadges(writeJson(dto.getBadges()));
         if (dto.getRestaurantStatus() != null)
             existing.setRestaurantStatus(Restaurant.RestaurantStatus.valueOf(dto.getRestaurantStatus()));
-        if (dto.getPriceLevel() != null)
-            existing.setPriceLevel(Restaurant.PriceLevel.valueOf(dto.getPriceLevel()));
-        if (dto.getPhone() != null)
-            existing.setPhone(dto.getPhone());
-        if (dto.getWebsite() != null)
-            existing.setWebsite(dto.getWebsite());
-        if (dto.getAddress() != null)
-            existing.setAddress(dto.getAddress());
-        if (dto.getCuisines() != null)
-            existing.setCuisinesJson(writeJson(dto.getCuisines()));
-        if (dto.getServices() != null)
-            existing.setServicesJson(writeJson(dto.getServices()));
-        if (dto.getDiets() != null)
-            existing.setDietsJson(writeJson(dto.getDiets()));
-        if (dto.getOpeningHours() != null)
-            existing.setOpeningHoursJson(writeJson(dto.getOpeningHours()));
+        if (dto.getVisibility() != null)
+            existing.setVisibility(Restaurant.Visibility.valueOf(dto.getVisibility()));
+        if (dto.getIsFeatured() != null)
+            existing.setIsFeatured(dto.getIsFeatured());
+        if (dto.getCuisinesJson() != null)
+            existing.setCuisinesJson(writeJson(dto.getCuisinesJson()));
+        if (dto.getServicesJson() != null)
+            existing.setServicesJson(writeJson(dto.getServicesJson()));
+        if (dto.getDietsJson() != null)
+            existing.setDietsJson(writeJson(dto.getDietsJson()));
+        if (dto.getOpeningHoursJson() != null)
+            existing.setOpeningHoursJson(writeJson(dto.getOpeningHoursJson()));
+        if (dto.getMenuHighlightsJson() != null)
+            existing.setMenuHighlightsJson(writeJson(dto.getMenuHighlightsJson()));
+        if (dto.getAmbianceTagsJson() != null)
+            existing.setAmbianceTagsJson(writeJson(dto.getAmbianceTagsJson()));
+        if (dto.getPaymentMethodsJson() != null)
+            existing.setPaymentMethodsJson(writeJson(dto.getPaymentMethodsJson()));
+        if (dto.getPoliciesText() != null)
+            existing.setPoliciesText(dto.getPoliciesText());
+        if (dto.getSlug() != null)
+            existing.setSlug(dto.getSlug());
+        if (dto.getSeoTitle() != null)
+            existing.setSeoTitle(dto.getSeoTitle());
+        if (dto.getSeoDescription() != null)
+            existing.setSeoDescription(dto.getSeoDescription());
+        if (dto.getBookingSettingsJson() != null)
+            existing.setBookingSettingsJson(writeJson(dto.getBookingSettingsJson()));
+        if (dto.getPublishedAt() != null)
+            existing.setPublishedAt(dto.getPublishedAt());
 
         Restaurant saved = restaurantRepository.save(existing);
         return toDTO(saved);
@@ -193,12 +233,12 @@ public class RestaurantService {
                 .reviewId(null)
                 .restaurant(restaurant)
                 .user(user)
-                .rating(dto.getRating() != null ? dto.getRating() : 0)
+                .rating(java.util.Objects.requireNonNullElse(dto.getRating(), 0))
                 .title(dto.getTitle())
                 .content(dto.getContent())
-                .imageUrls(joinList(dto.getImageUrls()))
-                .likesCount(dto.getLikesCount() != null ? dto.getLikesCount() : 0)
-                .replyCount(dto.getReplyCount() != null ? dto.getReplyCount() : 0)
+                .imageUrls(writeJson(dto.getImageUrls()))
+                .likesCount(java.util.Objects.requireNonNullElse(dto.getLikesCount(), 0))
+                .replyCount(java.util.Objects.requireNonNullElse(dto.getReplyCount(), 0))
                 .reviewStatus(
                         dto.getReviewStatus() != null ? RestaurantReview.ReviewStatus.valueOf(dto.getReviewStatus())
                                 : RestaurantReview.ReviewStatus.approved)
@@ -303,7 +343,7 @@ public class RestaurantService {
                 .rating(r.getRating())
                 .title(r.getTitle())
                 .content(r.getContent())
-                .imageUrls(splitList(r.getImageUrls()))
+                .imageUrls(readJsonListString(r.getImageUrls()))
                 .likesCount(r.getLikesCount())
                 .replyCount(r.getReplyCount())
                 .reviewStatus(r.getReviewStatus() != null ? r.getReviewStatus().name() : null)
@@ -321,41 +361,42 @@ public class RestaurantService {
                 .title(r.getTitle())
                 .serviceDescription(r.getServiceDescription())
                 .location(r.getLocation())
+                .address(r.getAddress())
+                .latitude(r.getLatitude())
+                .longitude(r.getLongitude())
+                .phone(r.getPhone())
+                .website(r.getWebsite())
                 .startDate(r.getStartDate())
                 .endDate(r.getEndDate())
                 .price(r.getPrice())
                 .currencyCode(r.getCurrencyCode())
+                .priceLevel(r.getPriceLevel() != null ? r.getPriceLevel().name() : null)
                 .capacity(r.getCapacity())
                 .minParticipants(r.getMinParticipants())
                 .maxParticipants(r.getMaxParticipants())
                 .thumbnailUrl(r.getThumbnailUrl())
-                .imageUrls(splitList(r.getImageUrls()))
+                .imageUrls(readJsonListString(r.getImageUrls()))
                 .ratingAverage(r.getRatingAverage())
-                .badges(splitList(r.getBadges()))
+                .badges(readJsonListString(r.getBadges()))
                 .restaurantStatus(r.getRestaurantStatus() != null ? r.getRestaurantStatus().name() : null)
-                .priceLevel(r.getPriceLevel() != null ? r.getPriceLevel().name() : null)
-                .phone(r.getPhone())
-                .website(r.getWebsite())
-                .address(r.getAddress())
-                .cuisines(readJsonList(r.getCuisinesJson()))
-                .services(readJsonList(r.getServicesJson()))
-                .diets(readJsonList(r.getDietsJson()))
-                .openingHours(readJsonMapOfList(r.getOpeningHoursJson()))
+                .visibility(r.getVisibility() != null ? r.getVisibility().name() : null)
+                .isFeatured(r.getIsFeatured())
+                .cuisinesJson(readJsonListString(r.getCuisinesJson()))
+                .servicesJson(readJsonListString(r.getServicesJson()))
+                .dietsJson(readJsonListString(r.getDietsJson()))
+                .openingHoursJson(readJsonObject(r.getOpeningHoursJson()))
+                .menuHighlightsJson(readJsonListString(r.getMenuHighlightsJson()))
+                .ambianceTagsJson(readJsonListString(r.getAmbianceTagsJson()))
+                .paymentMethodsJson(readJsonListString(r.getPaymentMethodsJson()))
+                .policiesText(r.getPoliciesText())
+                .slug(r.getSlug())
+                .seoTitle(r.getSeoTitle())
+                .seoDescription(r.getSeoDescription())
+                .bookingSettingsJson(readJsonObject(r.getBookingSettingsJson()))
+                .publishedAt(r.getPublishedAt())
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .build();
-    }
-
-    private String joinList(List<String> list) {
-        if (list == null || list.isEmpty())
-            return null;
-        return String.join(",", list);
-    }
-
-    private List<String> splitList(String csv) {
-        if (csv == null || csv.trim().isEmpty())
-            return null;
-        return List.of(csv.split(","));
     }
 
     private String writeJson(Object obj) {
@@ -369,25 +410,24 @@ public class RestaurantService {
     }
 
     @SuppressWarnings("unchecked")
-    private List<String> readJsonList(String json) {
+    private List<String> readJsonListString(String json) {
         if (json == null || json.isEmpty())
             return null;
         try {
             return objectMapper.readValue(json, List.class);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             log.warn("Không thể parse JSON list: {}", json, e);
             return null;
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, List<Map<String, String>>> readJsonMapOfList(String json) {
+    private Object readJsonObject(String json) {
         if (json == null || json.isEmpty())
             return null;
         try {
-            return objectMapper.readValue(json, Map.class);
-        } catch (Exception e) {
-            log.warn("Không thể parse JSON map: {}", json, e);
+            return objectMapper.readValue(json, Object.class);
+        } catch (JsonProcessingException e) {
+            log.warn("Không thể parse JSON object: {}", json, e);
             return null;
         }
     }

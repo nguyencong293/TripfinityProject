@@ -1,13 +1,30 @@
 package com.vn.tripfinity.backend.model;
 
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @NoArgsConstructor
@@ -19,6 +36,10 @@ public class Restaurant {
 
     public enum RestaurantStatus {
         published, archived, disabled
+    }
+
+    public enum Visibility {
+        private_, public_
     }
 
     public enum PriceLevel {
@@ -90,6 +111,13 @@ public class Restaurant {
     private RestaurantStatus restaurantStatus;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false, length = 16)
+    private Visibility visibility;
+
+    @Column(name = "is_featured", nullable = false)
+    private Boolean isFeatured;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "price_level", length = 32)
     private PriceLevel priceLevel;
 
@@ -102,6 +130,12 @@ public class Restaurant {
     @Column(name = "address", length = 255)
     private String address;
 
+    @Column(name = "latitude", precision = 10, scale = 8)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 11, scale = 8)
+    private BigDecimal longitude;
+
     @Column(name = "cuisines_json", columnDefinition = "JSON")
     private String cuisinesJson;
 
@@ -113,6 +147,33 @@ public class Restaurant {
 
     @Column(name = "opening_hours_json", columnDefinition = "JSON")
     private String openingHoursJson;
+
+    @Column(name = "menu_highlights_json", columnDefinition = "JSON")
+    private String menuHighlightsJson;
+
+    @Column(name = "ambiance_tags_json", columnDefinition = "JSON")
+    private String ambianceTagsJson;
+
+    @Column(name = "payment_methods_json", columnDefinition = "JSON")
+    private String paymentMethodsJson;
+
+    @Column(name = "policies_text", columnDefinition = "TEXT")
+    private String policiesText;
+
+    @Column(name = "slug", length = 255, unique = true)
+    private String slug;
+
+    @Column(name = "seo_title", length = 255)
+    private String seoTitle;
+
+    @Column(name = "seo_description", length = 512)
+    private String seoDescription;
+
+    @Column(name = "booking_settings_json", columnDefinition = "JSON")
+    private String bookingSettingsJson;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
@@ -128,5 +189,11 @@ public class Restaurant {
             ratingAverage = new BigDecimal("0.00");
         if (restaurantStatus == null)
             restaurantStatus = RestaurantStatus.published;
+        if (visibility == null)
+            visibility = Visibility.public_;
+        if (isFeatured == null)
+            isFeatured = false;
+        if (currencyCode == null || currencyCode.isEmpty())
+            currencyCode = "VND";
     }
 }
