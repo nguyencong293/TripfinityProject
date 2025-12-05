@@ -445,12 +445,18 @@ const TourEditPage: React.FC = () => {
               type="number"
               min="1"
               value={formData.durationDays || ""}
-              onChange={(e) =>
-                updateField(
-                  "durationDays",
-                  e.target.value ? Number(e.target.value) : null
-                )
-              }
+              onChange={(e) => {
+                const days = e.target.value ? Number(e.target.value) : null;
+                updateField("durationDays", days);
+                
+                // Auto-calculate end date if start date exists
+                if (days && formData.startDate) {
+                  const start = new Date(formData.startDate);
+                  const end = new Date(start);
+                  end.setDate(start.getDate() + days - 1);
+                  updateField("endDate", end.toISOString().split('T')[0]);
+                }
+              }}
               className={baseInput}
               placeholder="3"
             />
@@ -485,7 +491,17 @@ const TourEditPage: React.FC = () => {
             <input
               type="date"
               value={formData.startDate || ""}
-              onChange={(e) => updateField("startDate", e.target.value)}
+              onChange={(e) => {
+                updateField("startDate", e.target.value);
+                
+                // Auto-calculate end date if duration exists
+                if (formData.durationDays && e.target.value) {
+                  const start = new Date(e.target.value);
+                  const end = new Date(start);
+                  end.setDate(start.getDate() + formData.durationDays - 1);
+                  updateField("endDate", end.toISOString().split('T')[0]);
+                }
+              }}
               className={baseInput}
             />
             {errors.startDate && (
@@ -501,8 +517,9 @@ const TourEditPage: React.FC = () => {
             <input
               type="date"
               value={formData.endDate || ""}
-              onChange={(e) => updateField("endDate", e.target.value)}
-              className={baseInput}
+              disabled
+              className={baseInput + " bg-gray-100 dark:bg-gray-800 cursor-not-allowed"}
+              title="Ngày kết thúc được tính tự động từ số ngày tour và ngày bắt đầu"
             />
           </div>
 
@@ -660,7 +677,9 @@ const TourEditPage: React.FC = () => {
             <button
               type="button"
               onClick={addItineraryDay}
-              className="flex items-center gap-2 px-4 py-2 bg-light-primary dark:bg-dark-primary text-white rounded hover:opacity-90"
+              disabled={!formData.durationDays || itinerary.length >= (formData.durationDays || 0)}
+              className="flex items-center gap-2 px-4 py-2 bg-light-primary dark:bg-dark-primary text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={itinerary.length >= (formData.durationDays || 0) ? `Đã đủ ${formData.durationDays} ngày` : "Thêm ngày mới"}
             >
               <Plus className="w-4 h-4" />
               Thêm ngày
