@@ -512,28 +512,34 @@ const DashboardTourPage: React.FC = () => {
         console.log("🗺️ Tours found:", toursData.length, toursData);
         setTours(toursData);
 
-        const bRes = await getTourBookingsByProvider(providerId);
-        console.log("📅 Bookings response:", bRes);
-        console.log("📊 Total bookings:", bRes?.length || 0);
-        setBookings(bRes || []);
+        // Try to load bookings (API not implemented yet)
+        try {
+          const bRes = await getTourBookingsByProvider(providerId);
+          console.log("📅 Bookings response:", bRes);
+          console.log("📊 Total bookings:", bRes?.length || 0);
+          setBookings(bRes || []);
 
-        // Fetch user info for all bookings
-        const uniqueUserIds = Array.from(
-          new Set((bRes || []).map((b) => b.userId))
-        );
-        const usersMap = new Map<number, UserDTO>();
-        await Promise.all(
-          uniqueUserIds.map(async (userId) => {
-            try {
-              const user = await getUserById(userId);
-              usersMap.set(userId, user);
-            } catch (e) {
-              console.error(`Failed to fetch user ${userId}:`, e);
-            }
-          })
-        );
-        setUserCache(usersMap);
-        console.log("👥 Users loaded:", usersMap.size);
+          // Fetch user info for all bookings
+          const uniqueUserIds = Array.from(
+            new Set((bRes || []).map((b) => b.userId))
+          );
+          const usersMap = new Map<number, UserDTO>();
+          await Promise.all(
+            uniqueUserIds.map(async (userId) => {
+              try {
+                const user = await getUserById(userId);
+                usersMap.set(userId, user);
+              } catch (e) {
+                console.error(`Failed to fetch user ${userId}:`, e);
+              }
+            })
+          );
+          setUserCache(usersMap);
+          console.log("👥 Users loaded:", usersMap.size);
+        } catch (bookingError) {
+          console.warn("⚠️ Tour booking API chưa implement, bỏ qua:", bookingError);
+          setBookings([]);
+        }
 
         // Fetch rating summaries for each tour
         const summaryPromises = toursData.map((t) =>

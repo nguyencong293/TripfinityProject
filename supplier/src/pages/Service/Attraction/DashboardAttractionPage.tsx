@@ -251,25 +251,30 @@ const DashboardAttractionPage: React.FC = () => {
         console.log("📊 Loaded attractions:", attrs.length);
         setAttractions(attrs);
 
-        // Fetch bookings
-        const bks = await getAttractionBookingsByProvider(providerId);
-        console.log("📅 Loaded bookings:", bks.length);
-        setBookings(bks);
+        // Try to fetch bookings (API not implemented yet)
+        try {
+          const bks = await getAttractionBookingsByProvider(providerId);
+          console.log("📅 Loaded bookings:", bks.length);
+          setBookings(bks);
 
-        // Fetch users for bookings
-        const userIds = [...new Set(bks.map((b) => b.userId))];
-        const cache = new Map<number, UserDTO>();
-        await Promise.all(
-          userIds.map(async (uid) => {
-            try {
-              const user = await getUserById(uid);
-              cache.set(uid, user);
-            } catch (e) {
-              console.error(`Failed to load user ${uid}:`, e);
-            }
-          })
-        );
-        setUserCache(cache);
+          // Fetch users for bookings
+          const userIds = [...new Set(bks.map((b) => b.userId))];
+          const cache = new Map<number, UserDTO>();
+          await Promise.all(
+            userIds.map(async (uid) => {
+              try {
+                const user = await getUserById(uid);
+                cache.set(uid, user);
+              } catch (e) {
+                console.error(`Failed to load user ${uid}:`, e);
+              }
+            })
+          );
+          setUserCache(cache);
+        } catch (bookingError) {
+          console.warn("⚠️ Attraction booking API chưa implement, bỏ qua:", bookingError);
+          setBookings([]);
+        }
 
         // Fetch reviews for the first attraction (if available)
         const firstAttractionId = attrs[0]?.attractionId;
