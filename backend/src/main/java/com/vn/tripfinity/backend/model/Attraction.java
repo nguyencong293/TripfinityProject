@@ -1,13 +1,30 @@
 package com.vn.tripfinity.backend.model;
 
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @NoArgsConstructor
@@ -19,6 +36,15 @@ public class Attraction {
 
     public enum AttractionStatus {
         published, archived, disabled
+    }
+
+    public enum Visibility {
+        private_, public_
+    }
+
+    public enum AttractionType {
+        cultural_site, entertainment, historical_site, landmark, museum,
+        natural_attraction, other, park, temple, theme_park
     }
 
     @Id
@@ -46,6 +72,15 @@ public class Attraction {
 
     @Column(name = "location", length = 255)
     private String location;
+
+    @Column(name = "address", length = 255)
+    private String address;
+
+    @Column(name = "latitude", precision = 10, scale = 8)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 11, scale = 8)
+    private BigDecimal longitude;
 
     @Column(name = "start_date")
     private LocalDate startDate;
@@ -84,9 +119,16 @@ public class Attraction {
     @Column(name = "attraction_status", nullable = false, length = 32)
     private AttractionStatus attractionStatus;
 
-    // Specific fields
-    @Column(name = "address", length = 255)
-    private String address;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false, length = 16)
+    private Visibility visibility;
+
+    @Column(name = "is_featured", nullable = false)
+    private Boolean isFeatured;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "attraction_type", length = 32)
+    private AttractionType attractionType;
 
     @Column(name = "coordinates", length = 100)
     private String coordinates;
@@ -115,6 +157,24 @@ public class Attraction {
     @Column(name = "tips_text", columnDefinition = "TEXT")
     private String tipsText;
 
+    @Column(name = "policies_text", columnDefinition = "TEXT")
+    private String policiesText;
+
+    @Column(name = "slug", length = 255, unique = true)
+    private String slug;
+
+    @Column(name = "seo_title", length = 255)
+    private String seoTitle;
+
+    @Column(name = "seo_description", length = 512)
+    private String seoDescription;
+
+    @Column(name = "booking_settings_json", columnDefinition = "JSON")
+    private String bookingSettingsJson;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
@@ -129,5 +189,11 @@ public class Attraction {
             ratingAverage = new BigDecimal("0.00");
         if (attractionStatus == null)
             attractionStatus = AttractionStatus.published;
+        if (visibility == null)
+            visibility = Visibility.public_;
+        if (isFeatured == null)
+            isFeatured = false;
+        if (currencyCode == null || currencyCode.isEmpty())
+            currencyCode = "VND";
     }
 }

@@ -1,24 +1,26 @@
 package com.vn.tripfinity.backend.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vn.tripfinity.backend.dto.AttractionDTO;
-import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
-import com.vn.tripfinity.backend.model.Attraction;
-import com.vn.tripfinity.backend.model.Provider;
-import com.vn.tripfinity.backend.model.Area;
-import com.vn.tripfinity.backend.repository.AttractionRepository;
-import com.vn.tripfinity.backend.repository.ProviderRepository;
-import com.vn.tripfinity.backend.repository.AreaRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vn.tripfinity.backend.dto.AttractionDTO;
+import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
+import com.vn.tripfinity.backend.model.Area;
+import com.vn.tripfinity.backend.model.Attraction;
+import com.vn.tripfinity.backend.model.Provider;
+import com.vn.tripfinity.backend.repository.AreaRepository;
+import com.vn.tripfinity.backend.repository.AttractionRepository;
+import com.vn.tripfinity.backend.repository.ProviderRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -60,6 +62,9 @@ public class AttractionService {
                 .title(dto.getTitle())
                 .serviceDescription(dto.getServiceDescription())
                 .location(dto.getLocation())
+                .address(dto.getAddress())
+                .latitude(dto.getLatitude())
+                .longitude(dto.getLongitude())
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
                 .price(dto.getPrice())
@@ -68,13 +73,19 @@ public class AttractionService {
                 .minParticipants(dto.getMinParticipants())
                 .maxParticipants(dto.getMaxParticipants())
                 .thumbnailUrl(dto.getThumbnailUrl())
-                .imageUrls(joinList(dto.getImageUrls()))
+                .imageUrls(writeJson(dto.getImageUrls()))
                 .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
                 .badges(joinList(dto.getBadges()))
                 .attractionStatus(dto.getAttractionStatus() != null
                         ? Attraction.AttractionStatus.valueOf(dto.getAttractionStatus())
                         : Attraction.AttractionStatus.published)
-                .address(dto.getAddress())
+                .visibility(dto.getVisibility() != null
+                        ? Attraction.Visibility.valueOf(dto.getVisibility())
+                        : Attraction.Visibility.public_)
+                .isFeatured(dto.getIsFeatured() != null && dto.getIsFeatured())
+                .attractionType(dto.getAttractionType() != null
+                        ? Attraction.AttractionType.valueOf(dto.getAttractionType())
+                        : null)
                 .coordinates(dto.getCoordinates())
                 .averageVisitMinutes(dto.getAverageVisitMinutes())
                 .visitTypesJson(writeJson(dto.getVisitTypesJson()))
@@ -84,6 +95,12 @@ public class AttractionService {
                 .openingHoursJson(writeJson(dto.getOpeningHoursJson()))
                 .highlightsJson(writeJson(dto.getHighlightsJson()))
                 .tipsText(dto.getTipsText())
+                .policiesText(dto.getPoliciesText())
+                .slug(dto.getSlug())
+                .seoTitle(dto.getSeoTitle())
+                .seoDescription(dto.getSeoDescription())
+                .bookingSettingsJson(writeJson(dto.getBookingSettingsJson()))
+                .publishedAt(dto.getPublishedAt())
                 .build();
 
         Attraction saved = attractionRepository.save(entity);
@@ -115,6 +132,12 @@ public class AttractionService {
             existing.setServiceDescription(dto.getServiceDescription());
         if (dto.getLocation() != null)
             existing.setLocation(dto.getLocation());
+        if (dto.getAddress() != null)
+            existing.setAddress(dto.getAddress());
+        if (dto.getLatitude() != null)
+            existing.setLatitude(dto.getLatitude());
+        if (dto.getLongitude() != null)
+            existing.setLongitude(dto.getLongitude());
         if (dto.getStartDate() != null)
             existing.setStartDate(dto.getStartDate());
         if (dto.getEndDate() != null)
@@ -132,15 +155,19 @@ public class AttractionService {
         if (dto.getThumbnailUrl() != null)
             existing.setThumbnailUrl(dto.getThumbnailUrl());
         if (dto.getImageUrls() != null)
-            existing.setImageUrls(joinList(dto.getImageUrls()));
+            existing.setImageUrls(writeJson(dto.getImageUrls()));
         if (dto.getRatingAverage() != null)
             existing.setRatingAverage(dto.getRatingAverage());
         if (dto.getBadges() != null)
             existing.setBadges(joinList(dto.getBadges()));
         if (dto.getAttractionStatus() != null)
             existing.setAttractionStatus(Attraction.AttractionStatus.valueOf(dto.getAttractionStatus()));
-        if (dto.getAddress() != null)
-            existing.setAddress(dto.getAddress());
+        if (dto.getVisibility() != null)
+            existing.setVisibility(Attraction.Visibility.valueOf(dto.getVisibility()));
+        if (dto.getIsFeatured() != null)
+            existing.setIsFeatured(dto.getIsFeatured());
+        if (dto.getAttractionType() != null)
+            existing.setAttractionType(Attraction.AttractionType.valueOf(dto.getAttractionType()));
         if (dto.getCoordinates() != null)
             existing.setCoordinates(dto.getCoordinates());
         if (dto.getAverageVisitMinutes() != null)
@@ -159,6 +186,18 @@ public class AttractionService {
             existing.setHighlightsJson(writeJson(dto.getHighlightsJson()));
         if (dto.getTipsText() != null)
             existing.setTipsText(dto.getTipsText());
+        if (dto.getPoliciesText() != null)
+            existing.setPoliciesText(dto.getPoliciesText());
+        if (dto.getSlug() != null)
+            existing.setSlug(dto.getSlug());
+        if (dto.getSeoTitle() != null)
+            existing.setSeoTitle(dto.getSeoTitle());
+        if (dto.getSeoDescription() != null)
+            existing.setSeoDescription(dto.getSeoDescription());
+        if (dto.getBookingSettingsJson() != null)
+            existing.setBookingSettingsJson(writeJson(dto.getBookingSettingsJson()));
+        if (dto.getPublishedAt() != null)
+            existing.setPublishedAt(dto.getPublishedAt());
 
         Attraction saved = attractionRepository.save(existing);
         return toDTO(saved);
@@ -179,6 +218,9 @@ public class AttractionService {
                 .title(a.getTitle())
                 .serviceDescription(a.getServiceDescription())
                 .location(a.getLocation())
+                .address(a.getAddress())
+                .latitude(a.getLatitude())
+                .longitude(a.getLongitude())
                 .startDate(a.getStartDate())
                 .endDate(a.getEndDate())
                 .price(a.getPrice())
@@ -187,20 +229,28 @@ public class AttractionService {
                 .minParticipants(a.getMinParticipants())
                 .maxParticipants(a.getMaxParticipants())
                 .thumbnailUrl(a.getThumbnailUrl())
-                .imageUrls(splitList(a.getImageUrls()))
+                .imageUrls(readJsonListString(a.getImageUrls()))
                 .ratingAverage(a.getRatingAverage())
                 .badges(splitList(a.getBadges()))
                 .attractionStatus(a.getAttractionStatus() != null ? a.getAttractionStatus().name() : null)
-                .address(a.getAddress())
+                .visibility(a.getVisibility() != null ? a.getVisibility().name() : null)
+                .isFeatured(a.getIsFeatured())
+                .attractionType(a.getAttractionType() != null ? a.getAttractionType().name() : null)
                 .coordinates(a.getCoordinates())
                 .averageVisitMinutes(a.getAverageVisitMinutes())
-                .visitTypesJson(readJsonList(a.getVisitTypesJson()))
-                .availableTimesJson(readJsonObject(a.getAvailableTimesJson()))
-                .suitableForJson(readJsonList(a.getSuitableForJson()))
-                .featuresJson(readJsonList(a.getFeaturesJson()))
+                .visitTypesJson(readJsonListString(a.getVisitTypesJson()))
+                .availableTimesJson(readJsonListString(a.getAvailableTimesJson()))
+                .suitableForJson(readJsonListString(a.getSuitableForJson()))
+                .featuresJson(readJsonListInteger(a.getFeaturesJson()))
                 .openingHoursJson(readJsonObject(a.getOpeningHoursJson()))
-                .highlightsJson(readJsonList(a.getHighlightsJson()))
+                .highlightsJson(readJsonListInteger(a.getHighlightsJson()))
                 .tipsText(a.getTipsText())
+                .policiesText(a.getPoliciesText())
+                .slug(a.getSlug())
+                .seoTitle(a.getSeoTitle())
+                .seoDescription(a.getSeoDescription())
+                .bookingSettingsJson(readJsonObject(a.getBookingSettingsJson()))
+                .publishedAt(a.getPublishedAt())
                 .createdAt(a.getCreatedAt())
                 .updatedAt(a.getUpdatedAt())
                 .build();
@@ -236,12 +286,24 @@ public class AttractionService {
     }
 
     @SuppressWarnings("unchecked")
-    private List<String> readJsonList(String json) {
+    private List<String> readJsonListString(String json) {
         if (json == null || json.isEmpty())
             return null;
         try {
             return objectMapper.readValue(json, List.class);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
+            log.warn("Không thể parse JSON list: {}", json, e);
+            return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Integer> readJsonListInteger(String json) {
+        if (json == null || json.isEmpty())
+            return null;
+        try {
+            return objectMapper.readValue(json, List.class);
+        } catch (JsonProcessingException e) {
             log.warn("Không thể parse JSON list: {}", json, e);
             return null;
         }
@@ -252,7 +314,7 @@ public class AttractionService {
             return null;
         try {
             return objectMapper.readValue(json, Object.class);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             log.warn("Không thể parse JSON object: {}", json, e);
             return null;
         }

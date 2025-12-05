@@ -10,6 +10,8 @@ import DashboardTourPage from "../pages/Service/Tour/DashboardTourPage";
 import DashboardHotelPage from "../pages/Service/Hotel/DashboardHotelPage";
 import DashboardRestaurantPage from "../pages/Service/Restaurant/DashboardRestaurantPage";
 import DashboardAttractionPage from "../pages/Service/Attraction/DashboardAttractionPage";
+import AttractionCreatePage from "../pages/Service/Attraction/AttractionCreatePage";
+import AttractionEditPage from "../pages/Service/Attraction/AttractionEditPage";
 import HotelCreatePage from "../pages/Service/Hotel/HotelCreatePage";
 import HotelEditPage from "../pages/Service/Hotel/HotelEditPage";
 import TourCreatePage from "../pages/Service/Tour/TourCreatePage";
@@ -89,6 +91,14 @@ const AppRoutes: React.FC = () => {
             <Route
               path="service/attraction"
               element={<DashboardAttractionPage />}
+            />
+            <Route
+              path="service/attraction/create"
+              element={<AttractionCreatePage />}
+            />
+            <Route
+              path="service/attraction/:attractionId/edit"
+              element={<AttractionEditPage />}
             />
             <Route
               path="service/restaurant"

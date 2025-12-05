@@ -291,7 +291,7 @@ export interface AttractionDTO {
   price: number;
   currencyCode: string;
   attractionStatus: "published" | "archived" | "disabled";
-  visibility: "public" | "private";
+  visibility: "public_" | "private_";
 
   // Optional basic info
   serviceDescription?: string;

@@ -633,25 +633,33 @@ const DashboardAttractionPage: React.FC = () => {
             attractions.slice(0, 3).map((a) => (
               <div
                 key={a.attractionId}
-                className="rounded-lg border theme-border theme-bg-card p-4 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() =>
-                  navigate(`/supplier/service/attraction/${a.attractionId}/view`)
-                }
+                className="rounded-lg border theme-border theme-bg-card p-4 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start gap-3">
                   {a.thumbnailUrl ? (
                     <img
                       src={a.thumbnailUrl}
                       alt={a.title}
-                      className="w-20 h-20 object-cover rounded-lg"
+                      className="w-20 h-20 object-cover rounded-lg cursor-pointer"
+                      onClick={() =>
+                        navigate(`/supplier/service/attraction/${a.attractionId}/view`)
+                      }
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-lg theme-bg-secondary flex items-center justify-center">
+                    <div 
+                      className="w-20 h-20 rounded-lg theme-bg-secondary flex items-center justify-center cursor-pointer"
+                      onClick={() =>
+                        navigate(`/supplier/service/attraction/${a.attractionId}/view`)
+                      }
+                    >
                       <MapPin className="w-8 h-8 theme-text-secondary" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold theme-text-primary truncate">
+                    <h3 className="font-semibold theme-text-primary truncate cursor-pointer hover:theme-text-brand"
+                        onClick={() =>
+                          navigate(`/supplier/service/attraction/${a.attractionId}/view`)
+                        }>
                       {a.title}
                     </h3>
                     <p className="text-sm theme-text-secondary mt-1">
@@ -667,6 +675,24 @@ const DashboardAttractionPage: React.FC = () => {
                           {a.averageVisitMinutes} phút
                         </span>
                       )}
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={() =>
+                          navigate(`/supplier/service/attraction/${a.attractionId}/edit`)
+                        }
+                        className="flex-1 px-3 py-1.5 text-sm border theme-border rounded-lg hover:theme-bg-secondary transition-colors theme-text-primary"
+                      >
+                        Chỉnh sửa
+                      </button>
+                      <button
+                        onClick={() =>
+                          navigate(`/supplier/service/attraction/${a.attractionId}/view`)
+                        }
+                        className="flex-1 px-3 py-1.5 text-sm theme-bg-primary theme-text-button rounded-lg hover:opacity-90 transition-opacity"
+                      >
+                        Xem chi tiết
+                      </button>
                     </div>
                   </div>
                 </div>
