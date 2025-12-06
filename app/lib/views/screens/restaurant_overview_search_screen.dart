@@ -21,12 +21,10 @@ class RestaurantOverviewSearchScreen extends StatefulWidget {
 
 class _RestaurantOverviewSearchScreenState
     extends State<RestaurantOverviewSearchScreen> {
-  bool _hasDate = true;
-  bool _hasGuests = true;
-
-  RangeValues _priceRange = const RangeValues(50000, 450000);
   static const double _minPrice = 0;
-  static const double _maxPrice = 1000000;
+  static const double _maxPrice = 10000000;
+  static const RangeValues _defaultPrice = RangeValues(0, 10000000);
+  RangeValues _priceRange = const RangeValues(0, 10000000);
 
   final Set<String> _cuisines = {};
   final Set<String> _services = {};
@@ -67,22 +65,15 @@ class _RestaurantOverviewSearchScreenState
     _TagOption('dietary_dairy_free'.tr, LucideIcons.milkOff),
   ];
 
+  List<Map<String, String>> _allRestaurants = [];
   List<Map<String, String>> _restaurants = [];
 
   bool _loading = false;
   String? _error;
+  bool _filterApplied = false; // Track if user has applied filter
 
   bool get _hasAnyFilterApplied {
-    return _priceRange.start > _minPrice ||
-        _priceRange.end < _maxPrice ||
-        _cuisines.isNotEmpty ||
-        _services.isNotEmpty ||
-        _dietaries.isNotEmpty ||
-        _selectedStars.isNotEmpty ||
-        _openNow ||
-        _reservation ||
-        _takeAway ||
-        _inStockOnly;
+    return _filterApplied;
   }
 
   void _navigateToRestaurantDetail(Map<String, String> restaurant) {
@@ -220,20 +211,6 @@ class _RestaurantOverviewSearchScreenState
           const SizedBox(width: 8),
           _pill(
             context,
-            icon: _hasDate ? LucideIcons.calendarDays : LucideIcons.calendar,
-            label: _hasDate ? '11 thg 6' : 'date'.tr,
-            onTap: () => setState(() => _hasDate = !_hasDate),
-          ),
-          const SizedBox(width: 8),
-          _pill(
-            context,
-            icon: LucideIcons.users,
-            label: _hasGuests ? '2 ${'guests_short'.tr}' : 'guests_short'.tr,
-            onTap: () => setState(() => _hasGuests = !_hasGuests),
-          ),
-          const SizedBox(width: 8),
-          _pill(
-            context,
             icon: LucideIcons.slidersHorizontal,
             label: 'filter'.tr,
             selected: _hasAnyFilterApplied,
@@ -303,7 +280,7 @@ class _RestaurantOverviewSearchScreenState
                             TextButton(
                               onPressed: () {
                                 setSheet(() {
-                                  price = const RangeValues(50000, 450000);
+                                  price = const RangeValues(0, 10000000);
                                   cuisines.clear();
                                   services.clear();
                                   dietaries.clear();
@@ -313,6 +290,21 @@ class _RestaurantOverviewSearchScreenState
                                   takeAway = false;
                                   stock = false;
                                 });
+                                // Reset filter và hiển thị tất cả
+                                setState(() {
+                                  _priceRange = const RangeValues(0, 10000000);
+                                  _cuisines.clear();
+                                  _services.clear();
+                                  _dietaries.clear();
+                                  _selectedStars.clear();
+                                  _openNow = false;
+                                  _reservation = false;
+                                  _takeAway = false;
+                                  _inStockOnly = false;
+                                  _filterApplied = false;
+                                  _restaurants = List.from(_allRestaurants);
+                                });
+                                Navigator.pop(ctx);
                               },
                               child: Text(
                                 'reset'.tr,
@@ -506,7 +498,10 @@ class _RestaurantOverviewSearchScreenState
                                     _reservation = reservation;
                                     _takeAway = takeAway;
                                     _inStockOnly = stock;
+                                    _filterApplied =
+                                        true; // Mark filter as applied
                                   });
+                                  _applyFilters();
                                   Navigator.pop(ctx);
                                 },
                                 style: ElevatedButton.styleFrom(
@@ -787,7 +782,8 @@ class _RestaurantOverviewSearchScreenState
       }
 
       setState(() {
-        _restaurants = items;
+        _allRestaurants = items;
+        _restaurants = items; // Hiển thị tất cả ban đầu
         _loading = false;
       });
     } catch (e) {
@@ -796,6 +792,56 @@ class _RestaurantOverviewSearchScreenState
         _error = 'error_load_restaurants'.tr;
       });
     }
+  }
+
+  void _applyFilters() {
+    // Nếu chưa apply filter, hiển thị tất cả
+    if (!_filterApplied) {
+      setState(() {
+        _restaurants = List.from(_allRestaurants);
+      });
+      return;
+    }
+
+    List<Map<String, String>> filtered = List.from(_allRestaurants);
+
+    // Lọc theo giá (luôn áp dụng khi _filterApplied = true)
+    filtered = filtered.where((r) {
+      final priceStr = r['price'] ?? '';
+      // Extract số từ string như "50.000 đ"
+      final numStr = priceStr.replaceAll(RegExp(r'[^0-9]'), '');
+      final price = double.tryParse(numStr) ?? 0;
+      return price >= _priceRange.start && price <= _priceRange.end;
+    }).toList();
+
+    // Lọc theo cuisines (nếu có chọn)
+    if (_cuisines.isNotEmpty) {
+      filtered = filtered.where((r) {
+        final cuisine = r['cuisine']?.toLowerCase() ?? '';
+        return _cuisines.any((c) => cuisine.contains(c.toLowerCase()));
+      }).toList();
+    }
+
+    // Lọc theo services (nếu có chọn)
+    if (_services.isNotEmpty) {
+      filtered = filtered.where((r) {
+        final tag = r['tag']?.toLowerCase() ?? '';
+        return _services.any((s) => tag.contains(s.toLowerCase()));
+      }).toList();
+    }
+
+    // Lọc theo rating stars (nếu có chọn)
+    if (_selectedStars.isNotEmpty) {
+      filtered = filtered.where((r) {
+        final rating = double.tryParse(r['rating'] ?? '0') ?? 0;
+        final roundedRating = rating.round();
+        return _selectedStars.contains(roundedRating);
+      }).toList();
+    }
+
+    setState(() {
+      _restaurants = filtered;
+    });
   }
 
   String _getRatingString(dynamic rating) {

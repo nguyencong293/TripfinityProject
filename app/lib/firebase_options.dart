@@ -64,8 +64,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '173444476399',
     projectId: 'tripfinity-466014',
     storageBucket: 'tripfinity-466014.firebasestorage.app',
-    androidClientId: '173444476399-5l4828tlfd9jq2v3j1gjirl9f3gks5ej.apps.googleusercontent.com',
-    iosClientId: '173444476399-jbcv4644evd91i21eou9db5l92a139ei.apps.googleusercontent.com',
+    androidClientId:
+        '173444476399-5l4828tlfd9jq2v3j1gjirl9f3gks5ej.apps.googleusercontent.com',
+    iosClientId:
+        '173444476399-jbcv4644evd91i21eou9db5l92a139ei.apps.googleusercontent.com',
     iosBundleId: 'com.vn.tripfinity.app',
   );
 
@@ -75,8 +77,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '173444476399',
     projectId: 'tripfinity-466014',
     storageBucket: 'tripfinity-466014.firebasestorage.app',
-    androidClientId: '173444476399-5l4828tlfd9jq2v3j1gjirl9f3gks5ej.apps.googleusercontent.com',
-    iosClientId: '173444476399-jbcv4644evd91i21eou9db5l92a139ei.apps.googleusercontent.com',
+    androidClientId:
+        '173444476399-5l4828tlfd9jq2v3j1gjirl9f3gks5ej.apps.googleusercontent.com',
+    iosClientId:
+        '173444476399-jbcv4644evd91i21eou9db5l92a139ei.apps.googleusercontent.com',
     iosBundleId: 'com.vn.tripfinity.app',
   );
 
