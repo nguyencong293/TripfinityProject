@@ -20,16 +20,15 @@ class TourServiceOverviewScreen extends StatefulWidget {
 }
 
 class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
-  bool _hasDate = true;
-  bool _hasGuests = true;
-
   static const double _minPrice = 0;
   static const double _maxPrice = 10_000_000;
-  RangeValues _priceRange = const RangeValues(0, 3_500_000);
+  static const RangeValues _defaultPrice = RangeValues(0, 10_000_000);
+  RangeValues _priceRange = const RangeValues(0, 10_000_000);
 
   static const double _minDays = 1;
   static const double _maxDays = 10;
-  RangeValues _durationRange = const RangeValues(1, 5);
+  static const RangeValues _defaultDays = RangeValues(1, 10);
+  RangeValues _durationRange = const RangeValues(1, 10);
 
   final Set<String> _selectedTourTypes = {};
   final Set<String> _selectedServices = {};
@@ -67,10 +66,8 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
   String? _error;
 
   bool get _hasAnyFilterApplied {
-    return _priceRange.start > _minPrice ||
-        _priceRange.end < _maxPrice ||
-        _durationRange.start > _minDays ||
-        _durationRange.end < _maxDays ||
+    return _priceRange != _defaultPrice ||
+        _durationRange != _defaultDays ||
         _selectedTourTypes.isNotEmpty ||
         _selectedServices.isNotEmpty ||
         _difficulty != null ||
@@ -228,20 +225,6 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
             icon: LucideIcons.mapPin,
             label: 'cat_tours'.tr,
             selected: true,
-          ),
-          const SizedBox(width: 8),
-          _pill(
-            context,
-            icon: _hasDate ? LucideIcons.calendarDays : LucideIcons.calendar,
-            label: _hasDate ? '11 thg 6 → 15' : 'date'.tr,
-            onTap: () => setState(() => _hasDate = !_hasDate),
-          ),
-          const SizedBox(width: 8),
-          _pill(
-            context,
-            icon: LucideIcons.users,
-            label: _hasGuests ? '2 ${'guests_short'.tr}' : 'guests'.tr,
-            onTap: () => setState(() => _hasGuests = !_hasGuests),
           ),
           const SizedBox(width: 8),
           _pill(

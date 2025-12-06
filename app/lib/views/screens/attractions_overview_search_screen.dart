@@ -22,17 +22,11 @@ class AttractionOverviewSearchScreen extends StatefulWidget {
 
 class _AttractionOverviewSearchScreenState
     extends State<AttractionOverviewSearchScreen> {
-  bool _hasDate = true;
-  bool _hasGuests = true;
-
-  RangeValues _priceRange = const RangeValues(0, 800000); // VNĐ (vé)
-  final RangeValues _defaultPrice = const RangeValues(0, 800000);
+  RangeValues _priceRange = const RangeValues(0, 2000000); // VNĐ (vé tham quan)
+  final RangeValues _defaultPrice = const RangeValues(0, 2000000);
 
   final Set<int> _selectedRatings = {};
-  final Set<String> _selectedTypes = {};
-  final Set<String> _selectedServices = {};
-  final Set<String> _selectedTimes = {};
-  final Set<String> _selectedSuitability = {};
+  final Set<String> _selectedTypes = {}; // Attraction types from backend
 
   bool _loading = false;
   String? _error;
@@ -47,57 +41,36 @@ class _AttractionOverviewSearchScreenState
   bool get _hasAnyFilterApplied {
     return _priceRange != _defaultPrice ||
         _selectedRatings.isNotEmpty ||
-        _selectedTypes.isNotEmpty ||
-        _selectedServices.isNotEmpty ||
-        _selectedTimes.isNotEmpty ||
-        _selectedSuitability.isNotEmpty;
+        _selectedTypes.isNotEmpty;
   }
 
   List<Map<String, dynamic>> get _filteredAttractions {
     return _attractions.where((a) {
+      // Price filter
       final priceInt = a['priceInt'] is num
           ? (a['priceInt'] as num).toInt()
           : 0;
+      if (priceInt < _priceRange.start || priceInt > _priceRange.end) {
+        return false;
+      }
+
+      // Rating filter
       final ratingVal = a['rating'];
       final ratingNum = ratingVal is num
           ? ratingVal
           : (ratingVal is String ? double.tryParse(ratingVal) ?? 0.0 : 0.0);
-      final types = (a['types'] is List)
-          ? (a['types'] as List).map((e) => e.toString()).toList()
-          : const <String>[];
-      final services = (a['services'] is List)
-          ? (a['services'] as List).map((e) => e.toString()).toList()
-          : const <String>[];
-      final times = (a['times'] is List)
-          ? (a['times'] as List).map((e) => e.toString()).toList()
-          : const <String>[];
-      final suit = (a['suit'] is List)
-          ? (a['suit'] as List).map((e) => e.toString()).toList()
-          : const <String>[];
-
-      if (priceInt < _priceRange.start || priceInt > _priceRange.end) {
-        return false;
-      }
       if (_selectedRatings.isNotEmpty &&
           !_selectedRatings.any((r) => ratingNum.floor() == r)) {
         return false;
       }
+
+      // Attraction Type filter
+      final attractionType = a['attractionType']?.toString() ?? '';
       if (_selectedTypes.isNotEmpty &&
-          !_selectedTypes.any((t) => types.contains(t))) {
+          !_selectedTypes.contains(attractionType)) {
         return false;
       }
-      if (_selectedServices.isNotEmpty &&
-          !_selectedServices.any((s) => services.contains(s))) {
-        return false;
-      }
-      if (_selectedTimes.isNotEmpty &&
-          !_selectedTimes.any((t) => times.contains(t))) {
-        return false;
-      }
-      if (_selectedSuitability.isNotEmpty &&
-          !_selectedSuitability.any((s) => suit.contains(s))) {
-        return false;
-      }
+
       return true;
     }).toList();
   }
@@ -113,10 +86,6 @@ class _AttractionOverviewSearchScreenState
               ? int.tryParse(attractionId.toString())
               : null,
           attraction: attractionId == null ? attraction : null, // fallback
-          activeTypes: _selectedTypes,
-          activeServices: _selectedServices,
-          activeTimes: _selectedTimes,
-          activeSuitability: _selectedSuitability,
         ),
       ),
     );
@@ -127,9 +96,6 @@ class _AttractionOverviewSearchScreenState
     RangeValues tempPrice = _priceRange;
     final tempRatings = {..._selectedRatings};
     final tempTypes = {..._selectedTypes};
-    final tempServices = {..._selectedServices};
-    final tempTimes = {..._selectedTimes};
-    final tempSuit = {..._selectedSuitability};
 
     showModalBottomSheet(
       context: context,
@@ -221,53 +187,47 @@ class _AttractionOverviewSearchScreenState
                             ],
                           ),
 
-                          _sectionTitle('reviews_title'.tr),
+                          _sectionTitle('Đánh giá'),
                           _wrapOptions<int>(
-                            options: const [5, 4, 3, 2],
+                            options: const [5, 4, 3, 2, 1],
                             isSelected: (o) => tempRatings.contains(o),
                             onTap: (o) => setM(
                               () => tempRatings.contains(o)
                                   ? tempRatings.remove(o)
                                   : tempRatings.add(o),
                             ),
-                            labelBuilder: (o) => '$o ${'stars'.tr}',
+                            labelBuilder: (o) => '$o ⭐',
                           ),
 
-                          _sectionTitle('visit_types'.tr),
-                          _chipsGroup(tempTypes, [
-                            'type_culture'.tr,
-                            'type_history'.tr,
-                            'type_nature'.tr,
-                            'type_entertainment'.tr,
-                            'type_museum'.tr,
-                            'type_park'.tr,
-                          ], setM),
-
-                          _sectionTitle('available_services'.tr),
-                          _chipsGroup(tempServices, [
-                            'svc_guide'.tr,
-                            'svc_photo'.tr,
-                            'svc_food'.tr,
-                            'svc_show'.tr,
-                            'svc_cable_car'.tr,
-                            'svc_rentals'.tr,
-                          ], setM),
-
-                          _sectionTitle('operating_times'.tr),
-                          _chipsGroup(tempTimes, [
-                            'time_morning'.tr,
-                            'time_afternoon'.tr,
-                            'time_evening'.tr,
-                          ], setM),
-
-                          _sectionTitle('suitable_for'.tr),
-                          _chipsGroup(tempSuit, [
-                            'suit_family'.tr,
-                            'suit_group'.tr,
-                            'suit_kids'.tr,
-                            'suit_couple'.tr,
-                            'suit_solo'.tr,
-                          ], setM),
+                          _sectionTitle('Loại điểm tham quan'),
+                          _chipsGroup(
+                            tempTypes,
+                            const [
+                              'cultural_site',
+                              'entertainment',
+                              'historical_site',
+                              'landmark',
+                              'museum',
+                              'natural_attraction',
+                              'park',
+                              'temple',
+                              'theme_park',
+                              'other',
+                            ],
+                            setM,
+                            labelMap: const {
+                              'cultural_site': 'Di tích văn hóa',
+                              'entertainment': 'Giải trí',
+                              'historical_site': 'Di tích lịch sử',
+                              'landmark': 'Địa danh',
+                              'museum': 'Bảo tàng',
+                              'natural_attraction': 'Điểm tự nhiên',
+                              'park': 'Công viên',
+                              'temple': 'Chùa/Đền',
+                              'theme_park': 'Công viên giải trí',
+                              'other': 'Khác',
+                            },
+                          ),
                           const SizedBox(height: 8),
                         ],
                       ),
@@ -282,15 +242,6 @@ class _AttractionOverviewSearchScreenState
                           _selectedTypes
                             ..clear()
                             ..addAll(tempTypes);
-                          _selectedServices
-                            ..clear()
-                            ..addAll(tempServices);
-                          _selectedTimes
-                            ..clear()
-                            ..addAll(tempTimes);
-                          _selectedSuitability
-                            ..clear()
-                            ..addAll(tempSuit);
                         });
                         Navigator.pop(context);
                       },
@@ -358,18 +309,20 @@ class _AttractionOverviewSearchScreenState
   Widget _chipsGroup(
     Set<String> current,
     List<String> options,
-    void Function(void Function()) setM,
-  ) {
+    void Function(void Function()) setM, {
+    Map<String, String>? labelMap,
+  }) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: options.map((o) {
         final sel = current.contains(o);
+        final label = labelMap?[o] ?? o;
         return FilterChip(
           label: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 110),
+            constraints: const BoxConstraints(maxWidth: 140),
             child: Text(
-              o,
+              label,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 13,
@@ -463,14 +416,11 @@ class _AttractionOverviewSearchScreenState
                     _priceRange = _defaultPrice;
                     _selectedRatings.clear();
                     _selectedTypes.clear();
-                    _selectedServices.clear();
-                    _selectedTimes.clear();
-                    _selectedSuitability.clear();
                   });
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('filters_reset'.tr),
+                      content: Text('Đã xóa bộ lọc'),
                       behavior: SnackBarBehavior.floating,
                       backgroundColor: context.cardBackgroundColor,
                     ),
@@ -550,20 +500,6 @@ class _AttractionOverviewSearchScreenState
             label: 'cat_attraction'.tr,
             selected: true,
             onTap: () {},
-          ),
-          const SizedBox(width: 8),
-          _pill(
-            context,
-            icon: _hasDate ? LucideIcons.calendarDays : LucideIcons.calendar,
-            label: _hasDate ? '11 thg 6 → 12' : 'date'.tr,
-            onTap: () => setState(() => _hasDate = !_hasDate),
-          ),
-          const SizedBox(width: 8),
-          _pill(
-            context,
-            icon: LucideIcons.users,
-            label: _hasGuests ? '2 ${'guests'.tr}' : 'guests'.tr,
-            onTap: () => setState(() => _hasGuests = !_hasGuests),
           ),
           const SizedBox(width: 8),
           _pill(
@@ -670,20 +606,16 @@ class _AttractionOverviewSearchScreenState
           final priceInt = _toInt(price);
 
           return {
+            'attractionId': m['attractionId'],
             'name': m['title']?.toString() ?? '',
             'location': m['location']?.toString() ?? '',
             'rating': m['ratingAverage'],
             'type': 'attraction',
+            'attractionType': m['attractionType']?.toString() ?? '',
             'price': displayPrice,
             'priceInt': priceInt,
             'description': m['serviceDescription']?.toString() ?? '',
             'imageUrl': m['thumbnailUrl'],
-            'types': m['types'] is List ? List.from(m['types']) : <String>[],
-            'services': m['services'] is List
-                ? List.from(m['services'])
-                : <String>[],
-            'times': m['times'] is List ? List.from(m['times']) : <String>[],
-            'suit': m['suit'] is List ? List.from(m['suit']) : <String>[],
           };
         }).toList();
       }

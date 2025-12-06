@@ -1,5 +1,13 @@
 package com.vn.tripfinity.backend.service;
 
+import java.text.Normalizer;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
 import com.vn.tripfinity.backend.dto.AttractionDTO;
 import com.vn.tripfinity.backend.dto.HotelDTO;
 import com.vn.tripfinity.backend.dto.RestaurantDTO;
@@ -14,14 +22,8 @@ import com.vn.tripfinity.backend.repository.AttractionRepository;
 import com.vn.tripfinity.backend.repository.HotelRepository;
 import com.vn.tripfinity.backend.repository.RestaurantRepository;
 import com.vn.tripfinity.backend.repository.TourRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.text.Normalizer;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -309,6 +311,9 @@ public class SearchService {
                 .title(a.getTitle())
                 .serviceDescription(a.getServiceDescription())
                 .location(a.getLocation())
+                .address(a.getAddress())
+                .latitude(a.getLatitude())
+                .longitude(a.getLongitude())
                 .startDate(a.getStartDate())
                 .endDate(a.getEndDate())
                 .price(a.getPrice())
@@ -321,7 +326,7 @@ public class SearchService {
                 .ratingAverage(a.getRatingAverage())
                 .badges(splitCsv(a.getBadges()))
                 .attractionStatus(a.getAttractionStatus() != null ? a.getAttractionStatus().name() : null)
-                .address(a.getAddress())
+                .attractionType(a.getAttractionType() != null ? a.getAttractionType().name() : null)
                 .coordinates(a.getCoordinates())
                 .averageVisitMinutes(a.getAverageVisitMinutes())
                 .createdAt(a.getCreatedAt())

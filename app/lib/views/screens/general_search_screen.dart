@@ -1009,10 +1009,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         builder: (_) => AttractionsOverviewDetailScreen(
           attractionId: id,
           attraction: attractionData,
-          activeTypes: const {},
-          activeServices: const {},
-          activeTimes: const {},
-          activeSuitability: const {},
         ),
       ),
     );

@@ -1,30 +1,127 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+
+// API
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/attraction_api_service.dart';
-import 'package:app/services/localization_service.dart';
+
+// ===== ATTRACTION CONSTANTS (từ Supplier Portal) =====
+const Map<String, String> _kVisitTypesDict = {
+  'guided_tour': 'Tham quan có hướng dẫn viên',
+  'self_guided': 'Tự do tham quan',
+  'audio_guide': 'Hướng dẫn âm thanh',
+  'virtual_tour': 'Tham quan ảo',
+};
+
+const Map<String, String> _kSuitableForDict = {
+  'family': 'Gia đình',
+  'kids': 'Trẻ em',
+  'elderly': 'Người cao tuổi',
+  'couples': 'Cặp đôi',
+  'groups': 'Nhóm',
+  'solo': 'Một mình',
+  'pets': 'Thú cưng',
+};
+
+const Map<String, String> _kAvailableTimesDict = {
+  'morning': 'Sáng',
+  'afternoon': 'Chiều',
+  'evening': 'Tối',
+  'night': 'Đêm',
+};
+
+const Map<int, String> _kHighlightsDict = {
+  1: 'View biển',
+  2: 'View núi',
+  3: 'Trung tâm thành phố',
+  4: 'Gần sân bay',
+  5: 'Hồ bơi ngoài trời',
+  6: 'Hồ bơi trong nhà',
+  7: 'Spa & Massage',
+  8: 'Phòng gym',
+  9: 'Nhà hàng cao cấp',
+  10: 'Bar & Lounge',
+  11: 'Bãi biển riêng',
+  12: 'Hồ bơi vô cực',
+  13: 'Bar hồ bơi',
+  14: 'Câu lạc bộ trẻ em (Kids Club)',
+  15: 'Dịch vụ trông trẻ',
+  16: 'Sân tennis',
+  17: 'Sân golf gần kề',
+  18: 'Thể thao dưới nước',
+  19: 'Lặn biển / Snorkeling',
+  20: 'Kayak / Chèo SUP',
+  21: 'Công viên nước mini',
+  22: 'Rooftop bar',
+  23: 'Nhà hàng buffet',
+  24: 'Trung tâm hội nghị / phòng họp',
+  25: 'Dịch vụ đưa đón sân bay',
+  26: 'Dịch vụ đưa đón trong khu',
+  27: 'Bãi đỗ xe có nhân viên (valet)',
+  28: 'Xông hơi / Sauna',
+  29: 'Bể sục / Jacuzzi',
+  30: 'Khu vui chơi trẻ em',
+};
+
+const Map<int, String> _kFeaturesDict = {
+  1: 'WiFi miễn phí',
+  2: 'Điều hòa',
+  3: 'Nhà vệ sinh công cộng',
+  4: 'Quầy thông tin',
+  5: 'Cửa hàng lưu niệm',
+  6: 'Nhà hàng/Quán ăn',
+  7: 'Quầy cà phê',
+  8: 'Bãi đậu xe miễn phí',
+  9: 'Bãi đậu xe có phí',
+  10: 'Cho phép thú cưng',
+  11: 'Hướng dẫn viên',
+  12: 'Audio guide',
+  13: 'Phòng trưng bày',
+  14: 'Khu vui chơi trẻ em',
+  15: 'Khu picnic',
+  16: 'Máy bán hàng tự động',
+  17: 'Phòng khám y tế',
+  18: 'Lễ tân/Quầy vé',
+  19: 'Thang máy',
+  20: 'Tiện nghi cho người khuyết tật',
+  21: 'Đổi tiền / ATM',
+  22: 'Trạm sạc xe điện',
+  23: 'Khu vực chụp ảnh',
+  24: 'Sân khấu/Biểu diễn',
+  25: 'Phòng chiếu phim',
+  26: 'Thư viện',
+  27: 'Phòng VR/AR',
+  28: 'Khu vườn',
+  29: 'Đài quan sát',
+  30: 'Bảo vệ 24/7',
+};
+
+const Map<String, String> _kDaysOfWeekDict = {
+  'monday': 'Thứ Hai',
+  'tuesday': 'Thứ Ba',
+  'wednesday': 'Thứ Tư',
+  'thursday': 'Thứ Năm',
+  'friday': 'Thứ Sáu',
+  'saturday': 'Thứ Bảy',
+  'sunday': 'Chủ Nhật',
+};
 
 class AttractionsOverviewDetailScreen extends StatefulWidget {
   final int? attractionId;
   final Map<String, dynamic>? attraction;
 
-  final Set<String>? activeTypes;
-  final Set<String>? activeServices;
-  final Set<String>? activeTimes;
-  final Set<String>? activeSuitability;
-
   const AttractionsOverviewDetailScreen({
     super.key,
     this.attractionId,
     this.attraction,
-    this.activeTypes,
-    this.activeServices,
-    this.activeTimes,
-    this.activeSuitability,
   }) : assert(
          attractionId != null || attraction != null,
          'Cần truyền attractionId hoặc attraction',
@@ -38,228 +135,70 @@ class AttractionsOverviewDetailScreen extends StatefulWidget {
 class _AttractionsOverviewDetailScreenState
     extends State<AttractionsOverviewDetailScreen> {
   bool _introExpanded = false;
-  bool _showAllReviews = false;
-  bool _showAllGallery = false;
 
   Map<String, dynamic>? _detail;
   bool _loading = true;
-  String? _errorMessage;
-  int? _attractionId;
+  String? _error;
 
-  final List<Map<String, dynamic>> _reviews = [];
+  int? _resolvedId;
+
+  // Image slider state (COPY FROM HOTEL)
+  final PageController _imageController = PageController();
+  int _imageIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _attractionId =
-        widget.attractionId ??
-        _parseId(
-          widget.attraction?['attractionId'] ?? widget.attraction?['id'],
-        );
+    _resolvedId =
+        widget.attractionId ?? _tryParseInt(widget.attraction?['attractionId']);
     _fetchDetail();
   }
 
-  int? _parseId(dynamic raw) {
-    if (raw == null) return null;
-    if (raw is int) return raw;
-    return int.tryParse(raw.toString());
+  @override
+  void dispose() {
+    _imageController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchDetail() async {
-    if (_attractionId == null) {
+    if (_resolvedId == null) {
       setState(() {
         _loading = false;
         if (widget.attraction == null) {
-          _errorMessage = 'missing_attraction_id'.tr;
+          _error = 'Không xác định được ID điểm tham quan';
         }
       });
       return;
     }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final api = AttractionApiService(dio: Dio(), prefs: prefs);
+      final data = await api.getAttractionById(_resolvedId!);
 
-      final data = await api.getAttractionById(_attractionId!);
+      debugPrint('🔍 Attraction Data: attractionId=$_resolvedId');
+      debugPrint('🔍 Title: ${data['title']}');
+      debugPrint('🔍 ImageUrls: ${data['imageUrls']}');
+      debugPrint('🔍 Latitude: ${data['latitude']}');
+      debugPrint('🔍 Longitude: ${data['longitude']}');
 
       setState(() {
         _detail = data;
         _loading = false;
       });
     } catch (e) {
+      debugPrint('❌ Error loading attraction: $e');
       setState(() {
-        _errorMessage = 'error_load_failed'.tr;
+        _error = 'Không thể tải thông tin điểm tham quan';
         _loading = false;
       });
     }
   }
 
-  Map<String, dynamic> get _data {
-    return {...?widget.attraction, if (_detail != null) ..._detail!};
-  }
-
-  String _title(Map<String, dynamic> d) =>
-      (d['title'] ?? d['name'] ?? '').toString();
-
-  String _locationText(Map<String, dynamic> d) {
-    final loc = d['location'];
-    final addr = d['address'];
-    return (loc ?? addr ?? '').toString();
-  }
-
-  double _rating(Map<String, dynamic> d) {
-    final r = d['ratingAverage'] ?? d['rating'];
-    if (r == null) return 0.0;
-    if (r is num) return r.toDouble();
-    return double.tryParse(r.toString()) ?? 0.0;
-  }
-
-  num? _price(Map<String, dynamic> d) {
-    final p = d['price'];
-    if (p == null) return null;
-    if (p is num) return p;
-    return num.tryParse(p.toString());
-  }
-
-  String? _currency(Map<String, dynamic> d) {
-    final c = d['currencyCode'];
-    return c is String ? c : c?.toString();
-  }
-
-  List<String> _images(Map<String, dynamic> d) {
-    final imgs = d['imageUrls'];
-    if (imgs is List) {
-      return imgs.map((e) => e.toString()).toList();
-    }
-    return const [];
-  }
-
-  String? _thumbnail(Map<String, dynamic> d) {
-    final t = d['thumbnailUrl'];
-    return t?.toString();
-  }
-
-  List<String> _listOfStrings(dynamic value) {
-    if (value is List) {
-      return value.map((e) => e.toString()).toList();
-    }
-    return const [];
-  }
-
-  List<String> _visitTypes(Map<String, dynamic> d) =>
-      _listOfStrings(d['visitTypesJson']);
-
-  List<String> _features(Map<String, dynamic> d) =>
-      _listOfStrings(d['featuresJson']);
-
-  List<String> _suitableFor(Map<String, dynamic> d) =>
-      _listOfStrings(d['suitableForJson']);
-
-  List<String> _availableTimes(Map<String, dynamic> d) {
-    final v = d['availableTimesJson'];
-    if (v is List) return _listOfStrings(v);
-    if (v is Map) {
-      // Map -> "key: value"
-      return v.entries.map((e) => '${e.key}: ${e.value}').toList();
-    }
-    return const [];
-  }
-
-  String _intro(Map<String, dynamic> d) =>
-      (d['serviceDescription'] ?? '').toString();
-
-  List<String> _highlights(Map<String, dynamic> d) =>
-      _listOfStrings(d['highlightsJson']);
-
-  List<String> _openingHours(Map<String, dynamic> d) {
-    final oh = d['openingHoursJson'];
-    if (oh is List) return _listOfStrings(oh);
-    if (oh is Map) {
-      return oh.entries.map((e) => '${e.key}: ${e.value}').toList();
-    }
-    return const [];
-  }
-
-  List<String> _tips(Map<String, dynamic> d) {
-    final t = d['tipsText'];
-    if (t == null) return const [];
-    return t
-        .toString()
-        .split('\n')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-  }
-
-  String _formatPrice(num? price, {String? currency}) {
-    if (price == null || price == 0) return 'free'.tr;
-    final isVnd = (currency ?? '').toUpperCase() == 'VND';
-    String compact;
-    if (price >= 1000000) {
-      compact = '${(price / 1000000).toStringAsFixed(1)}M';
-    } else if (price >= 1000) {
-      compact = '${(price / 1000).toStringAsFixed(0)}K';
-    } else {
-      compact = price.toStringAsFixed(0);
-    }
-    return isVnd ? '$compactđ' : '$compact ${currency ?? ''}'.trim();
-  }
-
-  bool _isHttpUrl(String? s) {
-    if (s == null) return false;
-    return s.startsWith('http://') || s.startsWith('https://');
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(
-        backgroundColor: context.backgroundColor,
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: context.backgroundColor,
-          leading: IconButton(
-            icon: Icon(LucideIcons.arrowLeft, color: context.textPrimaryColor),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
+    final data = _data; // merged view
 
-    if (_errorMessage != null) {
-      return Scaffold(
-        backgroundColor: context.backgroundColor,
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: context.backgroundColor,
-          leading: IconButton(
-            icon: Icon(LucideIcons.arrowLeft, color: context.textPrimaryColor),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(_errorMessage!, style: context.bodyTwoStyle),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _loading = true;
-                    _errorMessage = null;
-                  });
-                  _fetchDetail();
-                },
-                child: Text('retry'.tr),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final attraction = _data;
     return Scaffold(
       backgroundColor: context.backgroundColor,
       appBar: AppBar(
@@ -280,181 +219,310 @@ class _AttractionsOverviewDetailScreenState
           ),
         ],
       ),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          _heroImage(attraction),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: _headerInfo(context, attraction),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _priceAndBooking(context, attraction),
-          ),
-          const SizedBox(height: 20),
-          _sectionWrapper(
-            context,
-            title: 'introduction'.tr,
-            child: _expandableText(
-              context,
-              text: _intro(attraction).isNotEmpty
-                  ? _intro(attraction)
-                  : 'no_description'.tr,
-              expanded: _introExpanded,
-              onToggle: () => setState(() => _introExpanded = !_introExpanded),
-            ),
-          ),
-          if (_highlights(attraction).isNotEmpty)
-            _sectionWrapper(
-              context,
-              title: 'highlights'.tr,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _highlights(
-                  attraction,
-                ).map((h) => _highlightItemText(context, h)).toList(),
+      body: _loading
+          ? Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: context.primaryColor,
+                ),
               ),
-            ),
-          _typeAndServiceBlock(
-            context,
-            title: 'visit_types'.tr,
-            options: _visitTypes(attraction),
-            activeSet: widget.activeTypes ?? {},
-          ),
-          _typeAndServiceBlock(
-            context,
-            title: 'available_services'.tr,
-            options: _features(attraction),
-            activeSet: widget.activeServices ?? {},
-          ),
-          _typeAndServiceBlock(
-            context,
-            title: 'operating_times'.tr,
-            options: _availableTimes(attraction),
-            activeSet: widget.activeTimes ?? {},
-          ),
-          _typeAndServiceBlock(
-            context,
-            title: 'suitable_for'.tr,
-            options: _suitableFor(attraction),
-            activeSet: widget.activeSuitability ?? {},
-          ),
-          _sectionWrapper(
-            context,
-            title: 'tickets'.tr,
-            child: _ticketSection(context),
-          ),
-          _sectionWrapper(
-            context,
-            title: 'practical_info'.tr,
-            child: _practicalInfoSectionDynamic(context, attraction),
-          ),
-          _sectionWrapper(
-            context,
-            title: 'gallery'.tr,
-            child: _gallerySection(context, attraction),
-          ),
-          _sectionWrapper(
-            context,
-            title: 'location'.tr,
-            child: _mapSection(context, attraction),
-          ),
-          _sectionWrapper(
-            context,
-            title: 'reviews_title'.tr,
-            child: _ratingSummary(context, attraction),
-          ),
-          if (_reviews.isNotEmpty)
-            _sectionWrapper(
-              context,
-              title: 'all_reviews'.tr,
-              child: _reviewsSection(context),
-            ),
-          const SizedBox(height: 28),
-        ],
-      ),
-    );
-  }
-
-  // ===== HERO IMAGE =====
-  Widget _heroImage(Map<String, dynamic> attraction) {
-    final images = _images(attraction);
-    final thumb = _thumbnail(attraction);
-    final first = (thumb?.isNotEmpty == true)
-        ? thumb!
-        : (images.isNotEmpty ? images.first : null);
-    final total = (images.isNotEmpty ? images.length : (first != null ? 1 : 0));
-
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (first != null && _isHttpUrl(first))
-            Image.network(
-              first,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _heroFallback(),
             )
-          else if (first != null)
-            Image.asset(
-              first,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _heroFallback(),
-            )
-          else
-            _heroFallback(),
-          Positioned(
-            bottom: 12,
-            left: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: context.overlayModalBackdropColor,
-                borderRadius: BorderRadius.circular(24),
+          : _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  _error!,
+                  style: context.bodyOneStyle.copyWith(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    LucideIcons.image,
-                    size: 14,
-                    color: context.buttonTextColor,
+            )
+          : ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                // IMAGE GALLERY (COPY FROM HOTEL)
+                _imageGallery(_imageList(data)),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: _headerInfo(context, data),
+                ),
+
+                const SizedBox(height: 12),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _priceAndAction(context, data),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Giới thiệu
+                _sectionWrapper(
+                  context,
+                  title: 'Giới thiệu',
+                  child: _expandableText(
+                    context,
+                    text: data['serviceDescription']?.toString() ?? '—',
+                    expanded: _introExpanded,
+                    onToggle: () =>
+                        setState(() => _introExpanded = !_introExpanded),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    total > 0 ? '1 / $total' : '0 / 0',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.buttonTextColor,
-                      fontWeight: FontWeight.w600,
+                ),
+
+                // Highlights
+                if (_highlightsToNames(data['highlightsJson']).isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Điểm nổi bật',
+                    child: _bulletList(
+                      context,
+                      _highlightsToNames(data['highlightsJson']),
                     ),
                   ),
-                ],
-              ),
+
+                // Visit Types
+                if (_visitTypesToNames(data['visitTypesJson']).isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Loại hình tham quan',
+                    child: _chipsRow(
+                      context,
+                      _visitTypesToNames(data['visitTypesJson']),
+                    ),
+                  ),
+
+                // Features/Services
+                if (_featuresToNames(data['featuresJson']).isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Dịch vụ & Tiện ích',
+                    child: _chipsRow(
+                      context,
+                      _featuresToNames(data['featuresJson']),
+                    ),
+                  ),
+
+                // Available Times
+                if (_availableTimesToNames(
+                  data['availableTimesJson'],
+                ).isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Thời gian hoạt động',
+                    child: _chipsRow(
+                      context,
+                      _availableTimesToNames(data['availableTimesJson']),
+                    ),
+                  ),
+
+                // Suitable For
+                if (_suitableForToNames(data['suitableForJson']).isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Phù hợp với',
+                    child: _chipsRow(
+                      context,
+                      _suitableForToNames(data['suitableForJson']),
+                    ),
+                  ),
+
+                // Opening Hours
+                if (data['openingHoursJson'] != null)
+                  _sectionWrapper(
+                    context,
+                    title: 'Giờ mở cửa',
+                    child: _openingHoursBlock(
+                      context,
+                      data['openingHoursJson'],
+                    ),
+                  ),
+
+                // Tips
+                if (data['tipsText'] != null &&
+                    data['tipsText'].toString().isNotEmpty)
+                  _sectionWrapper(
+                    context,
+                    title: 'Mẹo tham quan',
+                    child: _bulletList(
+                      context,
+                      _splitLines(data['tipsText'].toString()),
+                    ),
+                  ),
+
+                // LOCATION WITH GOOGLE MAPS (COPY FROM HOTEL)
+                _sectionWrapper(
+                  context,
+                  title: 'Vị trí',
+                  child: _locationBlock(context, data),
+                ),
+
+                const SizedBox(height: 28),
+              ],
+            ),
+    );
+  }
+
+  // ===== IMAGE GALLERY (COPIED FROM HOTEL) =====
+  Widget _imageGallery(List<String> images) {
+    final hasImages = images.isNotEmpty;
+
+    debugPrint(
+      '🖼️ Image Gallery: hasImages=$hasImages, count=${images.length}',
+    );
+    if (hasImages) {
+      debugPrint('🖼️ Images: $images');
+    }
+
+    return Container(
+      color: context.backgroundColor,
+      child: Column(
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (!hasImages)
+                  _imageFallback(context)
+                else
+                  PageView.builder(
+                    controller: _imageController,
+                    onPageChanged: (i) => setState(() => _imageIndex = i),
+                    itemCount: images.length,
+                    itemBuilder: (_, i) {
+                      final url = images[i];
+                      final isNetwork = url.startsWith('http');
+                      if (url.isEmpty) return _imageFallback(context);
+                      return isNetwork
+                          ? Image.network(
+                              url,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _imageFallback(context),
+                            )
+                          : Image.asset(
+                              url,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _imageFallback(context),
+                            );
+                    },
+                  ),
+                if (hasImages && images.length > 1)
+                  Positioned(
+                    bottom: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            LucideIcons.image,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${_imageIndex + 1} / ${images.length}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
+          if (hasImages && images.length > 1)
+            SizedBox(
+              height: 64,
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                scrollDirection: Axis.horizontal,
+                itemBuilder: (_, i) {
+                  final url = images[i];
+                  final selected = i == _imageIndex;
+                  return InkWell(
+                    onTap: () => _imageController.animateToPage(
+                      i,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                    ),
+                    child: Container(
+                      width: 86,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: selected
+                              ? context.primaryColor
+                              : context.dividerColor,
+                          width: selected ? 2.5 : 1,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(7),
+                        child: url.startsWith('http')
+                            ? Image.network(
+                                url,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _imageFallback(context),
+                              )
+                            : Image.asset(
+                                url,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _imageFallback(context),
+                              ),
+                      ),
+                    ),
+                  );
+                },
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemCount: images.length,
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _heroFallback() {
+  Widget _imageFallback(BuildContext context) {
     return Container(
       color: context.skeletonPlaceholderColor,
       child: Icon(Icons.image, size: 48, color: context.textSecondaryColor),
     );
   }
 
-  // ===== HEADER =====
-  Widget _headerInfo(BuildContext context, Map<String, dynamic> attraction) {
-    final rating = _rating(attraction);
+  // ===== HEADER INFO =====
+  Widget _headerInfo(BuildContext context, Map<String, dynamic> d) {
+    final title = d['title']?.toString() ?? '';
+    final location =
+        d['location']?.toString() ?? d['address']?.toString() ?? '';
+    final rating = _toDouble(d['ratingAverage']) ?? 0.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _title(attraction),
+          title,
           style: context.bodyOneStyle.copyWith(
             fontWeight: FontWeight.w700,
             fontSize: 18,
@@ -467,7 +535,7 @@ class _AttractionsOverviewDetailScreenState
             const SizedBox(width: 4),
             Expanded(
               child: Text(
-                _locationText(attraction),
+                location,
                 style: context.bodyTwoStyle.copyWith(
                   color: context.textSecondaryColor,
                 ),
@@ -486,35 +554,22 @@ class _AttractionsOverviewDetailScreenState
             ),
             const SizedBox(width: 8),
             Text(
-              'reviews_title'.tr,
+              'Đánh giá',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 16,
-          children: [
-            _inlineAction(context, 'view_map'.tr),
-            _inlineAction(context, 'contact_title'.tr),
-            _inlineAction(context, 'write_review'.tr),
-            _inlineAction(context, 'share'.tr),
-          ],
-        ),
       ],
     );
   }
 
-  // ===== PRICE & BOOKING =====
-  Widget _priceAndBooking(
-    BuildContext context,
-    Map<String, dynamic> attraction,
-  ) {
-    final price = _price(attraction);
-    final currency = _currency(attraction);
-    final priceText = _formatPrice(price, currency: currency);
+  // ===== PRICE & ACTION =====
+  Widget _priceAndAction(BuildContext context, Map<String, dynamic> d) {
+    final price = _toDouble(d['price']) ?? 0;
+    final currency = d['currencyCode']?.toString() ?? 'VND';
+    final priceText = _formatPrice(price, currency);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,7 +577,7 @@ class _AttractionsOverviewDetailScreenState
         Row(
           children: [
             Text(
-              '${'from'.tr} ',
+              'Từ ',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
               ),
@@ -536,7 +591,7 @@ class _AttractionsOverviewDetailScreenState
               ),
             ),
             Text(
-              '/${'per_person'.tr}',
+              '/người',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
               ),
@@ -556,9 +611,9 @@ class _AttractionsOverviewDetailScreenState
               elevation: 0,
             ),
             onPressed: () {},
-            child: Text(
-              'book_now'.tr,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            child: const Text(
+              'Đặt vé ngay',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
         ),
@@ -566,604 +621,241 @@ class _AttractionsOverviewDetailScreenState
     );
   }
 
-  // ===== HIGHLIGHTS SECTION (text bullets) =====
-  Widget _highlightItemText(BuildContext context, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 24,
-            alignment: Alignment.topCenter,
-            child: Icon(
-              LucideIcons.sparkles,
-              size: 16,
-              color: context.primaryColor,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: context.captionStyle.copyWith(
-                color: context.textSecondaryColor,
-                height: 1.35,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ===== LOCATION BLOCK WITH GOOGLE MAPS (COPIED FROM HOTEL) =====
+  Widget _locationBlock(BuildContext context, Map<String, dynamic> d) {
+    final address = d['address']?.toString();
+    final location = d['location']?.toString();
+    final text = address?.isNotEmpty == true ? address! : (location ?? '');
 
-  // ===== TYPE AND SERVICE BLOCK =====
-  Widget _typeAndServiceBlock(
-    BuildContext context, {
-    required String title,
-    required List<String> options,
-    required Set<String> activeSet,
-  }) {
-    if (options.isEmpty) return const SizedBox.shrink();
+    final latitude = d['latitude'];
+    final longitude = d['longitude'];
 
-    return _sectionWrapper(
-      context,
-      title: title,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: options.map((option) {
-          final isActive = activeSet.contains(option);
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? context.primaryColor.withValues(alpha: 0.12)
-                  : context.cardBackgroundColor,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isActive ? context.primaryColor : context.dividerColor,
-              ),
-            ),
-            child: Text(
-              option,
-              style: context.captionStyle.copyWith(
-                color: isActive
-                    ? context.primaryColor
-                    : context.textSecondaryColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
+    double? lat;
+    double? lng;
 
-  // ===== TICKET SECTION (demo) =====
-  Widget _ticketSection(BuildContext context) {
-    final List<_TicketInfo> ticketOptions = [
-      _TicketInfo(
-        title: 'ticket_adult'.tr,
-        price: 120000,
-        description: 'ticket_adult_desc'.tr,
-        features: [
-          'ticket_feature_free_visit'.tr,
-          'ticket_feature_basic_guide'.tr,
-        ],
-      ),
-      _TicketInfo(
-        title: 'ticket_child'.tr,
-        price: 60000,
-        description: 'ticket_child_desc'.tr,
-        features: [
-          'ticket_feature_free_visit'.tr,
-          'ticket_feature_basic_guide'.tr,
-        ],
-      ),
-      _TicketInfo(
-        title: 'ticket_combo_guide'.tr,
-        price: 200000,
-        description: 'ticket_combo_guide_desc'.tr,
-        features: [
-          'ticket_feature_pro_guide'.tr,
-          'ticket_feature_history'.tr,
-          'ticket_feature_photos'.tr,
-        ],
-      ),
-    ];
-    return Column(
-      children: ticketOptions
-          .map((ticket) => _ticketItem(context, ticket))
-          .toList(),
-    );
-  }
-
-  Widget _ticketItem(BuildContext context, _TicketInfo ticket) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cardBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ticket.title,
-                      style: context.bodyTwoStyle.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      ticket.description,
-                      style: context.captionStyle.copyWith(
-                        color: context.textSecondaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                _formatPrice(ticket.price),
-                style: context.bodyOneStyle.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: context.primaryColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ...ticket.features.map(
-            (feature) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  Icon(
-                    LucideIcons.check,
-                    size: 14,
-                    color: context.primaryColor,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      feature,
-                      style: context.captionStyle.copyWith(
-                        color: context.textSecondaryColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===== PRACTICAL INFO SECTION (từ backend nếu có) =====
-  Widget _practicalInfoSectionDynamic(
-    BuildContext context,
-    Map<String, dynamic> d,
-  ) {
-    final infos = <Map<String, dynamic>>[];
-
-    final opening = _openingHours(d);
-    if (opening.isNotEmpty) {
-      infos.add({'title': 'opening_hours'.tr, 'content': opening});
+    if (latitude != null && longitude != null) {
+      if (latitude is num) lat = latitude.toDouble();
+      if (longitude is num) lng = longitude.toDouble();
     }
 
-    final addr = _locationText(d);
-    if (addr.isNotEmpty) {
-      infos.add({
-        'title': 'location'.tr,
-        'content': ['${'address'.tr}: $addr'],
-      });
-    }
+    debugPrint('📍 Location Block: lat=$lat, lng=$lng, address=$text');
 
-    final tips = _tips(d);
-    if (tips.isNotEmpty) {
-      infos.add({'title': 'visiting_tips'.tr, 'content': tips});
-    }
-
-    if (infos.isEmpty) {
-      return Text(
-        'no_description'.tr,
-        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
-      );
-    }
-
-    return Column(
-      children: infos
-          .map(
-            (info) => _practicalInfoItem(
-              context,
-              info['title'] as String,
-              (info['content'] as List).cast<String>(),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  Widget _practicalInfoItem(
-    BuildContext context,
-    String title,
-    List<String> content,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: context.bodyTwoStyle.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          ...content.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                '• $item',
-                style: context.captionStyle.copyWith(
-                  color: context.textSecondaryColor,
-                  height: 1.3,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===== GALLERY SECTION =====
-  Widget _gallerySection(BuildContext context, Map<String, dynamic> d) {
-    final allImages = _images(d);
-    final displayImages = _showAllGallery
-        ? allImages
-        : allImages.take(6).toList();
-
-    if (allImages.isEmpty) {
-      return Text(
-        'no_photos'.tr,
-        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
-      );
-    }
-
-    return Column(
-      children: [
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 1,
-          ),
-          itemCount: displayImages.length,
-          itemBuilder: (context, index) {
-            final url = displayImages[index];
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: _isHttpUrl(url)
-                  ? Image.network(
-                      url,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: context.primaryColor.withValues(alpha: 0.1),
-                        child: Icon(
-                          LucideIcons.image,
-                          color: context.primaryColor,
-                        ),
-                      ),
-                    )
-                  : Image.asset(
-                      url,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: context.primaryColor.withValues(alpha: 0.1),
-                        child: Icon(
-                          LucideIcons.image,
-                          color: context.primaryColor,
-                        ),
-                      ),
-                    ),
-            );
-          },
-        ),
-        if (!_showAllGallery && allImages.length > 6)
-          TextButton(
-            onPressed: () => setState(() => _showAllGallery = true),
-            child: Text(
-              '${'see_all'.tr} ${allImages.length} ${'photos'.tr}',
-              style: context.captionStyle.copyWith(
-                color: context.primaryColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  // ===== MAP SECTION =====
-  Widget _mapSection(BuildContext context, Map<String, dynamic> d) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Image.asset(
-            'assets/images/onboarding2.png',
-            height: 180,
-            width: double.infinity,
-            fit: BoxFit.cover,
-          ),
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: context.primaryColor),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          icon: Icon(LucideIcons.map, size: 18, color: context.primaryColor),
-          label: Text(
-            'open_map'.tr,
+        if (lat != null && lng != null)
+          FutureBuilder<String>(
+            future: _reverseGeocode(lat, lng),
+            builder: (context, snapshot) {
+              final displayAddress = snapshot.data ?? text;
+              return InkWell(
+                onTap: () {
+                  final url =
+                      'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+                  launchUrl(
+                    Uri.parse(url),
+                    mode: LaunchMode.externalApplication,
+                  );
+                },
+                child: Text(
+                  displayAddress,
+                  style: context.bodyTwoStyle.copyWith(
+                    color: context.primaryColor,
+                    decoration: TextDecoration.underline,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            },
+          )
+        else if (text.isNotEmpty)
+          Text(
+            text,
             style: context.bodyTwoStyle.copyWith(
               color: context.primaryColor,
+              decoration: TextDecoration.underline,
               fontWeight: FontWeight.w600,
             ),
           ),
-          onPressed: () {},
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 200,
+            width: double.infinity,
+            child: lat != null && lng != null
+                ? GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(lat, lng),
+                      zoom: 15,
+                    ),
+                    markers: {
+                      Marker(
+                        markerId: const MarkerId('attraction_location'),
+                        position: LatLng(lat, lng),
+                        infoWindow: InfoWindow(
+                          title: d['title']?.toString() ?? 'Điểm tham quan',
+                          snippet: text,
+                        ),
+                      ),
+                    },
+                    zoomControlsEnabled: false,
+                    myLocationButtonEnabled: false,
+                    mapToolbarEnabled: false,
+                    compassEnabled: false,
+                    rotateGesturesEnabled: false,
+                    scrollGesturesEnabled: true,
+                    zoomGesturesEnabled: true,
+                    tiltGesturesEnabled: false,
+                    liteModeEnabled: true,
+                  )
+                : Image.asset(
+                    'assets/images/onboarding2.png',
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+          ),
         ),
       ],
     );
   }
 
-  // ===== RATING SUMMARY =====
-  Widget _ratingSummary(BuildContext context, Map<String, dynamic> d) {
-    final rating = _rating(d);
+  Future<String> _reverseGeocode(double lat, double lng) async {
+    try {
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json&accept-language=vi',
+      );
 
-    final rows = [
-      {'label': 'rating_excellent'.tr, 'value': 0.7},
-      {'label': 'rating_very_good'.tr, 'value': 0.8},
-      {'label': 'rating_good'.tr, 'value': 0.1},
-      {'label': 'rating_fair'.tr, 'value': 0.0},
-      {'label': 'rating_poor'.tr, 'value': 0.0},
-    ];
+      final response = await http
+          .get(url, headers: {'User-Agent': 'TripfinityApp/1.0'})
+          .timeout(const Duration(seconds: 5));
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cardBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Column(
-                children: [
-                  Text(
-                    rating.toStringAsFixed(1),
-                    style: context.subTitleOneStyle.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 28,
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final displayName = data['display_name'] as String?;
+
+        if (displayName != null && displayName.isNotEmpty) {
+          return displayName;
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Reverse geocode error: $e');
+    }
+
+    return '$lat, $lng';
+  }
+
+  // ===== OPENING HOURS =====
+  Widget _openingHoursBlock(BuildContext context, dynamic openingHours) {
+    if (openingHours == null) return const SizedBox.shrink();
+
+    if (openingHours is Map) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: openingHours.entries.map((e) {
+          final dayKey = e.key.toString().toLowerCase();
+          final dayName = _kDaysOfWeekDict[dayKey] ?? e.key.toString();
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 90,
+                  child: Text(
+                    dayName,
+                    style: context.captionStyle.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  _starsRow(context, rating),
-                  const SizedBox(height: 4),
-                  Text(
-                    'reviews_title'.tr,
+                ),
+                Expanded(
+                  child: Text(
+                    e.value.toString(),
                     style: context.captionStyle.copyWith(
                       color: context.textSecondaryColor,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  children: rows
-                      .map(
-                        (r) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 70,
-                                child: Text(
-                                  r['label'] as String,
-                                  style: context.captionStyle.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: LinearProgressIndicator(
-                                    minHeight: 8,
-                                    value: r['value'] as double,
-                                    backgroundColor: context.dividerColor,
-                                    valueColor: AlwaysStoppedAnimation(
-                                      context.primaryColor,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '',
-                                style: context.captionStyle.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===== REVIEWS SECTION =====
-  Widget _reviewsSection(BuildContext context) {
-    if (_reviews.isEmpty) {
-      return Text(
-        'no_reviews'.tr,
-        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
+              ],
+            ),
+          );
+        }).toList(),
       );
     }
 
-    final displayReviews = _showAllReviews
-        ? _reviews
-        : _reviews.take(2).toList();
-
-    return Column(
-      children: [
-        ...displayReviews.map((review) => _reviewItem(context, review)),
-        if (!_showAllReviews && _reviews.length > 2)
-          TextButton(
-            onPressed: () => setState(() => _showAllReviews = true),
-            child: Text(
-              'see_all_reviews'.tr,
-              style: context.captionStyle.copyWith(
-                color: context.primaryColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-      ],
+    return Text(
+      openingHours.toString(),
+      style: context.captionStyle.copyWith(color: context.textSecondaryColor),
     );
   }
 
-  Widget _reviewItem(BuildContext context, Map<String, dynamic> review) {
-    final images =
-        (review['images'] as List?)?.map((e) => e.toString()).toList() ??
-        const [];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cardBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  // ===== BULLET LIST =====
+  Widget _bulletList(BuildContext context, List<String> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: items.map((item) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const CircleAvatar(
-                radius: 18,
-                backgroundImage: AssetImage('assets/images/onboarding1.png'),
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: context.primaryColor,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      (review['user'] ?? 'guest'.tr).toString(),
-                      style: context.bodyTwoStyle.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        _starsRow(
-                          context,
-                          (review['rating'] as num?)?.toDouble() ?? 0,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          (review['date'] ?? '').toString(),
-                          style: context.captionStyle.copyWith(
-                            color: context.textSecondaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                child: Text(
+                  item,
+                  style: context.captionStyle.copyWith(
+                    color: context.textSecondaryColor,
+                    height: 1.4,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            (review['content'] ?? '').toString(),
-            style: context.bodyTwoStyle.copyWith(
-              height: 1.4,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          if (images.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _reviewImages(context, images),
-          ],
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                LucideIcons.thumbsUp,
-                size: 14,
-                color: context.textSecondaryColor,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${review['helpful'] ?? 0} ${'helpful'.tr}',
-                style: context.captionStyle.copyWith(
-                  color: context.textSecondaryColor,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      }).toList(),
     );
   }
 
-  Widget _reviewImages(BuildContext context, List<String> images) {
-    return SizedBox(
-      height: 60,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: images.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final url = images[index];
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: _isHttpUrl(url)
-                ? Image.network(url, width: 60, height: 60, fit: BoxFit.cover)
-                : Image.asset(url, width: 60, height: 60, fit: BoxFit.cover),
-          );
-        },
-      ),
+  // ===== CHIPS ROW =====
+  Widget _chipsRow(BuildContext context, List<String> items) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: items.map((item) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: context.cardBackgroundColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: context.dividerColor),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.check, size: 14, color: context.primaryColor),
+              const SizedBox(width: 6),
+              Text(
+                item,
+                style: context.captionStyle.copyWith(
+                  color: context.textSecondaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -1172,26 +864,18 @@ class _AttractionsOverviewDetailScreenState
     BuildContext context, {
     required String title,
     required Widget child,
-    Widget? trailing,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: context.bodyOneStyle.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-              if (trailing != null) trailing,
-            ],
+          Text(
+            title,
+            style: context.bodyOneStyle.copyWith(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
           ),
           const SizedBox(height: 10),
           child,
@@ -1223,9 +907,9 @@ class _AttractionsOverviewDetailScreenState
         InkWell(
           onTap: onToggle,
           child: Text(
-            expanded ? 'show_less'.tr : 'read_more'.tr,
+            expanded ? 'Thu gọn' : 'Xem thêm',
             style: context.captionStyle.copyWith(
-              color: context.textPrimaryColor,
+              color: context.primaryColor,
               fontWeight: FontWeight.w600,
               decoration: TextDecoration.underline,
             ),
@@ -1250,29 +934,97 @@ class _AttractionsOverviewDetailScreenState
     );
   }
 
-  Widget _inlineAction(BuildContext context, String label) {
-    return InkWell(
-      onTap: () {},
-      child: Text(
-        label,
-        style: context.captionStyle.copyWith(
-          color: context.textPrimaryColor,
-          decoration: TextDecoration.underline,
-        ),
-      ),
-    );
+  Map<String, dynamic> get _data {
+    return {...?widget.attraction, if (_detail != null) ..._detail!};
   }
-}
 
-class _TicketInfo {
-  final String title;
-  final int price;
-  final String description;
-  final List<String> features;
-  const _TicketInfo({
-    required this.title,
-    required this.price,
-    required this.description,
-    required this.features,
-  });
+  List<String> _imageList(Map<String, dynamic> d) {
+    final imgs = d['imageUrls'];
+    if (imgs is List) {
+      return imgs.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+    }
+    final thumb = d['thumbnailUrl']?.toString();
+    if (thumb != null && thumb.isNotEmpty) {
+      return [thumb];
+    }
+    return const [];
+  }
+
+  List<String> _listOfStrings(dynamic value) {
+    if (value is List) {
+      return value.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+    }
+    return const [];
+  }
+
+  List<int> _listOfIntegers(dynamic value) {
+    if (value is List) {
+      return value
+          .map((e) => e is int ? e : int.tryParse(e.toString()))
+          .where((e) => e != null)
+          .cast<int>()
+          .toList();
+    }
+    return const [];
+  }
+
+  List<String> _highlightsToNames(dynamic highlightsJson) {
+    final ids = _listOfIntegers(highlightsJson);
+    return ids.map((id) => _kHighlightsDict[id] ?? 'ID: $id').toList();
+  }
+
+  List<String> _featuresToNames(dynamic featuresJson) {
+    final ids = _listOfIntegers(featuresJson);
+    return ids.map((id) => _kFeaturesDict[id] ?? 'ID: $id').toList();
+  }
+
+  List<String> _visitTypesToNames(dynamic visitTypesJson) {
+    final keys = _listOfStrings(visitTypesJson);
+    return keys.map((key) => _kVisitTypesDict[key] ?? key).toList();
+  }
+
+  List<String> _suitableForToNames(dynamic suitableForJson) {
+    final keys = _listOfStrings(suitableForJson);
+    return keys.map((key) => _kSuitableForDict[key] ?? key).toList();
+  }
+
+  List<String> _availableTimesToNames(dynamic availableTimesJson) {
+    final keys = _listOfStrings(availableTimesJson);
+    return keys.map((key) => _kAvailableTimesDict[key] ?? key).toList();
+  }
+
+  List<String> _splitLines(String text) {
+    return text
+        .split('\n')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
+  int? _tryParseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
+  }
+
+  double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
+
+  String _formatPrice(double price, String currency) {
+    if (price == 0) return 'Miễn phí';
+    final isVnd = currency.toUpperCase() == 'VND';
+    if (isVnd) {
+      if (price >= 1000000) {
+        return '${(price / 1000000).toStringAsFixed(1)}Mđ';
+      } else if (price >= 1000) {
+        return '${(price / 1000).toStringAsFixed(0)}Kđ';
+      }
+      return '${price.toStringAsFixed(0)}đ';
+    }
+    return '$price $currency';
+  }
 }

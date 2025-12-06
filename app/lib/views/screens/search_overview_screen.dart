@@ -472,10 +472,6 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
         builder: (_) => AttractionsOverviewDetailScreen(
           attractionId: id, // dynamic fetch if available
           attraction: attractionData,
-          activeTypes: const {},
-          activeServices: const {},
-          activeTimes: const {},
-          activeSuitability: const {},
         ),
       ),
     );

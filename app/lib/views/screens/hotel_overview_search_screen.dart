@@ -29,9 +29,10 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
   int _searchRooms = 1;
   int _searchPeople = 2;
 
-  RangeValues _priceRange = const RangeValues(800000, 3500000);
   static const double _minPrice = 0; // Min có thể là 0
   static const double _maxPrice = 10000000;
+  static const RangeValues _defaultPrice = RangeValues(0, 10000000);
+  RangeValues _priceRange = const RangeValues(0, 10000000);
 
   final Set<int> _selectedStars = {}; // 1..5
   final Set<int> _selectedAmenityIds = <int>{};
@@ -375,15 +376,14 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
   }
 
   bool get _hasAnyFilterApplied {
-    return _selectedStars.isNotEmpty ||
+    return _priceRange != _defaultPrice ||
+        _selectedStars.isNotEmpty ||
         _selectedAmenityIds.isNotEmpty ||
         _selectedHighlightIds.isNotEmpty ||
         _freeCancellation ||
         _payAtHotel ||
         _breakfastIncluded ||
-        _inStockOnly ||
-        _priceRange.start > _minPrice ||
-        _priceRange.end < _maxPrice;
+        _inStockOnly;
   }
 
   Future<void> _openFilterSheet(BuildContext context) async {
