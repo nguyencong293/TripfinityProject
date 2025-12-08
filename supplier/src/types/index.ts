@@ -589,18 +589,13 @@ export interface RestaurantReviewDTO {
   likesCount?: number;
   replyCount?: number;
   reviewStatus?: "approved" | "rejected";
-  // Individual aspect ratings
-  foodQuality?: number; // 1-5
-  service?: number; // 1-5
-  ambiance?: number; // 1-5
-  valueForMoney?: number; // 1-5
-  // Legacy aspects object
+  // Restaurant-specific aspect ratings (match database schema)
   aspects?: {
-    food: number; // 1-5
-    service: number; // 1-5
-    ambiance: number; // 1-5
-    valueForMoney: number; // 1-5
-    cleanliness: number; // 1-5
+    quality?: number; // 1-5 - Food/product quality
+    service?: number; // 1-5 - Service quality
+    price?: number; // 1-5 - Price/value rating
+    location?: number; // 1-5 - Location convenience
+    ambience?: number; // 1-5 - Atmosphere/ambiance
   };
   createdAt?: string;
   updatedAt?: string;
@@ -610,19 +605,18 @@ export interface RestaurantReviewDTO {
 export interface RestaurantRatingSummaryDTO {
   restaurantId: number;
   avgRating: number; // 0.00 - 5.00
-  avgOverall?: number; // Alias for avgRating
   totalReviews: number;
   count1: number;
   count2: number;
   count3: number;
   count4: number;
   count5: number;
-  avgFood?: number;
-  avgFoodQuality?: number; // Alias for avgFood
+  // Restaurant có 5 aspects: quality, service, price, location, ambience
+  avgQuality?: number;
   avgService?: number;
-  avgAmbiance?: number;
-  avgValueForMoney?: number;
-  avgCleanliness?: number;
+  avgPrice?: number;
+  avgLocation?: number;
+  avgAmbience?: number;
 }
 
 // ==========================================

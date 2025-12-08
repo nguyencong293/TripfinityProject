@@ -55,7 +55,7 @@ class RestaurantApiService {
     String? status,
   }) async {
     final res = await _dio.get(
-      '/api/restaurants/$restaurantId/reviews',
+      '/restaurant-reviews/restaurant/$restaurantId',
       queryParameters: {
         if (status != null && status.isNotEmpty) 'status': status,
       },
@@ -73,7 +73,7 @@ class RestaurantApiService {
 
   // Fetch review replies
   Future<List<Map<String, dynamic>>> getReviewReplies(int reviewId) async {
-    final res = await _dio.get('/api/restaurants/reviews/$reviewId/replies');
+    final res = await _dio.get('/restaurant-reviews/$reviewId/replies');
 
     if (res.statusCode == 200 && res.data is List) {
       return List<Map<String, dynamic>>.from(res.data);
@@ -82,6 +82,65 @@ class RestaurantApiService {
     final msg = (res.data is Map && (res.data as Map)['message'] != null)
         ? (res.data as Map)['message'].toString()
         : 'Get review replies failed with status ${res.statusCode}';
+    throw Exception(msg);
+  }
+
+  // Upload review image to Cloudinary
+  Future<String> uploadReviewImage(String imagePath) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(imagePath),
+    });
+
+    final res = await _dio.post(
+      '/restaurant-reviews/upload-image',
+      data: formData,
+    );
+
+    if (res.statusCode == 200 && res.data is Map<String, dynamic>) {
+      final url = res.data['imageUrl'] ?? res.data['url'];
+      if (url != null && url is String) {
+        return url;
+      }
+    }
+
+    final msg = (res.data is Map && (res.data as Map)['message'] != null)
+        ? (res.data as Map)['message'].toString()
+        : 'Upload image failed with status ${res.statusCode}';
+    throw Exception(msg);
+  }
+
+  // Create restaurant review
+  Future<Map<String, dynamic>> createRestaurantReview({
+    required int restaurantId,
+    required int userId,
+    required int rating,
+    String? title,
+    String? content,
+    List<String>? imageUrls,
+    Map<String, int>? aspects,
+  }) async {
+    final res = await _dio.post(
+      '/restaurant-reviews',
+      data: {
+        'restaurantId': restaurantId,
+        'userId': userId,
+        'rating': rating,
+        if (title != null && title.isNotEmpty) 'title': title,
+        if (content != null && content.isNotEmpty) 'content': content,
+        if (imageUrls != null && imageUrls.isNotEmpty) 'imageUrls': imageUrls,
+        if (aspects != null) 'aspects': aspects,
+      },
+    );
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      if (res.data is Map<String, dynamic>) {
+        return res.data as Map<String, dynamic>;
+      }
+    }
+
+    final msg = (res.data is Map && (res.data as Map)['message'] != null)
+        ? (res.data as Map)['message'].toString()
+        : 'Create review failed with status ${res.statusCode}';
     throw Exception(msg);
   }
 }

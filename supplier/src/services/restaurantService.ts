@@ -210,6 +210,16 @@ export const getRestaurantReviewsByRestaurant = async (
 };
 
 /**
+ * Get restaurant review by ID
+ */
+export const getRestaurantReviewById = async (
+  reviewId: number
+): Promise<RestaurantReviewDTO> => {
+  const res = await api.get<RestaurantReviewDTO>(`/restaurant-reviews/${reviewId}`);
+  return res.data;
+};
+
+/**
  * Get reviews count by provider ID
  */
 export const getRestaurantReviewsCountByProvider = async (
@@ -228,7 +238,7 @@ export const getRestaurantRatingSummaryByRestaurant = async (
   restaurantId: number
 ): Promise<RestaurantRatingSummaryDTO> => {
   const response = await api.get<RestaurantRatingSummaryDTO>(
-    `/restaurant-reviews/restaurant/${restaurantId}/summary`
+    `/restaurants/${restaurantId}/rating-summary`
   );
   return response.data;
 };

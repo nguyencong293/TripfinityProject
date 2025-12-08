@@ -10,6 +10,8 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/restaurant_api_service.dart';
+import 'package:app/views/screens/detail_restaurant_review_user_screen.dart';
+import 'package:app/views/screens/restaurant_reviews_list_screen.dart';
 
 // Canonical dictionaries from supplier portal
 const Map<String, String> kCuisinesDict = {
@@ -460,11 +462,65 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         });
       } catch (_) {}
 
+      // Calculate rating summary from reviews
+      Map<String, dynamic>? ratingSummary;
+      if (reviews.isNotEmpty) {
+        int total = reviews.length;
+        double avgRating = 0;
+        Map<int, int> ratingCounts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+
+        double totalQuality = 0,
+            totalService = 0,
+            totalPrice = 0,
+            totalLocation = 0,
+            totalAmbience = 0;
+        int aspectCount = 0;
+
+        for (var review in reviews) {
+          final rating = (review['rating'] as num?)?.toInt() ?? 0;
+          if (rating >= 1 && rating <= 5) {
+            avgRating += rating;
+            ratingCounts[rating] = (ratingCounts[rating] ?? 0) + 1;
+          }
+
+          // Calculate aspect averages
+          final aspects = review['aspects'] as Map<String, dynamic>?;
+          if (aspects != null) {
+            totalQuality += (aspects['quality'] as num?)?.toDouble() ?? 0;
+            totalService += (aspects['service'] as num?)?.toDouble() ?? 0;
+            totalPrice += (aspects['price'] as num?)?.toDouble() ?? 0;
+            totalLocation += (aspects['location'] as num?)?.toDouble() ?? 0;
+            totalAmbience += (aspects['ambience'] as num?)?.toDouble() ?? 0;
+            aspectCount++;
+          }
+        }
+
+        ratingSummary = {
+          'averageRating': total > 0
+              ? (avgRating / total).toStringAsFixed(1)
+              : '0.0',
+          'totalReviews': total,
+          'rating5Count': ratingCounts[5],
+          'rating4Count': ratingCounts[4],
+          'rating3Count': ratingCounts[3],
+          'rating2Count': ratingCounts[2],
+          'rating1Count': ratingCounts[1],
+          'averageQuality': aspectCount > 0 ? totalQuality / aspectCount : 0.0,
+          'averageService': aspectCount > 0 ? totalService / aspectCount : 0.0,
+          'averagePrice': aspectCount > 0 ? totalPrice / aspectCount : 0.0,
+          'averageLocation': aspectCount > 0
+              ? totalLocation / aspectCount
+              : 0.0,
+          'averageAmbience': aspectCount > 0
+              ? totalAmbience / aspectCount
+              : 0.0,
+        };
+      }
+
       setState(() {
         _detail = detail;
         _reviews = reviews;
-        _ratingSummaryData =
-            null; // TODO: Add getRatingSummary to RestaurantApiService
+        _ratingSummaryData = ratingSummary;
         _loading = false;
       });
     } catch (e) {
@@ -902,21 +958,27 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (address.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(LucideIcons.mapPin, size: 18, color: context.primaryColor),
-                const SizedBox(width: 8),
-                Expanded(child: Text(address, style: context.bodyOneStyle)),
-              ],
+          InkWell(
+            onTap: () {
+              final url =
+                  'https://www.google.com/maps/search/?api=1&query=$latNum,$lngNum';
+              launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+            },
+            child: Text(
+              address,
+              style: context.bodyTwoStyle.copyWith(
+                color: context.primaryColor,
+                decoration: TextDecoration.underline,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
+        const SizedBox(height: 12),
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: SizedBox(
             height: 200,
+            width: double.infinity,
             child: GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: LatLng(latNum, lngNum),
@@ -924,12 +986,23 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               ),
               markers: {
                 Marker(
-                  markerId: const MarkerId('restaurant'),
+                  markerId: const MarkerId('restaurant_location'),
                   position: LatLng(latNum, lngNum),
+                  infoWindow: InfoWindow(
+                    title: data['title']?.toString() ?? 'Nhà hàng',
+                    snippet: address,
+                  ),
                 ),
               },
               zoomControlsEnabled: false,
               myLocationButtonEnabled: false,
+              mapToolbarEnabled: false,
+              compassEnabled: false,
+              rotateGesturesEnabled: false,
+              scrollGesturesEnabled: true,
+              zoomGesturesEnabled: true,
+              tiltGesturesEnabled: false,
+              liteModeEnabled: true,
             ),
           ),
         ),
@@ -961,8 +1034,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 ),
                 Row(
                   children: List.generate(5, (i) {
+                    final ratingNum = double.tryParse(avgRating) ?? 0.0;
+                    final isFilled = i < ratingNum.round();
                     return Icon(
-                      Icons.star_rounded,
+                      isFilled ? Icons.star_rounded : Icons.star_border_rounded,
                       size: 16,
                       color: context.primaryColor,
                     );
@@ -1001,7 +1076,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                           child: LinearProgressIndicator(
                             value: percent / 100,
                             backgroundColor: context.dividerColor,
-                            color: context.primaryColor,
+                            valueColor: AlwaysStoppedAnimation(
+                              _getColorForRating(star.toDouble()),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -1014,112 +1091,336 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             ),
           ],
         ),
+
+        // Restaurant aspect ratings
+        const SizedBox(height: 24),
+        _buildAspectRatings(context, summary),
       ],
     );
   }
 
-  Widget _reviewsBlock(BuildContext context) {
-    if (_reviews.isEmpty) {
-      return Text('Chưa có đánh giá', style: context.bodyOneStyle);
-    }
+  Widget _buildAspectRatings(
+    BuildContext context,
+    Map<String, dynamic> summary,
+  ) {
+    // Get aspect averages from summary
+    final quality = (summary['averageQuality'] ?? 0.0).toDouble();
+    final service = (summary['averageService'] ?? 0.0).toDouble();
+    final price = (summary['averagePrice'] ?? 0.0).toDouble();
+    final location = (summary['averageLocation'] ?? 0.0).toDouble();
+    final ambience = (summary['averageAmbience'] ?? 0.0).toDouble();
 
     return Column(
-      children: _reviews.map((review) {
-        final reviewId = review['reviewId'] as int;
-        final isExpanded = _expandedReviews.contains(reviewId);
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _aspectRatingRow(context, 'Chất lượng', quality),
+        const SizedBox(height: 8),
+        _aspectRatingRow(context, 'Dịch vụ', service),
+        const SizedBox(height: 8),
+        _aspectRatingRow(context, 'Giá cả', price),
+        const SizedBox(height: 8),
+        _aspectRatingRow(context, 'Vị trí', location),
+        const SizedBox(height: 8),
+        _aspectRatingRow(context, 'Không khí', ambience),
+      ],
+    );
+  }
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: context.backgroundColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: context.dividerColor.withValues(alpha: 0.3),
+  Widget _aspectRatingRow(BuildContext context, String label, double rating) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 90,
+          child: Text(
+            label,
+            style: context.bodyTwoStyle.copyWith(
+              color: context.textSecondaryColor,
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: context.primaryColor.withValues(
-                      alpha: 0.1,
-                    ),
-                    child: Text(
-                      (review['userName']?.toString() ?? 'U')
-                          .substring(0, 1)
-                          .toUpperCase(),
-                      style: TextStyle(
-                        color: context.primaryColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          review['userName']?.toString() ?? 'User',
-                          style: context.bodyOneStyle.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            ...List.generate(
-                              review['rating'] as int? ?? 0,
-                              (i) => Icon(
-                                Icons.star_rounded,
-                                size: 14,
-                                color: context.primaryColor,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              review['createdAt']?.toString() ?? '',
-                              style: context.captionStyle.copyWith(
-                                color: context.textSecondaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                review['comment']?.toString() ?? '',
-                style: context.bodyOneStyle,
-                maxLines: isExpanded ? null : 3,
-                overflow: isExpanded ? null : TextOverflow.ellipsis,
-              ),
-              if ((review['comment']?.toString() ?? '').length > 150)
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      if (isExpanded) {
-                        _expandedReviews.remove(reviewId);
-                      } else {
-                        _expandedReviews.add(reviewId);
-                      }
-                    });
-                  },
-                  child: Text(
-                    isExpanded ? 'Thu gọn' : 'Xem thêm',
-                    style: TextStyle(color: context.primaryColor),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: rating / 5.0,
+              backgroundColor: context.dividerColor,
+              valueColor: AlwaysStoppedAnimation(_getColorForRating(rating)),
+              minHeight: 8,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 30,
+          child: Text(
+            rating.toStringAsFixed(1),
+            style: context.bodyTwoStyle.copyWith(
+              color: context.textPrimaryColor,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.end,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper: Get color based on rating value
+  Color _getColorForRating(double rating) {
+    if (rating >= 4.0) {
+      return const Color(0xFF23A455); // Green
+    } else if (rating >= 3.0) {
+      return Colors.orange; // Orange
+    } else {
+      return Colors.red; // Red
+    }
+  }
+
+  Widget _reviewsBlock(BuildContext context) {
+    if (_reviews.isEmpty) {
+      return Column(
+        children: [
+          Text('Chưa có đánh giá', style: context.bodyOneStyle),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DetailRestaurantReviewUserScreen(
+                    restaurantId: _resolvedId!,
+                    restaurantName: _data['title']?.toString() ?? 'Restaurant',
+                    restaurantLocation: _data['location']?.toString() ?? '',
+                    restaurantImage: _imageList(_data).isNotEmpty
+                        ? _imageList(_data).first
+                        : '',
                   ),
                 ),
+              );
+              if (result == true) {
+                _fetchDetail();
+              }
+            },
+            icon: const Icon(LucideIcons.edit, size: 18),
+            label: const Text('Viết đánh giá đầu tiên'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: context.primaryColor,
+              foregroundColor: context.buttonTextColor,
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Show only first 3 reviews
+    final visible = _reviews.take(3).toList();
+
+    return Column(
+      children: [
+        ...visible.map((r) => _reviewItem(context, r)),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RestaurantReviewsListScreen(
+                        restaurantId: _resolvedId!,
+                        restaurantName:
+                            _data['title']?.toString() ?? 'Restaurant',
+                      ),
+                    ),
+                  );
+                  if (result == true) {
+                    _fetchDetail();
+                  }
+                },
+                icon: const Icon(LucideIcons.eye, size: 18),
+                label: Text('Xem tất cả (${_reviews.length})'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: context.primaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DetailRestaurantReviewUserScreen(
+                        restaurantId: _resolvedId!,
+                        restaurantName:
+                            _data['title']?.toString() ?? 'Restaurant',
+                        restaurantLocation: _data['location']?.toString() ?? '',
+                        restaurantImage: _imageList(_data).isNotEmpty
+                            ? _imageList(_data).first
+                            : '',
+                      ),
+                    ),
+                  );
+                  if (result == true) {
+                    _fetchDetail();
+                  }
+                },
+                icon: const Icon(LucideIcons.edit, size: 18),
+                label: const Text('Viết đánh giá'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.primaryColor,
+                  foregroundColor: context.buttonTextColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _reviewItem(BuildContext context, Map<String, dynamic> r) {
+    final userName = r['userName']?.toString() ?? 'Người dùng';
+    final rating = (r['rating'] as num?)?.toDouble() ?? 5.0;
+    final content = r['content']?.toString() ?? '';
+    final createdAt = r['createdAt']?.toString() ?? '';
+    final reviewId = r['reviewId'] as int? ?? 0;
+    final isExpanded = _expandedReviews.contains(reviewId);
+
+    // Parse date
+    String date = '';
+    if (createdAt.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(createdAt);
+        date = '${dt.day}/${dt.month}/${dt.year}';
+      } catch (e) {
+        date = '';
+      }
+    }
+
+    // Parse imageUrls
+    List<String> imageUrls = [];
+    final imageUrlsRaw = r['imageUrls'];
+    if (imageUrlsRaw is String && imageUrlsRaw.isNotEmpty) {
+      imageUrls = imageUrlsRaw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    } else if (imageUrlsRaw is List) {
+      imageUrls = imageUrlsRaw
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: context.primaryColor.withValues(alpha: 0.1),
+                child: Text(
+                  userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                  style: TextStyle(
+                    color: context.primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  userName,
+                  style: context.bodyOneStyle.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                date,
+                style: context.captionStyle.copyWith(
+                  color: context.textSecondaryColor,
+                ),
+              ),
             ],
           ),
-        );
-      }).toList(),
+          const SizedBox(height: 6),
+          Row(
+            children: List.generate(5, (i) {
+              return Icon(
+                i < rating.round()
+                    ? Icons.star_rounded
+                    : Icons.star_border_rounded,
+                size: 16,
+                color: context.primaryColor,
+              );
+            }),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            content,
+            style: context.bodyTwoStyle,
+            maxLines: isExpanded ? null : 4,
+            overflow: isExpanded ? null : TextOverflow.ellipsis,
+          ),
+          if (content.length > 150) ...[
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  if (isExpanded) {
+                    _expandedReviews.remove(reviewId);
+                  } else {
+                    _expandedReviews.add(reviewId);
+                  }
+                });
+              },
+              child: Text(
+                isExpanded ? 'Thu gọn' : 'Xem thêm',
+                style: TextStyle(color: context.primaryColor),
+              ),
+            ),
+          ],
+          if (imageUrls.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 80,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: imageUrls.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      imageUrls[index],
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 80,
+                        height: 80,
+                        color: context.dividerColor,
+                        child: Icon(
+                          LucideIcons.image,
+                          color: context.textSecondaryColor,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+          const Divider(height: 24),
+        ],
+      ),
     );
   }
 }

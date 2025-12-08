@@ -1,6 +1,24 @@
 package com.vn.tripfinity.backend.controller;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.vn.tripfinity.backend.dto.RestaurantDTO;
+import com.vn.tripfinity.backend.dto.RestaurantRatingSummaryDTO;
 import com.vn.tripfinity.backend.dto.RestaurantReviewDTO;
 import com.vn.tripfinity.backend.dto.RestaurantReviewReplyDTO;
 import com.vn.tripfinity.backend.service.RestaurantService;
@@ -8,12 +26,6 @@ import com.vn.tripfinity.backend.service.RestaurantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/restaurants")
@@ -113,5 +125,16 @@ public class RestaurantController {
             @PathVariable("reviewId") Integer reviewId) {
         requireBearer(authorization);
         return ResponseEntity.ok(restaurantService.getRestaurantReviewReplies(reviewId));
+    }
+
+    // ==================== RATING SUMMARY ENDPOINT ====================
+    @GetMapping("/{restaurantId}/rating-summary")
+    public ResponseEntity<RestaurantRatingSummaryDTO> getRatingSummary(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Integer restaurantId) {
+        requireBearer(authorization);
+        log.info("GET /api/restaurants/{}/rating-summary - Getting rating summary", restaurantId);
+        RestaurantRatingSummaryDTO summary = restaurantService.calculateRatingSummary(restaurantId);
+        return ResponseEntity.ok(summary);
     }
 }

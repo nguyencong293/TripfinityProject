@@ -166,17 +166,17 @@ const RestaurantRatingSummaryCard: React.FC<RestaurantRatingSummaryCardProps> = 
         </div>
       </div>
       <div className="space-y-2">
-        {summary.avgFood !== undefined && (
+        {summary.avgQuality !== undefined && (
           <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-24">Món ăn:</span>
+            <span className="text-sm theme-text-secondary w-24">Chất lượng:</span>
             <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
               <div
                 className="h-full bg-orange-500"
-                style={{ width: `${(summary.avgFood / 5) * 100}%` }}
+                style={{ width: `${(summary.avgQuality / 5) * 100}%` }}
               />
             </div>
             <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgFood?.toFixed(1)}
+              {summary.avgQuality?.toFixed(1)}
             </span>
           </div>
         )}
@@ -194,17 +194,45 @@ const RestaurantRatingSummaryCard: React.FC<RestaurantRatingSummaryCardProps> = 
             </span>
           </div>
         )}
-        {summary.avgAmbiance !== undefined && (
+        {summary.avgPrice !== undefined && (
           <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-24">Không gian:</span>
+            <span className="text-sm theme-text-secondary w-24">Giá cả:</span>
             <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
               <div
-                className="h-full bg-purple-500"
-                style={{ width: `${(summary.avgAmbiance / 5) * 100}%` }}
+                className="h-full bg-green-500"
+                style={{ width: `${(summary.avgPrice / 5) * 100}%` }}
               />
             </div>
             <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgAmbiance?.toFixed(1)}
+              {summary.avgPrice?.toFixed(1)}
+            </span>
+          </div>
+        )}
+        {summary.avgLocation !== undefined && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm theme-text-secondary w-24">Vị trí:</span>
+            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-purple-500"
+                style={{ width: `${(summary.avgLocation / 5) * 100}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium theme-text-primary w-8">
+              {summary.avgLocation?.toFixed(1)}
+            </span>
+          </div>
+        )}
+        {summary.avgAmbience !== undefined && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm theme-text-secondary w-24">Không khí:</span>
+            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-pink-500"
+                style={{ width: `${(summary.avgAmbience / 5) * 100}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium theme-text-primary w-8">
+              {summary.avgAmbience?.toFixed(1)}
             </span>
           </div>
         )}
@@ -252,9 +280,9 @@ const RestaurantReviewCard: React.FC<RestaurantReviewCardProps> = ({
       </p>
       {review.aspects && (
         <div className="flex flex-wrap gap-2 text-xs">
-          {review.aspects.food !== undefined && (
+          {review.aspects.quality !== undefined && (
             <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
-              Món ăn: {review.aspects.food}/5
+              Chất lượng: {review.aspects.quality}/5
             </span>
           )}
           {review.aspects.service !== undefined && (
@@ -262,9 +290,19 @@ const RestaurantReviewCard: React.FC<RestaurantReviewCardProps> = ({
               Dịch vụ: {review.aspects.service}/5
             </span>
           )}
-          {review.aspects.ambiance !== undefined && (
+          {review.aspects.price !== undefined && (
+            <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+              Giá cả: {review.aspects.price}/5
+            </span>
+          )}
+          {review.aspects.location !== undefined && (
             <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
-              Không gian: {review.aspects.ambiance}/5
+              Vị trí: {review.aspects.location}/5
+            </span>
+          )}
+          {review.aspects.ambience !== undefined && (
+            <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded">
+              Không khí: {review.aspects.ambience}/5
             </span>
           )}
         </div>
@@ -460,61 +498,86 @@ const DashboardRestaurantPage: React.FC = () => {
         console.log("🍽️ Restaurants found:", rs.length, rs);
         setRestaurants(rs);
 
-        const bRes = await getRestaurantBookingsByProvider(providerId);
-        console.log("📅 Bookings response:", bRes);
-        console.log("📊 Total bookings:", bRes?.length || 0);
-        setBookings(bRes || []);
+        // TODO: Restaurant bookings API not implemented yet
+        // const bRes = await getRestaurantBookingsByProvider(providerId);
+        // console.log("📅 Bookings response:", bRes);
+        // console.log("📊 Total bookings:", bRes?.length || 0);
+        // setBookings(bRes || []);
+        setBookings([]); // Empty bookings for now
 
-        // Fetch user info for all bookings
-        const uniqueUserIds = Array.from(
-          new Set((bRes || []).map((b) => b.userId))
-        );
-        const usersMap = new Map<number, UserDTO>();
-        await Promise.all(
-          uniqueUserIds.map(async (userId) => {
-            try {
-              const user = await getUserById(userId);
-              usersMap.set(userId, user);
-            } catch (e) {
-              console.error(`Failed to fetch user ${userId}:`, e);
-            }
-          })
-        );
-        setUserCache(usersMap);
-        console.log("👥 Users loaded:", usersMap.size);
+        // Fetch user info for all bookings (skipped for now)
+        // const uniqueUserIds = Array.from(
+        //   new Set((bRes || []).map((b) => b.userId))
+        // );
+        // const usersMap = new Map<number, UserDTO>();
+        // await Promise.all(
+        //   uniqueUserIds.map(async (userId) => {
+        //     try {
+        //       const user = await getUserById(userId);
+        //       usersMap.set(userId, user);
+        //     } catch (e) {
+        //       console.error(`Failed to fetch user ${userId}:`, e);
+        //     }
+        //   })
+        // );
+        // setUserCache(usersMap);
+        // console.log("👥 Users loaded:", usersMap.size);
+        setUserCache(new Map());
 
         // Fetch rating summaries for each restaurant
-        const summaryPromises = rs.map((r) =>
-          r.restaurantId
-            ? getRestaurantRatingSummaryByRestaurant(r.restaurantId).catch((e) => {
-                console.error(
-                  `Failed to fetch rating for restaurant ${r.restaurantId}:`,
-                  e
-                );
-                return null;
-              })
-            : Promise.resolve(null)
-        );
+        console.log(`📊 Fetching rating summaries for ${rs.length} restaurants:`, rs.map(r => ({ id: r.restaurantId, title: r.title })));
+        const summaryPromises = rs.map((r) => {
+          return r.restaurantId
+            ? getRestaurantRatingSummaryByRestaurant(r.restaurantId)
+                .then((summary) => {
+                  console.log(`✅ Restaurant ${r.restaurantId} (${r.title}) - Summary:`, {
+                    summaryRestaurantId: summary.restaurantId,
+                    avgRating: summary.avgRating,
+                    totalReviews: summary.totalReviews
+                  });
+                  return summary;
+                })
+                .catch((e) => {
+                  console.error(`❌ Failed to fetch rating for restaurant ${r.restaurantId} (${r.title}):`, e.message);
+                  return null;
+                })
+            : Promise.resolve(null);
+        });
         const summaries = (await Promise.all(summaryPromises)).filter(
           (s) => s !== null
         ) as RestaurantRatingSummaryDTO[];
+        console.log(`✅ All summaries loaded (${summaries.length}):`, summaries.map(s => ({ id: s.restaurantId, rating: s.avgRating, reviews: s.totalReviews })));
         setRatingSummaries(summaries);
 
-        // Fetch reviews for the first restaurant (if available)
-        const firstRestaurantId = rs[0]?.restaurantId;
-        if (firstRestaurantId) {
-          console.log(`📥 Dashboard loading reviews for restaurant ${firstRestaurantId}`);
-          const revs = await getRestaurantReviewsByRestaurant(firstRestaurantId);
-          console.log(`📤 Dashboard received ${revs.length} reviews`);
-          setRecentReviews(revs.slice(0, 2));
-        } else {
-          setRecentReviews([]);
+        // Fetch reviews from all restaurants
+        const allReviews: RestaurantReviewDTO[] = [];
+        for (const restaurant of rs) {
+          if (restaurant.restaurantId) {
+            try {
+              const revs = await getRestaurantReviewsByRestaurant(restaurant.restaurantId);
+              allReviews.push(...revs);
+            } catch (e) {
+              console.error(`Failed to load reviews for restaurant ${restaurant.restaurantId}:`, e);
+            }
+          }
         }
+        
+        // Sort by newest and take 2 most recent
+        allReviews.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        setRecentReviews(allReviews.slice(0, 2));
 
         // Fetch total reviews count for provider
         const reviewsCount = await getRestaurantReviewsCountByProvider(providerId);
-        console.log("📊 Total reviews for provider:", reviewsCount);
-        setTotalReviews(reviewsCount);
+        console.log("📊 Total reviews for provider:", reviewsCount, typeof reviewsCount);
+        // Handle if backend returns object instead of number
+        const count = typeof reviewsCount === 'object' && reviewsCount !== null && 'totalReviews' in reviewsCount
+          ? (reviewsCount as { totalReviews: number }).totalReviews
+          : reviewsCount;
+        setTotalReviews(typeof count === 'number' ? count : 0);
       } catch (e) {
         console.error("❌ Error loading dashboard data:", e);
       }
@@ -677,7 +740,7 @@ const DashboardRestaurantPage: React.FC = () => {
         <StatCard
           icon={<Calendar className="w-5 h-5 icon-brand" />}
           label="Tổng đánh giá"
-          value={totalReviews}
+          value={typeof totalReviews === 'number' ? totalReviews : 0}
         />
         <StatCard
           icon={<Utensils className="w-5 h-5 icon-brand" />}
@@ -955,13 +1018,19 @@ const DashboardRestaurantPage: React.FC = () => {
               const summary = ratingSummaries.find(
                 (s) => s.restaurantId === restaurant.restaurantId
               );
+              console.log(`🔍 Restaurant ${restaurant.restaurantId} (${restaurant.title}):`, summary ? 'Has summary' : 'No summary');
               return summary ? (
                 <RestaurantRatingSummaryCard
                   key={restaurant.restaurantId}
                   summary={summary}
                   restaurantName={restaurant.title || "Nhà hàng"}
                 />
-              ) : null;
+              ) : (
+                <div key={restaurant.restaurantId} className="rounded-xl border theme-border theme-bg-card p-4">
+                  <h4 className="font-semibold theme-text-primary mb-3">{restaurant.title || "Nhà hàng"}</h4>
+                  <p className="text-sm theme-text-secondary">Chưa có đánh giá nào</p>
+                </div>
+              );
             })
           )}
         </div>

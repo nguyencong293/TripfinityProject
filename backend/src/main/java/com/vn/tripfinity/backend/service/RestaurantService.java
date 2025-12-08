@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vn.tripfinity.backend.dto.RestaurantDTO;
+import com.vn.tripfinity.backend.dto.RestaurantRatingSummaryDTO;
 import com.vn.tripfinity.backend.dto.RestaurantReviewDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Area;
@@ -430,5 +431,87 @@ public class RestaurantService {
             log.warn("Không thể parse JSON object: {}", json, e);
             return null;
         }
+    }
+
+    /**
+     * Tính rating summary động từ restaurant_reviews và restaurant_review_aspects
+     */
+    public RestaurantRatingSummaryDTO calculateRatingSummary(Integer restaurantId) {
+        log.debug("Tính rating summary cho Restaurant ID: {}", restaurantId);
+
+        // Lấy tất cả reviews của restaurant (không cần filter status vì restaurant không có approved)
+        List<RestaurantReview> reviews = restaurantReviewRepository.findByRestaurant_RestaurantId(restaurantId);
+
+        RestaurantRatingSummaryDTO summary = RestaurantRatingSummaryDTO.builder()
+            .restaurantId(restaurantId)
+            .totalReviews(reviews.size())
+            .build();
+
+        if (reviews.isEmpty()) {
+            // Không có review, trả về giá trị mặc định
+            summary.setAvgRating(BigDecimal.ZERO);
+            summary.setCount1(0);
+            summary.setCount2(0);
+            summary.setCount3(0);
+            summary.setCount4(0);
+            summary.setCount5(0);
+            return summary;
+        }
+
+        // Tính avg rating tổng thể
+        double avgRating = reviews.stream()
+            .mapToInt(RestaurantReview::getRating)
+            .average()
+            .orElse(0.0);
+        summary.setAvgRating(BigDecimal.valueOf(avgRating).setScale(2, java.math.RoundingMode.HALF_UP));
+
+        // Đếm số lượng từng loại rating
+        summary.setCount1((int) reviews.stream().filter(r -> r.getRating() == 1).count());
+        summary.setCount2((int) reviews.stream().filter(r -> r.getRating() == 2).count());
+        summary.setCount3((int) reviews.stream().filter(r -> r.getRating() == 3).count());
+        summary.setCount4((int) reviews.stream().filter(r -> r.getRating() == 4).count());
+        summary.setCount5((int) reviews.stream().filter(r -> r.getRating() == 5).count());
+
+        // Tính trung bình các aspects (restaurant có 5 aspects: quality, service, price, location, ambience)
+        List<Integer> reviewIds = reviews.stream()
+            .map(RestaurantReview::getReviewId)
+            .collect(Collectors.toList());
+
+        List<RestaurantReviewAspects> aspects = restaurantReviewAspectsRepository.findAllById(reviewIds);
+
+        if (!aspects.isEmpty()) {
+            double avgQuality = aspects.stream()
+                .mapToInt(RestaurantReviewAspects::getQuality)
+                .average()
+                .orElse(0.0);
+            summary.setAvgQuality(BigDecimal.valueOf(avgQuality).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgService = aspects.stream()
+                .mapToInt(RestaurantReviewAspects::getService)
+                .average()
+                .orElse(0.0);
+            summary.setAvgService(BigDecimal.valueOf(avgService).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgPrice = aspects.stream()
+                .mapToInt(RestaurantReviewAspects::getPrice)
+                .average()
+                .orElse(0.0);
+            summary.setAvgPrice(BigDecimal.valueOf(avgPrice).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgLocation = aspects.stream()
+                .mapToInt(RestaurantReviewAspects::getLocation)
+                .average()
+                .orElse(0.0);
+            summary.setAvgLocation(BigDecimal.valueOf(avgLocation).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgAmbience = aspects.stream()
+                .mapToInt(RestaurantReviewAspects::getAmbience)
+                .average()
+                .orElse(0.0);
+            summary.setAvgAmbience(BigDecimal.valueOf(avgAmbience).setScale(2, java.math.RoundingMode.HALF_UP));
+        }
+
+        log.info("✅ Đã tính rating summary cho Restaurant ID: {} với {} reviews", restaurantId, reviews.size());
+        return summary;
     }
 }
