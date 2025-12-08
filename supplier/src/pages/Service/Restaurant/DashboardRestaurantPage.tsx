@@ -23,13 +23,11 @@ import {
 } from "recharts";
 import {
   getProviderByUserId,
-  getUserById,
 } from "../../../services/providerService";
 import {
   getRestaurantsByProvider,
   getRestaurantReviewsByRestaurant,
   getRestaurantReviewsCountByProvider,
-  getRestaurantBookingsByProvider,
   getRestaurantRatingSummaryByRestaurant,
 } from "../../../services/restaurantService";
 import type {
