@@ -2,7 +2,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'dart:io';
+
 import 'fcm_api_service.dart';
 import '../controllers/auth_controller.dart';
 
@@ -149,13 +149,13 @@ class FCMService {
       return;
     }
 
-    final user = _authController!.currentUser;
+    final user = _authController.currentUser;
     if (user == null || user.userId == null) {
       debugPrint('⚠️ User not logged in, skip sending token');
       return;
     }
 
-    final authToken = _authController!.rawToken;
+    final authToken = _authController.rawToken;
     await FCMApiService.updateFCMToken(
       userId: user.userId!,
       fcmToken: token,
@@ -167,10 +167,10 @@ class FCMService {
   Future<void> clearTokenFromBackend() async {
     if (_authController == null) return;
 
-    final user = _authController!.currentUser;
+    final user = _authController.currentUser;
     if (user == null || user.userId == null) return;
 
-    final authToken = _authController!.rawToken;
+    final authToken = _authController.rawToken;
     await FCMApiService.deleteFCMToken(
       userId: user.userId!,
       authToken: authToken,

@@ -41,6 +41,8 @@ import RestaurantRecentReviewsPage from "../pages/Service/Restaurant/RecentRevie
 import RestaurantReviewDetailPage from "../pages/Service/Restaurant/ReviewDetailPage";
 import ListRestaurantBookingPage from "../pages/Service/Restaurant/ListRestaurantBookingPage";
 import RestaurantBookingViewPage from "../pages/Service/Restaurant/RestaurantBookingViewPage";
+import ListTourBookingPage from "../pages/Service/Tour/ListTourBookingPage";
+import TourBookingViewPage from "../pages/Service/Tour/TourBookingViewPage";
 import NotificationListPage from "../pages/NotificationListPage";
 import ScrollToTop from "../components/ScrollToTop";
 
@@ -74,6 +76,8 @@ const AppRoutes: React.FC = () => {
             <Route path="listings" element={<ListingsPage />} />
             <Route path="service/tour" element={<DashboardTourPage />} />
             <Route path="service/tour/list" element={<TourListPage />} />
+            <Route path="service/tour/bookings" element={<ListTourBookingPage />} />
+            <Route path="service/tour/bookings/:bookingId" element={<TourBookingViewPage />} />
             <Route path="service/tour/create" element={<TourCreatePage />} />
             <Route
               path="service/tour/:tourId/edit"

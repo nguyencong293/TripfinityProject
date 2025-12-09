@@ -7,49 +7,40 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/controllers/auth_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
-import 'package:app/services/hotel_booking_api_service.dart';
+import 'package:app/services/tour_booking_api_service.dart';
 import 'package:app/services/zalopay_api_service.dart';
 import 'package:app/views/screens/payment_webview_screen.dart';
 
-class HotelBookingCheckoutScreen extends StatefulWidget {
-  final int hotelId;
-  final String hotelTitle;
+class TourBookingCheckoutScreen extends StatefulWidget {
+  final int tourId;
+  final String tourTitle;
   final String? imageUrl;
   final num basePrice;
-  final num? extraPricePerNight;
   final String? currencyCode;
   final DateTimeRange dateRange;
-  final int rooms;
   final int people;
   final int? minParticipants;
   final int? maxParticipants;
-  final int? maxBedsPerRoom; // from backend: max beds per room
-  final int? maxRooms; // capacity (rooms)
 
-  const HotelBookingCheckoutScreen({
+  const TourBookingCheckoutScreen({
     super.key,
-    required this.hotelId,
-    required this.hotelTitle,
+    required this.tourId,
+    required this.tourTitle,
     this.imageUrl,
     required this.basePrice,
-    this.extraPricePerNight,
     required this.currencyCode,
     required this.dateRange,
-    required this.rooms,
     required this.people,
     this.minParticipants,
     this.maxParticipants,
-    this.maxBedsPerRoom,
-    this.maxRooms,
   });
 
   @override
-  State<HotelBookingCheckoutScreen> createState() =>
-      _HotelBookingCheckoutScreenState();
+  State<TourBookingCheckoutScreen> createState() =>
+      _TourBookingCheckoutScreenState();
 }
 
-class _HotelBookingCheckoutScreenState
-    extends State<HotelBookingCheckoutScreen> {
+class _TourBookingCheckoutScreenState extends State<TourBookingCheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -58,16 +49,12 @@ class _HotelBookingCheckoutScreenState
 
   bool _submitting = false;
   String _paymentMethod = 'counter'; // 'counter' or 'zalopay'
-  int _rooms = 1;
-  int _beds = 1;
   int _people = 1;
   late DateTimeRange _dateRange;
 
   @override
   void initState() {
     super.initState();
-    _rooms = widget.rooms;
-    _beds = 1;
     _people = widget.people;
     _dateRange = widget.dateRange;
     _loadUserInfo();
@@ -155,10 +142,9 @@ class _HotelBookingCheckoutScreenState
         }
 
         final updateData = {
-          if (newName.isNotEmpty && newName != savedName)
-            'fullName': newName, // Changed from 'full_name' to match DTO
+          if (newName.isNotEmpty && newName != savedName) 'fullName': newName,
           if (newPhone.isNotEmpty && newPhone != savedPhone)
-            'phoneNumber': newPhone, // Changed from 'phone_number' to match DTO
+            'phoneNumber': newPhone,
         };
 
         debugPrint('📤 Sending PUT /users/$userId with data: $updateData');
@@ -243,14 +229,9 @@ class _HotelBookingCheckoutScreenState
 
   @override
   Widget build(BuildContext context) {
-    _rooms = _rooms.clamp(1, 99);
-    _beds = _beds.clamp(1, 99);
-    final nights = _calcNights(_dateRange);
-    // Công thức người dùng yêu cầu:
-    // Tổng = số phòng × (giá gốc + số đêm × giá mỗi đêm)
-    final extra = (widget.extraPricePerNight ?? 0);
-    final perRoomTotal = widget.basePrice + nights * extra;
-    final total = _rooms * perRoomTotal;
+    final days = _calcDays(_dateRange);
+    // Tổng giá tour = giá cơ bản × số người
+    final total = widget.basePrice * _people;
 
     return Scaffold(
       backgroundColor: context.backgroundColor,
@@ -269,11 +250,9 @@ class _HotelBookingCheckoutScreenState
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: [
-          _summaryCard(nights, total),
+          _summaryCard(days, total),
           const SizedBox(height: 12),
           _dateSelector(),
-          const SizedBox(height: 12),
-          _roomBedSelector(),
           const SizedBox(height: 12),
           _peopleSelector(),
           const SizedBox(height: 12),
@@ -306,7 +285,7 @@ class _HotelBookingCheckoutScreenState
                     )
                   : Text(
                       _paymentMethod == 'counter'
-                          ? 'Xác nhận đặt (trả tại quầy)'
+                          ? 'Xác nhận đặt (trả trực tiếp)'
                           : 'Thanh toán qua ZaloPay',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
@@ -343,7 +322,7 @@ class _HotelBookingCheckoutScreenState
               children: [
                 ListTile(
                   leading: Radio<String>(value: 'counter'),
-                  title: const Text('Thanh toán trực tiếp tại quầy'),
+                  title: const Text('Thanh toán trực tiếp'),
                   contentPadding: EdgeInsets.zero,
                   onTap: () => setState(() => _paymentMethod = 'counter'),
                 ),
@@ -361,7 +340,7 @@ class _HotelBookingCheckoutScreenState
     );
   }
 
-  Widget _summaryCard(int nights, num total) {
+  Widget _summaryCard(int days, num total) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -392,14 +371,14 @@ class _HotelBookingCheckoutScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.hotelTitle,
+                  widget.tourTitle,
                   style: context.bodyOneStyle.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${_formatDate(_dateRange.start)} → ${_formatDate(_dateRange.end)} · $_rooms phòng · $_people khách · $nights đêm',
+                  '${_formatDate(_dateRange.start)} → ${_formatDate(_dateRange.end)} · $_people khách · $days ngày',
                   style: context.captionStyle.copyWith(
                     color: context.textSecondaryColor,
                   ),
@@ -413,14 +392,13 @@ class _HotelBookingCheckoutScreenState
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    if (widget.extraPricePerNight != null)
-                      Text(
-                        ' + ${_formatPrice(widget.extraPricePerNight!, widget.currencyCode)} / đêm',
-                        style: context.bodyOneStyle.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.orange,
-                        ),
+                    Text(
+                      ' / người',
+                      style: context.bodyOneStyle.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.orange,
                       ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -450,7 +428,7 @@ class _HotelBookingCheckoutScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Ngày nhận/trả phòng',
+            'Ngày bắt đầu/kết thúc tour',
             style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
@@ -471,59 +449,6 @@ class _HotelBookingCheckoutScreenState
     );
   }
 
-  Widget _roomBedSelector() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: context.cardBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Số phòng & số giường',
-            style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
-          _qtyRow(
-            label: 'Phòng',
-            value: _rooms,
-            onMinus: () => setState(() {
-              final minR = 1;
-              final maxR = (widget.maxRooms ?? 99).clamp(1, 999);
-              _rooms = (_rooms - 1).clamp(minR, maxR);
-              // Clamp beds when rooms changes
-              final maxBeds = (widget.maxBedsPerRoom ?? 99) * _rooms;
-              _beds = _beds.clamp(1, maxBeds.clamp(1, 999));
-            }),
-            onPlus: () => setState(() {
-              final minR = 1;
-              final maxR = (widget.maxRooms ?? 99).clamp(1, 999);
-              _rooms = (_rooms + 1).clamp(minR, maxR);
-              final maxBeds = (widget.maxBedsPerRoom ?? 99) * _rooms;
-              _beds = _beds.clamp(1, maxBeds.clamp(1, 999));
-            }),
-          ),
-          const SizedBox(height: 8),
-          _qtyRow(
-            label: 'Giường',
-            value: _beds,
-            onMinus: () => setState(() {
-              final maxBeds = (widget.maxBedsPerRoom ?? 99) * _rooms;
-              _beds = (_beds - 1).clamp(1, maxBeds.clamp(1, 999));
-            }),
-            onPlus: () => setState(() {
-              final maxBeds = (widget.maxBedsPerRoom ?? 99) * _rooms;
-              _beds = (_beds + 1).clamp(1, maxBeds.clamp(1, 999));
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _peopleSelector() {
     final minP = (widget.minParticipants ?? 1).clamp(1, 9999);
     final maxP = (widget.maxParticipants ?? 9999).clamp(minP, 9999);
@@ -538,7 +463,7 @@ class _HotelBookingCheckoutScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Số khách',
+            'Số khách tham gia',
             style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
@@ -737,7 +662,7 @@ class _HotelBookingCheckoutScreenState
         ),
         const SizedBox(height: 8),
         Text(
-          '• Đặt chỗ sẽ ở trạng thái chờ thanh toán.\n• Bạn sẽ thanh toán qua ví/đối tác ở bước sau.',
+          '• Đặt tour sẽ ở trạng thái chờ xác nhận.\n• Bạn sẽ thanh toán qua ví/đối tác hoặc trực tiếp.',
           style: context.captionStyle.copyWith(
             color: context.textSecondaryColor,
           ),
@@ -756,7 +681,7 @@ class _HotelBookingCheckoutScreenState
           int.tryParse(prefs.getString('user_id') ?? '') ??
           -1;
       if (uid <= 0) {
-        _showSnack('Bạn cần đăng nhập để đặt phòng.');
+        _showSnack('Bạn cần đăng nhập để đặt tour.');
         setState(() => _submitting = false);
         return;
       }
@@ -766,10 +691,10 @@ class _HotelBookingCheckoutScreenState
 
       // COUNTER payment: Create booking immediately
       if (_paymentMethod == 'counter') {
-        final api = HotelBookingApiService(dio: Dio(), prefs: prefs);
+        final api = TourBookingApiService(dio: Dio(), prefs: prefs);
         await api.createBooking(
           userId: uid,
-          hotelId: widget.hotelId,
+          tourId: widget.tourId,
           startDate: DateTime(
             _dateRange.start.year,
             _dateRange.start.month,
@@ -781,7 +706,6 @@ class _HotelBookingCheckoutScreenState
             _dateRange.end.day,
           ),
           numAdults: _people,
-          rooms: _rooms, // Gửi số phòng
           totalPrice: total,
           currencyCode: (widget.currencyCode ?? 'VND').toUpperCase(),
           providerNotes: _buildProviderNotes(),
@@ -789,7 +713,7 @@ class _HotelBookingCheckoutScreenState
         );
         if (!mounted) return;
         setState(() => _submitting = false);
-        _showSnack('Đặt chỗ thành công. Thanh toán tại quầy khi nhận phòng.');
+        _showSnack('Đặt tour thành công. Thanh toán trực tiếp khi tham gia.');
         Navigator.of(context).pop();
         return;
       }
@@ -797,10 +721,10 @@ class _HotelBookingCheckoutScreenState
       // ZALOPAY payment: Do NOT create booking yet, just create order
       try {
         final zalo = ZaloPayApiService(dio: Dio(), prefs: prefs);
-        final orderResult = await zalo.createOrder(
+        final orderResult = await zalo.createTourOrder(
           amount: total,
           userId: uid,
-          hotelId: widget.hotelId,
+          tourId: widget.tourId,
           startDate: DateTime(
             _dateRange.start.year,
             _dateRange.start.month,
@@ -812,15 +736,12 @@ class _HotelBookingCheckoutScreenState
             _dateRange.end.day,
           ),
           numAdults: _people,
-          numChildren: 0,
-          providerNotes:
-              _buildProviderNotes(), // Include provider notes (rooms, beds, requests)
-          description: 'Thanh toan dat phong hotel #${widget.hotelId}',
+          providerNotes: _buildProviderNotes(),
+          description: 'Thanh toan dat tour #${widget.tourId}',
         );
 
         final orderUrl = orderResult['order_url']!;
-        final appTransId =
-            orderResult['apptransid']!; // Note: lowercase from backend
+        final appTransId = orderResult['apptransid']!;
 
         setState(() => _submitting = false);
 
@@ -836,7 +757,7 @@ class _HotelBookingCheckoutScreenState
           // Payment completed successfully - now create booking via test endpoint
           setState(() => _submitting = true);
           try {
-            // Call test endpoint to create booking from pending payment
+            // Call test endpoint to create tour booking from pending payment
             final testDio = Dio();
             testDio.options.baseUrl = 'http://10.0.2.2:8080/api';
             final token = prefs.getString('user_token');
@@ -845,7 +766,7 @@ class _HotelBookingCheckoutScreenState
             }
 
             final createResponse = await testDio.post(
-              '/test/create-booking-from-pending',
+              '/test/create-tour-booking-from-pending',
               queryParameters: {'appTransId': appTransId},
             );
 
@@ -872,15 +793,15 @@ class _HotelBookingCheckoutScreenState
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Đặt phòng của bạn đã được xác nhận.'),
+                        Text('Đặt tour của bạn đã được xác nhận.'),
                         if (bookingId != null)
                           Text(
-                            'Mã đặt phòng: #$bookingId',
+                            'Mã đặt tour: #$bookingId',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         SizedBox(height: 8),
                         Text(
-                          'Bạn có thể kiểm tra chi tiết đặt phòng trong mục "Đơn của tôi".',
+                          'Bạn có thể kiểm tra chi tiết đặt tour trong mục "Đơn của tôi".',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[600],
@@ -903,13 +824,13 @@ class _HotelBookingCheckoutScreenState
             } else {
               // Failed to create booking
               _showSnack(
-                'Thanh toán thành công nhưng không tạo được đặt phòng. Vui lòng liên hệ hỗ trợ.',
+                'Thanh toán thành công nhưng không tạo được đặt tour. Vui lòng liên hệ hỗ trợ.',
               );
             }
           } catch (e) {
             setState(() => _submitting = false);
             _showSnack(
-              'Thanh toán thành công nhưng lỗi tạo đặt phòng: ${e.toString()}',
+              'Thanh toán thành công nhưng lỗi tạo đặt tour: ${e.toString()}',
             );
           }
         } else {
@@ -923,14 +844,13 @@ class _HotelBookingCheckoutScreenState
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      _showSnack('Lỗi đặt chỗ: ${e.toString()}');
+      _showSnack('Lỗi đặt tour: ${e.toString()}');
     }
   }
 
   String _buildProviderNotes() {
     final parts = <String>[];
-    parts.add('rooms=$_rooms');
-    parts.add('beds=$_beds');
+    parts.add('people=$_people');
     final r = _requestCtrl.text.trim();
     if (r.isNotEmpty) parts.add('requests=${r.replaceAll('\n', ' ')}');
     return parts.join('; ');
@@ -943,12 +863,13 @@ class _HotelBookingCheckoutScreenState
   }
 
   String _formatDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
-  int _calcNights(DateTimeRange range) {
+
+  int _calcDays(DateTimeRange range) {
     // Normalize to midnight to avoid any time component affecting inDays
     final s = DateTime(range.start.year, range.start.month, range.start.day);
     final e = DateTime(range.end.year, range.end.month, range.end.day);
     final diff = e.difference(s).inDays;
-    return diff <= 0 ? 1 : diff; // at least 1 night
+    return diff <= 0 ? 1 : diff; // at least 1 day
   }
 
   String _formatPrice(num price, String? currency) {

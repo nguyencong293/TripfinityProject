@@ -733,21 +733,22 @@ export interface TourBookingDTO {
   userId: number;
   tourId: number;
   bookingDate?: string; // ISO string
-  tourDate?: string; // Ngày đi tour
-  numberOfTravelers?: number; // Total travelers (used in some contexts)
-  numAdults: number;
-  numChildren?: number;
+  startDate?: string; // Ngày bắt đầu tour (from backend)
+  endDate?: string; // Ngày kết thúc tour (from backend)
+  numAdults: number; // Tổng số người (không phân biệt người lớn/trẻ em)
   specialRequests?: string;
   totalPrice: number;
+  depositAmount?: number;
   currencyCode?: string;
+  paymentMethod?: string;
   bookingStatus?: 
     | "pending" 
     | "confirmed" 
     | "cancelled" 
     | "completed" 
-    | "no_show";
-  paymentMethod?: string;
-  depositAmount?: number;
+    | "refunded";
+  eTicketUrl?: string;
+  qrCodeData?: string;
   createdAt?: string;
   updatedAt?: string;
   providerId?: number;

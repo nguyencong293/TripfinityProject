@@ -18,6 +18,7 @@ public class PendingPaymentDto {
     private Integer userId;
     private Integer hotelId;
     private Integer restaurantId; // For restaurant bookings
+    private Integer tourId; // For tour bookings
     private LocalDate startDate;
     private LocalDate endDate;
     private Integer numAdults;

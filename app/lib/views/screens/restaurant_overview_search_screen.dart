@@ -23,7 +23,7 @@ class _RestaurantOverviewSearchScreenState
     extends State<RestaurantOverviewSearchScreen> {
   static const double _minPrice = 0;
   static const double _maxPrice = 10000000;
-  static const RangeValues _defaultPrice = RangeValues(0, 10000000);
+  // static const RangeValues _defaultPrice = RangeValues(0, 10000000);
   RangeValues _priceRange = const RangeValues(0, 10000000);
 
   final Set<String> _cuisines = {};

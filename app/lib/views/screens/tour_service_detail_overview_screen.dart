@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/tour_api_service.dart';
+import 'package:app/views/screens/tour_booking_checkout_screen.dart';
 
 // Dictionaries for tour categories, services, languages (sync with backend)
 const Map<String, String> kCategoriesDict = {
@@ -108,10 +109,10 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
   }
 
   Map<String, dynamic> get _data {
-    final merged = <String, dynamic>{};
-    if (widget.tour != null) merged.addAll(widget.tour!);
-    if (_detail != null) merged.addAll(_detail!);
-    return merged;
+    // Ưu tiên dữ liệu từ API (_detail) hơn fallback (widget.tour)
+    if (_detail != null) return _detail!;
+    if (widget.tour != null) return widget.tour!;
+    return {};
   }
 
   @override
@@ -775,7 +776,41 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
               ),
               elevation: 0,
             ),
-            onPressed: () {},
+            onPressed: () {
+              // Navigate to tour booking checkout
+              final tourData = _data;
+              final images = _imageList(tourData);
+
+              // Parse duration from tour data
+              final durationDays = tourData['durationDays'] as int? ?? 3;
+              final startDate = DateTime.now().add(const Duration(days: 1));
+              final endDate = startDate.add(Duration(days: durationDays));
+
+              // Parse capacity from tour data
+              final minPart = tourData['minParticipants'] as int?;
+              final maxPart = tourData['maxParticipants'] as int?;
+              final capacity = tourData['capacity'] as int?;
+              final defaultPeople = minPart ?? 2;
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TourBookingCheckoutScreen(
+                    tourId: _resolvedId ?? 0,
+                    tourTitle: tourData['title']?.toString() ?? 'Tour',
+                    imageUrl: images.isNotEmpty ? images[0] : null,
+                    basePrice:
+                        double.tryParse(tourData['price']?.toString() ?? '0') ??
+                        0,
+                    currencyCode: tourData['currencyCode']?.toString() ?? 'VND',
+                    dateRange: DateTimeRange(start: startDate, end: endDate),
+                    people: defaultPeople,
+                    minParticipants: minPart,
+                    maxParticipants: maxPart ?? capacity,
+                  ),
+                ),
+              );
+            },
             child: const Text(
               'Đặt ngay',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),

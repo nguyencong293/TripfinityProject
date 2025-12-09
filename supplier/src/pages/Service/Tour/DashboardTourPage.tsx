@@ -97,8 +97,14 @@ const TourBookingRow: React.FC<TourBookingRowProps> = ({
     return new Date(dateString).toLocaleDateString("vi-VN");
   };
 
-  const totalTravelers = booking.numberOfTravelers || 
-    ((booking.numAdults || 0) + (booking.numChildren || 0));
+  const getPaymentLabel = (method?: string) => {
+    if (!method || method === "counter") {
+      return { label: "Thanh toán tại quầy", color: "bg-yellow-100 text-yellow-800", icon: "💵" };
+    }
+    return { label: method.toUpperCase() + " - Đã thanh toán", color: "bg-green-100 text-green-800", icon: "✅" };
+  };
+
+  const paymentInfo = getPaymentLabel(booking.paymentMethod);
 
   return (
     <div className="rounded-xl border theme-border theme-bg-card p-4 hover:shadow-md transition-shadow">
@@ -117,13 +123,17 @@ const TourBookingRow: React.FC<TourBookingRowProps> = ({
               {booking.totalPrice?.toLocaleString("vi-VN")} {booking.currencyCode || "VND"}
             </p>
             <p className="text-sm theme-text-secondary">
-              {totalTravelers} người
+              {booking.numAdults || 0} người
             </p>
           </div>
         </div>
         <div className="flex items-center gap-4 text-sm theme-text-secondary">
-          <span>📅 {formatDate(booking.tourDate)}</span>
-          <span>👥 {booking.numAdults || 0} người lớn, {booking.numChildren || 0} trẻ em</span>
+          <span>📅 {formatDate(booking.startDate)} - {formatDate(booking.endDate)}</span>
+          <span>👥 {booking.numAdults || 0} người</span>
+        </div>
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${paymentInfo.color}`}>
+          <span>{paymentInfo.icon}</span>
+          <span>{paymentInfo.label}</span>
         </div>
         {booking.specialRequests && (
           <p className="text-sm theme-text-secondary italic">
@@ -541,38 +551,42 @@ const DashboardTourPage: React.FC = () => {
           setBookings([]);
         }
 
+        // TODO: Uncomment when tour review API is ready
         // Fetch rating summaries for each tour
-        const summaryPromises = toursData.map((t) =>
-          t.tourId
-            ? getTourRatingSummaryByTour(t.tourId).catch((e) => {
-                console.error(
-                  `Failed to fetch rating for tour ${t.tourId}:`,
-                  e
-                );
-                return null;
-              })
-            : Promise.resolve(null)
-        );
-        const summaries = (await Promise.all(summaryPromises)).filter(
-          (s) => s !== null
-        ) as TourRatingSummaryDTO[];
-        setRatingSummaries(summaries);
+        // const summaryPromises = toursData.map((t) =>
+        //   t.tourId
+        //     ? getTourRatingSummaryByTour(t.tourId).catch((e) => {
+        //         console.error(
+        //           `Failed to fetch rating for tour ${t.tourId}:`,
+        //           e
+        //         );
+        //         return null;
+        //       })
+        //     : Promise.resolve(null)
+        // );
+        // const summaries = (await Promise.all(summaryPromises)).filter(
+        //   (s) => s !== null
+        // ) as TourRatingSummaryDTO[];
+        // setRatingSummaries(summaries);
+        setRatingSummaries([]);
 
         // Fetch reviews for the first tour (if available)
-        const firstTourId = toursData[0]?.tourId;
-        if (firstTourId) {
-          console.log(`📥 Dashboard loading reviews for tour ${firstTourId}`);
-          const revs = await getTourReviewsByTour(firstTourId);
-          console.log(`📤 Dashboard received ${revs.length} reviews`);
-          setRecentReviews(revs.slice(0, 2));
-        } else {
-          setRecentReviews([]);
-        }
+        // const firstTourId = toursData[0]?.tourId;
+        // if (firstTourId) {
+        //   console.log(`📥 Dashboard loading reviews for tour ${firstTourId}`);
+        //   const revs = await getTourReviewsByTour(firstTourId);
+        //   console.log(`📤 Dashboard received ${revs.length} reviews`);
+        //   setRecentReviews(revs.slice(0, 2));
+        // } else {
+        //   setRecentReviews([]);
+        // }
+        setRecentReviews([]);
 
         // Fetch total reviews count for provider
-        const reviewsCount = await getTourReviewsCountByProvider(providerId);
-        console.log("📊 Total reviews for provider:", reviewsCount);
-        setTotalReviews(reviewsCount);
+        // const reviewsCount = await getTourReviewsCountByProvider(providerId);
+        // console.log("📊 Total reviews for provider:", reviewsCount);
+        // setTotalReviews(reviewsCount);
+        setTotalReviews(0);
       } catch (e) {
         console.error("❌ Error loading dashboard data:", e);
       }
