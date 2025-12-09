@@ -11,6 +11,8 @@ import {
   BarChart2,
   MessageSquare,
   Zap,
+  Clock,
+  Users,
 } from "lucide-react";
 import {
   BarChart,
@@ -82,57 +84,102 @@ const RestaurantBookingRow: React.FC<RestaurantBookingRowProps> = ({
     return new Date(dateString).toLocaleDateString("vi-VN");
   };
 
-  const totalGuests = (booking.numAdults || 0) + (booking.numChildren || 0);
+  const formatTime = (timeString?: string) => {
+    if (!timeString) return "N/A";
+    return timeString.substring(0, 5); // HH:mm:ss -> HH:mm
+  };
 
   return (
-    <div className="rounded-xl border theme-border theme-bg-card p-4 hover:shadow-md transition-shadow">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h4 className="font-semibold theme-text-primary mb-1">
-              {restaurantName || "Restaurant"}
+    <div className="rounded-xl border theme-border theme-bg-card p-6 hover:shadow-md transition-shadow">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* Left Section: Restaurant & Customer Info */}
+        <div className="md:col-span-5">
+          <div className="mb-4">
+            <h4 className="font-semibold theme-text-primary text-lg mb-2">
+              {restaurantName || "Nhà hàng"}
             </h4>
-            <p className="text-sm theme-text-secondary">
-              {userName || "Guest"} • {userPhone || "N/A"}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="font-semibold theme-text-primary">
-              {booking.totalPrice?.toLocaleString("vi-VN")} {booking.currencyCode || "VND"}
-            </p>
-            <p className="text-sm theme-text-secondary">
-              {totalGuests} khách
-            </p>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-sm theme-text-secondary">
+                <span className="font-medium">Khách hàng:</span>
+                <span>{userName || "N/A"}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm theme-text-secondary">
+                <span className="font-medium">Điện thoại:</span>
+                <span>{userPhone || "N/A"}</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-sm theme-text-secondary">
-          <span>📅 {formatDate(booking.reservationDate)}</span>
-          <span>🕐 {booking.reservationTime || "N/A"}</span>
+
+        {/* Middle Section: Booking Details */}
+        <div className="md:col-span-4">
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar className="w-4 h-4 theme-text-secondary" />
+              <span className="theme-text-secondary">Ngày đặt:</span>
+              <span className="font-medium theme-text-primary">
+                {formatDate(booking.reservationDate)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="w-4 h-4 theme-text-secondary" />
+              <span className="theme-text-secondary">Giờ:</span>
+              <span className="font-medium theme-text-primary">
+                {formatTime(booking.reservationTime)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="w-4 h-4 theme-text-secondary" />
+              <span className="theme-text-secondary">Số khách:</span>
+              <span className="font-medium theme-text-primary">
+                {booking.numAdults} người
+              </span>
+            </div>
+            {booking.specialRequests && (
+              <div className="flex items-start gap-2 text-sm pt-1">
+                <MessageSquare className="w-4 h-4 theme-text-secondary mt-0.5" />
+                <div>
+                  <span className="theme-text-secondary">Yêu cầu:</span>
+                  <p className="theme-text-primary italic mt-0.5">
+                    {booking.specialRequests}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        {booking.specialRequests && (
-          <p className="text-sm theme-text-secondary italic">
-            💬 {booking.specialRequests}
-          </p>
-        )}
-        <div className="flex gap-2 pt-2 border-t theme-border">
-          <button
-            onClick={onView}
-            className="flex-1 px-3 py-2 text-sm theme-bg-secondary theme-text-primary rounded-lg hover:theme-bg-tertiary transition-colors"
-          >
-            Xem chi tiết
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Xác nhận
-          </button>
-          <button
-            onClick={onCancel}
-            className="flex-1 px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Từ chối
-          </button>
+
+        {/* Right Section: Price & Actions */}
+        <div className="md:col-span-3 flex flex-col justify-between">
+          <div className="text-right mb-4">
+            <p className="text-sm theme-text-secondary mb-1">Tổng tiền</p>
+            <p className="text-2xl font-bold theme-text-primary">
+              {(booking.totalPrice || 0).toLocaleString("vi-VN")}
+            </p>
+            <p className="text-sm theme-text-secondary">{booking.currencyCode || "VND"}</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={onView}
+              className="w-full px-4 py-2 text-sm theme-bg-secondary theme-text-primary rounded-lg hover:theme-bg-tertiary transition-colors font-medium"
+            >
+              Xem chi tiết
+            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={onConfirm}
+                className="flex-1 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                Xác nhận
+              </button>
+              <button
+                onClick={onCancel}
+                className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Từ chối
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -341,9 +388,9 @@ const DashboardRestaurantPage: React.FC = () => {
       setActionLoading(modalState.bookingId);
       
       if (modalState.type === "confirm") {
-        await api.patch(`/restaurant-bookings/${modalState.bookingId}/confirm`);
+        await api.patch(`/restaurant-bookings/${modalState.bookingId}/status/confirmed`);
       } else {
-        await api.patch(`/restaurant-bookings/${modalState.bookingId}/cancel`);
+        await api.patch(`/restaurant-bookings/${modalState.bookingId}/status/cancelled`);
       }
 
       // Refresh booking data
@@ -496,31 +543,27 @@ const DashboardRestaurantPage: React.FC = () => {
         console.log("🍽️ Restaurants found:", rs.length, rs);
         setRestaurants(rs);
 
-        // TODO: Restaurant bookings API not implemented yet
-        // const bRes = await getRestaurantBookingsByProvider(providerId);
-        // console.log("📅 Bookings response:", bRes);
-        // console.log("📊 Total bookings:", bRes?.length || 0);
-        // setBookings(bRes || []);
-        setBookings([]); // Empty bookings for now
+        // Fetch restaurant bookings
+        const bRes = await api.get<RestaurantBookingDTO[]>(`/restaurant-bookings/provider/${providerId}`);
+        const bookingsData = bRes.data || [];
+        console.log("📅 Restaurant bookings found:", bookingsData.length);
+        setBookings(bookingsData);
 
-        // Fetch user info for all bookings (skipped for now)
-        // const uniqueUserIds = Array.from(
-        //   new Set((bRes || []).map((b) => b.userId))
-        // );
-        // const usersMap = new Map<number, UserDTO>();
-        // await Promise.all(
-        //   uniqueUserIds.map(async (userId) => {
-        //     try {
-        //       const user = await getUserById(userId);
-        //       usersMap.set(userId, user);
-        //     } catch (e) {
-        //       console.error(`Failed to fetch user ${userId}:`, e);
-        //     }
-        //   })
-        // );
-        // setUserCache(usersMap);
-        // console.log("👥 Users loaded:", usersMap.size);
-        setUserCache(new Map());
+        // Fetch user info for all bookings
+        const uniqueUserIds = Array.from(new Set(bookingsData.map((b) => b.userId)));
+        const usersMap = new Map<number, UserDTO>();
+        await Promise.all(
+          uniqueUserIds.map(async (userId) => {
+            try {
+              const userResponse = await api.get<UserDTO>(`/users/${userId}`);
+              usersMap.set(userId, userResponse.data);
+            } catch (e) {
+              console.error(`Failed to fetch user ${userId}:`, e);
+            }
+          })
+        );
+        setUserCache(usersMap);
+        console.log("👥 Users loaded:", usersMap.size);
 
         // Fetch rating summaries for each restaurant
         console.log(`📊 Fetching rating summaries for ${rs.length} restaurants:`, rs.map(r => ({ id: r.restaurantId, title: r.title })));

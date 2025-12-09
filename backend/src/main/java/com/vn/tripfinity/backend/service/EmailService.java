@@ -395,4 +395,170 @@ public class EmailService {
             </html>
             """, customerName, bookingCode, hotelTitle);
     }
+
+    /**
+     * Email xác nhận đặt bàn restaurant cho user (async)
+     */
+    @Async
+    public void sendRestaurantBookingConfirmationEmail(String to, String customerName, String restaurantTitle, 
+            String bookingCode, String reservationDate, String totalPrice, String paymentMethod, int guests) {
+        try {
+            String subject = "Xác nhận đặt bàn - " + restaurantTitle;
+            String htmlContent = buildRestaurantBookingConfirmationHtml(customerName, restaurantTitle, bookingCode, 
+                reservationDate, totalPrice, paymentMethod, guests);
+            sendEmail(to, subject, htmlContent);
+            log.info("✅ Restaurant booking confirmation email sent to {}", to);
+        } catch (Exception e) {
+            log.error("❌ Failed to send restaurant booking confirmation email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    /**
+     * Email thông báo supplier có booking restaurant mới (async)
+     */
+    @Async
+    public void sendSupplierNewRestaurantBookingEmail(String to, String supplierName, String restaurantTitle,
+            String bookingCode, String customerName, String reservationDate, 
+            String totalPrice, String paymentMethod, int guests) {
+        try {
+            String subject = "[Tripfinity] Đơn đặt bàn mới - " + restaurantTitle;
+            String htmlContent = buildSupplierNewRestaurantBookingHtml(supplierName, restaurantTitle, bookingCode,
+                customerName, reservationDate, totalPrice, paymentMethod, guests);
+            sendEmail(to, subject, htmlContent);
+            log.info("✅ Supplier new restaurant booking email sent to {}", to);
+        } catch (Exception e) {
+            log.error("❌ Failed to send supplier new restaurant booking email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    private String buildRestaurantBookingConfirmationHtml(String customerName, String restaurantTitle, 
+            String bookingCode, String reservationDate, String totalPrice, String paymentMethod, int guests) {
+        
+        String paymentMethodText = switch (paymentMethod.toLowerCase()) {
+            case "zalopay" -> "ZaloPay (đã thanh toán)";
+            case "vnpay" -> "VNPay (đã thanh toán)";
+            case "momo" -> "MoMo (đã thanh toán)";
+            case "counter" -> "Thanh toán trực tiếp tại nhà hàng";
+            default -> paymentMethod;
+        };
+
+        return String.format("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background-color: #23A455; color: white; padding: 20px; text-align: center; }
+                    .content { padding: 20px; background-color: #f9f9f9; }
+                    .info-box { background-color: white; padding: 15px; margin: 10px 0; border-left: 4px solid #23A455; }
+                    .footer { text-align: center; padding: 20px; font-size: 12px; color: #777; }
+                    .button { display: inline-block; padding: 10px 20px; background-color: #23A455; color: white; text-decoration: none; border-radius: 5px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🍴 Xác nhận đặt bàn</h1>
+                    </div>
+                    <div class="content">
+                        <p>Xin chào <strong>%s</strong>,</p>
+                        
+                        <p>Cảm ơn bạn đã đặt bàn tại <strong>%s</strong> qua Tripfinity!</p>
+                        
+                        <div class="info-box">
+                            <h3>📋 Thông tin đặt bàn</h3>
+                            <p><strong>Mã đặt bàn:</strong> %s</p>
+                            <p><strong>Nhà hàng:</strong> %s</p>
+                            <p><strong>Ngày đặt:</strong> %s</p>
+                            <p><strong>Số khách:</strong> %d người</p>
+                            <p><strong>Tổng tiền:</strong> %s VND</p>
+                            <p><strong>Phương thức thanh toán:</strong> %s</p>
+                        </div>
+                        
+                        <p>Vui lòng đến đúng giờ để đảm bảo chỗ ngồi tốt nhất cho bạn!</p>
+                        
+                        <p>Nếu có bất kỳ thay đổi nào, vui lòng liên hệ với chúng tôi sớm nhất có thể.</p>
+                        
+                        <p style="text-align: center; margin-top: 20px;">
+                            <a href="https://tripfinity.com/my-bookings" class="button">Xem đơn đặt bàn của tôi</a>
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>Tripfinity - Nền tảng du lịch hàng đầu Việt Nam</p>
+                        <p>Email: support@tripfinity.com | Hotline: 1900-xxxx</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """, customerName, restaurantTitle, bookingCode, restaurantTitle, reservationDate, 
+            guests, totalPrice, paymentMethodText);
+    }
+
+    private String buildSupplierNewRestaurantBookingHtml(String supplierName, String restaurantTitle, String bookingCode,
+            String customerName, String reservationDate, String totalPrice, String paymentMethod, int guests) {
+        
+        String paymentMethodText = switch (paymentMethod.toLowerCase()) {
+            case "zalopay" -> "ZaloPay (đã thanh toán)";
+            case "vnpay" -> "VNPay (đã thanh toán)";
+            case "momo" -> "MoMo (đã thanh toán)";
+            case "counter" -> "Thanh toán trực tiếp tại nhà hàng";
+            default -> paymentMethod;
+        };
+
+        return String.format("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background-color: #FF6B35; color: white; padding: 20px; text-align: center; }
+                    .content { padding: 20px; background-color: #f9f9f9; }
+                    .info-box { background-color: white; padding: 15px; margin: 10px 0; border-left: 4px solid #FF6B35; }
+                    .footer { text-align: center; padding: 20px; font-size: 12px; color: #777; }
+                    .button { display: inline-block; padding: 10px 20px; background-color: #FF6B35; color: white; text-decoration: none; border-radius: 5px; }
+                    .highlight { background-color: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🍴 Đơn đặt bàn mới</h1>
+                    </div>
+                    <div class="content">
+                        <p>Xin chào <strong>%s</strong>,</p>
+                        
+                        <div class="highlight">
+                            <p>🔔 Bạn có một đơn đặt bàn mới cho <strong>%s</strong></p>
+                        </div>
+                        
+                        <div class="info-box">
+                            <h3>📋 Chi tiết đặt bàn</h3>
+                            <p><strong>Mã đặt bàn:</strong> %s</p>
+                            <p><strong>Khách hàng:</strong> %s</p>
+                            <p><strong>Ngày đặt:</strong> %s</p>
+                            <p><strong>Số khách:</strong> %d người</p>
+                            <p><strong>Tổng tiền:</strong> %s VND</p>
+                            <p><strong>Phương thức thanh toán:</strong> %s</p>
+                        </div>
+                        
+                        <p><strong>Lưu ý:</strong> Vui lòng chuẩn bị và sắp xếp chỗ ngồi cho khách hàng.</p>
+                        
+                        <p style="text-align: center; margin-top: 20px;">
+                            <a href="https://supplier.tripfinity.com/bookings" class="button">Xem chi tiết đơn đặt bàn</a>
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>Tripfinity Supplier Portal</p>
+                        <p>Email: supplier@tripfinity.com | Hotline: 1900-xxxx</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """, supplierName, restaurantTitle, bookingCode, customerName, reservationDate, 
+            guests, totalPrice, paymentMethodText);
+    }
 }

@@ -39,6 +39,8 @@ import ReviewDetailPage from "../pages/Service/Hotel/ReviewDetailPage";
 import RestaurantAllReviewsPage from "../pages/Service/Restaurant/AllReviewsPage";
 import RestaurantRecentReviewsPage from "../pages/Service/Restaurant/RecentReviewsPage";
 import RestaurantReviewDetailPage from "../pages/Service/Restaurant/ReviewDetailPage";
+import ListRestaurantBookingPage from "../pages/Service/Restaurant/ListRestaurantBookingPage";
+import RestaurantBookingViewPage from "../pages/Service/Restaurant/RestaurantBookingViewPage";
 import NotificationListPage from "../pages/NotificationListPage";
 import ScrollToTop from "../components/ScrollToTop";
 
@@ -148,6 +150,14 @@ const AppRoutes: React.FC = () => {
             <Route
               path="service/restaurant/reviews/:reviewId"
               element={<RestaurantReviewDetailPage />}
+            />
+            <Route
+              path="service/restaurant/bookings"
+              element={<ListRestaurantBookingPage />}
+            />
+            <Route
+              path="service/restaurant/bookings/:bookingId"
+              element={<RestaurantBookingViewPage />}
             />
           </Route>
         </Route>

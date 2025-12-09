@@ -17,6 +17,7 @@ public class PendingPaymentDto {
     private String appTransId; // ZaloPay transaction ID
     private Integer userId;
     private Integer hotelId;
+    private Integer restaurantId; // For restaurant bookings
     private LocalDate startDate;
     private LocalDate endDate;
     private Integer numAdults;

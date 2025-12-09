@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/restaurant_api_service.dart';
 import 'package:app/views/screens/detail_restaurant_review_user_screen.dart';
 import 'package:app/views/screens/restaurant_reviews_list_screen.dart';
+import 'package:app/views/screens/restaurant_booking_checkout_screen.dart';
 
 // Canonical dictionaries from supplier portal
 const Map<String, String> kCuisinesDict = {
@@ -766,7 +767,32 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           ),
           ElevatedButton.icon(
             onPressed: () {
-              // TODO: Navigate to booking
+              // Navigate to restaurant booking checkout
+              final restaurantData = _data;
+              final images = _imageList(restaurantData);
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => RestaurantBookingCheckoutScreen(
+                    restaurantId: _resolvedId ?? 0,
+                    restaurantTitle:
+                        restaurantData['title']?.toString() ?? 'Restaurant',
+                    imageUrl: images.isNotEmpty ? images[0] : null,
+                    basePrice:
+                        double.tryParse(
+                          restaurantData['price']?.toString() ?? '0',
+                        ) ??
+                        100000,
+                    currencyCode:
+                        restaurantData['currencyCode']?.toString() ?? 'VND',
+                    reservationDate: DateTime.now().add(
+                      const Duration(days: 1),
+                    ),
+                    people: 2,
+                  ),
+                ),
+              );
             },
             icon: const Icon(LucideIcons.calendar, size: 18),
             label: const Text('Đặt bàn'),

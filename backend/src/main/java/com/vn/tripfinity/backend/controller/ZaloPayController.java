@@ -81,6 +81,43 @@ public class ZaloPayController {
     }
 
     /**
+     * Create ZaloPay order for Restaurant booking with pending payment info
+     */
+    @PostMapping("/create-restaurant-order")
+    public ResponseEntity<Map<String, Object>> createRestaurantOrder(
+            @RequestParam BigDecimal amount,
+            @RequestParam Integer userId,
+            @RequestParam Integer restaurantId,
+            @RequestParam LocalDate reservationDate,
+            @RequestParam Integer numAdults,
+            @RequestParam(required = false) String providerNotes,
+            @RequestParam(required = false) String description) {
+
+        log.info("Creating ZaloPay order for restaurant: user={}, restaurant={}, amount={}", userId, restaurantId, amount);
+
+        // Create order in ZaloPay
+        Map<String, Object> result = zaloPayService.createOrder(amount, userId.toString(), description);
+        String appTransId = (String) result.get("apptransid");
+
+        // Store pending payment info for restaurant
+        PendingPaymentDto pendingPayment = PendingPaymentDto.builder()
+                .userId(userId)
+                .restaurantId(restaurantId)
+                .startDate(reservationDate)
+                .numAdults(numAdults)
+                .totalPrice(amount)
+                .currencyCode("VND")
+                .providerNotes(providerNotes)
+                .build();
+
+        pendingPaymentService.storePendingPayment(appTransId, pendingPayment);
+
+        log.info("Stored pending restaurant payment for transaction: {}", appTransId);
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * ZaloPay callback - called when payment is successful
      * This is where we create the actual booking and payment record
      */
