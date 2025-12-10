@@ -382,7 +382,9 @@ export interface AttractionBookingDTO {
   userId: number;
   attractionId: number;
   bookingDate?: string; // ISO string
-  visitDate?: string; // Ngày dự kiến tham quan
+  startDate?: string; // Ngày bắt đầu tham quan (from backend)
+  endDate?: string; // Ngày kết thúc (optional)
+  visitDate?: string; // Alias for startDate (for compatibility)
   visitTime?: string; // Giờ tham quan (HH:mm:ss)
   numAdults: number;
   numChildren?: number;

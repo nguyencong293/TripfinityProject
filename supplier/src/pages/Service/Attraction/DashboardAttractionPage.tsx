@@ -12,6 +12,12 @@ import {
   MessageSquare,
   Zap,
   Clock,
+  Users,
+  Eye,
+  CheckCircle,
+  XCircle,
+  User,
+  Phone,
 } from "lucide-react";
 import {
   BarChart,
@@ -733,58 +739,141 @@ const DashboardAttractionPage: React.FC = () => {
                 const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
                 return dateB - dateA;
               })
-              .slice(0, 3)
+              .slice(0, 1)
               .map((b) => {
                 const attraction = attractions.find((a) => a.attractionId === b.attractionId);
                 const user = userCache.get(b.userId);
+                
+                const formatDate = (s?: string) => s ? new Date(s).toLocaleDateString("vi-VN") : "N/A";
+                const formatDateTime = (s?: string) => s ? new Date(s).toLocaleString("vi-VN", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A";
+                const formatCurrency = (v?: number) => new Intl.NumberFormat("vi-VN").format(v || 0);
+                
+                const getPaymentStatusLabel = (method?: string) => {
+                  if (!method || method === "counter") {
+                    return { label: "Thanh toán tại quầy", sublabel: "Chưa thanh toán", color: "bg-yellow-100 text-yellow-800 border-yellow-300", icon: "💵" };
+                  }
+                  return { label: "Thanh toán online", sublabel: method.toUpperCase() + " - Đã thanh toán", color: "bg-green-100 text-green-800 border-green-300", icon: "✅" };
+                };
+                
+                const paymentInfo = getPaymentStatusLabel(b.paymentMethod);
+                
                 return (
                   <div
                     key={b.bookingId}
-                    className="rounded-lg border theme-border theme-bg-card p-4"
+                    className={`p-5 rounded-xl border-2 transition-all hover:shadow-lg ${!b.providerSeen ? "bg-blue-50 border-blue-400 ring-2 ring-blue-200" : "theme-bg-card theme-border hover:border-gray-300"}`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between mb-4 pb-4 border-b theme-border">
                       <div className="flex-1">
-                        <h4 className="font-medium theme-text-primary">
-                          {attraction?.title || "Điểm tham quan"}
-                        </h4>
-                        <p className="text-sm theme-text-secondary mt-1">
-                          Khách: {user?.fullName || "N/A"} • {user?.phoneNumber || ""}
-                        </p>
-                        <p className="text-sm theme-text-secondary">
-                          Ngày tham quan: {b.visitDate || "Chưa xác định"}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className="font-semibold theme-text-brand">
-                          {b.totalPrice.toLocaleString("vi-VN")} VND
-                        </span>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() =>
-                              setModalState({
-                                isOpen: true,
-                                type: "confirm",
-                                bookingId: b.bookingId || null,
-                              })
-                            }
-                            className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                          >
-                            Xác nhận
-                          </button>
-                          <button
-                            onClick={() =>
-                              setModalState({
-                                isOpen: true,
-                                type: "cancel",
-                                bookingId: b.bookingId || null,
-                              })
-                            }
-                            className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                          >
-                            Hủy
-                          </button>
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <h3 className="text-xl font-bold theme-text-primary">#{b.bookingId}</h3>
+                          {!b.providerSeen && <span className="px-2.5 py-1 text-xs font-bold bg-red-500 text-white rounded-full animate-pulse shadow-sm">MỚI</span>}
+                          <span className={`px-3 py-1 text-xs font-semibold rounded-full border-2 ${b.providerConfirmed === 0 ? "bg-orange-100 text-orange-700 border-orange-300" : b.providerConfirmed === 1 ? "bg-blue-100 text-blue-700 border-blue-300" : "bg-red-100 text-red-700 border-red-300"}`}>
+                            {b.providerConfirmed === 0 ? "Chờ xác nhận" : b.providerConfirmed === 1 ? "Đã xác nhận" : "Đã hủy"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm theme-text-secondary">
+                          <Clock className="w-4 h-4" />
+                          <span className="font-medium">{formatDateTime(b.createdAt)}</span>
                         </div>
                       </div>
+                    </div>
+
+                    {attraction && (
+                      <div className="mb-4 p-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <p className="text-xs text-blue-600 font-medium mb-0.5">Điểm tham quan</p>
+                            <p className="text-base font-bold text-blue-900">{attraction.title}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mb-4 p-3 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
+                      <p className="text-xs text-green-600 font-medium mb-2">Thông tin khách hàng</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-green-600 flex-shrink-0" />
+                          <span className="text-sm font-semibold text-green-900">{user?.fullName || `User ID: ${b.userId}`}</span>
+                        </div>
+                        {user?.phoneNumber && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-green-600 flex-shrink-0" />
+                            <span className="text-sm font-semibold text-green-900">{user.phoneNumber}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                      <div className="flex items-start gap-2 p-3 rounded-lg theme-bg-secondary">
+                        <Calendar className="w-5 h-5 mt-0.5 text-green-600 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs theme-text-secondary font-medium mb-1">Ngày tham quan</p>
+                          <p className="font-bold theme-text-primary text-base truncate">{formatDate(b.startDate || b.visitDate)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 p-3 rounded-lg theme-bg-secondary">
+                        <Users className="w-5 h-5 mt-0.5 text-blue-600 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs theme-text-secondary font-medium mb-1">Số khách</p>
+                          <p className="font-bold theme-text-primary text-base">{b.numAdults} người lớn{b.numChildren ? `, ${b.numChildren} trẻ em` : ""}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-4 p-3 rounded-lg border-2 ${paymentInfo.color}">
+                      <div className="flex items-start gap-2">
+                        <span className="text-xl">{paymentInfo.icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold mb-1 opacity-80">Thông tin thanh toán</p>
+                          <p className="font-bold text-sm leading-tight">{paymentInfo.label}</p>
+                          <p className="text-xs mt-0.5 opacity-75">{paymentInfo.sublabel}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 shadow-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-white opacity-90">Tổng tiền</span>
+                        <div className="text-right">
+                          <span className="text-2xl font-black text-white block">{formatCurrency(b.totalPrice)}</span>
+                          <span className="text-sm font-medium text-white opacity-90">{b.currencyCode || "VND"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {b.providerNotes && (
+                      <div className="mb-4 p-3 rounded-lg bg-amber-50 border-2 border-amber-300">
+                        <p className="text-xs font-bold text-amber-800 mb-1.5 flex items-center gap-1">📝 Ghi chú / Yêu cầu đặc biệt</p>
+                        <p className="text-sm text-amber-900 font-medium leading-relaxed">{b.providerNotes}</p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 flex-wrap pt-3 border-t theme-border">
+                      <button 
+                        onClick={() => navigate(`/supplier/service/attraction/bookings/${b.bookingId}`)} 
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold theme-text-primary hover:theme-text-brand bg-white hover:bg-blue-50 border-2 theme-border hover:border-blue-300 rounded-lg transition-all shadow-sm hover:shadow"
+                      >
+                        <Eye className="w-4 h-4" />Xem chi tiết
+                      </button>
+                      {b.providerConfirmed === 0 && (
+                        <button 
+                          onClick={() => setModalState({ isOpen: true, type: "confirm", bookingId: b.bookingId || null })} 
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+                        >
+                          <CheckCircle className="w-4 h-4" />Xác nhận đặt vé
+                        </button>
+                      )}
+                      {(b.providerConfirmed === 0 || b.providerConfirmed === 1) && (
+                        <button 
+                          onClick={() => setModalState({ isOpen: true, type: "cancel", bookingId: b.bookingId || null })} 
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+                        >
+                          <XCircle className="w-4 h-4" />Hủy đặt vé
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

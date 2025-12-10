@@ -11,10 +11,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.vn.tripfinity.backend.dto.HotelBookingDTO;
 import com.vn.tripfinity.backend.dto.RestaurantBookingDTO;
 import com.vn.tripfinity.backend.dto.TourBookingDTO;
+import com.vn.tripfinity.backend.dto.AttractionBookingDTO;
 import com.vn.tripfinity.backend.dto.PendingPaymentDto;
 import com.vn.tripfinity.backend.service.HotelBookingService;
 import com.vn.tripfinity.backend.service.RestaurantBookingService;
 import com.vn.tripfinity.backend.service.TourBookingService;
+import com.vn.tripfinity.backend.service.AttractionBookingService;
 import com.vn.tripfinity.backend.service.PendingPaymentService;
 
 /**
@@ -37,6 +39,9 @@ public class TestController {
     @Autowired
     private TourBookingService tourBookingService;
 
+    @Autowired
+    private AttractionBookingService attractionBookingService;
+
     @PostMapping("/create-booking-from-pending")
     public Map<String, Object> createBookingFromPending(@RequestParam String appTransId) {
         try {
@@ -46,22 +51,82 @@ public class TestController {
                 return Map.of("success", false, "message", "Pending payment not found: " + appTransId);
             }
 
-            // Create booking
-            HotelBookingDTO bookingDto = HotelBookingDTO.builder()
-                    .userId(pendingPayment.getUserId())
-                    .hotelId(pendingPayment.getHotelId())
-                    .startDate(pendingPayment.getStartDate())
-                    .endDate(pendingPayment.getEndDate())
-                    .numAdults(pendingPayment.getNumAdults())
-                    .totalPrice(pendingPayment.getTotalPrice())
-                    .currencyCode(pendingPayment.getCurrencyCode())
-                    .providerNotes(pendingPayment.getProviderNotes()) // Include provider notes
-                    .bookingStatus("confirmed")
-                    .paymentMethod("zalopay")
-                    .channel("mobile_app")
-                    .build();
+            Integer bookingId;
 
-            HotelBookingDTO createdBooking = hotelBookingService.createBooking(bookingDto);
+            // Auto-detect booking type based on which ID is present
+            if (pendingPayment.getHotelId() != null) {
+                // Hotel booking
+                HotelBookingDTO bookingDto = HotelBookingDTO.builder()
+                        .userId(pendingPayment.getUserId())
+                        .hotelId(pendingPayment.getHotelId())
+                        .startDate(pendingPayment.getStartDate())
+                        .endDate(pendingPayment.getEndDate())
+                        .numAdults(pendingPayment.getNumAdults())
+                        .totalPrice(pendingPayment.getTotalPrice())
+                        .currencyCode(pendingPayment.getCurrencyCode())
+                        .providerNotes(pendingPayment.getProviderNotes())
+                        .bookingStatus("confirmed")
+                        .paymentMethod("zalopay")
+                        .channel("mobile_app")
+                        .build();
+                HotelBookingDTO created = hotelBookingService.createBooking(bookingDto);
+                bookingId = created.getBookingId();
+                
+            } else if (pendingPayment.getRestaurantId() != null) {
+                // Restaurant booking
+                RestaurantBookingDTO bookingDto = RestaurantBookingDTO.builder()
+                        .userId(pendingPayment.getUserId())
+                        .restaurantId(pendingPayment.getRestaurantId())
+                        .startDate(pendingPayment.getStartDate())
+                        .numAdults(pendingPayment.getNumAdults())
+                        .totalPrice(pendingPayment.getTotalPrice())
+                        .currencyCode(pendingPayment.getCurrencyCode())
+                        .providerNotes(pendingPayment.getProviderNotes())
+                        .bookingStatus("confirmed")
+                        .paymentMethod("zalopay")
+                        .channel("mobile_app")
+                        .build();
+                RestaurantBookingDTO created = restaurantBookingService.createBooking(bookingDto);
+                bookingId = created.getBookingId();
+                
+            } else if (pendingPayment.getTourId() != null) {
+                // Tour booking
+                TourBookingDTO bookingDto = TourBookingDTO.builder()
+                        .userId(pendingPayment.getUserId())
+                        .tourId(pendingPayment.getTourId())
+                        .startDate(pendingPayment.getStartDate())
+                        .endDate(pendingPayment.getEndDate())
+                        .numAdults(pendingPayment.getNumAdults())
+                        .totalPrice(pendingPayment.getTotalPrice())
+                        .currencyCode(pendingPayment.getCurrencyCode())
+                        .providerNotes(pendingPayment.getProviderNotes())
+                        .bookingStatus("confirmed")
+                        .paymentMethod("zalopay")
+                        .channel("mobile_app")
+                        .build();
+                TourBookingDTO created = tourBookingService.createBooking(bookingDto);
+                bookingId = created.getBookingId();
+                
+            } else if (pendingPayment.getAttractionId() != null) {
+                // Attraction booking
+                AttractionBookingDTO bookingDto = AttractionBookingDTO.builder()
+                        .userId(pendingPayment.getUserId())
+                        .attractionId(pendingPayment.getAttractionId())
+                        .startDate(pendingPayment.getStartDate())
+                        .numAdults(pendingPayment.getNumAdults())
+                        .totalPrice(pendingPayment.getTotalPrice())
+                        .currencyCode(pendingPayment.getCurrencyCode())
+                        .providerNotes(pendingPayment.getProviderNotes())
+                        .bookingStatus("confirmed")
+                        .paymentMethod("zalopay")
+                        .channel("mobile_app")
+                        .build();
+                AttractionBookingDTO created = attractionBookingService.createBooking(bookingDto);
+                bookingId = created.getBookingId();
+                
+            } else {
+                return Map.of("success", false, "message", "Unknown booking type");
+            }
 
             // Remove pending payment
             pendingPaymentService.removePendingPayment(appTransId);
@@ -69,7 +134,7 @@ public class TestController {
             return Map.of(
                     "success", true,
                     "message", "Booking created successfully",
-                    "bookingId", createdBooking.getBookingId(),
+                    "bookingId", bookingId,
                     "transactionId", appTransId);
 
         } catch (Exception e) {

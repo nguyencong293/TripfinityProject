@@ -12,6 +12,7 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/attraction_api_service.dart';
+import 'package:app/views/screens/attraction_booking_checkout_screen.dart';
 
 // ===== ATTRACTION CONSTANTS (từ Supplier Portal) =====
 const Map<String, String> _kVisitTypesDict = {
@@ -146,6 +147,10 @@ class _AttractionsOverviewDetailScreenState
   final PageController _imageController = PageController();
   int _imageIndex = 0;
 
+  // Date and people selection
+  DateTime? _visitDate;
+  int _people = 2;
+
   @override
   void initState() {
     super.initState();
@@ -253,6 +258,13 @@ class _AttractionsOverviewDetailScreenState
                 ),
 
                 const SizedBox(height: 12),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _dateAndPeopleSelector(context, data),
+                ),
+
+                const SizedBox(height: 16),
 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -565,11 +577,81 @@ class _AttractionsOverviewDetailScreenState
     );
   }
 
+  // ===== DATE AND PEOPLE SELECTOR =====
+  Widget _dateAndPeopleSelector(BuildContext context, Map<String, dynamic> d) {
+    return Row(
+      children: [
+        Expanded(
+          child: _outlinedChip(
+            context,
+            icon: LucideIcons.calendar,
+            label: _visitDateLabel(),
+            onTap: _openDatePicker,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _outlinedChip(
+            context,
+            icon: LucideIcons.users,
+            label: _peopleLabel(),
+            onTap: () => _openPeopleSelector(d),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _outlinedChip(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: context.primaryColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: context.primaryColor.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: context.primaryColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: context.captionStyle.copyWith(
+                  color: context.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ===== PRICE & ACTION =====
   Widget _priceAndAction(BuildContext context, Map<String, dynamic> d) {
     final price = _toDouble(d['price']) ?? 0;
     final currency = d['currencyCode']?.toString() ?? 'VND';
-    final priceText = _formatPrice(price, currency);
+    final totalPrice = price * _people;
+    final priceText = _formatPrice(totalPrice, currency);
+
+    // Check capacity
+    final maxParticipants = _toInt(d['maxParticipants']);
+    final minParticipants = _toInt(d['minParticipants']) ?? 1;
+    final isSoldOut = maxParticipants != null && maxParticipants <= 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -577,7 +659,7 @@ class _AttractionsOverviewDetailScreenState
         Row(
           children: [
             Text(
-              'Từ ',
+              'Tổng: ',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
               ),
@@ -591,7 +673,7 @@ class _AttractionsOverviewDetailScreenState
               ),
             ),
             Text(
-              '/người',
+              ' ($_people người)',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
               ),
@@ -603,17 +685,17 @@ class _AttractionsOverviewDetailScreenState
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: context.primaryColor,
+              backgroundColor: isSoldOut ? Colors.grey : context.primaryColor,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(26),
               ),
               elevation: 0,
             ),
-            onPressed: () {},
-            child: const Text(
-              'Đặt vé ngay',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            onPressed: isSoldOut ? null : () => _navigateToBooking(d),
+            child: Text(
+              isSoldOut ? 'Đã hết chỗ' : 'Đặt vé ngay',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
         ),
@@ -1026,5 +1108,207 @@ class _AttractionsOverviewDetailScreenState
       return '${price.toStringAsFixed(0)}đ';
     }
     return '$price $currency';
+  }
+
+  // ===== DATE AND PEOPLE PICKERS =====
+  String _visitDateLabel() {
+    if (_visitDate == null) {
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      return _formatDateShort(tomorrow);
+    }
+    return _formatDateShort(_visitDate!);
+  }
+
+  String _formatDateShort(DateTime d) {
+    return '${d.day} thg ${d.month}, ${d.year}';
+  }
+
+  String _peopleLabel() {
+    return '$_people người';
+  }
+
+  Future<void> _openDatePicker() async {
+    final now = DateTime.now();
+    final tomorrow = now.add(const Duration(days: 1));
+    final initial = _visitDate ?? tomorrow;
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: tomorrow,
+      lastDate: now.add(const Duration(days: 365)),
+      helpText: 'Chọn ngày tham quan',
+      confirmText: 'Xong',
+      cancelText: 'Hủy',
+    );
+
+    if (picked != null && mounted) {
+      setState(() => _visitDate = picked);
+    }
+  }
+
+  Future<void> _openPeopleSelector(Map<String, dynamic> d) async {
+    int people = _people;
+
+    final minParticipants = _toInt(d['minParticipants']) ?? 1;
+    final maxParticipants = _toInt(d['maxParticipants']) ?? 50;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: context.cardBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Số lượng người',
+                    style: context.bodyOneStyle.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Người lớn',
+                              style: context.bodyOneStyle.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              'Từ $minParticipants-$maxParticipants người',
+                              style: context.captionStyle.copyWith(
+                                color: context.textSecondaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: people > minParticipants
+                                ? () => setLocal(() => people--)
+                                : null,
+                            icon: Icon(
+                              LucideIcons.minus,
+                              color: people > minParticipants
+                                  ? context.primaryColor
+                                  : context.textSecondaryColor,
+                            ),
+                          ),
+                          SizedBox(
+                            width: 40,
+                            child: Text(
+                              '$people',
+                              textAlign: TextAlign.center,
+                              style: context.bodyOneStyle.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: people < maxParticipants
+                                ? () => setLocal(() => people++)
+                                : null,
+                            icon: Icon(
+                              LucideIcons.plus,
+                              color: people < maxParticipants
+                                  ? context.primaryColor
+                                  : context.textSecondaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() => _people = people);
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: context.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                      ),
+                      child: const Text(
+                        'Xác nhận',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _navigateToBooking(Map<String, dynamic> d) {
+    final now = DateTime.now();
+    final visitDate = _visitDate ?? now.add(const Duration(days: 1));
+    final attractionId = _resolvedId;
+
+    if (attractionId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không xác định được điểm tham quan'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final title = d['title']?.toString() ?? 'Điểm tham quan';
+    final price = _toDouble(d['price']) ?? 0;
+    final currency = d['currencyCode']?.toString() ?? 'VND';
+    final minParticipants = _toInt(d['minParticipants']);
+    final maxParticipants = _toInt(d['maxParticipants']);
+    final images = _imageList(d);
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AttractionBookingCheckoutScreen(
+          attractionId: attractionId,
+          attractionTitle: title,
+          imageUrl: images.isNotEmpty ? images.first : null,
+          basePrice: price,
+          currencyCode: currency,
+          visitDate: visitDate,
+          people: _people,
+          minParticipants: minParticipants,
+          maxParticipants: maxParticipants,
+        ),
+      ),
+    );
+  }
+
+  int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
   }
 }

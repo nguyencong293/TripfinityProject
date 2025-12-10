@@ -202,4 +202,60 @@ public class NotificationService {
                 String.format("Rất tiếc, đơn đặt phòng '%s' (Mã: %s) của bạn đã bị hủy. Vui lòng liên hệ để biết thêm chi tiết.", 
                     hotelTitle, bookingCode));
     }
+
+    /**
+     * Helper: Thông báo cho user khi đặt điểm tham quan thành công
+     */
+    @Transactional
+    public void notifyUserAttractionBookingCreated(Integer userId, String attractionTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_attraction_booking",
+                "Đặt điểm tham quan thành công",
+                String.format("Bạn đã đặt '%s' thành công (Mã: %s). Vui lòng đợi 1-2 tiếng để đội ngũ liên hệ xác nhận.", 
+                    attractionTitle, bookingCode));
+    }
+
+    /**
+     * Helper: Thông báo cho supplier khi có attraction booking mới
+     */
+    @Transactional
+    public void notifySupplierNewAttractionBooking(Integer supplierId, String attractionTitle, String bookingCode, String customerName) {
+        createNotification(
+                supplierId,
+                Notification.TYPE_IN_APP,
+                "service_attraction_booking",
+                "Đơn đặt điểm tham quan mới",
+                String.format("Có đơn đặt mới cho '%s' (Mã: %s) từ khách hàng %s. Vui lòng xác nhận đơn hàng.", 
+                    attractionTitle, bookingCode, customerName));
+    }
+
+    /**
+     * Helper: Thông báo cho user khi attraction booking được xác nhận
+     */
+    @Transactional
+    public void notifyUserAttractionBookingConfirmed(Integer userId, String attractionTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_attraction_booking",
+                "Đặt điểm tham quan đã được xác nhận",
+                String.format("Đơn đặt '%s' (Mã: %s) của bạn đã được xác nhận. Chúng tôi rất mong được phục vụ bạn!", 
+                    attractionTitle, bookingCode));
+    }
+
+    /**
+     * Helper: Thông báo cho user khi attraction booking bị hủy
+     */
+    @Transactional
+    public void notifyUserAttractionBookingCancelled(Integer userId, String attractionTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_attraction_booking",
+                "Đặt điểm tham quan đã bị hủy",
+                String.format("Rất tiếc, đơn đặt '%s' (Mã: %s) của bạn đã bị hủy. Vui lòng liên hệ để biết thêm chi tiết.", 
+                    attractionTitle, bookingCode));
+    }
 }

@@ -561,4 +561,274 @@ public class EmailService {
             """, supplierName, restaurantTitle, bookingCode, customerName, reservationDate, 
             guests, totalPrice, paymentMethodText);
     }
+
+    // ==================== ATTRACTION BOOKING EMAILS ====================
+
+    /**
+     * Email xác nhận đặt điểm tham quan cho khách hàng (async)
+     */
+    @Async
+    public void sendAttractionBookingConfirmationEmail(String to, String customerName, String attractionTitle,
+            String bookingCode, String visitDate, String totalPrice, String paymentMethod) {
+        try {
+            String subject = "Xác nhận đặt điểm tham quan - " + attractionTitle;
+            String htmlContent = buildAttractionBookingConfirmationHtml(customerName, attractionTitle,
+                    bookingCode, visitDate, totalPrice, paymentMethod);
+            sendEmail(to, subject, htmlContent);
+            log.info("✅ Attraction booking confirmation email sent to {}", to);
+        } catch (Exception e) {
+            log.error("❌ Failed to send attraction booking confirmation email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    /**
+     * Email thông báo có đơn đặt điểm tham quan mới cho supplier (async)
+     */
+    @Async
+    public void sendSupplierNewAttractionBookingEmail(String to, String supplierName, String attractionTitle,
+            String bookingCode, String customerName, String visitDate, String totalPrice,
+            String paymentMethod, int numAdults) {
+        try {
+            String subject = "Đơn đặt điểm tham quan mới - " + attractionTitle;
+            String htmlContent = buildSupplierNewAttractionBookingHtml(supplierName, attractionTitle,
+                    bookingCode, customerName, visitDate, totalPrice, paymentMethod, numAdults);
+            sendEmail(to, subject, htmlContent);
+            log.info("✅ Supplier new attraction booking email sent to {}", to);
+        } catch (Exception e) {
+            log.error("❌ Failed to send supplier new attraction booking email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    /**
+     * Email thông báo đặt điểm tham quan đã được xác nhận (async)
+     */
+    @Async
+    public void sendAttractionBookingApprovedEmail(String to, String customerName, String attractionTitle,
+            String bookingCode, String visitDate) {
+        try {
+            String subject = "Đặt điểm tham quan đã được xác nhận - " + attractionTitle;
+            String htmlContent = buildAttractionBookingApprovedHtml(customerName, attractionTitle,
+                    bookingCode, visitDate);
+            sendEmail(to, subject, htmlContent);
+            log.info("✅ Attraction booking approved email sent to {}", to);
+        } catch (Exception e) {
+            log.error("❌ Failed to send attraction booking approved email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    /**
+     * Email thông báo đặt điểm tham quan bị hủy (async)
+     */
+    @Async
+    public void sendAttractionBookingCancelledEmail(String to, String customerName, String attractionTitle,
+            String bookingCode) {
+        try {
+            String subject = "Đặt điểm tham quan đã bị hủy - " + attractionTitle;
+            String htmlContent = buildAttractionBookingCancelledHtml(customerName, attractionTitle, bookingCode);
+            sendEmail(to, subject, htmlContent);
+            log.info("✅ Attraction booking cancelled email sent to {}", to);
+        } catch (Exception e) {
+            log.error("❌ Failed to send attraction booking cancelled email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    private String buildAttractionBookingConfirmationHtml(String customerName, String attractionTitle,
+            String bookingCode, String visitDate, String totalPrice, String paymentMethod) {
+        String paymentText = paymentMethod.equalsIgnoreCase("counter")
+                ? "Thanh toán tại quầy"
+                : "Thanh toán qua " + paymentMethod.toUpperCase();
+
+        return String.format("""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                        .info-box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #667eea; }
+                        .button { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+                        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🎯 Xác nhận đặt điểm tham quan</h1>
+                        </div>
+                        <div class="content">
+                            <p>Xin chào <strong>%s</strong>,</p>
+                            <p>Cảm ơn bạn đã đặt điểm tham quan với Tripfinity! Đơn đặt của bạn đã được ghi nhận.</p>
+                            <div class="info-box">
+                                <h3>Thông tin đặt điểm tham quan</h3>
+                                <p><strong>Điểm tham quan:</strong> %s</p>
+                                <p><strong>Mã đơn:</strong> %s</p>
+                                <p><strong>Ngày tham quan:</strong> %s</p>
+                                <p><strong>Tổng tiền:</strong> %s VND</p>
+                                <p><strong>Phương thức:</strong> %s</p>
+                            </div>
+                            <p>Đơn đặt của bạn đang ở trạng thái <strong>Chờ xác nhận</strong>. Chúng tôi sẽ liên hệ với bạn trong vòng 1-2 tiếng để xác nhận.</p>
+                            <p style="text-align: center; margin-top: 20px;">
+                                <a href="https://tripfinity.com/my-bookings" class="button">Xem chi tiết đơn đặt</a>
+                            </p>
+                        </div>
+                        <div class="footer">
+                            <p>Tripfinity - Nền tảng du lịch hàng đầu Việt Nam</p>
+                            <p>Email: support@tripfinity.com | Hotline: 1900-xxxx</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """, customerName, attractionTitle, bookingCode, visitDate, totalPrice, paymentText);
+    }
+
+    private String buildSupplierNewAttractionBookingHtml(String supplierName, String attractionTitle,
+            String bookingCode, String customerName, String visitDate, String totalPrice,
+            String paymentMethod, int numAdults) {
+        String paymentMethodText = paymentMethod.equalsIgnoreCase("counter")
+                ? "Thanh toán tại quầy"
+                : "Thanh toán qua " + paymentMethod.toUpperCase();
+
+        return String.format("""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: linear-gradient(135deg, #f093fb 0%%, #f5576c 100%%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                        .info-box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #f093fb; }
+                        .button { display: inline-block; padding: 12px 24px; background: #f5576c; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+                        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🔔 Đơn đặt điểm tham quan mới</h1>
+                        </div>
+                        <div class="content">
+                            <p>Xin chào <strong>%s</strong>,</p>
+                            <p>Bạn có một đơn đặt điểm tham quan mới cần xác nhận!</p>
+                            <div class="info-box">
+                                <h3>Thông tin đơn đặt</h3>
+                                <p><strong>Điểm tham quan:</strong> %s</p>
+                                <p><strong>Mã đơn:</strong> %s</p>
+                                <p><strong>Khách hàng:</strong> %s</p>
+                                <p><strong>Ngày tham quan:</strong> %s</p>
+                                <p><strong>Số khách:</strong> %d người</p>
+                                <p><strong>Tổng tiền:</strong> %s VND</p>
+                                <p><strong>Phương thức:</strong> %s</p>
+                            </div>
+                            <p><strong>Lưu ý:</strong> Vui lòng xác nhận hoặc từ chối đơn đặt này trong vòng 2 tiếng.</p>
+                            <p style="text-align: center; margin-top: 20px;">
+                                <a href="https://supplier.tripfinity.com/bookings" class="button">Xem chi tiết đơn đặt</a>
+                            </p>
+                        </div>
+                        <div class="footer">
+                            <p>Tripfinity Supplier Portal</p>
+                            <p>Email: supplier@tripfinity.com | Hotline: 1900-xxxx</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """, supplierName, attractionTitle, bookingCode, customerName, visitDate,
+                numAdults, totalPrice, paymentMethodText);
+    }
+
+    private String buildAttractionBookingApprovedHtml(String customerName, String attractionTitle,
+            String bookingCode, String visitDate) {
+        return String.format("""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: linear-gradient(135deg, #11998e 0%%, #38ef7d 100%%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                        .info-box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #11998e; }
+                        .button { display: inline-block; padding: 12px 24px; background: #11998e; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+                        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>✅ Đặt điểm tham quan đã được xác nhận</h1>
+                        </div>
+                        <div class="content">
+                            <p>Xin chào <strong>%s</strong>,</p>
+                            <p>Tin tốt! Đơn đặt điểm tham quan của bạn đã được xác nhận.</p>
+                            <div class="info-box">
+                                <h3>Thông tin điểm tham quan</h3>
+                                <p><strong>Điểm tham quan:</strong> %s</p>
+                                <p><strong>Mã đơn:</strong> %s</p>
+                                <p><strong>Ngày tham quan:</strong> %s</p>
+                            </div>
+                            <p>Vui lòng đến đúng giờ và mang theo mã đơn đặt để nhận dịch vụ. Chúng tôi rất mong được phục vụ bạn!</p>
+                            <p style="text-align: center; margin-top: 20px;">
+                                <a href="https://tripfinity.com/my-bookings" class="button">Xem chi tiết</a>
+                            </p>
+                        </div>
+                        <div class="footer">
+                            <p>Tripfinity - Nền tảng du lịch hàng đầu Việt Nam</p>
+                            <p>Email: support@tripfinity.com | Hotline: 1900-xxxx</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """, customerName, attractionTitle, bookingCode, visitDate);
+    }
+
+    private String buildAttractionBookingCancelledHtml(String customerName, String attractionTitle,
+            String bookingCode) {
+        return String.format("""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: linear-gradient(135deg, #eb3349 0%%, #f45c43 100%%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                        .info-box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #eb3349; }
+                        .button { display: inline-block; padding: 12px 24px; background: #eb3349; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+                        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>❌ Đặt điểm tham quan đã bị hủy</h1>
+                        </div>
+                        <div class="content">
+                            <p>Xin chào <strong>%s</strong>,</p>
+                            <p>Chúng tôi rất tiếc phải thông báo rằng đơn đặt điểm tham quan của bạn đã bị hủy.</p>
+                            <div class="info-box">
+                                <h3>Thông tin đơn đặt</h3>
+                                <p><strong>Điểm tham quan:</strong> %s</p>
+                                <p><strong>Mã đơn:</strong> %s</p>
+                            </div>
+                            <p>Nếu bạn đã thanh toán, số tiền sẽ được hoàn lại trong vòng 3-5 ngày làm việc.</p>
+                            <p>Vui lòng liên hệ hotline <strong>1900-xxxx</strong> hoặc email <strong>support@tripfinity.com</strong> để biết thêm chi tiết.</p>
+                            <p style="text-align: center; margin-top: 20px;">
+                                <a href="https://tripfinity.com/attractions" class="button">Tìm điểm tham quan khác</a>
+                            </p>
+                        </div>
+                        <div class="footer">
+                            <p>Tripfinity - Nền tảng du lịch hàng đầu Việt Nam</p>
+                            <p>Email: support@tripfinity.com | Hotline: 1900-xxxx</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """, customerName, attractionTitle, bookingCode);
+    }
 }

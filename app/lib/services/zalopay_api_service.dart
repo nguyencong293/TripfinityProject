@@ -151,4 +151,42 @@ class ZaloPayApiService {
         : 'Create ZaloPay tour order failed (${res.statusCode})';
     throw Exception(msg);
   }
+
+  /// Creates ZaloPay order for Attraction booking
+  Future<Map<String, String>> createAttractionOrder({
+    required num amount,
+    required int userId,
+    required int attractionId,
+    required DateTime startDate,
+    required int numAdults,
+    String? providerNotes,
+    String? description,
+  }) async {
+    final res = await _dio.post(
+      '/zalopay/create-attraction-order',
+      queryParameters: {
+        'amount': amount,
+        'userId': userId,
+        'attractionId': attractionId,
+        'startDate': startDate.toIso8601String().split('T')[0], // YYYY-MM-DD
+        'numAdults': numAdults,
+        if (providerNotes != null && providerNotes.isNotEmpty)
+          'providerNotes': providerNotes,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+      },
+    );
+    if (res.statusCode == 200 && res.data is Map<String, dynamic>) {
+      final map = res.data as Map<String, dynamic>;
+      final url = map['order_url']?.toString();
+      final transId = map['apptransid']?.toString();
+      if (url != null && url.isNotEmpty && transId != null) {
+        return {'order_url': url, 'apptransid': transId};
+      }
+    }
+    final msg = (res.data is Map && (res.data as Map)['message'] != null)
+        ? (res.data as Map)['message'].toString()
+        : 'Create ZaloPay attraction order failed (${res.statusCode})';
+    throw Exception(msg);
+  }
 }
