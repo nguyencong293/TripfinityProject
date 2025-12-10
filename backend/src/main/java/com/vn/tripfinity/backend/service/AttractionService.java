@@ -31,6 +31,7 @@ public class AttractionService {
     private final AttractionRepository attractionRepository;
     private final ProviderRepository providerRepository;
     private final AreaRepository areaRepository;
+    private final NotificationService notificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<AttractionDTO> getAll() {
@@ -105,6 +106,18 @@ public class AttractionService {
 
         Attraction saved = attractionRepository.save(entity);
         log.info("Tạo Attraction ID: {}", saved.getAttractionId());
+        
+        // 📬 GỬI THÔNG BÁO CHO SUPPLIER
+        try {
+            if (provider != null && provider.getUser() != null) {
+                Integer userId = provider.getUser().getUserId();
+                notificationService.notifyAttractionCreated(userId, saved.getTitle());
+                log.info("📬 Attraction created notification sent to userId: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to send attraction created notification: {}", e.getMessage());
+        }
+        
         return toDTO(saved);
     }
 
@@ -200,6 +213,18 @@ public class AttractionService {
             existing.setPublishedAt(dto.getPublishedAt());
 
         Attraction saved = attractionRepository.save(existing);
+        
+        // 📬 GỬI THÔNG BÁO CHO SUPPLIER
+        try {
+            if (saved.getProvider() != null && saved.getProvider().getUser() != null) {
+                Integer userId = saved.getProvider().getUser().getUserId();
+                notificationService.notifyAttractionUpdated(userId, saved.getTitle());
+                log.info("📬 Attraction updated notification sent to userId: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to send attraction updated notification: {}", e.getMessage());
+        }
+        
         return toDTO(saved);
     }
 

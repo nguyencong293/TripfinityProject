@@ -138,6 +138,12 @@ const NotificationListPage = () => {
       service_hotel_new: { text: "Khách sạn mới", color: "bg-green-500" },
       service_hotel_update: { text: "Cập nhật", color: "bg-blue-500" },
       service_hotel_booking: { text: "Đặt phòng", color: "bg-purple-500" },
+      service_attraction_new: { text: "Điểm tham quan mới", color: "bg-green-500" },
+      service_attraction_update: { text: "Cập nhật điểm tham quan", color: "bg-blue-500" },
+      service_attraction_booking: { text: "Đặt điểm tham quan", color: "bg-purple-500" },
+      service_restaurant_new: { text: "Nhà hàng mới", color: "bg-green-500" },
+      service_restaurant_update: { text: "Cập nhật nhà hàng", color: "bg-blue-500" },
+      service_restaurant_booking: { text: "Đặt bàn", color: "bg-purple-500" },
       service_tour_new: { text: "Tour mới", color: "bg-green-500" },
       service_tour_update: { text: "Cập nhật tour", color: "bg-blue-500" },
       service_tour_booking: { text: "Đặt tour", color: "bg-purple-500" },
@@ -210,8 +216,31 @@ const NotificationListPage = () => {
     setCurrentPage(1);
   }, [filter, searchQuery, categoryFilter]);
 
-  // Get unique categories for filter dropdown
-  const categories = Array.from(new Set(notifications.map((n) => n.category)));
+  // All available categories (hardcoded to always show all options)
+  const allCategories = [
+    "service_hotel_new",
+    "service_hotel_update",
+    "service_hotel_booking",
+    "service_attraction_new",
+    "service_attraction_update",
+    "service_attraction_booking",
+    "service_restaurant_new",
+    "service_restaurant_update",
+    "service_restaurant_booking",
+    "service_tour_new",
+    "service_tour_update",
+    "service_tour_booking",
+    "payment_success",
+    "payment_failed",
+    "system_alert",
+    "promotion",
+  ];
+  
+  // Get unique categories from actual notifications
+  const existingCategories = Array.from(new Set(notifications.map((n) => n.category)));
+  
+  // Use all categories for dropdown, but merge with existing ones to not miss any
+  const categories = Array.from(new Set([...allCategories, ...existingCategories]));
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -508,6 +537,12 @@ const getCategoryText = (category: string): string => {
     service_hotel_new: "Khách sạn mới",
     service_hotel_update: "Cập nhật khách sạn",
     service_hotel_booking: "Đặt phòng",
+    service_attraction_new: "Điểm tham quan mới",
+    service_attraction_update: "Cập nhật điểm tham quan",
+    service_attraction_booking: "Đặt điểm tham quan",
+    service_restaurant_new: "Nhà hàng mới",
+    service_restaurant_update: "Cập nhật nhà hàng",
+    service_restaurant_booking: "Đặt bàn",
     service_tour_new: "Tour mới",
     service_tour_update: "Cập nhật tour",
     service_tour_booking: "Đặt tour",

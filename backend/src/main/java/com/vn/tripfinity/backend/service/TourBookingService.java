@@ -189,7 +189,7 @@ public class TourBookingService {
             String tourTitle = tour.getTitle();
 
             // Thông báo in-app cho user
-            notificationService.notifyUserBookingCreated(
+            notificationService.notifyUserTourBookingCreated(
                 user.getUserId(), 
                 tourTitle, 
                 bookingCode
@@ -204,8 +204,7 @@ public class TourBookingService {
             // Thông báo in-app cho supplier
             if (provider != null && provider.getUser() != null) {
                 Integer supplierId = provider.getUser().getUserId();
-                // Use existing method for hotel, adapt for tour
-                notificationService.notifySupplierNewBooking(
+                notificationService.notifySupplierNewTourBooking(
                     supplierId,
                     tourTitle,
                     bookingCode,
@@ -380,7 +379,7 @@ public class TourBookingService {
             String tourTitle = tour.getTitle();
 
             // Thông báo in-app cho user
-            notificationService.notifyUserBookingConfirmed(
+            notificationService.notifyUserTourBookingConfirmed(
                 user.getUserId(),
                 tourTitle,
                 bookingCode
@@ -426,7 +425,7 @@ public class TourBookingService {
             String tourTitle = tour.getTitle();
 
             // Thông báo in-app cho user
-            notificationService.notifyUserBookingCancelled(
+            notificationService.notifyUserTourBookingCancelled(
                 user.getUserId(),
                 tourTitle,
                 bookingCode

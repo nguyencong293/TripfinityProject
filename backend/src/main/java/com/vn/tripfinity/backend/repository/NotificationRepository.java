@@ -34,6 +34,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Inte
     @Query("SELECT n FROM Notification n WHERE n.user.userId = :userId AND n.category = :category ORDER BY n.createdAt DESC")
     List<Notification> findByCategoryAndUserId(@Param("userId") Integer userId, @Param("category") String category);
 
+    // Lấy N thông báo mới nhất theo category prefix (VD: "service_hotel" sẽ match "service_hotel_booking", "service_hotel_new", etc.)
+    @Query("SELECT n FROM Notification n WHERE n.user.userId = :userId AND n.category LIKE CONCAT(:categoryPrefix, '%') ORDER BY n.createdAt DESC")
+    List<Notification> findTopNByUserIdAndCategoryPrefix(@Param("userId") Integer userId, @Param("categoryPrefix") String categoryPrefix, Pageable pageable);
+
     // Đánh dấu đã đọc
     @Modifying
     @Query("UPDATE Notification n SET n.isRead = true, n.readAt = CURRENT_TIMESTAMP WHERE n.notificationId = :notificationId")

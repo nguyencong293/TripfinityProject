@@ -50,6 +50,7 @@ public class TourService {
     private final ReviewReplyRepository reviewReplyRepository;
     private final AreaRepository areaRepository;
     private final CloudinaryService cloudinaryService;
+    private final NotificationService notificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<TourDTO> getAllTours() {
@@ -129,6 +130,18 @@ public class TourService {
 
         Tour saved = tourRepository.save(entity);
         log.info("Tạo Tour ID: {}", saved.getTourId());
+        
+        // 📬 GỬI THÔNG BÁO CHO SUPPLIER
+        try {
+            if (provider != null && provider.getUser() != null) {
+                Integer userId = provider.getUser().getUserId();
+                notificationService.notifyTourCreated(userId, saved.getTitle());
+                log.info("📬 Tour created notification sent to userId: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to send tour created notification: {}", e.getMessage());
+        }
+        
         return toDTO(saved);
     }
 
@@ -237,6 +250,18 @@ public class TourService {
             existing.setPublishedAt(dto.getPublishedAt());
 
         Tour saved = tourRepository.save(existing);
+        
+        // 📬 GỬI THÔNG BÁO CHO SUPPLIER
+        try {
+            if (saved.getProvider() != null && saved.getProvider().getUser() != null) {
+                Integer userId = saved.getProvider().getUser().getUserId();
+                notificationService.notifyTourUpdated(userId, saved.getTitle());
+                log.info("📬 Tour updated notification sent to userId: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to send tour updated notification: {}", e.getMessage());
+        }
+        
         return toDTO(saved);
     }
 

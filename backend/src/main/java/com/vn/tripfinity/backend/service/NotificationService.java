@@ -70,7 +70,13 @@ public class NotificationService {
     /**
      * Lấy N thông báo mới nhất
      */
-    public List<NotificationDTO> getRecentNotifications(Integer userId, int limit) {
+    public List<NotificationDTO> getRecentNotifications(Integer userId, int limit, String categoryPrefix) {
+        if (categoryPrefix != null && !categoryPrefix.isEmpty()) {
+            return notificationRepository.findTopNByUserIdAndCategoryPrefix(userId, categoryPrefix, PageRequest.of(0, limit))
+                    .stream()
+                    .map(NotificationDTO::fromEntity)
+                    .collect(Collectors.toList());
+        }
         return notificationRepository.findTopNByUserId(userId, PageRequest.of(0, limit))
                 .stream()
                 .map(NotificationDTO::fromEntity)
@@ -257,5 +263,201 @@ public class NotificationService {
                 "Đặt điểm tham quan đã bị hủy",
                 String.format("Rất tiếc, đơn đặt '%s' (Mã: %s) của bạn đã bị hủy. Vui lòng liên hệ để biết thêm chi tiết.", 
                     attractionTitle, bookingCode));
+    }
+
+    // ==================== ATTRACTION SERVICE NOTIFICATION HELPERS ====================
+
+    /**
+     * Helper: Tạo thông báo khi tạo attraction mới
+     */
+    @Transactional
+    public void notifyAttractionCreated(Integer userId, String attractionTitle) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                Notification.CATEGORY_SERVICE_ATTRACTION_NEW,
+                "Điểm tham quan mới đã được tạo",
+                String.format("Điểm tham quan '%s' đã được tạo thành công.", attractionTitle));
+    }
+
+    /**
+     * Helper: Tạo thông báo khi cập nhật attraction
+     */
+    @Transactional
+    public void notifyAttractionUpdated(Integer userId, String attractionTitle) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                Notification.CATEGORY_SERVICE_ATTRACTION_UPDATE,
+                "Điểm tham quan đã được cập nhật",
+                String.format("Thông tin điểm tham quan '%s' đã được cập nhật thành công.", attractionTitle));
+    }
+
+    // ==================== RESTAURANT SERVICE NOTIFICATION HELPERS ====================
+
+    /**
+     * Helper: Tạo thông báo khi tạo restaurant mới
+     */
+    @Transactional
+    public void notifyRestaurantCreated(Integer userId, String restaurantTitle) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                Notification.CATEGORY_SERVICE_RESTAURANT_NEW,
+                "Nhà hàng mới đã được tạo",
+                String.format("Nhà hàng '%s' đã được tạo thành công.", restaurantTitle));
+    }
+
+    /**
+     * Helper: Tạo thông báo khi cập nhật restaurant
+     */
+    @Transactional
+    public void notifyRestaurantUpdated(Integer userId, String restaurantTitle) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                Notification.CATEGORY_SERVICE_RESTAURANT_UPDATE,
+                "Nhà hàng đã được cập nhật",
+                String.format("Thông tin nhà hàng '%s' đã được cập nhật thành công.", restaurantTitle));
+    }
+
+    /**
+     * Helper: Thông báo cho user khi đặt nhà hàng thành công
+     */
+    @Transactional
+    public void notifyUserRestaurantBookingCreated(Integer userId, String restaurantTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_restaurant_booking",
+                "Đặt nhà hàng thành công",
+                String.format("Bạn đã đặt bàn tại '%s' thành công (Mã: %s). Vui lòng đợi 1-2 tiếng để đội ngũ liên hệ xác nhận.", 
+                    restaurantTitle, bookingCode));
+    }
+
+    /**
+     * Helper: Thông báo cho supplier khi có restaurant booking mới
+     */
+    @Transactional
+    public void notifySupplierNewRestaurantBooking(Integer supplierId, String restaurantTitle, String bookingCode, String customerName) {
+        createNotification(
+                supplierId,
+                Notification.TYPE_IN_APP,
+                "service_restaurant_booking",
+                "Đơn đặt bàn mới",
+                String.format("Có đơn đặt bàn mới tại '%s' (Mã: %s) từ khách hàng %s. Vui lòng xác nhận đơn hàng.", 
+                    restaurantTitle, bookingCode, customerName));
+    }
+
+    /**
+     * Helper: Thông báo cho user khi restaurant booking được xác nhận
+     */
+    @Transactional
+    public void notifyUserRestaurantBookingConfirmed(Integer userId, String restaurantTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_restaurant_booking",
+                "Đặt bàn đã được xác nhận",
+                String.format("Đơn đặt bàn tại '%s' (Mã: %s) của bạn đã được xác nhận. Chúng tôi rất mong được phục vụ bạn!", 
+                    restaurantTitle, bookingCode));
+    }
+
+    /**
+     * Helper: Thông báo cho user khi restaurant booking bị hủy
+     */
+    @Transactional
+    public void notifyUserRestaurantBookingCancelled(Integer userId, String restaurantTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_restaurant_booking",
+                "Đặt bàn đã bị hủy",
+                String.format("Rất tiếc, đơn đặt bàn tại '%s' (Mã: %s) của bạn đã bị hủy. Vui lòng liên hệ để biết thêm chi tiết.", 
+                    restaurantTitle, bookingCode));
+    }
+
+    // ==================== TOUR SERVICE NOTIFICATION HELPERS ====================
+
+    /**
+     * Helper: Tạo thông báo khi tạo tour mới
+     */
+    @Transactional
+    public void notifyTourCreated(Integer userId, String tourTitle) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                Notification.CATEGORY_SERVICE_TOUR_NEW,
+                "Tour mới đã được tạo",
+                String.format("Tour '%s' đã được tạo thành công.", tourTitle));
+    }
+
+    /**
+     * Helper: Tạo thông báo khi cập nhật tour
+     */
+    @Transactional
+    public void notifyTourUpdated(Integer userId, String tourTitle) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                Notification.CATEGORY_SERVICE_TOUR_UPDATE,
+                "Tour đã được cập nhật",
+                String.format("Thông tin tour '%s' đã được cập nhật thành công.", tourTitle));
+    }
+
+    /**
+     * Helper: Thông báo cho user khi đặt tour thành công
+     */
+    @Transactional
+    public void notifyUserTourBookingCreated(Integer userId, String tourTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_tour_booking",
+                "Đặt tour thành công",
+                String.format("Bạn đã đặt tour '%s' thành công (Mã: %s). Vui lòng đợi 1-2 tiếng để đội ngũ liên hệ xác nhận.", 
+                    tourTitle, bookingCode));
+    }
+
+    /**
+     * Helper: Thông báo cho supplier khi có tour booking mới
+     */
+    @Transactional
+    public void notifySupplierNewTourBooking(Integer supplierId, String tourTitle, String bookingCode, String customerName) {
+        createNotification(
+                supplierId,
+                Notification.TYPE_IN_APP,
+                "service_tour_booking",
+                "Đơn đặt tour mới",
+                String.format("Có đơn đặt tour mới cho '%s' (Mã: %s) từ khách hàng %s. Vui lòng xác nhận đơn hàng.", 
+                    tourTitle, bookingCode, customerName));
+    }
+
+    /**
+     * Helper: Thông báo cho user khi tour booking được xác nhận
+     */
+    @Transactional
+    public void notifyUserTourBookingConfirmed(Integer userId, String tourTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_tour_booking",
+                "Đặt tour đã được xác nhận",
+                String.format("Đơn đặt tour '%s' (Mã: %s) của bạn đã được xác nhận. Chúng tôi rất mong được phục vụ bạn!", 
+                    tourTitle, bookingCode));
+    }
+
+    /**
+     * Helper: Thông báo cho user khi tour booking bị hủy
+     */
+    @Transactional
+    public void notifyUserTourBookingCancelled(Integer userId, String tourTitle, String bookingCode) {
+        createNotification(
+                userId,
+                Notification.TYPE_IN_APP,
+                "service_tour_booking",
+                "Đặt tour đã bị hủy",
+                String.format("Rất tiếc, đơn đặt tour '%s' (Mã: %s) của bạn đã bị hủy. Vui lòng liên hệ để biết thêm chi tiết.", 
+                    tourTitle, bookingCode));
     }
 }

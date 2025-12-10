@@ -9,15 +9,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.vn.tripfinity.backend.dto.RestaurantBookingDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
+import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.model.Restaurant;
 import com.vn.tripfinity.backend.model.RestaurantBooking;
 import com.vn.tripfinity.backend.model.RestaurantPayment;
-import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.model.User;
+import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.RestaurantBookingRepository;
 import com.vn.tripfinity.backend.repository.RestaurantPaymentRepository;
 import com.vn.tripfinity.backend.repository.RestaurantRepository;
-import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -198,7 +198,7 @@ public class RestaurantBookingService {
             String paymentMethod = dto.getPaymentMethod() != null ? dto.getPaymentMethod() : "counter";
 
             // Thông báo in-app cho user
-            notificationService.notifyUserBookingCreated(
+            notificationService.notifyUserRestaurantBookingCreated(
                 user.getUserId(), 
                 restaurantTitle, 
                 bookingCode
@@ -223,7 +223,7 @@ public class RestaurantBookingService {
             // Thông báo in-app cho supplier
             if (provider != null && provider.getUser() != null) {
                 Integer supplierId = provider.getUser().getUserId();
-                notificationService.notifySupplierNewBooking(
+                notificationService.notifySupplierNewRestaurantBooking(
                     supplierId,
                     restaurantTitle,
                     bookingCode,
@@ -408,6 +408,59 @@ public class RestaurantBookingService {
 
         RestaurantBooking updated = bookingRepository.save(booking);
         log.info("✅ Đã cập nhật status Booking ID: {} sang {}", updated.getBookingId(), newStatus);
+
+        // 📧 GỬI THÔNG BÁO KHI STATUS THAY ĐỔI
+        try {
+            User user = booking.getUser();
+            Restaurant restaurant = booking.getRestaurant();
+            String bookingCode = "RBK" + booking.getBookingId();
+            String restaurantTitle = restaurant.getTitle();
+
+            if (newStatus == RestaurantBooking.BookingStatus.confirmed) {
+                // Thông báo cho user khi booking được xác nhận
+                notificationService.notifyUserRestaurantBookingConfirmed(
+                    user.getUserId(), 
+                    restaurantTitle, 
+                    bookingCode
+                );
+                log.info("📬 Booking confirmed notification sent to userId: {}", user.getUserId());
+                
+                // 📱 GỬI FCM PUSH NOTIFICATION ĐẾN USER
+                if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
+                    String pushTitle = "Đặt bàn đã được xác nhận";
+                    String pushBody = "Đơn đặt bàn tại " + restaurantTitle + " đã được xác nhận";
+                    fcmService.sendNotificationToDevice(user.getFcmToken(), pushTitle, pushBody, null);
+                    log.info("📱 FCM push notification sent to user {}, token: {}...", user.getUserId(),
+                            user.getFcmToken().substring(0, Math.min(20, user.getFcmToken().length())));
+                } else {
+                    log.warn("⚠️ User {} has no FCM token, skipping push notification", user.getUserId());
+                }
+
+            } else if (newStatus == RestaurantBooking.BookingStatus.cancelled) {
+                // Thông báo cho user khi booking bị hủy
+                notificationService.notifyUserRestaurantBookingCancelled(
+                    user.getUserId(), 
+                    restaurantTitle, 
+                    bookingCode
+                );
+                log.info("📬 Booking cancelled notification sent to userId: {}", user.getUserId());
+                
+                // 📱 GỬI FCM PUSH NOTIFICATION ĐẾN USER
+                if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
+                    String pushTitle = "Đặt bàn đã bị hủy";
+                    String pushBody = "Đơn đặt bàn tại " + restaurantTitle + " đã bị hủy";
+                    fcmService.sendNotificationToDevice(user.getFcmToken(), pushTitle, pushBody, null);
+                    log.info("📱 FCM push notification sent to user {}, token: {}...", user.getUserId(),
+                            user.getFcmToken().substring(0, Math.min(20, user.getFcmToken().length())));
+                } else {
+                    log.warn("⚠️ User {} has no FCM token, skipping push notification", user.getUserId());
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send status change notifications: {}", e.getMessage());
+            // Không throw exception để không block status update
+        }
 
         return convertToDTO(updated);
     }

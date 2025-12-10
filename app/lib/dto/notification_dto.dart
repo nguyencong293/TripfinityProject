@@ -78,11 +78,58 @@ class NotificationDTO {
 
   /// Helper để lấy icon theo category
   String getIconByCategory() {
-    if (category.contains('booking')) return '🏨';
-    if (category.contains('payment')) return '💳';
     if (category.contains('hotel')) return '🏨';
+    if (category.contains('attraction')) return '🎡';
+    if (category.contains('restaurant')) return '🍽️';
+    if (category.contains('tour')) return '✈️';
+    if (category.contains('booking')) return '📅';
+    if (category.contains('payment')) return '💳';
     if (category.contains('promotion')) return '🎁';
     if (category.contains('system')) return '🔔';
     return '📬';
+  }
+
+  /// Helper để lấy text category tiếng Việt
+  String getCategoryText() {
+    switch (category) {
+      case 'service_hotel_new':
+        return 'Khách sạn mới';
+      case 'service_hotel_update':
+        return 'Cập nhật khách sạn';
+      case 'service_hotel_booking':
+        return 'Đặt phòng';
+      case 'service_attraction_new':
+        return 'Điểm tham quan mới';
+      case 'service_attraction_update':
+        return 'Cập nhật điểm tham quan';
+      case 'service_attraction_booking':
+        return 'Đặt điểm tham quan';
+      case 'service_restaurant_new':
+        return 'Nhà hàng mới';
+      case 'service_restaurant_update':
+        return 'Cập nhật nhà hàng';
+      case 'service_restaurant_booking':
+        return 'Đặt bàn';
+      case 'service_tour_new':
+        return 'Tour mới';
+      case 'service_tour_update':
+        return 'Cập nhật tour';
+      case 'service_tour_booking':
+        return 'Đặt tour';
+      case 'payment_success':
+        return 'Thanh toán thành công';
+      case 'payment_failed':
+        return 'Thanh toán thất bại';
+      case 'payment_refund':
+        return 'Hoàn tiền';
+      case 'system_alert':
+        return 'Cảnh báo hệ thống';
+      case 'system_maintenance':
+        return 'Bảo trì hệ thống';
+      case 'promotion':
+        return 'Khuyến mãi';
+      default:
+        return 'Thông báo';
+    }
   }
 }

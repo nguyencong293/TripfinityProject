@@ -41,6 +41,12 @@ public class Notification {
     public static final String CATEGORY_SERVICE_HOTEL_NEW = "service_hotel_new";
     public static final String CATEGORY_SERVICE_HOTEL_UPDATE = "service_hotel_update";
     public static final String CATEGORY_SERVICE_HOTEL_BOOKING = "service_hotel_booking";
+    public static final String CATEGORY_SERVICE_ATTRACTION_NEW = "service_attraction_new";
+    public static final String CATEGORY_SERVICE_ATTRACTION_UPDATE = "service_attraction_update";
+    public static final String CATEGORY_SERVICE_ATTRACTION_BOOKING = "service_attraction_booking";
+    public static final String CATEGORY_SERVICE_RESTAURANT_NEW = "service_restaurant_new";
+    public static final String CATEGORY_SERVICE_RESTAURANT_UPDATE = "service_restaurant_update";
+    public static final String CATEGORY_SERVICE_RESTAURANT_BOOKING = "service_restaurant_booking";
     public static final String CATEGORY_SERVICE_TOUR_NEW = "service_tour_new";
     public static final String CATEGORY_SERVICE_TOUR_UPDATE = "service_tour_update";
     public static final String CATEGORY_SERVICE_TOUR_BOOKING = "service_tour_booking";

@@ -424,7 +424,7 @@ const DashboardHotelPage: React.FC = () => {
       const user = JSON.parse(userStr);
       try {
         const response = await fetch(
-          `http://localhost:8080/api/notifications/user/${user.userId}/recent?limit=3`
+          `http://localhost:8080/api/notifications/user/${user.userId}/recent?limit=3&categoryPrefix=service_hotel`
         );
         if (response.ok) {
           const data: BackendNotification[] = await response.json();

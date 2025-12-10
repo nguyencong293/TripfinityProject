@@ -42,8 +42,9 @@ public class NotificationController {
     @GetMapping("/user/{userId}/recent")
     public ResponseEntity<List<NotificationDTO>> getRecentNotifications(
             @PathVariable Integer userId,
-            @RequestParam(defaultValue = "4") int limit) {
-        return ResponseEntity.ok(notificationService.getRecentNotifications(userId, limit));
+            @RequestParam(defaultValue = "4") int limit,
+            @RequestParam(required = false) String categoryPrefix) {
+        return ResponseEntity.ok(notificationService.getRecentNotifications(userId, limit, categoryPrefix));
     }
 
     /**

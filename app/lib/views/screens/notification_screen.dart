@@ -384,7 +384,26 @@ class _NotificationItem extends StatelessWidget {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
+                    // Category badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        notification.getCategoryText(),
+                        style: context.captionStyle.copyWith(
+                          color: context.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Text(
                       notification.content,
                       style: context.bodyTwoStyle.copyWith(

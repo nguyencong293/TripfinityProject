@@ -44,6 +44,7 @@ public class RestaurantService {
     private final UserRepository userRepository;
     private final ReviewReplyRepository reviewReplyRepository;
     private final AreaRepository areaRepository;
+    private final NotificationService notificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<RestaurantDTO> getAllRestaurants() {
@@ -116,6 +117,18 @@ public class RestaurantService {
 
         Restaurant saved = restaurantRepository.save(entity);
         log.info("Tạo Restaurant ID: {}", saved.getRestaurantId());
+        
+        // 📬 GỬI THÔNG BÁO CHO SUPPLIER
+        try {
+            if (provider != null && provider.getUser() != null) {
+                Integer userId = provider.getUser().getUserId();
+                notificationService.notifyRestaurantCreated(userId, saved.getTitle());
+                log.info("📬 Restaurant created notification sent to userId: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to send restaurant created notification: {}", e.getMessage());
+        }
+        
         return toDTO(saved);
     }
 
@@ -212,6 +225,18 @@ public class RestaurantService {
             existing.setPublishedAt(dto.getPublishedAt());
 
         Restaurant saved = restaurantRepository.save(existing);
+        
+        // 📬 GỬI THÔNG BÁO CHO SUPPLIER
+        try {
+            if (saved.getProvider() != null && saved.getProvider().getUser() != null) {
+                Integer userId = saved.getProvider().getUser().getUserId();
+                notificationService.notifyRestaurantUpdated(userId, saved.getTitle());
+                log.info("📬 Restaurant updated notification sent to userId: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to send restaurant updated notification: {}", e.getMessage());
+        }
+        
         return toDTO(saved);
     }
 
