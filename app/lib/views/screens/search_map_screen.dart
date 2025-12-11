@@ -4,9 +4,20 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:math';
+import 'dart:ui' as ui;
 
 // API centralized (reused from General/Search Overview)
 import 'package:app/services/search_api_service.dart';
+
+// Navigation imports
+import 'package:app/views/screens/hotel_detail_overview_screen.dart';
+import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
+import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
+import 'package:app/views/screens/attractions_overview_detail_screen.dart';
 
 class SearchMapScreen extends StatefulWidget {
   final String searchQuery;
@@ -26,8 +37,15 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
   bool _loading = false;
   String? _error;
 
-  // Danh sách item động hiển thị dưới sheet và trên “bản đồ”
-  // Mỗi item: { id, name, category, typeLabel, rating, price, imageUrl, assetImage, position(Offset) }
+  // Google Map controller và tọa độ
+  GoogleMapController? _mapController;
+  LatLng? _centerLocation;
+  final Set<Marker> _markers = {};
+  Map<String, BitmapDescriptor> _customIcons = {};
+  bool _initialCameraSet = false;
+
+  // Danh sách item động hiển thị dưới sheet và trên map
+  // Mỗi item: { id, name, category, type, rating, price, imageUrl, assetImage, lat, lng, address }
   final List<Map<String, dynamic>> _items = [];
 
   // Chiều cao ước tính của một item và header
@@ -37,13 +55,58 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchMapData(widget.searchQuery);
+    _initializeMap();
+  }
+
+  Future<void> _initializeMap() async {
+    await _loadCustomIcons();
+    await _fetchMapData(widget.searchQuery);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _mapController?.dispose();
     super.dispose();
+  }
+
+  // Kiểm tra tọa độ có hợp lệ không (trong phạm vi Việt Nam)
+  bool _isValidCoordinate(LatLng coords, LatLng? centerLocation) {
+    // Nếu không có center, chỉ kiểm tra phạm vi Việt Nam
+    if (centerLocation == null) {
+      return coords.latitude >= 8.0 &&
+          coords.latitude <= 24.0 &&
+          coords.longitude >= 102.0 &&
+          coords.longitude <= 110.0;
+    }
+
+    // Kiểm tra khoảng cách từ center (bán kính 200km ~ 2 độ)
+    final latDiff = (coords.latitude - centerLocation.latitude).abs();
+    final lngDiff = (coords.longitude - centerLocation.longitude).abs();
+    return latDiff <= 2.0 && lngDiff <= 2.0;
+  }
+
+  // Thêm offset nhỏ để tránh markers trùng tọa độ
+  LatLng _addOffset(LatLng original, int index, Set<Marker> existingMarkers) {
+    // Kiểm tra xem có marker nào cùng tọa độ không
+    final hasDuplicate = existingMarkers.any((marker) {
+      final latDiff = (marker.position.latitude - original.latitude).abs();
+      final lngDiff = (marker.position.longitude - original.longitude).abs();
+      return latDiff < 0.0001 && lngDiff < 0.0001;
+    });
+
+    if (!hasDuplicate) return original;
+
+    // Thêm offset nhỏ theo hình tròn xung quanh điểm gốc
+    final offsetDistance = 0.002; // ~200m
+    final angle = (index * 60) * 3.14159 / 180; // 60 độ mỗi marker
+    final latOffset = offsetDistance * cos(angle);
+    final lngOffset = offsetDistance * sin(angle);
+
+    return LatLng(
+      original.latitude + latOffset,
+      original.longitude + lngOffset,
+    );
   }
 
   @override
@@ -122,114 +185,135 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
     );
   }
 
-  // Bản đồ với các pin địa điểm (từ dữ liệu dynamic)
+  // Bản đồ với GoogleMap và markers động
   Widget _buildMapView(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('assets/images/onboarding1.png'), // ảnh nền giả lập
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              context.primaryColor.withValues(alpha: 0.1),
+    // Chỉ hiển thị map khi đã load xong markers
+    if (_centerLocation == null || _loading) {
+      // Hiển thị loading khi chưa có tọa độ hoặc đang load
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: context.backgroundColor,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: context.primaryColor),
+              const SizedBox(height: 16),
+              Text(
+                'Đang tải bản đồ...',
+                style: context.captionStyle.copyWith(
+                  color: context.textSecondaryColor,
+                ),
+              ),
             ],
           ),
         ),
-        child: Stack(
-          children: _items.asMap().entries.map((entry) {
-            final index = entry.key;
-            final location = entry.value;
-            return _buildMapPin(context, location, index);
-          }).toList(),
-        ),
-      ),
+      );
+    }
+
+    return GoogleMap(
+      onMapCreated: (controller) async {
+        _mapController = controller;
+        // Fit bounds ngay khi map được tạo nếu đã có markers
+        if (_markers.isNotEmpty) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          await _fitMapBounds();
+        }
+      },
+      initialCameraPosition: CameraPosition(target: _centerLocation!, zoom: 13),
+      markers: _markers,
+      myLocationButtonEnabled: true,
+      myLocationEnabled: true,
+      zoomControlsEnabled: false,
+      mapToolbarEnabled: false,
+      minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
+      onTap: (position) {
+        setState(() {
+          selectedPinIndex = null;
+        });
+      },
     );
   }
 
-  // Pin địa điểm trên bản đồ
-  Widget _buildMapPin(
-    BuildContext context,
-    Map<String, dynamic> location,
-    int index,
-  ) {
-    final bool isSelected = selectedPinIndex == index;
-    final Offset position =
-        location['position'] as Offset? ?? const Offset(0.5, 0.5);
-
-    return Positioned(
-      left: MediaQuery.of(context).size.width * position.dx - 25,
-      top: MediaQuery.of(context).size.height * position.dy - 50,
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            selectedPinIndex = index;
-          });
-          _showPinDetails(location);
-        },
-        child: Column(
-          children: [
-            // Popup thông tin khi được chọn
-            if (isSelected)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: context.cardBackgroundColor,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      offset: const Offset(0, 2),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-                child: Text(
-                  location['name']?.toString() ?? '',
-                  style: context.captionStyle.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: context.textPrimaryColor,
-                  ),
-                ),
-              ),
-
-            if (isSelected) const SizedBox(height: 4),
-
-            // Pin icon
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? context.primaryColor
-                    : context.cardBackgroundColor,
-                shape: BoxShape.circle,
-                border: Border.all(color: context.primaryColor, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    offset: const Offset(0, 2),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
-              child: Icon(
-                _getIconForType(location['type']?.toString() ?? ''),
-                color: isSelected ? Colors.white : context.primaryColor,
-                size: 24,
-              ),
-            ),
-          ],
-        ),
+  // Load custom marker icons
+  Future<void> _loadCustomIcons() async {
+    const markerColor = Color(0xFFE63946); // Đỏ cho tất cả markers
+    _customIcons = {
+      'hotel': await _createCustomMarker(LucideIcons.building, markerColor),
+      'restaurant': await _createCustomMarker(
+        LucideIcons.utensils,
+        markerColor,
       ),
+      'tour': await _createCustomMarker(LucideIcons.bus, markerColor),
+      'attraction': await _createCustomMarker(LucideIcons.ticket, markerColor),
+    };
+  }
+
+  // Tạo custom marker icon từ icon và màu
+  Future<BitmapDescriptor> _createCustomMarker(
+    IconData icon,
+    Color color,
+  ) async {
+    try {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = 100.0; // Giảm size xuống
+
+      // Vẽ vòng tròn nền
+      final paint = Paint()
+        ..color = color
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(const Offset(size / 2, size / 2), size / 2, paint);
+
+      // Vẽ viền trắng
+      final borderPaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6;
+      canvas.drawCircle(
+        const Offset(size / 2, size / 2),
+        size / 2 - 3,
+        borderPaint,
+      );
+
+      // Vẽ icon
+      final textPainter = TextPainter(textDirection: TextDirection.ltr);
+      textPainter.text = TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontSize: 50,
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          color: Colors.white,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset((size - textPainter.width) / 2, (size - textPainter.height) / 2),
+      );
+
+      final picture = pictureRecorder.endRecording();
+      final image = await picture.toImage(size.toInt(), size.toInt());
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+
+      if (bytes != null) {
+        return BitmapDescriptor.fromBytes(bytes.buffer.asUint8List());
+      }
+    } catch (e) {
+      debugPrint('❌ Error creating custom marker: $e');
+    }
+
+    // Fallback to default marker
+    return BitmapDescriptor.defaultMarkerWithHue(
+      color == Colors.blue
+          ? BitmapDescriptor.hueBlue
+          : color == Colors.orange
+          ? BitmapDescriptor.hueOrange
+          : color == Colors.green
+          ? BitmapDescriptor.hueGreen
+          : BitmapDescriptor.hueViolet,
     );
   }
 
@@ -409,7 +493,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
           setState(() {
             selectedPinIndex = index;
           });
-          // Optional: scroll tới pin tương ứng (đã expand trong _showPinDetails khi tap pin)
+          _navigateToDetail(location);
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -520,6 +604,130 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
     );
   }
 
+  // Navigate đến detail screen tương ứng
+  void _navigateToDetail(Map<String, dynamic> item) {
+    final category = item['category']?.toString();
+
+    switch (category) {
+      case 'hotel':
+        _navigateToHotelDetail(item);
+        break;
+      case 'restaurant':
+        _navigateToRestaurantDetail(item);
+        break;
+      case 'tour':
+        _navigateToTourDetail(item);
+        break;
+      case 'attraction':
+        _navigateToAttractionDetail(item);
+        break;
+    }
+  }
+
+  void _navigateToHotelDetail(Map<String, dynamic> item) {
+    final id = _parseId(item, ['hotelId', 'id', 'hotel_id']);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HotelDetailOverviewScreen(
+          hotelId: id, // dynamic fetch if available
+          hotel: {
+            'name': item['name']?.toString() ?? '',
+            'image':
+                item['imageUrl']?.toString() ??
+                item['assetImage']?.toString() ??
+                'assets/images/onboarding2.png',
+            'price': item['price']?.toString() ?? '—',
+          },
+          activeAmenities: const {'Wifi miễn phí', 'Bể bơi'},
+        ),
+      ),
+    );
+  }
+
+  void _navigateToRestaurantDetail(Map<String, dynamic> item) {
+    final id = _parseId(item, ['restaurantId', 'id', 'restaurant_id']);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RestaurantDetailScreen(
+          restaurantId: id,
+          restaurant: {
+            'name': item['name']?.toString() ?? '',
+            'location': item['address']?.toString() ?? '',
+            'rating': _getRatingString(item['rating']),
+            'type': 'restaurant',
+            'cuisine': '',
+            'price': item['price']?.toString() ?? '',
+            'reviews': '(320)', // fallback
+            'tag': '',
+            'image':
+                item['imageUrl']?.toString() ??
+                item['assetImage']?.toString() ??
+                'assets/images/onboarding4.png',
+          },
+          activeCuisines: const {'Âu'},
+          activeServices: const {'Bar'},
+          activeDietaries: const {},
+          activeStars: const {},
+          activeOpenNow: false,
+          activeReservation: false,
+          activeTakeAway: false,
+        ),
+      ),
+    );
+  }
+
+  void _navigateToTourDetail(Map<String, dynamic> item) {
+    final id = _parseId(item, ['tourId', 'id', 'tour_id']);
+    final tourData = {
+      'name': item['name']?.toString() ?? '',
+      'location': item['address']?.toString() ?? '',
+      'rating': _getRatingString(item['rating']),
+      'price': item['price']?.toString() ?? '',
+      'image':
+          item['imageUrl']?.toString() ??
+          item['assetImage']?.toString() ??
+          'assets/images/onboarding1.png',
+      'duration': '',
+      'description': '',
+      'tourId': id, // carry id in fallback too
+    };
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TourServiceDetailScreen(tourId: id, tour: tourData),
+      ),
+    );
+  }
+
+  void _navigateToAttractionDetail(Map<String, dynamic> item) {
+    final id = _parseId(item, ['attractionId', 'id', 'attraction_id']);
+    final attractionData = {
+      'name': item['name']?.toString() ?? '',
+      'location': item['address']?.toString() ?? '',
+      'rating': double.tryParse(_getRatingString(item['rating'])) ?? 0.0,
+      'price': 0,
+      'description': 'Diểm tham quan tại ${item['address']?.toString() ?? ''}',
+      'image':
+          item['imageUrl']?.toString() ??
+          item['assetImage']?.toString() ??
+          'assets/images/onboarding3.png',
+      'types': ['Tham quan'],
+      'services': ['Chụp ảnh'],
+      'times': ['Sáng', 'Chiều'],
+      'suit': ['Solo', 'Cặp đôi'],
+      'attractionId': id,
+    };
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AttractionsOverviewDetailScreen(
+          attractionId: id, // dynamic fetch if available
+          attraction: attractionData,
+        ),
+      ),
+    );
+  }
+
   // ===== API + Mapping =====
   Future<void> _fetchMapData(String query) async {
     setState(() {
@@ -528,108 +736,381 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
     });
 
     try {
+      // Geocode khu vực tìm kiếm để lấy tọa độ trung tâm
+      await _geocodeSearchQuery(query);
+
       final prefs = await SharedPreferences.getInstance();
       final api = SearchApiService(dio: Dio(), prefs: prefs);
       final data = await api.search(q: query);
 
       final List<Map<String, dynamic>> items = [];
-
-      // Helper: vị trí phân bố pin (giả lập) theo index
-      final positions = _predefinedPositions();
-
+      final Set<Marker> markers = {};
       int idx = 0;
 
       // Hotels
+      debugPrint(
+        '🏨 Processing ${(data['hotels'] as List?)?.length ?? 0} hotels',
+      );
       if (data['hotels'] is List) {
         for (final e in List.from(data['hotels'])) {
           final m = Map<String, dynamic>.from(e);
-          final price = m['price'];
-          final currency = m['currencyCode']?.toString();
-          items.add({
-            'id': 'hotel_$idx',
-            'name': m['title']?.toString() ?? '',
-            'category': 'hotel',
-            'type': 'Khách sạn',
-            'rating': m['ratingAverage'],
-            'price': _formatPrice(price, currency),
-            'imageUrl': m['thumbnailUrl'],
-            'assetImage': 'assets/images/onboarding2.png',
-            'position': positions[idx % positions.length],
-          });
-          idx++;
+
+          // Ưu tiên lấy tọa độ từ backend
+          final lat = m['latitude'] != null
+              ? double.tryParse(m['latitude'].toString())
+              : null;
+          final lng = m['longitude'] != null
+              ? double.tryParse(m['longitude'].toString())
+              : null;
+          final address =
+              m['address']?.toString() ?? m['location']?.toString() ?? '';
+
+          LatLng? coords;
+          if (lat != null && lng != null) {
+            coords = LatLng(lat, lng);
+            debugPrint(
+              '  📍 Hotel "${m['title']}": Using backend coords ($lat, $lng)',
+            );
+          } else {
+            debugPrint('  🔍 Geocoding hotel "${m['title']}": "$address"');
+            coords = await _geocodeAddress(address);
+            await Future.delayed(const Duration(milliseconds: 200));
+          }
+
+          if (coords != null) {
+            // Kiểm tra tọa độ hợp lệ
+            if (!_isValidCoordinate(coords, _centerLocation)) {
+              debugPrint(
+                '    ⚠️ Invalid coordinates, skipping hotel "${m['title']}"',
+              );
+              continue;
+            }
+
+            // Thêm offset nếu trùng tọa độ
+            coords = _addOffset(coords, idx, markers);
+            debugPrint(
+              '    ✅ Success: ${coords.latitude}, ${coords.longitude}',
+            );
+            final item = {
+              'id': 'hotel_$idx',
+              'hotelId': m['hotelId'] ?? m['id'] ?? m['hotel_id'],
+              'name': m['title']?.toString() ?? '',
+              'category': 'hotel',
+              'type': 'Khách sạn',
+              'rating': m['ratingAverage'],
+              'price': _formatPrice(m['price'], m['currencyCode']?.toString()),
+              'imageUrl': m['thumbnailUrl'],
+              'assetImage': 'assets/images/onboarding2.png',
+              'lat': coords.latitude,
+              'lng': coords.longitude,
+              'address': address,
+            };
+            items.add(item);
+
+            markers.add(
+              Marker(
+                markerId: MarkerId('hotel_$idx'),
+                position: coords,
+                icon: _customIcons['hotel'] ?? BitmapDescriptor.defaultMarker,
+                infoWindow: InfoWindow(
+                  title: item['name']?.toString() ?? '',
+                  snippet: '${item['type']} - ${item['price']}',
+                ),
+                onTap: () {
+                  setState(() {
+                    selectedPinIndex = items.length - 1;
+                  });
+                  _showPinDetails(item);
+                },
+              ),
+            );
+            idx++;
+          } else {
+            debugPrint('    ❌ Failed to geocode hotel address');
+          }
         }
       }
 
       // Restaurants
+      debugPrint(
+        '🍽️ Processing ${(data['restaurants'] as List?)?.length ?? 0} restaurants',
+      );
       if (data['restaurants'] is List) {
         for (final e in List.from(data['restaurants'])) {
           final m = Map<String, dynamic>.from(e);
-          final price = m['price'];
-          final currency = m['currencyCode']?.toString();
-          items.add({
-            'id': 'restaurant_$idx',
-            'name': m['title']?.toString() ?? '',
-            'category': 'restaurant',
-            'type': 'Nhà hàng',
-            'rating': m['ratingAverage'],
-            'price': _formatPrice(price, currency),
-            'imageUrl': m['thumbnailUrl'],
-            'assetImage': 'assets/images/onboarding1.png',
-            'position': positions[idx % positions.length],
-          });
-          idx++;
+
+          // Ưu tiên lấy tọa độ từ backend
+          final lat = m['latitude'] != null
+              ? double.tryParse(m['latitude'].toString())
+              : null;
+          final lng = m['longitude'] != null
+              ? double.tryParse(m['longitude'].toString())
+              : null;
+          final address =
+              m['address']?.toString() ?? m['location']?.toString() ?? '';
+
+          LatLng? coords;
+          if (lat != null && lng != null) {
+            coords = LatLng(lat, lng);
+            debugPrint(
+              '  📍 Restaurant "${m['title']}": Using backend coords ($lat, $lng)',
+            );
+          } else {
+            debugPrint('  🔍 Geocoding restaurant "${m['title']}": "$address"');
+            coords = await _geocodeAddress(address);
+            await Future.delayed(const Duration(milliseconds: 200));
+          }
+
+          if (coords != null) {
+            // Kiểm tra tọa độ hợp lệ
+            if (!_isValidCoordinate(coords, _centerLocation)) {
+              debugPrint(
+                '    ⚠️ Invalid coordinates, skipping restaurant "${m['title']}"',
+              );
+              continue;
+            }
+
+            // Thêm offset nếu trùng tọa độ
+            coords = _addOffset(coords, idx, markers);
+            debugPrint(
+              '    ✅ Success: ${coords.latitude}, ${coords.longitude}',
+            );
+            final item = {
+              'id': 'restaurant_$idx',
+              'restaurantId':
+                  m['restaurantId'] ?? m['id'] ?? m['restaurant_id'],
+              'name': m['title']?.toString() ?? '',
+              'category': 'restaurant',
+              'type': 'Nhà hàng',
+              'rating': m['ratingAverage'],
+              'price': _formatPrice(m['price'], m['currencyCode']?.toString()),
+              'imageUrl': m['thumbnailUrl'],
+              'assetImage': 'assets/images/onboarding1.png',
+              'lat': coords.latitude,
+              'lng': coords.longitude,
+              'address': address,
+            };
+            items.add(item);
+
+            markers.add(
+              Marker(
+                markerId: MarkerId('restaurant_$idx'),
+                position: coords,
+                icon:
+                    _customIcons['restaurant'] ??
+                    BitmapDescriptor.defaultMarker,
+                infoWindow: InfoWindow(
+                  title: item['name']?.toString() ?? '',
+                  snippet: '${item['type']} - ${item['price']}',
+                ),
+                onTap: () {
+                  setState(() {
+                    selectedPinIndex = items.length - 1;
+                  });
+                  _showPinDetails(item);
+                },
+              ),
+            );
+            idx++;
+          } else {
+            debugPrint('    ❌ Failed to geocode restaurant address');
+          }
         }
       }
 
       // Tours
+      debugPrint(
+        '🚌 Processing ${(data['tours'] as List?)?.length ?? 0} tours',
+      );
       if (data['tours'] is List) {
         for (final e in List.from(data['tours'])) {
           final m = Map<String, dynamic>.from(e);
-          final price = m['price'];
-          final currency = m['currencyCode']?.toString();
-          items.add({
-            'id': 'tour_$idx',
-            'name': m['title']?.toString() ?? '',
-            'category': 'tour',
-            'type': 'Tour dịch vụ',
-            'rating': m['ratingAverage'],
-            'price': _formatPrice(price, currency),
-            'imageUrl': m['thumbnailUrl'],
-            'assetImage': 'assets/images/onboarding4.png',
-            'position': positions[idx % positions.length],
-          });
-          idx++;
+
+          // Ưu tiên lấy tọa độ từ backend
+          final lat = m['latitude'] != null
+              ? double.tryParse(m['latitude'].toString())
+              : null;
+          final lng = m['longitude'] != null
+              ? double.tryParse(m['longitude'].toString())
+              : null;
+          final address =
+              m['address']?.toString() ?? m['location']?.toString() ?? '';
+
+          LatLng? coords;
+          if (lat != null && lng != null) {
+            coords = LatLng(lat, lng);
+            debugPrint(
+              '  📍 Tour "${m['title']}": Using backend coords ($lat, $lng)',
+            );
+          } else {
+            debugPrint('  🔍 Geocoding tour "${m['title']}": "$address"');
+            coords = await _geocodeAddress(address);
+            await Future.delayed(const Duration(milliseconds: 200));
+          }
+
+          if (coords != null) {
+            // Kiểm tra tọa độ hợp lệ
+            if (!_isValidCoordinate(coords, _centerLocation)) {
+              debugPrint(
+                '    ⚠️ Invalid coordinates, skipping tour "${m['title']}"',
+              );
+              continue;
+            }
+
+            // Thêm offset nếu trùng tọa độ
+            coords = _addOffset(coords, idx, markers);
+            debugPrint(
+              '    ✅ Success: ${coords.latitude}, ${coords.longitude}',
+            );
+            final item = {
+              'id': 'tour_$idx',
+              'tourId': m['tourId'] ?? m['id'] ?? m['tour_id'],
+              'name': m['title']?.toString() ?? '',
+              'category': 'tour',
+              'type': 'Tour dịch vụ',
+              'rating': m['ratingAverage'],
+              'price': _formatPrice(m['price'], m['currencyCode']?.toString()),
+              'imageUrl': m['thumbnailUrl'],
+              'assetImage': 'assets/images/onboarding4.png',
+              'lat': coords.latitude,
+              'lng': coords.longitude,
+              'address': address,
+            };
+            items.add(item);
+
+            markers.add(
+              Marker(
+                markerId: MarkerId('tour_$idx'),
+                position: coords,
+                icon: _customIcons['tour'] ?? BitmapDescriptor.defaultMarker,
+                infoWindow: InfoWindow(
+                  title: item['name']?.toString() ?? '',
+                  snippet: '${item['type']} - ${item['price']}',
+                ),
+                onTap: () {
+                  setState(() {
+                    selectedPinIndex = items.length - 1;
+                  });
+                  _showPinDetails(item);
+                },
+              ),
+            );
+            idx++;
+          } else {
+            debugPrint('    ❌ Failed to geocode tour address');
+          }
         }
       }
 
       // Attractions
+      debugPrint(
+        '🎡 Processing ${(data['attractions'] as List?)?.length ?? 0} attractions',
+      );
       if (data['attractions'] is List) {
         for (final e in List.from(data['attractions'])) {
           final m = Map<String, dynamic>.from(e);
-          final price = m['price'];
-          final currency = m['currencyCode']?.toString();
-          items.add({
-            'id': 'attraction_$idx',
-            'name': m['title']?.toString() ?? '',
-            'category': 'attraction',
-            'type': 'Hoạt động giải trí',
-            'rating': m['ratingAverage'],
-            'price': _formatPrice(price, currency),
-            'imageUrl': m['thumbnailUrl'],
-            'assetImage': 'assets/images/onboarding3.png',
-            'position': positions[idx % positions.length],
-          });
-          idx++;
+
+          // Ưu tiên lấy tọa độ từ backend
+          final lat = m['latitude'] != null
+              ? double.tryParse(m['latitude'].toString())
+              : null;
+          final lng = m['longitude'] != null
+              ? double.tryParse(m['longitude'].toString())
+              : null;
+          final address =
+              m['address']?.toString() ?? m['location']?.toString() ?? '';
+
+          LatLng? coords;
+          if (lat != null && lng != null) {
+            coords = LatLng(lat, lng);
+            debugPrint(
+              '  📍 Attraction "${m['title']}": Using backend coords ($lat, $lng)',
+            );
+          } else {
+            debugPrint('  🔍 Geocoding attraction "${m['title']}": "$address"');
+            coords = await _geocodeAddress(address);
+            await Future.delayed(const Duration(milliseconds: 200));
+          }
+
+          if (coords != null) {
+            // Kiểm tra tọa độ hợp lệ
+            if (!_isValidCoordinate(coords, _centerLocation)) {
+              debugPrint(
+                '    ⚠️ Invalid coordinates, skipping attraction "${m['title']}"',
+              );
+              continue;
+            }
+
+            // Thêm offset nếu trùng tọa độ
+            coords = _addOffset(coords, idx, markers);
+            debugPrint(
+              '    ✅ Success: ${coords.latitude}, ${coords.longitude}',
+            );
+            final item = {
+              'id': 'attraction_$idx',
+              'attractionId':
+                  m['attractionId'] ?? m['id'] ?? m['attraction_id'],
+              'name': m['title']?.toString() ?? '',
+              'category': 'attraction',
+              'type': 'Hoạt động giải trí',
+              'rating': m['ratingAverage'],
+              'price': _formatPrice(m['price'], m['currencyCode']?.toString()),
+              'imageUrl': m['thumbnailUrl'],
+              'assetImage': 'assets/images/onboarding3.png',
+              'lat': coords.latitude,
+              'lng': coords.longitude,
+              'address': address,
+            };
+            items.add(item);
+
+            markers.add(
+              Marker(
+                markerId: MarkerId('attraction_$idx'),
+                position: coords,
+                icon:
+                    _customIcons['attraction'] ??
+                    BitmapDescriptor.defaultMarker,
+                infoWindow: InfoWindow(
+                  title: item['name']?.toString() ?? '',
+                  snippet: '${item['type']} - ${item['price']}',
+                ),
+                onTap: () {
+                  setState(() {
+                    selectedPinIndex = items.length - 1;
+                  });
+                  _showPinDetails(item);
+                },
+              ),
+            );
+            idx++;
+          } else {
+            debugPrint('    ❌ Failed to geocode attraction address');
+          }
         }
       }
+
+      debugPrint(
+        '📊 Summary: ${markers.length} markers created from ${items.length} items',
+      );
 
       setState(() {
         _items
           ..clear()
           ..addAll(items);
+        _markers
+          ..clear()
+          ..addAll(markers);
         _loading = false;
       });
+
+      // Fit map bounds sau khi có markers
+      if (_markers.isNotEmpty) {
+        // Delay một chút để map controller sẵn sàng
+        await Future.delayed(const Duration(milliseconds: 800));
+        await _fitMapBounds();
+      }
     } catch (e) {
+      debugPrint('❌ Fetch map data error: $e');
       setState(() {
         _loading = false;
         _error =
@@ -638,25 +1119,163 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
     }
   }
 
-  // Vị trí pin “giả lập” trải đều màn hình
-  List<Offset> _predefinedPositions() {
-    return const [
-      Offset(0.25, 0.30),
-      Offset(0.60, 0.28),
-      Offset(0.45, 0.55),
-      Offset(0.70, 0.70),
-      Offset(0.40, 0.20),
-      Offset(0.15, 0.45),
-      Offset(0.80, 0.40),
-      Offset(0.30, 0.75),
-      Offset(0.55, 0.60),
-      Offset(0.20, 0.65),
-      Offset(0.85, 0.25),
-      Offset(0.65, 0.50),
-    ];
+  // Geocode search query để lấy tọa độ trung tâm khu vực
+  Future<void> _geocodeSearchQuery(String query) async {
+    try {
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=1&accept-language=vi',
+      );
+
+      final response = await http
+          .get(url, headers: {'User-Agent': 'TripfinityApp/1.0'})
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          final location = data[0];
+          final lat = double.tryParse(location['lat'].toString());
+          final lng = double.tryParse(location['lon'].toString());
+
+          if (lat != null && lng != null) {
+            setState(() {
+              _centerLocation = LatLng(lat, lng);
+            });
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Geocode search query error: $e');
+    }
+
+    // Fallback: Hà Nội
+    setState(() {
+      _centerLocation = const LatLng(21.0285, 105.8542);
+    });
+  }
+
+  // Tự động zoom map để hiển thị tất cả markers
+  Future<void> _fitMapBounds() async {
+    if (_mapController == null || _markers.isEmpty || _initialCameraSet) {
+      return;
+    }
+
+    try {
+      debugPrint('🎯 Fitting bounds for ${_markers.length} markers');
+
+      if (_markers.length == 1) {
+        // Nếu chỉ có 1 marker, zoom 11 để thấy overview rộng
+        final marker = _markers.first;
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(marker.position, 11),
+        );
+      } else {
+        // Tính bounds từ tất cả markers
+        double minLat = 90.0;
+        double maxLat = -90.0;
+        double minLng = 180.0;
+        double maxLng = -180.0;
+
+        debugPrint('📍 Marker positions:');
+        for (final marker in _markers) {
+          final lat = marker.position.latitude;
+          final lng = marker.position.longitude;
+          debugPrint('  - ${marker.markerId.value}: ($lat, $lng)');
+
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+          if (lng < minLng) minLng = lng;
+          if (lng > maxLng) maxLng = lng;
+        }
+
+        // Thêm padding rộng cho bounds để thấy overview toàn bộ khu vực
+        final latPadding =
+            (maxLat - minLat) * 0.5; // 50% padding để zoom xa hơn
+        final lngPadding = (maxLng - minLng) * 0.5;
+
+        final southwest = LatLng(minLat - latPadding, minLng - lngPadding);
+        final northeast = LatLng(maxLat + latPadding, maxLng + lngPadding);
+        final bounds = LatLngBounds(southwest: southwest, northeast: northeast);
+
+        // Animate camera với padding cho UI
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            bounds,
+            40, // padding 40px từ mép để tối ưu khung hình
+          ),
+        );
+      }
+
+      _initialCameraSet = true;
+      debugPrint('✅ Map bounds fitted: ${_markers.length} markers');
+    } catch (e) {
+      debugPrint('❌ Error fitting map bounds: $e');
+      // Fallback: zoom về center location với zoom mặc định
+      if (_centerLocation != null) {
+        await _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(_centerLocation!, 13),
+        );
+      }
+    }
+  }
+
+  // Geocode địa chỉ thành tọa độ
+  Future<LatLng?> _geocodeAddress(String address) async {
+    if (address.isEmpty) {
+      debugPrint('⚠️ Empty address, skipping geocode');
+      return null;
+    }
+
+    try {
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(address)}&format=json&limit=1&accept-language=vi',
+      );
+
+      final response = await http
+          .get(url, headers: {'User-Agent': 'TripfinityApp/1.0'})
+          .timeout(const Duration(seconds: 5)); // Increased timeout to 5s
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          final location = data[0];
+          final lat = double.tryParse(location['lat'].toString());
+          final lng = double.tryParse(location['lon'].toString());
+
+          if (lat != null && lng != null) {
+            return LatLng(lat, lng);
+          } else {
+            debugPrint('⚠️ Invalid lat/lng in response for "$address"');
+          }
+        } else {
+          debugPrint('⚠️ No geocoding results for "$address"');
+        }
+      } else {
+        debugPrint('⚠️ Geocoding HTTP ${response.statusCode} for "$address"');
+      }
+    } catch (e) {
+      debugPrint('❌ Geocode error for "$address": $e');
+    }
+
+    return null;
   }
 
   // ===== Utils =====
+  // Helper to parse id from common keys
+  int? _parseId(Map<String, dynamic> m, List<String> keys) {
+    for (final k in keys) {
+      final v = m[k];
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      if (v is String) {
+        final p = int.tryParse(v);
+        if (p != null) return p;
+      }
+    }
+    return null;
+  }
+
   String _getRatingString(dynamic rating) {
     if (rating == null) return '0.0';
     if (rating is String) return rating;
