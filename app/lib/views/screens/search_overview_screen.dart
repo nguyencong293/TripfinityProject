@@ -13,6 +13,9 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 // API centralized
 import 'package:app/services/search_api_service.dart';
@@ -40,6 +43,10 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   String? _areaName;
   String? _areaCountryOrSlug;
   String? _areaRating; // backend không trả rating cho area -> fallback '0.0'
+
+  // Location coordinates for map
+  double? _locationLat;
+  double? _locationLng;
 
   // Lists
   List<Map<String, dynamic>> _hotels = [];
@@ -492,71 +499,113 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
     return Container(
       width: double.infinity,
       height: 200,
-      decoration: BoxDecoration(
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        image: const DecorationImage(
-          image: AssetImage('assets/images/onboarding1.png'),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
-          ),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
+        child: Stack(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: context.primaryColor,
-                borderRadius: BorderRadius.circular(20),
+            // Google Map background
+            if (_locationLat != null && _locationLng != null)
+              GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: LatLng(_locationLat!, _locationLng!),
+                  zoom: 13,
+                ),
+                markers: {
+                  Marker(
+                    markerId: const MarkerId('search_location'),
+                    position: LatLng(_locationLat!, _locationLng!),
+                    infoWindow: InfoWindow(title: title, snippet: sub),
+                  ),
+                },
+                zoomControlsEnabled: false,
+                myLocationButtonEnabled: false,
+                mapToolbarEnabled: false,
+                compassEnabled: false,
+                rotateGesturesEnabled: false,
+                scrollGesturesEnabled: false,
+                zoomGesturesEnabled: false,
+                tiltGesturesEnabled: false,
+                liteModeEnabled: true,
+              )
+            else
+              // Fallback image khi chưa có tọa độ
+              Image.asset(
+                'assets/images/onboarding1.png',
+                width: double.infinity,
+                height: 200,
+                fit: BoxFit.cover,
               ),
-              child: Text(
-                'Tổng quan',
-                style: context.captionStyle.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+            // Gradient overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.7),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: context.h4Style.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+            // Content overlay
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: context.primaryColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Tổng quan',
+                      style: context.captionStyle.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    title,
+                    style: context.h4Style.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Khám phá các địa điểm nổi bật và dịch vụ tại đây.',
+                    style: context.bodyTwoStyle.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      height: 1.3,
+                      fontSize: 11,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      _buildInfoChip(context, LucideIcons.star, rating),
+                      _buildInfoChip(context, LucideIcons.mapPin, sub),
+                    ],
+                  ),
+                ],
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Khám phá các địa điểm nổi bật và dịch vụ tại đây.',
-              style: context.bodyTwoStyle.copyWith(
-                color: Colors.white.withValues(alpha: 0.9),
-                height: 1.3,
-                fontSize: 11,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                _buildInfoChip(context, LucideIcons.star, rating),
-                _buildInfoChip(context, LucideIcons.mapPin, sub),
-              ],
             ),
           ],
         ),
@@ -848,6 +897,9 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
     });
 
     try {
+      // Geocode location để lấy tọa độ cho map
+      _geocodeLocation(query);
+
       final prefs = await SharedPreferences.getInstance();
       final api = SearchApiService(dio: Dio(), prefs: prefs);
 
@@ -979,6 +1031,45 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   }
 
   // ===== Utils =====
+
+  // Geocode location name to lat/lng using Nominatim
+  Future<void> _geocodeLocation(String locationName) async {
+    try {
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(locationName)}&format=json&limit=1&accept-language=vi',
+      );
+
+      final response = await http
+          .get(url, headers: {'User-Agent': 'TripfinityApp/1.0'})
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+
+        if (data.isNotEmpty) {
+          final location = data[0];
+          final lat = double.tryParse(location['lat'].toString());
+          final lng = double.tryParse(location['lon'].toString());
+
+          if (lat != null && lng != null) {
+            setState(() {
+              _locationLat = lat;
+              _locationLng = lng;
+            });
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Geocoding error: $e');
+    }
+
+    // Nếu geocoding thất bại, reset tọa độ
+    setState(() {
+      _locationLat = null;
+      _locationLng = null;
+    });
+  }
 
   // Helper to parse id from common keys
   int? _parseId(Map<String, dynamic> m, List<String> keys) {
