@@ -23,6 +23,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // Use centralized API service and config
 import 'package:app/services/search_api_service.dart';
+import 'package:app/services/search_history_service.dart';
 
 // Quick filter categories
 enum _QuickFilter { all, restaurant, hotel, tour, attraction }
@@ -53,9 +54,15 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   List<Map<String, dynamic>> _attractionItems = [];
   List<Map<String, dynamic>> _destinationItems = []; // từ "area" trong response
 
+  // Recent viewed items from search history
+  List<Map<String, dynamic>> _recentViewedItems = [];
+  bool _loadingRecentViewed = false;
+  String _lastSearchQuery = ''; // Track the last search query
+
   @override
   void initState() {
     super.initState();
+    _loadRecentViewedItems();
     final iq = widget.initialQuery?.trim();
     if (iq != null && iq.isNotEmpty) {
       _searchController.text = iq;
@@ -738,6 +745,26 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
 
   // Recent section
   Widget _buildRecentSection(BuildContext context) {
+    if (_loadingRecentViewed) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: SizedBox(
+            height: 26,
+            width: 26,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: context.primaryColor,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_recentViewedItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -750,23 +777,28 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            TextButton(
-              onPressed: () {},
-              child: Text(
-                'Xem thêm',
-                style: context.captionStyle.copyWith(
-                  color: context.primaryColor,
-                  fontWeight: FontWeight.w600,
+            if (_recentViewedItems.length > 3)
+              TextButton(
+                onPressed: () {
+                  // Could navigate to full history screen
+                },
+                child: Text(
+                  'Xem thêm',
+                  style: context.captionStyle.copyWith(
+                    color: context.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: 3,
+          itemCount: _recentViewedItems.length > 3
+              ? 3
+              : _recentViewedItems.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) => _buildRecentItemTile(context, index),
         ),
@@ -775,39 +807,11 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   }
 
   Widget _buildRecentItemTile(BuildContext context, int index) {
-    final items = [
-      {
-        'name': 'White Rose Restaurant',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': '4.1',
-        'type': 'restaurant',
-        'cuisine': 'Âu',
-        'price': '120000 đ',
-        'reviews': '(320)',
-        'tag': 'Bar',
-      },
-      {
-        'name': 'Vinpearl - Resort Nha Trang',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': '4.2',
-        'type': 'hotel',
-        'price': '3.200.000đ/đêm',
-      },
-      {
-        'name': 'Tháp Chăm Po Nagar',
-        'location': 'Nha Trang, Việt Nam',
-        'rating': 4.3,
-        'type': 'attraction',
-        'price': 25000,
-        'description': 'Tháp cổ Chăm Po Nagar được xây dựng từ thế kỷ 8-12',
-        'types': ['Tôn giáo', 'Kiến trúc'],
-        'services': ['Chụp ảnh'],
-        'times': ['Sáng', 'Chiều'],
-        'suit': ['Solo', 'Cặp đôi'],
-      },
-    ];
+    if (index >= _recentViewedItems.length) {
+      return const SizedBox.shrink();
+    }
 
-    final item = items[index];
+    final item = _recentViewedItems[index];
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -818,32 +822,27 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       ),
       child: InkWell(
         onTap: () {
-          final type = item['type']?.toString();
+          final type = item['itemType']?.toString() ?? item['type']?.toString();
           if (type == 'hotel') {
             _openHotelDetail(item);
           } else if (type == 'restaurant') {
             _openRestaurantDetail(item);
           } else if (type == 'attraction') {
             _openAttractionDetail(item);
+          } else if (type == 'tour') {
+            _openTourDetail(item);
           } else {
-            _navigateToSpecificPage(item['name'].toString(), type ?? 'general');
+            _navigateToSpecificPage(
+              item['itemTitle']?.toString() ?? item['name']?.toString() ?? '',
+              type ?? 'general',
+            );
           }
         },
         child: Row(
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                'assets/images/onboarding${(index % 4) + 1}.png',
-                width: 60,
-                height: 60,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: _imageFallback(context),
-                ),
-              ),
+              child: _buildRecentItemImage(item, index),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -851,7 +850,9 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item['name'].toString(),
+                    item['itemTitle']?.toString() ??
+                        item['name']?.toString() ??
+                        '',
                     style: context.bodyOneStyle.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -860,7 +861,9 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    item['location'].toString(),
+                    item['itemLocation']?.toString() ??
+                        item['location']?.toString() ??
+                        '',
                     style: context.captionStyle.copyWith(
                       color: context.textSecondaryColor,
                     ),
@@ -877,7 +880,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        _getRatingString(item['rating']),
+                        _getRatingString(item['itemRating'] ?? item['rating']),
                         style: context.captionStyle.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -899,17 +902,43 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   }
 
   // ===== NAVIGATION HELPERS =====
-  void _openHotelDetail(Map<String, dynamic> hotel) {
-    final id = _parseId(hotel, ['hotelId', 'id', 'hotel_id']);
+  Future<void> _openHotelDetail(Map<String, dynamic> hotel) async {
+    final id = _parseId(hotel, ['hotelId', 'id', 'hotel_id', 'itemId']);
+    final title =
+        hotel['itemTitle']?.toString() ?? hotel['name']?.toString() ?? '';
+    final location =
+        hotel['itemLocation']?.toString() ??
+        hotel['location']?.toString() ??
+        '';
+    final imageUrl =
+        hotel['itemThumbnailUrl']?.toString() ?? hotel['imageUrl']?.toString();
+
+    // Save to history
+    final searchQuery = _searchController.text.trim().isEmpty
+        ? _lastSearchQuery.isEmpty
+              ? title
+              : _lastSearchQuery
+        : _searchController.text.trim();
+
+    await _saveClickedItem(
+      searchQuery: searchQuery,
+      searchType: 'hotel',
+      itemType: 'hotel',
+      itemId: id,
+      itemTitle: title,
+      itemLocation: location,
+      itemThumbnailUrl: imageUrl,
+    );
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => HotelDetailOverviewScreen(
           hotelId: id,
           hotel: {
-            'name': hotel['name']?.toString() ?? '',
+            'name': title,
             'image':
                 hotel['image']?.toString() ??
-                hotel['imageUrl']?.toString() ??
+                imageUrl ??
                 'assets/images/onboarding1.png',
             'price': hotel['price']?.toString() ?? '—',
           },
@@ -919,16 +948,51 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  void _openRestaurantDetail(Map<String, dynamic> restaurant) {
-    final id = _parseId(restaurant, ['restaurantId', 'id', 'restaurant_id']);
+  Future<void> _openRestaurantDetail(Map<String, dynamic> restaurant) async {
+    final id = _parseId(restaurant, [
+      'restaurantId',
+      'id',
+      'restaurant_id',
+      'itemId',
+    ]);
+    final title =
+        restaurant['itemTitle']?.toString() ??
+        restaurant['name']?.toString() ??
+        '';
+    final location =
+        restaurant['itemLocation']?.toString() ??
+        restaurant['location']?.toString() ??
+        '';
+    final imageUrl =
+        restaurant['itemThumbnailUrl']?.toString() ??
+        restaurant['imageUrl']?.toString();
+    final rating = restaurant['itemRating'] ?? restaurant['rating'];
+
+    // Save to history
+    final searchQuery = _searchController.text.trim().isEmpty
+        ? _lastSearchQuery.isEmpty
+              ? title
+              : _lastSearchQuery
+        : _searchController.text.trim();
+
+    await _saveClickedItem(
+      searchQuery: searchQuery,
+      searchType: 'restaurant',
+      itemType: 'restaurant',
+      itemId: id,
+      itemTitle: title,
+      itemLocation: location,
+      itemThumbnailUrl: imageUrl,
+    );
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RestaurantDetailScreen(
           restaurantId: id,
           restaurant: {
-            'name': restaurant['name']?.toString() ?? '',
-            'location': restaurant['location']?.toString() ?? '',
-            'rating': _getRatingString(restaurant['rating']),
+            'name': title,
+            'location': location,
+            'rating': _getRatingString(rating),
             'type': 'restaurant',
             'cuisine': restaurant['cuisine']?.toString() ?? '—',
             'price': restaurant['price']?.toString() ?? '',
@@ -936,7 +1000,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
             'tag': restaurant['tag']?.toString() ?? '',
             'image':
                 restaurant['image']?.toString() ??
-                restaurant['imageUrl']?.toString() ??
+                imageUrl ??
                 'assets/images/onboarding4.png',
           },
           activeCuisines: const {'Âu'},
@@ -951,16 +1015,41 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  void _openTourDetail(Map<String, dynamic> tour) {
-    final id = _parseId(tour, ['tourId', 'id', 'tour_id']);
+  Future<void> _openTourDetail(Map<String, dynamic> tour) async {
+    final id = _parseId(tour, ['tourId', 'id', 'tour_id', 'itemId']);
+    final title =
+        tour['itemTitle']?.toString() ?? tour['name']?.toString() ?? '';
+    final location =
+        tour['itemLocation']?.toString() ?? tour['location']?.toString() ?? '';
+    final imageUrl =
+        tour['itemThumbnailUrl']?.toString() ?? tour['imageUrl']?.toString();
+    final rating = tour['itemRating'] ?? tour['rating'];
+
+    // Save to history
+    final searchQuery = _searchController.text.trim().isEmpty
+        ? _lastSearchQuery.isEmpty
+              ? title
+              : _lastSearchQuery
+        : _searchController.text.trim();
+
+    await _saveClickedItem(
+      searchQuery: searchQuery,
+      searchType: 'tour',
+      itemType: 'tour',
+      itemId: id,
+      itemTitle: title,
+      itemLocation: location,
+      itemThumbnailUrl: imageUrl,
+    );
+
     final tourData = {
-      'name': tour['name']?.toString() ?? '',
-      'location': tour['location']?.toString() ?? '',
-      'rating': _getRatingString(tour['rating']),
+      'name': title,
+      'location': location,
+      'rating': _getRatingString(rating),
       'price': tour['price']?.toString() ?? '',
       'image':
           tour['image']?.toString() ??
-          tour['imageUrl']?.toString() ??
+          imageUrl ??
           'assets/images/onboarding1.png',
       'duration': tour['duration']?.toString() ?? '',
       'description': tour['description']?.toString() ?? '',
@@ -974,13 +1063,48 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     );
   }
 
-  void _openAttractionDetail(Map<String, dynamic> attraction) {
-    final id = _parseId(attraction, ['attractionId', 'id', 'attraction_id']);
+  Future<void> _openAttractionDetail(Map<String, dynamic> attraction) async {
+    final id = _parseId(attraction, [
+      'attractionId',
+      'id',
+      'attraction_id',
+      'itemId',
+    ]);
+    final title =
+        attraction['itemTitle']?.toString() ??
+        attraction['name']?.toString() ??
+        '';
+    final location =
+        attraction['itemLocation']?.toString() ??
+        attraction['location']?.toString() ??
+        '';
+    final imageUrl =
+        attraction['itemThumbnailUrl']?.toString() ??
+        attraction['imageUrl']?.toString();
+    final rating = attraction['itemRating'] ?? attraction['rating'];
     final priceInt = _extractPrice(attraction['price']?.toString() ?? '');
+
+    // Save to history
+    final searchQuery = _searchController.text.trim().isEmpty
+        ? _lastSearchQuery.isEmpty
+              ? title
+              : _lastSearchQuery
+        : _searchController.text.trim();
+
+    await _saveClickedItem(
+      searchQuery: searchQuery,
+      searchType: 'attraction',
+      itemType: 'attraction',
+      itemId: id,
+      itemTitle: title,
+      itemLocation: location,
+      itemThumbnailUrl: imageUrl,
+    );
+
     final attractionData = {
-      'name': attraction['name']?.toString() ?? '',
-      'location': attraction['location']?.toString() ?? '',
-      'rating': double.tryParse(_getRatingString(attraction['rating'])) ?? 0.0,
+      'name': title,
+      'location': location,
+      'rating': double.tryParse(_getRatingString(rating)) ?? 0.0,
       'price': priceInt,
       'description':
           attraction['description']?.toString() ??
@@ -1137,7 +1261,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   }
 
   // Submit search: ở màn hình này chỉ tải và hiển thị top 5, KHÔNG điều hướng
-  void _performSearch(String query) {
+  Future<void> _performSearch(String query) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
 
@@ -1146,17 +1270,26 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     });
 
     final category = _getSearchCategory(trimmed);
+    String searchType = 'general';
     if (category == 'hotel') {
       _selected = _QuickFilter.hotel;
+      searchType = 'hotel';
     } else if (category == 'tour') {
       _selected = _QuickFilter.tour;
+      searchType = 'tour';
     } else if (category == 'restaurant') {
       _selected = _QuickFilter.restaurant;
+      searchType = 'restaurant';
     } else if (category == 'activity') {
       _selected = _QuickFilter.attraction;
+      searchType = 'attraction';
     } else {
       _selected = _QuickFilter.all;
+      searchType = 'general';
     }
+
+    // Save search query to history
+    await _saveSearchQuery(trimmed, searchType);
 
     _fetchSearch(trimmed);
   }
@@ -1328,5 +1461,175 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       alignment: Alignment.center,
       child: Icon(LucideIcons.image, color: context.primaryColor),
     );
+  }
+
+  // Build image for recent viewed item
+  Widget _buildRecentItemImage(Map<String, dynamic> item, int index) {
+    final imageUrl =
+        item['itemThumbnailUrl']?.toString() ??
+        item['imageUrl']?.toString() ??
+        '';
+
+    if (imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        width: 60,
+        height: 60,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Image.asset(
+          'assets/images/onboarding${(index % 4) + 1}.png',
+          width: 60,
+          height: 60,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    return Image.asset(
+      'assets/images/onboarding${(index % 4) + 1}.png',
+      width: 60,
+      height: 60,
+      fit: BoxFit.cover,
+    );
+  }
+
+  // Load recent viewed items from search history
+  Future<void> _loadRecentViewedItems() async {
+    setState(() {
+      _loadingRecentViewed = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final historyService = SearchHistoryService(dio: Dio(), prefs: prefs);
+
+      final viewedItems = await historyService.getRecentViewedItems(limit: 10);
+
+      // Convert API response to the format expected by the UI
+      final List<Map<String, dynamic>> items = viewedItems.map((item) {
+        return {
+          'itemType': item['itemType'],
+          'itemId': item['itemId'],
+          'itemTitle': item['itemTitle'],
+          'itemLocation': item['itemLocation'],
+          'itemThumbnailUrl': item['itemThumbnailUrl'],
+          'itemPrice': item['itemPrice'],
+          'itemCurrencyCode': item['itemCurrencyCode'],
+          'itemRating': item['itemRating'],
+          // For compatibility with existing navigation methods
+          'name': item['itemTitle'],
+          'location': item['itemLocation'],
+          'rating': item['itemRating'],
+          'price': _formatPrice(item['itemPrice'], item['itemCurrencyCode']),
+          'type': item['itemType'],
+          'image': item['itemThumbnailUrl'],
+          'imageUrl': item['itemThumbnailUrl'],
+        };
+      }).toList();
+
+      setState(() {
+        _recentViewedItems = items;
+        _loadingRecentViewed = false;
+      });
+    } catch (e) {
+      // If user is not logged in or error occurs, just show empty list
+      setState(() {
+        _recentViewedItems = [];
+        _loadingRecentViewed = false;
+      });
+    }
+  }
+
+  // Save search query to history
+  Future<void> _saveSearchQuery(String query, String searchType) async {
+    print('🔍 _saveSearchQuery called: query="$query", type="$searchType"');
+    if (query.isEmpty) {
+      print('⚠️ Query is empty, skipping save');
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Check if user is logged in
+      final token = prefs.getString('user_token');
+      print('🔑 Token exists: ${token != null && token.isNotEmpty}');
+      if (token == null || token.isEmpty) {
+        // User not logged in - skip saving silently
+        print('⚠️ No token found, skipping save');
+        return;
+      }
+
+      print('📡 Calling SearchHistoryService.saveSearchQuery...');
+      final historyService = SearchHistoryService(dio: Dio(), prefs: prefs);
+      await historyService.saveSearchQuery(
+        searchQuery: query,
+        searchType: searchType,
+      );
+      print('✅ Saved search query: $query ($searchType)');
+    } catch (e) {
+      // Silently fail - don't interrupt user experience
+      if (e.toString().contains('authentication') ||
+          e.toString().contains('token')) {
+        // Auth error - user not logged in, skip silently
+        print('⚠️ Auth error, skipping: $e');
+        return;
+      }
+      print('❌ Failed to save search query: $e');
+    }
+  }
+
+  // Save clicked item to history
+  Future<void> _saveClickedItem({
+    required String searchQuery,
+    required String searchType,
+    required String itemType,
+    int? itemId,
+    String? itemTitle,
+    String? itemLocation,
+    String? itemThumbnailUrl,
+  }) async {
+    print(
+      '👆 _saveClickedItem called: query="$searchQuery", item="$itemTitle", type="$itemType", id=$itemId',
+    );
+    if (searchQuery.isEmpty) {
+      print('⚠️ Search query is empty, skipping save');
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Check if user is logged in
+      final token = prefs.getString('user_token');
+      print('🔑 Token exists: ${token != null && token.isNotEmpty}');
+      if (token == null || token.isEmpty) {
+        // User not logged in - skip saving silently
+        print('⚠️ No token found, skipping save');
+        return;
+      }
+
+      print('📡 Calling SearchHistoryService.saveClickedItem...');
+      final historyService = SearchHistoryService(dio: Dio(), prefs: prefs);
+      await historyService.saveClickedItem(
+        searchQuery: searchQuery,
+        searchType: searchType,
+        itemType: itemType,
+        itemId: itemId,
+        itemTitle: itemTitle,
+        itemLocation: itemLocation,
+        itemThumbnailUrl: itemThumbnailUrl,
+      );
+      print(
+        '✅ Saved clicked item: $itemTitle ($itemType) for query "$searchQuery"',
+      );
+    } catch (e) {
+      // Silently fail - don't interrupt user experience
+      if (e.toString().contains('authentication') ||
+          e.toString().contains('token')) {
+        // Auth error - user not logged in, skip silently
+        print('⚠️ Auth error, skipping: $e');
+        return;
+      }
+      print('❌ Failed to save clicked item: $e');
+    }
   }
 }

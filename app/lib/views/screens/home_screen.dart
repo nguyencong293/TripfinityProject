@@ -63,7 +63,12 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         },
       ),
-      GeneralSearchScreen(initialQuery: _initialSearchQuery),
+      GeneralSearchScreen(
+        key: ValueKey(
+          _initialSearchQuery ?? 'search',
+        ), // Rebuild when query changes
+        initialQuery: _initialSearchQuery,
+      ),
       const TripUserScreen(),
       const TripReviewUserScreen(),
       const DashboardUserScreen(),
@@ -87,6 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
         drawer: _AppDrawer(
           onNavigateToServices: () {
             setState(() {
+              _initialSearchQuery = null; // Reset search state
               _tabIndex = 1; // Chuyển về tab Search
             });
           },
@@ -94,7 +100,15 @@ class _HomeScreenState extends State<HomeScreen> {
         body: pages[_tabIndex],
         bottomNavigationBar: BottomNav(
           currentIndex: _tabIndex,
-          onTap: (i) => setState(() => _tabIndex = i),
+          onTap: (i) {
+            setState(() {
+              // Reset search query when leaving search tab
+              if (i != 1 && _tabIndex == 1) {
+                _initialSearchQuery = null;
+              }
+              _tabIndex = i;
+            });
+          },
         ),
       ),
     );
