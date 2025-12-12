@@ -20,4 +20,11 @@ public interface RestaurantReviewRepository extends JpaRepository<RestaurantRevi
 
     @Query("SELECT COUNT(r) FROM RestaurantReview r WHERE r.restaurant.provider.providerId = :providerId")
     Long countByRestaurant_Provider_ProviderId(@Param("providerId") Integer providerId);
+
+    /**
+     * Tính trung bình rating của restaurant (chỉ tính reviews đã approved)
+     * Trả về null nếu chưa có review nào
+     */
+    @Query("SELECT AVG(r.rating) FROM RestaurantReview r WHERE r.restaurant.restaurantId = :restaurantId AND r.reviewStatus = 'approved'")
+    Double calculateAverageRating(@Param("restaurantId") Integer restaurantId);
 }

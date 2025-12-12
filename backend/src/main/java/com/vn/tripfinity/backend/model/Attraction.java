@@ -109,9 +109,6 @@ public class Attraction {
     @Column(name = "image_urls", columnDefinition = "TEXT")
     private String imageUrls;
 
-    @Column(name = "rating_average", precision = 3, scale = 2)
-    private BigDecimal ratingAverage;
-
     @Column(name = "badges", length = 255)
     private String badges;
 
@@ -129,9 +126,6 @@ public class Attraction {
     @Enumerated(EnumType.STRING)
     @Column(name = "attraction_type", length = 32)
     private AttractionType attractionType;
-
-    @Column(name = "coordinates", length = 100)
-    private String coordinates;
 
     @Column(name = "average_visit_minutes")
     private Integer averageVisitMinutes;
@@ -169,9 +163,6 @@ public class Attraction {
     @Column(name = "seo_description", length = 512)
     private String seoDescription;
 
-    @Column(name = "booking_settings_json", columnDefinition = "JSON")
-    private String bookingSettingsJson;
-
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
@@ -185,8 +176,6 @@ public class Attraction {
 
     @PrePersist
     public void prePersist() {
-        if (ratingAverage == null)
-            ratingAverage = new BigDecimal("0.00");
         if (attractionStatus == null)
             attractionStatus = AttractionStatus.published;
         if (visibility == null)

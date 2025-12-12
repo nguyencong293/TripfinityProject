@@ -392,7 +392,7 @@ const HotelViewPage: React.FC = () => {
               </div>
             )}
 
-            {hotel.ratingAverage !== undefined && hotel.ratingAverage > 0 && (
+            {typeof hotel.ratingAverage === 'number' && hotel.ratingAverage > 0 && (
               <div>
                 <div className={labelCls}>{t("hotel_view_avg_rating")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>

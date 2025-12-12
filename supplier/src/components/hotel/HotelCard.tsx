@@ -77,7 +77,7 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel, onView, onEdit }) => {
                 </span>
               </div>
             )}
-            {hotel.ratingAverage !== undefined && (
+            {typeof hotel.ratingAverage === 'number' && hotel.ratingAverage > 0 && (
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 theme-text-warning" />
                 <span className="font-medium theme-text-secondary">

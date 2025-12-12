@@ -118,7 +118,6 @@ export interface HotelDTO {
   maxParticipants?: number;
   thumbnailUrl?: string;
   imageUrls?: string[];
-  ratingAverage?: number; // 0.00 - 5.00
   badges?: string[];
   starRating?: number; // 1 - 5
   propertyType?:
@@ -144,6 +143,9 @@ export interface HotelDTO {
   seoTitle?: string;
   seoDescription?: string;
   isFeatured?: boolean;
+
+  // Rating (calculated from reviews)
+  ratingAverage?: number | null; // null if no reviews
 
   // Raw JSON string from backend (you can parse into bookingSettings if needed)
 
@@ -312,9 +314,6 @@ export interface AttractionDTO {
   // Media
   thumbnailUrl?: string;
   imageUrls?: string[];
-  
-  // Rating
-  ratingAverage?: number; // 0.00 - 5.00
   badges?: string[];
   
   // Attraction type
@@ -347,8 +346,8 @@ export interface AttractionDTO {
   seoDescription?: string;
   isFeatured?: boolean;
   
-  // Booking settings
-  bookingSettingsJson?: string; // Raw JSON string
+  // Rating (calculated from reviews)
+  ratingAverage?: number | null; // null if no reviews (attraction review system not implemented yet)
   
   // Timestamps
   publishedAt?: string; // ISO datetime
@@ -494,7 +493,6 @@ export interface RestaurantDTO {
   imageUrls?: string[];
   
   // Rating
-  ratingAverage?: number; // 0.00 - 5.00
   totalReviews?: number; // Total review count
   badges?: string[]; // ["michelin_star", "recommended", "halal_certified"]
   
@@ -514,8 +512,8 @@ export interface RestaurantDTO {
   seoDescription?: string;
   isFeatured?: boolean;
   
-  // Booking settings
-  bookingSettingsJson?: string; // Raw JSON string
+  // Rating (calculated from reviews)
+  ratingAverage?: number | null; // null if no reviews
   
   // Timestamps
   publishedAt?: string; // ISO datetime
@@ -660,7 +658,6 @@ export interface TourDTO {
   imageUrls?: string | string[]; // JSON array of URLs
   
   // Rating
-  ratingAverage?: number; // 0.00 - 5.00
   badges?: string | string[]; // JSON array: ["best_seller","eco_friendly","family_friendly","adventure"]
   
   // Tour-specific fields
@@ -694,14 +691,14 @@ export interface TourDTO {
   // Additional Services (NEW)
   servicesJson?: string | string[]; // JSON: ["pickup","airport_transfer","photography","bike_rental","special_meals"]
   
-  // Booking Settings
-  bookingSettingsJson?: string | Record<string, any>; // Cấu hình đặt tour
-  
   // SEO
   slug?: string;
   seoTitle?: string;
   seoDescription?: string;
   isFeatured?: boolean;
+  
+  // Rating (calculated from reviews)
+  ratingAverage?: number | null; // null if no reviews
   
   // Timestamps
   publishedAt?: string; // ISO datetime

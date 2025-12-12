@@ -98,7 +98,7 @@ const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant, onView, onE
             </div>
           )}
           <div className="flex items-center gap-4 text-sm">
-            {restaurant.ratingAverage !== undefined && restaurant.ratingAverage > 0 && (
+            {typeof restaurant.ratingAverage === 'number' && restaurant.ratingAverage > 0 && (
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 theme-text-warning" />
                 <span className="font-medium theme-text-secondary">

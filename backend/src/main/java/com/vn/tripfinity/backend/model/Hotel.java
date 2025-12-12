@@ -111,9 +111,6 @@ public class Hotel {
     @Column(name = "image_urls", columnDefinition = "TEXT")
     private String imageUrls; // JSON array string: ["url1", "url2", ...]
 
-    @Column(name = "rating_average", precision = 3, scale = 2, nullable = false)
-    private BigDecimal ratingAverage;
-
     @Column(name = "badges", length = 255)
     private String badges;
 
@@ -184,8 +181,6 @@ public class Hotel {
 
     @PrePersist
     public void prePersist() {
-        if (ratingAverage == null)
-            ratingAverage = new BigDecimal("0.00");
         if (hotelStatus == null)
             hotelStatus = HotelStatus.published;
         if (propertyType == null)

@@ -100,9 +100,6 @@ public class Restaurant {
     @Column(name = "image_urls", columnDefinition = "TEXT")
     private String imageUrls;
 
-    @Column(name = "rating_average", precision = 3, scale = 2)
-    private BigDecimal ratingAverage;
-
     @Column(name = "badges", length = 255)
     private String badges;
 
@@ -169,9 +166,6 @@ public class Restaurant {
     @Column(name = "seo_description", length = 512)
     private String seoDescription;
 
-    @Column(name = "booking_settings_json", columnDefinition = "JSON")
-    private String bookingSettingsJson;
-
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
@@ -185,8 +179,6 @@ public class Restaurant {
 
     @PrePersist
     public void prePersist() {
-        if (ratingAverage == null)
-            ratingAverage = new BigDecimal("0.00");
         if (restaurantStatus == null)
             restaurantStatus = RestaurantStatus.published;
         if (visibility == null)

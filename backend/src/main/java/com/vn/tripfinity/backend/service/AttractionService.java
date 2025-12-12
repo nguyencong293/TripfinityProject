@@ -1,6 +1,6 @@
 package com.vn.tripfinity.backend.service;
 
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -56,6 +56,12 @@ public class AttractionService {
         Area area = areaRepository.findById(dto.getAreaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
 
+        // Xác định attractionStatus và publishedAt
+        Attraction.AttractionStatus attractionStatus = dto.getAttractionStatus() != null
+                ? Attraction.AttractionStatus.valueOf(dto.getAttractionStatus())
+                : Attraction.AttractionStatus.published;
+        LocalDateTime publishedAt = determinePublishedAt(attractionStatus, null);
+
         Attraction entity = Attraction.builder()
                 .attractionId(null)
                 .provider(provider)
@@ -75,11 +81,8 @@ public class AttractionService {
                 .maxParticipants(dto.getMaxParticipants())
                 .thumbnailUrl(dto.getThumbnailUrl())
                 .imageUrls(writeJson(dto.getImageUrls()))
-                .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
                 .badges(joinList(dto.getBadges()))
-                .attractionStatus(dto.getAttractionStatus() != null
-                        ? Attraction.AttractionStatus.valueOf(dto.getAttractionStatus())
-                        : Attraction.AttractionStatus.published)
+                .attractionStatus(attractionStatus)
                 .visibility(dto.getVisibility() != null
                         ? Attraction.Visibility.valueOf(dto.getVisibility())
                         : Attraction.Visibility.public_)
@@ -87,7 +90,6 @@ public class AttractionService {
                 .attractionType(dto.getAttractionType() != null
                         ? Attraction.AttractionType.valueOf(dto.getAttractionType())
                         : null)
-                .coordinates(dto.getCoordinates())
                 .averageVisitMinutes(dto.getAverageVisitMinutes())
                 .visitTypesJson(writeJson(dto.getVisitTypesJson()))
                 .availableTimesJson(writeJson(dto.getAvailableTimesJson()))
@@ -100,8 +102,7 @@ public class AttractionService {
                 .slug(dto.getSlug())
                 .seoTitle(dto.getSeoTitle())
                 .seoDescription(dto.getSeoDescription())
-                .bookingSettingsJson(writeJson(dto.getBookingSettingsJson()))
-                .publishedAt(dto.getPublishedAt())
+                .publishedAt(publishedAt)
                 .build();
 
         Attraction saved = attractionRepository.save(entity);
@@ -169,20 +170,28 @@ public class AttractionService {
             existing.setThumbnailUrl(dto.getThumbnailUrl());
         if (dto.getImageUrls() != null)
             existing.setImageUrls(writeJson(dto.getImageUrls()));
-        if (dto.getRatingAverage() != null)
-            existing.setRatingAverage(dto.getRatingAverage());
         if (dto.getBadges() != null)
             existing.setBadges(joinList(dto.getBadges()));
-        if (dto.getAttractionStatus() != null)
-            existing.setAttractionStatus(Attraction.AttractionStatus.valueOf(dto.getAttractionStatus()));
+        if (dto.getAttractionStatus() != null) {
+            Attraction.AttractionStatus oldStatus = existing.getAttractionStatus();
+            Attraction.AttractionStatus newStatus = Attraction.AttractionStatus.valueOf(dto.getAttractionStatus());
+            LocalDateTime oldPublishedAt = existing.getPublishedAt();
+            
+            existing.setAttractionStatus(newStatus);
+            
+            if (oldStatus != newStatus) {
+                LocalDateTime newPublishedAt = determinePublishedAt(newStatus, oldPublishedAt);
+                existing.setPublishedAt(newPublishedAt);
+                log.info("🔄 Attraction {} status thay đổi từ {} -> {}, publishedAt: {} -> {}",
+                        existing.getAttractionId(), oldStatus, newStatus, oldPublishedAt, newPublishedAt);
+            }
+        }
         if (dto.getVisibility() != null)
             existing.setVisibility(Attraction.Visibility.valueOf(dto.getVisibility()));
         if (dto.getIsFeatured() != null)
             existing.setIsFeatured(dto.getIsFeatured());
         if (dto.getAttractionType() != null)
             existing.setAttractionType(Attraction.AttractionType.valueOf(dto.getAttractionType()));
-        if (dto.getCoordinates() != null)
-            existing.setCoordinates(dto.getCoordinates());
         if (dto.getAverageVisitMinutes() != null)
             existing.setAverageVisitMinutes(dto.getAverageVisitMinutes());
         if (dto.getVisitTypesJson() != null)
@@ -207,8 +216,6 @@ public class AttractionService {
             existing.setSeoTitle(dto.getSeoTitle());
         if (dto.getSeoDescription() != null)
             existing.setSeoDescription(dto.getSeoDescription());
-        if (dto.getBookingSettingsJson() != null)
-            existing.setBookingSettingsJson(writeJson(dto.getBookingSettingsJson()));
         if (dto.getPublishedAt() != null)
             existing.setPublishedAt(dto.getPublishedAt());
 
@@ -255,13 +262,11 @@ public class AttractionService {
                 .maxParticipants(a.getMaxParticipants())
                 .thumbnailUrl(a.getThumbnailUrl())
                 .imageUrls(readJsonListString(a.getImageUrls()))
-                .ratingAverage(a.getRatingAverage())
                 .badges(splitList(a.getBadges()))
                 .attractionStatus(a.getAttractionStatus() != null ? a.getAttractionStatus().name() : null)
                 .visibility(a.getVisibility() != null ? a.getVisibility().name() : null)
                 .isFeatured(a.getIsFeatured())
                 .attractionType(a.getAttractionType() != null ? a.getAttractionType().name() : null)
-                .coordinates(a.getCoordinates())
                 .averageVisitMinutes(a.getAverageVisitMinutes())
                 .visitTypesJson(readJsonListString(a.getVisitTypesJson()))
                 .availableTimesJson(readJsonListString(a.getAvailableTimesJson()))
@@ -274,11 +279,21 @@ public class AttractionService {
                 .slug(a.getSlug())
                 .seoTitle(a.getSeoTitle())
                 .seoDescription(a.getSeoDescription())
-                .bookingSettingsJson(readJsonObject(a.getBookingSettingsJson()))
                 .publishedAt(a.getPublishedAt())
+                .ratingAverage(null) // Chưa có review system cho attraction
                 .createdAt(a.getCreatedAt())
                 .updatedAt(a.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * Xác định publishedAt dựa trên attractionStatus
+     */
+    private LocalDateTime determinePublishedAt(Attraction.AttractionStatus status, LocalDateTime currentPublishedAt) {
+        return switch (status) {
+            case published -> currentPublishedAt == null ? LocalDateTime.now() : currentPublishedAt;
+            case archived, disabled -> null;
+        };
     }
 
     private String joinList(List<String> list) {
@@ -315,10 +330,12 @@ public class AttractionService {
         if (json == null || json.isEmpty())
             return null;
         try {
+            // Try JSON format first
             return objectMapper.readValue(json, List.class);
         } catch (JsonProcessingException e) {
-            log.warn("Không thể parse JSON list: {}", json, e);
-            return null;
+            // Fallback to CSV format for legacy data
+            log.debug("Parse JSON failed, trying CSV format: {}", json);
+            return splitList(json);
         }
     }
 

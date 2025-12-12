@@ -331,7 +331,7 @@ const AttractionViewPage: React.FC = () => {
             )}
 
             {attraction.ratingAverage !== undefined &&
-              attraction.ratingAverage > 0 && (
+              typeof attraction.ratingAverage === 'number' && attraction.ratingAverage > 0 && (
                 <div>
                   <div className={labelCls}>Đánh giá trung bình</div>
                   <div className={valueCls + " flex items-center gap-2 mt-1"}>

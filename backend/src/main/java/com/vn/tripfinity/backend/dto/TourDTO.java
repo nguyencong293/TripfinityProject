@@ -69,10 +69,6 @@ public class TourDTO {
 
     private List<@Size(max = 1024) String> imageUrls;
 
-    @DecimalMin(value = "0.00", inclusive = true, message = "ratingAverage phải >= 0.00")
-    @DecimalMax(value = "5.00", inclusive = true, message = "ratingAverage phải <= 5.00")
-    private BigDecimal ratingAverage;
-
     private List<@Size(max = 100) String> badges;
 
     @Size(max = 32)
@@ -136,9 +132,10 @@ public class TourDTO {
     @Size(max = 512)
     private String seoDescription;
 
-    private String bookingSettingsJson; // JSON string for booking configuration
-
     private LocalDateTime publishedAt;
+
+    // Calculated field - null nếu chưa có review
+    private Double ratingAverage;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

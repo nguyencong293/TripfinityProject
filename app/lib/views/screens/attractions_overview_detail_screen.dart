@@ -650,7 +650,6 @@ class _AttractionsOverviewDetailScreenState
 
     // Check capacity
     final maxParticipants = _toInt(d['maxParticipants']);
-    final minParticipants = _toInt(d['minParticipants']) ?? 1;
     final isSoldOut = maxParticipants != null && maxParticipants <= 0;
 
     return Column(

@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -128,22 +127,8 @@ public class AreaService {
 
         long total = countHotels + countRestaurants + countAttractions + countTours;
 
-        BigDecimal sum = BigDecimal.ZERO;
-        Double sH = hotelRepository.sumRatingAverageByArea(id);
-        Double sR = restaurantRepository.sumRatingAverageByArea(id);
-        Double sA = attractionRepository.sumRatingAverageByArea(id);
-        Double sT = tourRepository.sumRatingAverageByArea(id);
-        if (sH != null)
-            sum = sum.add(BigDecimal.valueOf(sH));
-        if (sR != null)
-            sum = sum.add(BigDecimal.valueOf(sR));
-        if (sA != null)
-            sum = sum.add(BigDecimal.valueOf(sA));
-        if (sT != null)
-            sum = sum.add(BigDecimal.valueOf(sT));
-
-        BigDecimal avg = total > 0 ? sum.divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP)
-                : new BigDecimal("0.00");
+        // Rating average không còn được lưu trong database
+        BigDecimal avg = new BigDecimal("0.00"); // Mặc định 0.00
 
         dto.setAvgRating(avg);
         dto.setRatingsCount((int) total);
@@ -175,22 +160,8 @@ public class AreaService {
 
         long total = countHotels + countRestaurants + countAttractions + countTours;
 
-        BigDecimal sum = BigDecimal.ZERO;
-        Double sH = hotelRepository.sumRatingAverageByArea(id);
-        Double sR = restaurantRepository.sumRatingAverageByArea(id);
-        Double sA = attractionRepository.sumRatingAverageByArea(id);
-        Double sT = tourRepository.sumRatingAverageByArea(id);
-        if (sH != null)
-            sum = sum.add(BigDecimal.valueOf(sH));
-        if (sR != null)
-            sum = sum.add(BigDecimal.valueOf(sR));
-        if (sA != null)
-            sum = sum.add(BigDecimal.valueOf(sA));
-        if (sT != null)
-            sum = sum.add(BigDecimal.valueOf(sT));
-
-        BigDecimal avg = total > 0 ? sum.divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP)
-                : new BigDecimal("0.00");
+        // Rating average không còn được lưu trong database
+        BigDecimal avg = new BigDecimal("0.00"); // Mặc định 0.00
 
         a.setAvgRating(avg);
         a.setRatingsCount((int) total);

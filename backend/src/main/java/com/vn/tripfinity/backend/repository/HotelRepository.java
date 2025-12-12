@@ -60,12 +60,6 @@ public interface HotelRepository extends JpaRepository<Hotel, Integer> {
      */
     long countByArea_AreaId(Integer areaId);
 
-    /**
-     * Tính tổng rating average của hotels trong khu vực
-     */
-    @Query("SELECT COALESCE(SUM(h.ratingAverage), 0) FROM Hotel h WHERE h.area.areaId = :areaId")
-    Double sumRatingAverageByArea(@Param("areaId") Integer areaId);
-
     // ==================== FIND BY SLUG ====================
 
     /**
@@ -150,7 +144,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Integer> {
     @Query("SELECT h FROM Hotel h WHERE h.area.areaId = :areaId " +
             "AND h.propertyType = :propertyType " +
             "AND h.hotelStatus = 'published' " +
-            "ORDER BY h.ratingAverage DESC")
+            "ORDER BY h.createdAt DESC")
     List<Hotel> findByAreaAndPropertyType(@Param("areaId") Integer areaId,
             @Param("propertyType") Hotel.PropertyType propertyType);
 
@@ -166,7 +160,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Integer> {
      */
     @Query("SELECT h FROM Hotel h WHERE h.starRating >= :minStars " +
             "AND h.hotelStatus = 'published' " +
-            "ORDER BY h.starRating DESC, h.ratingAverage DESC")
+            "ORDER BY h.starRating DESC, h.createdAt DESC")
     List<Hotel> findByMinStarRating(@Param("minStars") Integer minStars);
 
     // ==================== SORT BY RATING ====================
@@ -176,7 +170,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Integer> {
      */
     @Query("SELECT h FROM Hotel h WHERE h.hotelStatus = 'published' " +
             "AND h.visibility = 'public_' " +
-            "ORDER BY h.ratingAverage DESC, h.createdAt DESC")
+            "ORDER BY h.createdAt DESC")
     List<Hotel> findTopRatedHotels();
 
     /**
@@ -185,7 +179,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Integer> {
     @Query("SELECT h FROM Hotel h WHERE h.area.areaId = :areaId " +
             "AND h.hotelStatus = 'published' " +
             "AND h.visibility = 'public_' " +
-            "ORDER BY h.ratingAverage DESC, h.createdAt DESC")
+            "ORDER BY h.createdAt DESC")
     List<Hotel> findTopRatedHotelsByArea(@Param("areaId") Integer areaId);
 
     // ==================== PRICE RANGE FILTER ====================
@@ -223,7 +217,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Integer> {
             "AND (:maxPrice IS NULL OR h.price <= :maxPrice) " +
             "AND h.hotelStatus = 'published' " +
             "AND h.visibility = 'public_' " +
-            "ORDER BY h.ratingAverage DESC, h.createdAt DESC")
+            "ORDER BY h.createdAt DESC")
     List<Hotel> advancedSearch(@Param("areaId") Integer areaId,
             @Param("propertyType") Hotel.PropertyType propertyType,
             @Param("minStars") Integer minStars,
@@ -237,12 +231,6 @@ public interface HotelRepository extends JpaRepository<Hotel, Integer> {
      */
     @Query("SELECT COUNT(h) FROM Hotel h WHERE h.hotelStatus = 'published'")
     long countPublishedHotels();
-
-    /**
-     * Tính trung bình rating của tất cả hotels
-     */
-    @Query("SELECT AVG(h.ratingAverage) FROM Hotel h WHERE h.hotelStatus = 'published'")
-    Double calculateAverageRating();
 
     /**
      * Tính trung bình giá của hotels trong khu vực

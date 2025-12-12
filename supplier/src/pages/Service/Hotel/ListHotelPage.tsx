@@ -254,6 +254,13 @@ const ListHotelPage: React.FC = () => {
             ({hotels.length} {t("hotel_list_count_suffix")})
           </span>
         </div>
+        <button
+          onClick={() => navigate("/supplier/service/hotel/create")}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+        >
+          <span>+</span>
+          <span>Thêm Khách sạn</span>
+        </button>
       </div>
 
       {/* Body */}

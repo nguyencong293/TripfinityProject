@@ -1,7 +1,7 @@
 package com.vn.tripfinity.backend.service;
 
 import java.io.IOException;
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +75,12 @@ public class TourService {
         Area area = areaRepository.findById(dto.getAreaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
 
+        // Xác định tourStatus và publishedAt
+        Tour.TourStatus tourStatus = dto.getTourStatus() != null 
+                ? Tour.TourStatus.valueOf(dto.getTourStatus())
+                : Tour.TourStatus.published;
+        LocalDateTime publishedAt = determinePublishedAt(tourStatus, null);
+
         Tour entity = Tour.builder()
                 .tourId(null)
                 .provider(provider)
@@ -94,13 +100,11 @@ public class TourService {
                 .maxParticipants(dto.getMaxParticipants())
                 .thumbnailUrl(dto.getThumbnailUrl())
                 .imageUrls(writeJson(dto.getImageUrls()))
-                .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
                 .badges(writeJson(dto.getBadges()))
-                .tourStatus(dto.getTourStatus() != null ? Tour.TourStatus.valueOf(dto.getTourStatus())
-                        : Tour.TourStatus.published)
+                .tourStatus(tourStatus)
                 .visibility(dto.getVisibility() != null ? Tour.Visibility.valueOf(dto.getVisibility().replace("public", "public_").replace("private", "private_"))
                         : Tour.Visibility.public_)
-                .isFeatured(dto.getIsFeatured() != null ? dto.getIsFeatured() : false)
+                .isFeatured(Boolean.TRUE.equals(dto.getIsFeatured()))
                 .durationDays(dto.getDurationDays())
                 .difficultyLevel(
                         dto.getDifficultyLevel() != null ? Tour.DifficultyLevel.valueOf(dto.getDifficultyLevel())
@@ -124,8 +128,7 @@ public class TourService {
                 .slug(dto.getSlug())
                 .seoTitle(dto.getSeoTitle())
                 .seoDescription(dto.getSeoDescription())
-                .bookingSettingsJson(dto.getBookingSettingsJson())
-                .publishedAt(dto.getPublishedAt())
+                .publishedAt(publishedAt)
                 .build();
 
         Tour saved = tourRepository.save(entity);
@@ -194,12 +197,22 @@ public class TourService {
             existing.setThumbnailUrl(dto.getThumbnailUrl());
         if (dto.getImageUrls() != null)
             existing.setImageUrls(writeJson(dto.getImageUrls()));
-        if (dto.getRatingAverage() != null)
-            existing.setRatingAverage(dto.getRatingAverage());
         if (dto.getBadges() != null)
             existing.setBadges(writeJson(dto.getBadges()));
-        if (dto.getTourStatus() != null)
-            existing.setTourStatus(Tour.TourStatus.valueOf(dto.getTourStatus()));
+        if (dto.getTourStatus() != null) {
+            Tour.TourStatus oldStatus = existing.getTourStatus();
+            Tour.TourStatus newStatus = Tour.TourStatus.valueOf(dto.getTourStatus());
+            LocalDateTime oldPublishedAt = existing.getPublishedAt();
+            
+            existing.setTourStatus(newStatus);
+            
+            if (oldStatus != newStatus) {
+                LocalDateTime newPublishedAt = determinePublishedAt(newStatus, oldPublishedAt);
+                existing.setPublishedAt(newPublishedAt);
+                log.info("🔄 Tour {} status thay đổi từ {} -> {}, publishedAt: {} -> {}",
+                        existing.getTourId(), oldStatus, newStatus, oldPublishedAt, newPublishedAt);
+            }
+        }
         if (dto.getVisibility() != null)
             existing.setVisibility(Tour.Visibility.valueOf(dto.getVisibility().replace("public", "public_").replace("private", "private_")));
         if (dto.getIsFeatured() != null)
@@ -244,8 +257,6 @@ public class TourService {
             existing.setSeoTitle(dto.getSeoTitle());
         if (dto.getSeoDescription() != null)
             existing.setSeoDescription(dto.getSeoDescription());
-        if (dto.getBookingSettingsJson() != null)
-            existing.setBookingSettingsJson(dto.getBookingSettingsJson());
         if (dto.getPublishedAt() != null)
             existing.setPublishedAt(dto.getPublishedAt());
 
@@ -279,6 +290,15 @@ public class TourService {
         User user = userRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy User id: " + dto.getUserId()));
 
+        Integer likesCount = 0;
+        if (dto.getLikesCount() != null) {
+            likesCount = dto.getLikesCount();
+        }
+        Integer replyCount = 0;
+        if (dto.getReplyCount() != null) {
+            replyCount = dto.getReplyCount();
+        }
+        
         TourReview review = TourReview.builder()
                 .reviewId(null)
                 .tour(tour)
@@ -287,8 +307,8 @@ public class TourService {
                 .title(dto.getTitle())
                 .content(dto.getContent())
                 .imageUrls(joinList(dto.getImageUrls()))
-                .likesCount(dto.getLikesCount() != null ? dto.getLikesCount() : 0)
-                .replyCount(dto.getReplyCount() != null ? dto.getReplyCount() : 0)
+                .likesCount(likesCount)
+                .replyCount(replyCount)
                 .reviewStatus(dto.getReviewStatus() != null ? TourReview.ReviewStatus.valueOf(dto.getReviewStatus())
                         : TourReview.ReviewStatus.approved)
                 .build();
@@ -400,6 +420,9 @@ public class TourService {
     }
 
     private TourDTO toDTO(Tour t) {
+        // Calculate rating average from reviews (null if no reviews)
+        Double ratingAverage = tourReviewRepository.calculateAverageRating(t.getTourId());
+        
         return TourDTO.builder()
                 .tourId(t.getTourId())
                 .providerId(t.getProvider() != null ? t.getProvider().getProviderId() : null)
@@ -419,7 +442,6 @@ public class TourService {
                 .maxParticipants(t.getMaxParticipants())
                 .thumbnailUrl(t.getThumbnailUrl())
                 .imageUrls(readJsonList(t.getImageUrls()))
-                .ratingAverage(t.getRatingAverage())
                 .badges(readJsonList(t.getBadges()))
                 .tourStatus(t.getTourStatus() != null ? t.getTourStatus().name() : null)
                 .visibility(t.getVisibility() != null ? t.getVisibility().name().replace("public_", "public").replace("private_", "private") : null)
@@ -444,8 +466,8 @@ public class TourService {
                 .slug(t.getSlug())
                 .seoTitle(t.getSeoTitle())
                 .seoDescription(t.getSeoDescription())
-                .bookingSettingsJson(t.getBookingSettingsJson())
                 .publishedAt(t.getPublishedAt())
+                .ratingAverage(ratingAverage)
                 .createdAt(t.getCreatedAt())
                 .updatedAt(t.getUpdatedAt())
                 .build();
@@ -466,11 +488,24 @@ public class TourService {
         if (json == null || json.isEmpty())
             return null;
         try {
+            // Try JSON format first
             return objectMapper.readValue(json, List.class);
-        } catch (Exception e) {
-            log.warn("Không thể parse JSON list: {}", json, e);
-            return null;
+        } catch (JsonProcessingException e) {
+            // Fallback to CSV format for legacy data
+            log.debug("Parse JSON failed, trying CSV format: {}", json);
+            return splitList(json);
         }
+    }
+
+    /**
+     * Xác định publishedAt dựa trên tourStatus
+     */
+    private LocalDateTime determinePublishedAt(Tour.TourStatus status, LocalDateTime currentPublishedAt) {
+        return switch (status) {
+            case published -> currentPublishedAt == null ? LocalDateTime.now() : currentPublishedAt;
+            case archived, disabled -> null;
+            default -> null;
+        };
     }
 
     // Helper methods for deprecated CSV fields (guideLanguage, inclusiveItems, exclusiveItems)
@@ -498,7 +533,7 @@ public class TourService {
             try {
                 cloudinaryService.deleteImage(tour.getThumbnailUrl());
                 log.info("Đã xóa thumbnail cũ trên Cloudinary");
-            } catch (Exception e) {
+            } catch (IOException e) {
                 log.error("Lỗi khi xóa thumbnail cũ: {}", e.getMessage());
             }
         }
@@ -523,7 +558,7 @@ public class TourService {
             try {
                 cloudinaryService.deleteImage(tour.getThumbnailUrl());
                 log.info("Đã xóa thumbnail trên Cloudinary");
-            } catch (Exception e) {
+            } catch (IOException e) {
                 log.error("Lỗi khi xóa thumbnail trên Cloudinary: {}", e.getMessage());
             }
         }
@@ -567,7 +602,7 @@ public class TourService {
             try {
                 cloudinaryService.deleteImage(imageUrl);
                 log.info("Đã xóa ảnh trên Cloudinary");
-            } catch (Exception e) {
+            } catch (IOException e) {
                 log.error("Lỗi khi xóa ảnh trên Cloudinary: {}", e.getMessage());
             }
 
@@ -592,7 +627,7 @@ public class TourService {
         for (String imageUrl : currentImageUrls) {
             try {
                 cloudinaryService.deleteImage(imageUrl);
-            } catch (Exception e) {
+            } catch (IOException e) {
                 log.error("Lỗi khi xóa ảnh trên Cloudinary: {}", e.getMessage());
             }
         }

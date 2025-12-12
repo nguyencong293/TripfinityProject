@@ -20,8 +20,11 @@ import com.vn.tripfinity.backend.model.Tour;
 import com.vn.tripfinity.backend.repository.AreaRepository;
 import com.vn.tripfinity.backend.repository.AttractionRepository;
 import com.vn.tripfinity.backend.repository.HotelRepository;
+import com.vn.tripfinity.backend.repository.HotelReviewRepository;
 import com.vn.tripfinity.backend.repository.RestaurantRepository;
+import com.vn.tripfinity.backend.repository.RestaurantReviewRepository;
 import com.vn.tripfinity.backend.repository.TourRepository;
+import com.vn.tripfinity.backend.repository.TourReviewRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,6 +37,9 @@ public class SearchService {
     private final AttractionRepository attractionRepository;
     private final TourRepository tourRepository;
     private final AreaRepository areaRepository;
+    private final HotelReviewRepository hotelReviewRepository;
+    private final RestaurantReviewRepository restaurantReviewRepository;
+    private final TourReviewRepository tourReviewRepository;
 
     public Map<String, Object> searchAll(String q, String type, String status) {
         String query = q == null ? null : q.trim();
@@ -243,6 +249,8 @@ public class SearchService {
     }
 
     private HotelDTO toHotelDTO(Hotel h) {
+        Double ratingAverage = hotelReviewRepository.calculateAverageRating(h.getHotelId());
+        
         return HotelDTO.builder()
                 .hotelId(h.getHotelId())
                 .providerId(h.getProvider() != null ? h.getProvider().getProviderId() : null)
@@ -261,7 +269,6 @@ public class SearchService {
                 .maxParticipants(h.getMaxParticipants())
                 .thumbnailUrl(h.getThumbnailUrl())
                 .imageUrls(splitCsv(h.getImageUrls()))
-                .ratingAverage(h.getRatingAverage())
                 .badges(splitCsv(h.getBadges()))
                 .hotelStatus(h.getHotelStatus() != null ? h.getHotelStatus().name() : null)
                 .starRating(h.getStarRating())
@@ -269,12 +276,15 @@ public class SearchService {
                 .address(h.getAddress())
                 .checkinTime(h.getCheckinTime())
                 .checkoutTime(h.getCheckoutTime())
+                .ratingAverage(ratingAverage)
                 .createdAt(h.getCreatedAt())
                 .updatedAt(h.getUpdatedAt())
                 .build();
     }
 
     private RestaurantDTO toRestaurantDTO(Restaurant r) {
+        Double ratingAverage = restaurantReviewRepository.calculateAverageRating(r.getRestaurantId());
+        
         return RestaurantDTO.builder()
                 .restaurantId(r.getRestaurantId())
                 .providerId(r.getProvider() != null ? r.getProvider().getProviderId() : null)
@@ -291,13 +301,13 @@ public class SearchService {
                 .maxParticipants(r.getMaxParticipants())
                 .thumbnailUrl(r.getThumbnailUrl())
                 .imageUrls(splitCsv(r.getImageUrls()))
-                .ratingAverage(r.getRatingAverage())
                 .badges(splitCsv(r.getBadges()))
                 .restaurantStatus(r.getRestaurantStatus() != null ? r.getRestaurantStatus().name() : null)
                 .priceLevel(r.getPriceLevel() != null ? r.getPriceLevel().name() : null)
                 .phone(r.getPhone())
                 .website(r.getWebsite())
                 .address(r.getAddress())
+                .ratingAverage(ratingAverage)
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .build();
@@ -323,11 +333,9 @@ public class SearchService {
                 .maxParticipants(a.getMaxParticipants())
                 .thumbnailUrl(a.getThumbnailUrl())
                 .imageUrls(splitCsv(a.getImageUrls()))
-                .ratingAverage(a.getRatingAverage())
                 .badges(splitCsv(a.getBadges()))
                 .attractionStatus(a.getAttractionStatus() != null ? a.getAttractionStatus().name() : null)
                 .attractionType(a.getAttractionType() != null ? a.getAttractionType().name() : null)
-                .coordinates(a.getCoordinates())
                 .averageVisitMinutes(a.getAverageVisitMinutes())
                 .createdAt(a.getCreatedAt())
                 .updatedAt(a.getUpdatedAt())
@@ -335,6 +343,8 @@ public class SearchService {
     }
 
     private TourDTO toTourDTO(Tour t) {
+        Double ratingAverage = tourReviewRepository.calculateAverageRating(t.getTourId());
+        
         return TourDTO.builder()
                 .tourId(t.getTourId())
                 .providerId(t.getProvider() != null ? t.getProvider().getProviderId() : null)
@@ -351,7 +361,6 @@ public class SearchService {
                 .maxParticipants(t.getMaxParticipants())
                 .thumbnailUrl(t.getThumbnailUrl())
                 .imageUrls(splitCsv(t.getImageUrls()))
-                .ratingAverage(t.getRatingAverage())
                 .badges(splitCsv(t.getBadges()))
                 .tourStatus(t.getTourStatus() != null ? t.getTourStatus().name() : null)
                 .itineraryOverview(t.getItineraryOverview())
@@ -363,6 +372,7 @@ public class SearchService {
                 .difficultyLevel(t.getDifficultyLevel() != null ? t.getDifficultyLevel().name() : null)
                 .durationDays(t.getDurationDays())
                 .departureLocation(t.getDepartureLocation())
+                .ratingAverage(ratingAverage)
                 .createdAt(t.getCreatedAt())
                 .updatedAt(t.getUpdatedAt())
                 .build();

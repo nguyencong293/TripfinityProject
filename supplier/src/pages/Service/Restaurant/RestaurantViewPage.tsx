@@ -307,7 +307,7 @@ const RestaurantViewPage: React.FC = () => {
             )}
 
             {restaurant.ratingAverage !== undefined &&
-              restaurant.ratingAverage > 0 && (
+              typeof restaurant.ratingAverage === 'number' && restaurant.ratingAverage > 0 && (
                 <div>
                   <div className={labelCls}>Đánh giá trung bình</div>
                   <div className={valueCls + " flex items-center gap-2 mt-1"}>

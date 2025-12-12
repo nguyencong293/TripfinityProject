@@ -145,7 +145,6 @@ public class HotelService {
                 .totalRooms(dto.getTotalRooms())
                 .minParticipants(dto.getMinParticipants())
                 .maxParticipants(dto.getMaxParticipants())
-                .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
                 .badges(listToCommaString(dto.getBadges()))
                 .hotelStatus(hotelStatus)
                 .starRating(dto.getStarRating())
@@ -236,8 +235,6 @@ public class HotelService {
             hotel.setMinParticipants(dto.getMinParticipants());
         if (dto.getMaxParticipants() != null)
             hotel.setMaxParticipants(dto.getMaxParticipants());
-        if (dto.getRatingAverage() != null)
-            hotel.setRatingAverage(dto.getRatingAverage());
         if (dto.getBadges() != null)
             hotel.setBadges(listToCommaString(dto.getBadges()));
 
@@ -494,6 +491,9 @@ public class HotelService {
         Integer availableRooms = calculateAvailableRooms(hotel.getHotelId(), hotel.getTotalRooms());
         Integer availableCapacity = calculateAvailableCapacity(hotel.getHotelId(), hotel.getCapacity());
         
+        // Calculate rating average from reviews (null if no reviews)
+        Double ratingAverage = hotelReviewRepository.calculateAverageRating(hotel.getHotelId());
+        
         return HotelDTO.builder()
                 .hotelId(hotel.getHotelId())
                 .providerId(hotel.getProvider() != null ? hotel.getProvider().getProviderId() : null)
@@ -515,7 +515,6 @@ public class HotelService {
                 .maxParticipants(hotel.getMaxParticipants())
                 .thumbnailUrl(hotel.getThumbnailUrl())
                 .imageUrls(jsonToStringList(hotel.getImageUrls()))
-                .ratingAverage(hotel.getRatingAverage())
                 .badges(commaStringToList(hotel.getBadges()))
                 .hotelStatus(hotel.getHotelStatus() != null ? hotel.getHotelStatus().name() : null)
                 .starRating(hotel.getStarRating())
@@ -534,6 +533,7 @@ public class HotelService {
                 .isFeatured(hotel.getIsFeatured())
                 .publishedAt(hotel.getPublishedAt())
                 .visibility(hotel.getVisibility() != null ? hotel.getVisibility().name() : null)
+                .ratingAverage(ratingAverage)
                 .createdAt(hotel.getCreatedAt())
                 .updatedAt(hotel.getUpdatedAt())
                 .build();
@@ -647,12 +647,14 @@ public class HotelService {
             return new ArrayList<>();
         }
         try {
+            // Try JSON format first
             List<String> list = objectMapper.readValue(json, new TypeReference<List<String>>() {
             });
             return list != null ? list : new ArrayList<>();
         } catch (JsonProcessingException e) {
-            log.error("Error converting JSON to string list: {}", json, e);
-            return new ArrayList<>();
+            // Fallback to CSV format for legacy data
+            log.debug("Parse JSON failed, trying CSV format: {}", json);
+            return commaStringToList(json);
         }
     }
 

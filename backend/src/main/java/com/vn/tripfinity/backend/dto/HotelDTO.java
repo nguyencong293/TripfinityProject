@@ -98,11 +98,6 @@ public class HotelDTO {
     @JsonAlias("image_urls")
     private List<String> imageUrls; // List of image URLs
 
-    @DecimalMin(value = "0.00", message = "ratingAverage phải >= 0.00")
-    @DecimalMax(value = "5.00", message = "ratingAverage phải <= 5.00")
-    @JsonAlias("rating_average")
-    private BigDecimal ratingAverage;
-
     private List<String> badges;
 
     @NotNull(message = "hotelStatus không được để trống")
@@ -165,6 +160,10 @@ public class HotelDTO {
 
     @NotNull(message = "visibility không được để trống")
     private String visibility; // public_, private_
+
+    // Calculated field - null nếu chưa có review
+    @JsonAlias("rating_average")
+    private Double ratingAverage;
 
     @JsonAlias("created_at")
     private LocalDateTime createdAt;

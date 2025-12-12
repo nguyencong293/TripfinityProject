@@ -303,6 +303,17 @@ const TourListPage: React.FC = () => {
             ({tours.length} tours)
           </span>
         </div>
+        <button
+          onClick={() => navigate("/supplier/service/tour/create")}
+          className={
+            "px-4 py-2 rounded-lg font-medium transition-colors " +
+            (dark
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-blue-500 text-white hover:bg-blue-600")
+          }
+        >
+          + Thêm Tour
+        </button>
       </div>
 
       {/* Body */}

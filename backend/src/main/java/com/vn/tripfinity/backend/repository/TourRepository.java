@@ -14,9 +14,6 @@ public interface TourRepository extends JpaRepository<Tour, Integer> {
 
     long countByArea_AreaId(Integer areaId);
 
-    @Query("SELECT COALESCE(SUM(t.ratingAverage), 0) FROM Tour t WHERE t.area.areaId = :areaId")
-    Double sumRatingAverageByArea(@Param("areaId") Integer areaId);
-
     @Query("SELECT t FROM Tour t WHERE (:q IS NULL OR :q = '' OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.location) LIKE LOWER(CONCAT('%', :q, '%'))) AND (:status IS NULL OR t.tourStatus = :status) ORDER BY t.createdAt DESC")
     List<Tour> searchByTitleOrLocation(@Param("q") String q, @Param("status") Tour.TourStatus status);
 

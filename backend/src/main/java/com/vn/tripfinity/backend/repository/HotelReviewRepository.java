@@ -21,4 +21,11 @@ public interface HotelReviewRepository extends JpaRepository<HotelReview, Intege
 
     @Query("SELECT COUNT(r) FROM HotelReview r WHERE r.hotel.provider.providerId = :providerId")
     Long countByHotel_Provider_ProviderId(@Param("providerId") Integer providerId);
+
+    /**
+     * Tính trung bình rating của hotel (chỉ tính reviews đã approved)
+     * Trả về null nếu chưa có review nào
+     */
+    @Query("SELECT AVG(r.rating) FROM HotelReview r WHERE r.hotel.hotelId = :hotelId AND r.reviewStatus = 'approved'")
+    Double calculateAverageRating(@Param("hotelId") Integer hotelId);
 }

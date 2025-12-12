@@ -1,6 +1,7 @@
 package com.vn.tripfinity.backend.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -69,6 +70,12 @@ public class RestaurantService {
         Area area = areaRepository.findById(dto.getAreaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Area id: " + dto.getAreaId()));
 
+        // Xác định restaurantStatus và publishedAt
+        Restaurant.RestaurantStatus restaurantStatus = dto.getRestaurantStatus() != null
+                ? Restaurant.RestaurantStatus.valueOf(dto.getRestaurantStatus())
+                : Restaurant.RestaurantStatus.published;
+        LocalDateTime publishedAt = determinePublishedAt(restaurantStatus, null);
+
         Restaurant entity = Restaurant.builder()
                 .restaurantId(null)
                 .provider(provider)
@@ -91,11 +98,8 @@ public class RestaurantService {
                 .maxParticipants(dto.getMaxParticipants())
                 .thumbnailUrl(dto.getThumbnailUrl())
                 .imageUrls(writeJson(dto.getImageUrls()))
-                .ratingAverage(dto.getRatingAverage() != null ? dto.getRatingAverage() : new BigDecimal("0.00"))
                 .badges(writeJson(dto.getBadges()))
-                .restaurantStatus(dto.getRestaurantStatus() != null
-                        ? Restaurant.RestaurantStatus.valueOf(dto.getRestaurantStatus())
-                        : Restaurant.RestaurantStatus.published)
+                .restaurantStatus(restaurantStatus)
                 .visibility(dto.getVisibility() != null
                         ? Restaurant.Visibility.valueOf(dto.getVisibility())
                         : Restaurant.Visibility.public_)
@@ -111,8 +115,7 @@ public class RestaurantService {
                 .slug(dto.getSlug())
                 .seoTitle(dto.getSeoTitle())
                 .seoDescription(dto.getSeoDescription())
-                .bookingSettingsJson(writeJson(dto.getBookingSettingsJson()))
-                .publishedAt(dto.getPublishedAt())
+                .publishedAt(publishedAt)
                 .build();
 
         Restaurant saved = restaurantRepository.save(entity);
@@ -187,12 +190,22 @@ public class RestaurantService {
             existing.setThumbnailUrl(dto.getThumbnailUrl());
         if (dto.getImageUrls() != null)
             existing.setImageUrls(writeJson(dto.getImageUrls()));
-        if (dto.getRatingAverage() != null)
-            existing.setRatingAverage(dto.getRatingAverage());
         if (dto.getBadges() != null)
             existing.setBadges(writeJson(dto.getBadges()));
-        if (dto.getRestaurantStatus() != null)
-            existing.setRestaurantStatus(Restaurant.RestaurantStatus.valueOf(dto.getRestaurantStatus()));
+        if (dto.getRestaurantStatus() != null) {
+            Restaurant.RestaurantStatus oldStatus = existing.getRestaurantStatus();
+            Restaurant.RestaurantStatus newStatus = Restaurant.RestaurantStatus.valueOf(dto.getRestaurantStatus());
+            LocalDateTime oldPublishedAt = existing.getPublishedAt();
+            
+            existing.setRestaurantStatus(newStatus);
+            
+            if (oldStatus != newStatus) {
+                LocalDateTime newPublishedAt = determinePublishedAt(newStatus, oldPublishedAt);
+                existing.setPublishedAt(newPublishedAt);
+                log.info("🔄 Restaurant {} status thay đổi từ {} -> {}, publishedAt: {} -> {}",
+                        existing.getRestaurantId(), oldStatus, newStatus, oldPublishedAt, newPublishedAt);
+            }
+        }
         if (dto.getVisibility() != null)
             existing.setVisibility(Restaurant.Visibility.valueOf(dto.getVisibility()));
         if (dto.getIsFeatured() != null)
@@ -219,8 +232,6 @@ public class RestaurantService {
             existing.setSeoTitle(dto.getSeoTitle());
         if (dto.getSeoDescription() != null)
             existing.setSeoDescription(dto.getSeoDescription());
-        if (dto.getBookingSettingsJson() != null)
-            existing.setBookingSettingsJson(writeJson(dto.getBookingSettingsJson()));
         if (dto.getPublishedAt() != null)
             existing.setPublishedAt(dto.getPublishedAt());
 
@@ -380,6 +391,9 @@ public class RestaurantService {
     }
 
     private RestaurantDTO toDTO(Restaurant r) {
+        // Calculate rating average from reviews (null if no reviews)
+        Double ratingAverage = restaurantReviewRepository.calculateAverageRating(r.getRestaurantId());
+        
         return RestaurantDTO.builder()
                 .restaurantId(r.getRestaurantId())
                 .providerId(r.getProvider() != null ? r.getProvider().getProviderId() : null)
@@ -402,7 +416,6 @@ public class RestaurantService {
                 .maxParticipants(r.getMaxParticipants())
                 .thumbnailUrl(r.getThumbnailUrl())
                 .imageUrls(readJsonListString(r.getImageUrls()))
-                .ratingAverage(r.getRatingAverage())
                 .badges(readJsonListString(r.getBadges()))
                 .restaurantStatus(r.getRestaurantStatus() != null ? r.getRestaurantStatus().name() : null)
                 .visibility(r.getVisibility() != null ? r.getVisibility().name() : null)
@@ -418,11 +431,22 @@ public class RestaurantService {
                 .slug(r.getSlug())
                 .seoTitle(r.getSeoTitle())
                 .seoDescription(r.getSeoDescription())
-                .bookingSettingsJson(readJsonObject(r.getBookingSettingsJson()))
                 .publishedAt(r.getPublishedAt())
+                .ratingAverage(ratingAverage)
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * Xác định publishedAt dựa trên restaurantStatus
+     */
+    private LocalDateTime determinePublishedAt(Restaurant.RestaurantStatus status, LocalDateTime currentPublishedAt) {
+        return switch (status) {
+            case published -> currentPublishedAt == null ? LocalDateTime.now() : currentPublishedAt;
+            case archived, disabled -> null;
+            default -> null;
+        };
     }
 
     private String writeJson(Object obj) {
@@ -440,9 +464,17 @@ public class RestaurantService {
         if (json == null || json.isEmpty())
             return null;
         try {
+            // Try JSON format first
             return objectMapper.readValue(json, List.class);
         } catch (JsonProcessingException e) {
-            log.warn("Không thể parse JSON list: {}", json, e);
+            // Fallback to CSV format for legacy data
+            log.debug("Parse JSON failed, trying CSV format: {}", json);
+            if (json.contains(",")) {
+                return java.util.Arrays.asList(json.split(",")).stream()
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(java.util.stream.Collectors.toList());
+            }
             return null;
         }
     }

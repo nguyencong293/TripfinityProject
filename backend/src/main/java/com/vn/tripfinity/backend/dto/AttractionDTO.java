@@ -86,11 +86,6 @@ public class AttractionDTO {
     @JsonAlias("image_urls")
     private List<String> imageUrls;
 
-    @DecimalMin(value = "0.00", message = "ratingAverage phải >= 0.00")
-    @DecimalMax(value = "5.00", message = "ratingAverage phải <= 5.00")
-    @JsonAlias("rating_average")
-    private BigDecimal ratingAverage;
-
     private List<String> badges;
 
     @NotNull(message = "attractionStatus không được để trống")
@@ -105,9 +100,6 @@ public class AttractionDTO {
 
     @JsonAlias("attraction_type")
     private String attractionType; // cultural_site, entertainment, historical_site, etc.
-
-    @Size(max = 100)
-    private String coordinates;
 
     @JsonAlias("average_visit_minutes")
     private Integer averageVisitMinutes;
@@ -148,11 +140,12 @@ public class AttractionDTO {
     @JsonAlias("seo_description")
     private String seoDescription;
 
-    @JsonAlias("booking_settings_json")
-    private Object bookingSettingsJson;
-
     @JsonAlias("published_at")
     private LocalDateTime publishedAt;
+
+    // Calculated field - null vì chưa có review system cho attraction
+    @JsonAlias("rating_average")
+    private Double ratingAverage;
 
     @JsonAlias("created_at")
     private LocalDateTime createdAt;

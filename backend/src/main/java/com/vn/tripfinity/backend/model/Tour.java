@@ -112,9 +112,6 @@ public class Tour {
     @Column(name = "image_urls", columnDefinition = "TEXT")
     private String imageUrls; // JSON array string: ["url1", "url2", ...]
 
-    @Column(name = "rating_average", precision = 3, scale = 2)
-    private BigDecimal ratingAverage;
-
     @Column(name = "badges", length = 255)
     private String badges; // JSON array string
 
@@ -191,9 +188,6 @@ public class Tour {
     @Column(name = "seo_description", length = 512)
     private String seoDescription;
 
-    @Column(name = "booking_settings_json", columnDefinition = "JSON")
-    private String bookingSettingsJson;
-
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
@@ -207,8 +201,6 @@ public class Tour {
 
     @PrePersist
     public void prePersist() {
-        if (ratingAverage == null)
-            ratingAverage = new BigDecimal("0.00");
         if (tourStatus == null)
             tourStatus = TourStatus.published;
         if (visibility == null)

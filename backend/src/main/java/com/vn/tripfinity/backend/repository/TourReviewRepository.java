@@ -16,4 +16,11 @@ public interface TourReviewRepository extends JpaRepository<TourReview, Integer>
     @Query("SELECT r FROM TourReview r WHERE r.tour.tourId = :tourId AND r.reviewStatus = :status ORDER BY r.createdAt DESC")
     List<TourReview> findByTourAndStatus(@Param("tourId") Integer tourId,
             @Param("status") TourReview.ReviewStatus status);
+
+    /**
+     * Tính trung bình rating của tour (chỉ tính reviews đã approved)
+     * Trả về null nếu chưa có review nào
+     */
+    @Query("SELECT AVG(r.rating) FROM TourReview r WHERE r.tour.tourId = :tourId AND r.reviewStatus = 'approved'")
+    Double calculateAverageRating(@Param("tourId") Integer tourId);
 }

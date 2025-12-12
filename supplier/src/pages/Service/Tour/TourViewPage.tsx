@@ -292,7 +292,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
               </div>
             </div>
 
-            {tour.ratingAverage && (
+            {typeof tour.ratingAverage === 'number' && tour.ratingAverage > 0 && (
               <div>
                 <div className={labelCls}>Đánh giá trung bình</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
