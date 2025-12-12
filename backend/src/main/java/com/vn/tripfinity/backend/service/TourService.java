@@ -111,12 +111,12 @@ public class TourService {
                                 : null)
                 .departureLocation(dto.getDepartureLocation())
                 .meetingPoint(dto.getMeetingPoint())
-                .guideLanguage(joinList(dto.getGuideLanguage()))
+                .guideLanguage(dto.getGuideLanguagesJson() != null ? joinList(dto.getGuideLanguagesJson()) : joinList(dto.getGuideLanguage()))
                 .guideLanguagesJson(writeJson(dto.getGuideLanguagesJson()))
                 .itineraryOverview(dto.getItineraryOverview())
                 .itineraryDetailsJson(dto.getItineraryDetailsJson())
-                .inclusiveItems(joinList(dto.getInclusiveItems()))
-                .exclusiveItems(joinList(dto.getExclusiveItems()))
+                .inclusiveItems(dto.getIncludedJson() != null ? joinList(dto.getIncludedJson()) : joinList(dto.getInclusiveItems()))
+                .exclusiveItems(dto.getExcludedJson() != null ? joinList(dto.getExcludedJson()) : joinList(dto.getExclusiveItems()))
                 .includedJson(writeJson(dto.getIncludedJson()))
                 .excludedJson(writeJson(dto.getExcludedJson()))
                 .cancellationPolicy(dto.getCancellationPolicy())
@@ -225,22 +225,30 @@ public class TourService {
             existing.setDepartureLocation(dto.getDepartureLocation());
         if (dto.getMeetingPoint() != null)
             existing.setMeetingPoint(dto.getMeetingPoint());
-        if (dto.getGuideLanguage() != null)
-            existing.setGuideLanguage(joinList(dto.getGuideLanguage()));
-        if (dto.getGuideLanguagesJson() != null)
+        // Sync guide language: prioritize JSON, fallback to CSV
+        if (dto.getGuideLanguagesJson() != null) {
             existing.setGuideLanguagesJson(writeJson(dto.getGuideLanguagesJson()));
+            existing.setGuideLanguage(joinList(dto.getGuideLanguagesJson()));
+        } else if (dto.getGuideLanguage() != null) {
+            existing.setGuideLanguage(joinList(dto.getGuideLanguage()));
+        }
         if (dto.getItineraryOverview() != null)
             existing.setItineraryOverview(dto.getItineraryOverview());
         if (dto.getItineraryDetailsJson() != null)
             existing.setItineraryDetailsJson(dto.getItineraryDetailsJson());
-        if (dto.getInclusiveItems() != null)
-            existing.setInclusiveItems(joinList(dto.getInclusiveItems()));
-        if (dto.getExclusiveItems() != null)
-            existing.setExclusiveItems(joinList(dto.getExclusiveItems()));
-        if (dto.getIncludedJson() != null)
+        // Sync inclusive/exclusive items: prioritize JSON, fallback to CSV
+        if (dto.getIncludedJson() != null) {
             existing.setIncludedJson(writeJson(dto.getIncludedJson()));
-        if (dto.getExcludedJson() != null)
+            existing.setInclusiveItems(joinList(dto.getIncludedJson()));
+        } else if (dto.getInclusiveItems() != null) {
+            existing.setInclusiveItems(joinList(dto.getInclusiveItems()));
+        }
+        if (dto.getExcludedJson() != null) {
             existing.setExcludedJson(writeJson(dto.getExcludedJson()));
+            existing.setExclusiveItems(joinList(dto.getExcludedJson()));
+        } else if (dto.getExclusiveItems() != null) {
+            existing.setExclusiveItems(joinList(dto.getExclusiveItems()));
+        }
         if (dto.getCancellationPolicy() != null)
             existing.setCancellationPolicy(dto.getCancellationPolicy());
         if (dto.getPoliciesText() != null)
