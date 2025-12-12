@@ -37,6 +37,7 @@ public class HotelBookingService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final FCMService fcmService;
+    private final PointsService pointsService;
 
     public List<HotelBookingDTO> getAllBookings() {
         log.debug("Lấy toàn bộ hotel bookings");
@@ -506,6 +507,13 @@ public class HotelBookingService {
         
         HotelBooking updated = bookingRepository.save(booking);
         log.info("Đã xác nhận Booking ID: {} lúc {}", bookingId, updated.getProviderConfirmedAt());
+
+        // 🎁 CỘNG ĐIỂM CHO USER
+        try {
+            pointsService.awardBookingPoints(booking.getUser().getUserId(), "Khách sạn", bookingId);
+        } catch (Exception e) {
+            log.error("Failed to award points for booking {}: {}", bookingId, e.getMessage());
+        }
 
         // 📧 GỬI THÔNG BÁO VÀ EMAIL CHO USER
         try {

@@ -1,20 +1,112 @@
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
+import 'package:app/controllers/auth_controller.dart';
 import 'package:app/services/localization_service.dart';
+import 'package:app/services/points_service.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
+import 'dart:convert';
 
-/// UI tĩnh: Thành Tích & Điểm Thưởng
-/// - Bám theo theme + .tr localization
-/// - Dùng icon Lucide
-class BadgesAndPointsUserScreen extends StatelessWidget {
+/// Thành Tích & Điểm Thưởng - Dynamic with API
+class BadgesAndPointsUserScreen extends StatefulWidget {
   const BadgesAndPointsUserScreen({super.key});
 
   @override
+  State<BadgesAndPointsUserScreen> createState() =>
+      _BadgesAndPointsUserScreenState();
+}
+
+class _BadgesAndPointsUserScreenState extends State<BadgesAndPointsUserScreen> {
+  final PointsService _pointsService = PointsService();
+
+  bool _loading = true;
+  int _totalPoints = 0;
+  int _userId = 0;
+  List<Map<String, dynamic>> _pointsHistory = [];
+  List<Map<String, dynamic>> _unlockedBadges = [];
+  List<Map<String, dynamic>> _allBadges = [];
+  String _currentTier = 'Đồng';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final authController = context.read<AuthController>();
+      final userId = authController.currentUser?.userId;
+
+      if (userId == null) {
+        print('❌ User ID is null from AuthController');
+        setState(() => _loading = false);
+        return;
+      }
+
+      _userId = userId;
+      print('✅ User ID from AuthController: $_userId');
+
+      print('🔄 Calling API: /points/user/$_userId/summary');
+      final summary = await _pointsService.getUserPointsSummary(_userId);
+      print('✅ API Response: $summary');
+
+      setState(() {
+        _totalPoints = summary['totalPoints'] ?? 0;
+        _pointsHistory = List<Map<String, dynamic>>.from(
+          summary['recentPoints'] ?? [],
+        );
+        _unlockedBadges = List<Map<String, dynamic>>.from(
+          summary['unlockedBadges'] ?? [],
+        );
+        _allBadges = List<Map<String, dynamic>>.from(
+          summary['availableBadges'] ?? [],
+        );
+        _currentTier = _determineTier(_totalPoints);
+        _loading = false;
+      });
+
+      print('📊 Total Points: $_totalPoints');
+      print('📜 Points History: ${_pointsHistory.length} items');
+      print('🎖️ Unlocked Badges: ${_unlockedBadges.length} items');
+      print('🏆 All Badges: ${_allBadges.length} items');
+    } catch (e) {
+      print('❌ Error loading data: $e');
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Không thể tải dữ liệu: $e')));
+      }
+    }
+  }
+
+  String _determineTier(int points) {
+    if (points >= 5000) return 'Huyền thoại';
+    if (points >= 2000) return 'Kim cương';
+    if (points >= 1000) return 'Vàng';
+    if (points >= 500) return 'Bạc';
+    if (points >= 200) return 'Đồng';
+    return 'Mới bắt đầu';
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Dữ liệu tĩnh mô phỏng theo thiết kế
-    const totalPoints = 1000;
-    const currentTierKey = 'badges_tier_potential'; // "Cấp độ Tiềm năng"
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: context.backgroundColor,
+        appBar: AppBar(
+          backgroundColor: context.backgroundColor,
+          elevation: 0,
+          iconTheme: IconThemeData(color: context.textPrimaryColor),
+          title: Text('account_badges_points'.tr, style: context.h5Style),
+        ),
+        body: Center(
+          child: CircularProgressIndicator(color: context.primaryColor),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: context.backgroundColor,
@@ -36,21 +128,19 @@ class BadgesAndPointsUserScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _KpiTile(
-                        color:
-                            context.primaryColor, // dùng màu chủ đạo từ theme
+                        color: context.primaryColor,
                         icon: LucideIcons.star,
                         titleKey: 'badges_total_points',
-                        valueText: totalPoints.toString(),
+                        valueText: _totalPoints.toString(),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: _KpiTile(
-                        color:
-                            context.successColor, // dùng màu success từ theme
+                        color: context.successColor,
                         icon: LucideIcons.badgeCheck,
                         titleKey: 'badges_current_tier',
-                        valueKey: currentTierKey,
+                        valueText: _currentTier,
                       ),
                     ),
                   ],
@@ -72,7 +162,14 @@ class BadgesAndPointsUserScreen extends StatelessWidget {
               // Tab content
               Expanded(
                 child: TabBarView(
-                  children: const [_MemberLevelsTab(), _PointsHistoryTab()],
+                  children: [
+                    _MemberLevelsTab(
+                      allBadges: _allBadges,
+                      unlockedBadges: _unlockedBadges,
+                      currentPoints: _totalPoints,
+                    ),
+                    _PointsHistoryTab(pointsHistory: _pointsHistory),
+                  ],
                 ),
               ),
             ],
@@ -87,21 +184,20 @@ class _KpiTile extends StatelessWidget {
   final Color color;
   final IconData icon;
   final String titleKey;
-  final String? valueText; // nếu muốn truyền text trực tiếp
-  final String? valueKey; // hoặc dùng key để .tr
+  final String valueText;
+
   const _KpiTile({
     required this.color,
     required this.icon,
     required this.titleKey,
-    this.valueText,
-    this.valueKey,
+    required this.valueText,
   });
 
   @override
   Widget build(BuildContext context) {
     final bg = color;
     final title = titleKey.tr;
-    final value = valueText ?? valueKey?.tr ?? '';
+    final value = valueText;
 
     return Container(
       height: 110,
@@ -189,40 +285,90 @@ class _PillTabBar extends StatelessWidget {
 }
 
 class _MemberLevelsTab extends StatelessWidget {
-  final levels = const [
-    (
-      icon: LucideIcons.sparkles,
-      titleKey: 'badges_tier_potential_title',
-      descKey: 'badges_tier_potential_desc',
-    ),
-    (
-      icon: LucideIcons.badge,
-      titleKey: 'badges_tier_bronze_title',
-      descKey: 'badges_tier_bronze_desc',
-    ),
-    (
-      icon: LucideIcons.badgeHelp,
-      titleKey: 'badges_tier_silver_title',
-      descKey: 'badges_tier_silver_desc',
-    ),
-  ];
+  final List<Map<String, dynamic>> allBadges;
+  final List<Map<String, dynamic>> unlockedBadges;
+  final int currentPoints;
 
-  const _MemberLevelsTab();
+  const _MemberLevelsTab({
+    required this.allBadges,
+    required this.unlockedBadges,
+    required this.currentPoints,
+  });
+
+  IconData _getBadgeIcon(String badgeName) {
+    if (badgeName.contains('Đồng')) return LucideIcons.badge;
+    if (badgeName.contains('Bạc')) return LucideIcons.badgeCheck;
+    if (badgeName.contains('Vàng')) return LucideIcons.award;
+    if (badgeName.contains('Kim cương')) return LucideIcons.gem;
+    if (badgeName.contains('Huyền thoại')) return LucideIcons.crown;
+    return LucideIcons.sparkles;
+  }
+
+  bool _isUnlocked(int badgeId) {
+    return unlockedBadges.any((ub) {
+      final badge = ub['badge'];
+      if (badge != null && badge is Map<String, dynamic>) {
+        return badge['badgeId'] == badgeId;
+      }
+      return ub['badgeId'] == badgeId;
+    });
+  }
+
+  int _getRequiredPoints(Map<String, dynamic> badge) {
+    // Backend already parsed criteriaJson and returned requiredPoints
+    final requiredPoints = badge['requiredPoints'];
+    if (requiredPoints != null) {
+      return requiredPoints is int
+          ? requiredPoints
+          : int.tryParse(requiredPoints.toString()) ?? 0;
+    }
+
+    // Fallback: parse criteriaJson if requiredPoints not available
+    try {
+      final criteriaJson = badge['criteriaJson'];
+      if (criteriaJson != null && criteriaJson is String) {
+        final criteria = jsonDecode(criteriaJson);
+        return criteria['requiredPoints'] as int? ?? 0;
+      }
+    } catch (e) {
+      print('⚠️ Failed to parse criteriaJson: $e');
+    }
+
+    return 0;
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (allBadges.isEmpty) {
+      return Center(
+        child: Text(
+          'Không có huy hiệu nào',
+          style: context.bodyOneStyle.copyWith(
+            color: context.textSecondaryColor,
+          ),
+        ),
+      );
+    }
+
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
       itemBuilder: (_, i) {
-        final item = levels[i];
+        final badge = allBadges[i];
+        final badgeId = badge['badgeId'] ?? 0;
+        final isUnlocked = _isUnlocked(badgeId);
+        final requiredPoints = _getRequiredPoints(badge);
+
         return _LevelCard(
-          icon: item.icon,
-          title: item.titleKey.tr,
-          description: item.descKey.tr,
+          icon: _getBadgeIcon(badge['badgeName'] ?? ''),
+          title: badge['badgeName'] ?? '',
+          description: badge['badgeDescription'] ?? '',
+          isUnlocked: isUnlocked,
+          currentPoints: currentPoints,
+          requiredPoints: requiredPoints,
         );
       },
       separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemCount: levels.length,
+      itemCount: allBadges.length,
     );
   }
 }
@@ -231,14 +377,25 @@ class _LevelCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
+  final bool isUnlocked;
+  final int currentPoints;
+  final int requiredPoints;
+
   const _LevelCard({
     required this.icon,
     required this.title,
     required this.description,
+    this.isUnlocked = false,
+    required this.currentPoints,
+    required this.requiredPoints,
   });
 
   @override
   Widget build(BuildContext context) {
+    final progress = requiredPoints > 0
+        ? (currentPoints / requiredPoints).clamp(0.0, 1.0)
+        : 0.0;
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.light
@@ -257,34 +414,136 @@ class _LevelCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: context.secondaryColor,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: context.primaryColor, size: 24),
+          Stack(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: isUnlocked
+                      ? context.secondaryColor
+                      : context.borderLineColor.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: isUnlocked
+                      ? context.primaryColor
+                      : context.textSecondaryColor.withValues(alpha: 0.5),
+                  size: 26,
+                ),
+              ),
+              if (!isUnlocked)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      LucideIcons.lock,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: context.subTitleOneStyle,
-                  textAlign: TextAlign.center,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: context.subTitleOneStyle.copyWith(
+                          color: isUnlocked
+                              ? context.textPrimaryColor
+                              : context.textSecondaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (isUnlocked)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: context.successColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '✓ Đã mở',
+                          style: context.captionStyle.copyWith(
+                            color: context.successColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   description,
                   style: context.bodyTwoStyle.copyWith(
                     color: context.textSecondaryColor,
+                    fontSize: 13,
                   ),
-                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                // Progress bar
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          isUnlocked
+                              ? 'Hoàn thành'
+                              : '$currentPoints / $requiredPoints điểm',
+                          style: context.captionStyle.copyWith(
+                            color: isUnlocked
+                                ? context.successColor
+                                : context.textSecondaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (!isUnlocked && requiredPoints > currentPoints)
+                          Text(
+                            'Còn ${requiredPoints - currentPoints}',
+                            style: context.captionStyle.copyWith(
+                              color: context.textSecondaryColor.withValues(
+                                alpha: 0.7,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 8,
+                        backgroundColor: context.borderLineColor.withValues(
+                          alpha: 0.3,
+                        ),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isUnlocked
+                              ? context.successColor
+                              : context.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -296,28 +555,53 @@ class _LevelCard extends StatelessWidget {
 }
 
 class _PointsHistoryTab extends StatelessWidget {
-  // Dữ liệu mẫu cho lịch sử điểm
-  final items = const [
-    ('badges_hist_login_7days', '+10', '12/6/2025'),
-    ('badges_hist_login_7days', '+10', '12/6/2025'),
-    ('badges_hist_login_7days', '+10', '12/6/2025'),
-    ('badges_hist_login_7days', '+10', '12/6/2025'),
-    ('badges_hist_login_7days', '+10', '12/6/2025'),
-    ('badges_hist_login_7days', '+10', '12/6/2025'),
-    ('badges_hist_login_7days', '+10', '12/6/2025'),
-    ('badges_hist_login_7days', '+10', '12/6/2025'),
-    ('badges_hist_login_7days', '+10', '12/6/2025'),
-  ];
+  final List<Map<String, dynamic>> pointsHistory;
 
-  const _PointsHistoryTab();
+  const _PointsHistoryTab({required this.pointsHistory});
+
+  String _formatDate(String? createdAt) {
+    if (createdAt == null) return '';
+    try {
+      final dt = DateTime.parse(createdAt);
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return createdAt;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (pointsHistory.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              LucideIcons.history,
+              size: 64,
+              color: context.textSecondaryColor.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Chưa có lịch sử điểm',
+              style: context.bodyOneStyle.copyWith(
+                color: context.textSecondaryColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final border = BorderSide(color: context.borderLineColor);
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
       itemBuilder: (_, i) {
-        final (titleKey, points, date) = items[i];
+        final point = pointsHistory[i];
+        final reason = point['reason'] ?? 'Tích điểm';
+        final points = point['points'] ?? 0;
+        final date = _formatDate(point['createdAt']);
+
         return Container(
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.light
@@ -327,10 +611,26 @@ class _PointsHistoryTab extends StatelessWidget {
             border: Border.fromBorderSide(border),
           ),
           child: ListTile(
-            title: Text(titleKey.tr, style: context.subTitleTwoStyle),
+            leading: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: context.successColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                LucideIcons.plus,
+                color: context.successColor,
+                size: 20,
+              ),
+            ),
+            title: Text(reason, style: context.subTitleTwoStyle),
             subtitle: Text(
-              points,
-              style: context.bodyTwoStyle.copyWith(color: context.successColor),
+              '+$points điểm',
+              style: context.bodyTwoStyle.copyWith(
+                color: context.successColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             trailing: Text(
               date,
@@ -346,7 +646,7 @@ class _PointsHistoryTab extends StatelessWidget {
         );
       },
       separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemCount: items.length,
+      itemCount: pointsHistory.length,
     );
   }
 }

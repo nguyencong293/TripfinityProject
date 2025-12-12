@@ -751,6 +751,14 @@ CREATE TABLE points (
     CONSTRAINT fk_points_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Insert default badges with criteria
+INSERT INTO badges (badge_name, badge_description, icon_url, criteria_json, created_at, updated_at) VALUES
+('Đồng', 'Du khách mới - Bắt đầu hành trình khám phá', '🥉', '{"requiredPoints":200}', NOW(), NOW()),
+('Bạc', 'Nhà thám hiểm - Đã có nhiều trải nghiệm', '🥈', '{"requiredPoints":500}', NOW(), NOW()),
+('Vàng', 'Du lịch chuyên nghiệp - Người đi nhiều nơi', '🥇', '{"requiredPoints":1000}', NOW(), NOW()),
+('Kim cương', 'Huyền thoại du lịch - Bậc thầy khám phá', '💎', '{"requiredPoints":2000}', NOW(), NOW()),
+('Huyền thoại', 'Bậc thầy du lịch - Đỉnh cao của du lịch', '👑', '{"requiredPoints":5000}', NOW(), NOW());
+
 -- 33) notifications
 CREATE TABLE notifications (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,

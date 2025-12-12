@@ -36,6 +36,7 @@ public class TourBookingService {
     private final ProviderRepository providerRepository;
     private final NotificationService notificationService;
     private final FCMService fcmService;
+    private final PointsService pointsService;
 
     public List<TourBookingDTO> getAllBookings() {
         log.debug("Lấy toàn bộ tour bookings");
@@ -370,6 +371,13 @@ public class TourBookingService {
         
         TourBooking updated = bookingRepository.save(booking);
         log.info("Đã xác nhận Tour Booking ID: {} - providerConfirmed=1", bookingId);
+
+        // 🎁 CỘNG ĐIỂM CHO USER
+        try {
+            pointsService.awardBookingPoints(booking.getUser().getUserId(), "Tour", bookingId);
+        } catch (Exception e) {
+            log.error("Failed to award points for booking {}: {}", bookingId, e.getMessage());
+        }
 
         // 📧 GỬI THÔNG BÁO VÀ EMAIL CHO USER
         try {

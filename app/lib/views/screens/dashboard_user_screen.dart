@@ -2,6 +2,7 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/controllers/language_controller.dart';
 import 'package:app/services/localization_service.dart';
+import 'package:app/services/points_service.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -11,8 +12,52 @@ import '../../routes/app_router.dart';
 import 'package:go_router/go_router.dart';
 
 /// Dashboard tài khoản: bám theo theme và hỗ trợ đa ngôn ngữ
-class DashboardUserScreen extends StatelessWidget {
+class DashboardUserScreen extends StatefulWidget {
   const DashboardUserScreen({super.key});
+
+  @override
+  State<DashboardUserScreen> createState() => _DashboardUserScreenState();
+}
+
+class _DashboardUserScreenState extends State<DashboardUserScreen> {
+  final PointsService _pointsService = PointsService();
+  int _totalPoints = 0;
+  bool _loadingPoints = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserPoints();
+  }
+
+  Future<void> _loadUserPoints() async {
+    try {
+      final authController = context.read<AuthController>();
+      final userId = authController.currentUser?.userId;
+
+      if (userId != null) {
+        print('📊 Loading points for user ID: $userId');
+        final points = await _pointsService.getTotalPoints(userId);
+        if (mounted) {
+          setState(() {
+            _totalPoints = points;
+            _loadingPoints = false;
+          });
+        }
+        print('✅ Total points loaded: $points');
+      } else {
+        print('⚠️ User ID is null');
+        if (mounted) {
+          setState(() => _loadingPoints = false);
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading points: $e');
+      if (mounted) {
+        setState(() => _loadingPoints = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,10 +69,9 @@ class DashboardUserScreen extends StatelessWidget {
         final fullName = user?.fullName;
         final email = user?.email;
 
-        // Fake data (placeholder) — có thể thay bằng dữ liệu thực sau
+        // TODO: Load từ API thực tế
         const bookedCount = 1;
         const processingCount = 1;
-        const points = 1000;
         const notifications = '99+';
 
         return SafeArea(
@@ -48,8 +92,9 @@ class DashboardUserScreen extends StatelessWidget {
                 _StatsGrid(
                   booked: bookedCount,
                   processing: processingCount,
-                  points: points,
+                  points: _loadingPoints ? 0 : _totalPoints,
                   notifications: notifications,
+                  loadingPoints: _loadingPoints,
                 ),
 
                 const SizedBox(height: 12),
@@ -160,11 +205,14 @@ class _StatsGrid extends StatelessWidget {
   final int processing;
   final int points;
   final String notifications;
+  final bool loadingPoints;
+
   const _StatsGrid({
     required this.booked,
     required this.processing,
     required this.points,
     required this.notifications,
+    this.loadingPoints = false,
   });
 
   @override
@@ -196,7 +244,7 @@ class _StatsGrid extends StatelessWidget {
             icon: LucideIcons.timer,
           ),
           _StatCard(
-            value: '$points',
+            value: loadingPoints ? '...' : '$points',
             label: 'account_badges_points'.tr,
             icon: LucideIcons.medal,
             onTap: () => context.push(AppRouter.badgesPoints),

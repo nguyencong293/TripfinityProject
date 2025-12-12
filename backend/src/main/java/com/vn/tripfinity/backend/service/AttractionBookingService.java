@@ -37,6 +37,7 @@ public class AttractionBookingService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final FCMService fcmService;
+    private final PointsService pointsService;
 
     public List<AttractionBookingDTO> getAllBookings() {
         log.debug("Lấy toàn bộ attraction bookings");
@@ -441,6 +442,13 @@ public class AttractionBookingService {
 
         AttractionBooking updated = bookingRepository.save(booking);
         log.info("Đã xác nhận Booking ID: {} lúc {}", bookingId, updated.getProviderConfirmedAt());
+
+        // 🎁 CỘNG ĐIỂM CHO USER
+        try {
+            pointsService.awardBookingPoints(booking.getUser().getUserId(), "Điểm tham quan", bookingId);
+        } catch (Exception e) {
+            log.error("Failed to award points for booking {}: {}", bookingId, e.getMessage());
+        }
 
         // 📧 GỬI THÔNG BÁO VÀ EMAIL CHO USER
         try {
