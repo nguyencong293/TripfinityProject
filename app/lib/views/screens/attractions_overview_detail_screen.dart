@@ -529,6 +529,8 @@ class _AttractionsOverviewDetailScreenState
     final location =
         d['location']?.toString() ?? d['address']?.toString() ?? '';
     final rating = _toDouble(d['ratingAverage']) ?? 0.0;
+    final reviewCount =
+        _toInt(d['reviewCount']) ?? _toInt(d['totalReviews']) ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,11 +566,12 @@ class _AttractionsOverviewDetailScreenState
               rating.toStringAsFixed(1),
               style: context.bodyTwoStyle.copyWith(fontWeight: FontWeight.w600),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Text(
-              'Đánh giá',
+              '($reviewCount)',
               style: context.captionStyle.copyWith(
                 color: context.textSecondaryColor,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],

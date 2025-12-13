@@ -7,6 +7,7 @@ import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
 import 'package:app/views/screens/attractions_overview_detail_screen.dart';
 import 'package:app/views/screens/nearby_search_screen.dart';
+import 'package:app/views/screens/search_history_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -25,6 +26,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Use centralized API service and config
 import 'package:app/services/search_api_service.dart';
 import 'package:app/services/search_history_service.dart';
+import 'package:app/services/hotel_api_service.dart';
+import 'package:app/services/restaurant_api_service.dart';
+import 'package:app/services/tour_api_service.dart';
+import 'package:app/services/attraction_api_service.dart';
 
 // Quick filter categories
 enum _QuickFilter { all, restaurant, hotel, tour, attraction }
@@ -786,7 +791,11 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
             if (_recentViewedItems.length > 3)
               TextButton(
                 onPressed: () {
-                  // Could navigate to full history screen
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SearchHistoryScreen(),
+                    ),
+                  );
                 },
                 child: Text(
                   'Xem thêm',
@@ -1511,9 +1520,25 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
 
       final viewedItems = await historyService.getRecentViewedItems(limit: 10);
 
-      // Convert API response to the format expected by the UI
-      final List<Map<String, dynamic>> items = viewedItems.map((item) {
-        return {
+      // Convert API response to the format expected by the UI and fetch latest ratings
+      final List<Map<String, dynamic>> items = [];
+      for (final item in viewedItems) {
+        // Fetch latest rating from API
+        dynamic latestRating = item['itemRating'];
+        try {
+          latestRating = await _fetchLatestRating(
+            prefs,
+            item['itemType'],
+            item['itemId'],
+          );
+        } catch (e) {
+          // Keep old rating if fetch fails
+          debugPrint(
+            'Failed to fetch rating for ${item['itemType']} ${item['itemId']}: $e',
+          );
+        }
+
+        items.add({
           'itemType': item['itemType'],
           'itemId': item['itemId'],
           'itemTitle': item['itemTitle'],
@@ -1521,17 +1546,17 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
           'itemThumbnailUrl': item['itemThumbnailUrl'],
           'itemPrice': item['itemPrice'],
           'itemCurrencyCode': item['itemCurrencyCode'],
-          'itemRating': item['itemRating'],
+          'itemRating': latestRating,
           // For compatibility with existing navigation methods
           'name': item['itemTitle'],
           'location': item['itemLocation'],
-          'rating': item['itemRating'],
+          'rating': latestRating,
           'price': _formatPrice(item['itemPrice'], item['itemCurrencyCode']),
           'type': item['itemType'],
           'image': item['itemThumbnailUrl'],
           'imageUrl': item['itemThumbnailUrl'],
-        };
-      }).toList();
+        });
+      }
 
       setState(() {
         _recentViewedItems = items;
@@ -1543,6 +1568,38 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         _recentViewedItems = [];
         _loadingRecentViewed = false;
       });
+    }
+  }
+
+  Future<dynamic> _fetchLatestRating(
+    SharedPreferences prefs,
+    String itemType,
+    int itemId,
+  ) async {
+    try {
+      final dio = Dio();
+      switch (itemType.toLowerCase()) {
+        case 'hotel':
+          final hotelApi = HotelApiService(dio: dio, prefs: prefs);
+          final hotel = await hotelApi.getHotelById(itemId);
+          return hotel['ratingAverage'] ?? hotel['rating'] ?? 0.0;
+        case 'restaurant':
+          final restaurantApi = RestaurantApiService(dio: dio, prefs: prefs);
+          final restaurant = await restaurantApi.getRestaurantById(itemId);
+          return restaurant['ratingAverage'] ?? restaurant['rating'] ?? 0.0;
+        case 'tour':
+          final tourApi = TourApiService(dio: dio, prefs: prefs);
+          final tour = await tourApi.getTourById(itemId);
+          return tour['ratingAverage'] ?? tour['rating'] ?? 0.0;
+        case 'attraction':
+          final attractionApi = AttractionApiService(dio: dio, prefs: prefs);
+          final attraction = await attractionApi.getAttractionById(itemId);
+          return attraction['ratingAverage'] ?? attraction['rating'] ?? 0.0;
+        default:
+          return 0.0;
+      }
+    } catch (e) {
+      return 0.0;
     }
   }
 

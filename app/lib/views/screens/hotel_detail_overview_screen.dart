@@ -551,10 +551,8 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
         const SizedBox(height: 6),
         Row(
           children: [
-            if (starRating != null) _starsRow(context, starRating.toDouble()),
-            if (starRating != null) const SizedBox(width: 8),
-            Icon(Icons.star_rounded, color: context.primaryColor, size: 16),
-            const SizedBox(width: 4),
+            _starsRow(context, ratingAvg),
+            const SizedBox(width: 8),
             Text(
               ratingAvg.toStringAsFixed(1),
               style: context.captionStyle.copyWith(fontWeight: FontWeight.w700),
@@ -2056,7 +2054,7 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
-        final filled = i < rating.round();
+        final filled = rating >= i + 1;
         return Padding(
           padding: const EdgeInsets.only(right: 2),
           child: Icon(

@@ -618,7 +618,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
   Widget _headerInfo(BuildContext context, Map<String, dynamic> data) {
     final name = data['title']?.toString() ?? 'Restaurant';
-    final rating = data['ratingAverage']?.toString() ?? '0.0';
+    final ratingNum =
+        double.tryParse(data['ratingAverage']?.toString() ?? '0.0') ?? 0.0;
+    final reviewCount = _reviews.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -630,13 +632,35 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            Icon(LucideIcons.star, size: 18, color: context.primaryColor),
-            const SizedBox(width: 4),
+            // 5 stars row
+            Row(
+              children: List.generate(5, (i) {
+                final isFilled = ratingNum >= i + 1;
+                return Icon(
+                  isFilled ? Icons.star_rounded : Icons.star_border_rounded,
+                  size: 16,
+                  color: context.primaryColor,
+                );
+              }),
+            ),
+            const SizedBox(width: 8),
             Text(
-              rating,
+              ratingNum.toStringAsFixed(1),
               style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w600),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 6),
+            Text(
+              '($reviewCount)',
+              style: context.captionStyle.copyWith(
+                color: context.textSecondaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
             Icon(
               LucideIcons.mapPin,
               size: 16,
@@ -1061,7 +1085,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 Row(
                   children: List.generate(5, (i) {
                     final ratingNum = double.tryParse(avgRating) ?? 0.0;
-                    final isFilled = i < ratingNum.round();
+                    final isFilled = ratingNum >= i + 1;
                     return Icon(
                       isFilled ? Icons.star_rounded : Icons.star_border_rounded,
                       size: 16,
