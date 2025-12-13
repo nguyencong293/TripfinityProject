@@ -299,7 +299,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
 
       if (bytes != null) {
-        return BitmapDescriptor.fromBytes(bytes.buffer.asUint8List());
+        return BitmapDescriptor.bytes(bytes.buffer.asUint8List());
       }
     } catch (e) {
       debugPrint('❌ Error creating custom marker: $e');

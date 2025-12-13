@@ -526,7 +526,6 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     final name = d['title']?.toString() ?? d['name']?.toString() ?? '';
     final ratingAvg =
         _toDouble(d['ratingAverage']) ?? _toDouble(d['rating']) ?? 0.0;
-    final starRating = _toInt(d['starRating']);
     final ratingLabel = ratingAvg > 4.2
         ? 'Tuyệt vời'
         : ratingAvg > 3.5
@@ -646,9 +645,7 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     }
 
     // Nếu không có availableRooms, fallback về totalRooms hoặc capacity
-    if (availableRooms == null) {
-      availableRooms = totalRooms;
-    }
+    availableRooms ??= totalRooms;
     if (availableRooms == null) {
       final capRaw = d['capacity'];
       if (capRaw is num) {

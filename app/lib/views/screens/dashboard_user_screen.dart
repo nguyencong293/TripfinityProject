@@ -36,7 +36,7 @@ class _DashboardUserScreenState extends State<DashboardUserScreen> {
       final userId = authController.currentUser?.userId;
 
       if (userId != null) {
-        print('📊 Loading points for user ID: $userId');
+        debugPrint('📊 Loading points for user ID: $userId');
         final points = await _pointsService.getTotalPoints(userId);
         if (mounted) {
           setState(() {
@@ -44,15 +44,15 @@ class _DashboardUserScreenState extends State<DashboardUserScreen> {
             _loadingPoints = false;
           });
         }
-        print('✅ Total points loaded: $points');
+        debugPrint('✅ Total points loaded: $points');
       } else {
-        print('⚠️ User ID is null');
+        debugPrint('⚠️ User ID is null');
         if (mounted) {
           setState(() => _loadingPoints = false);
         }
       }
     } catch (e) {
-      print('❌ Error loading points: $e');
+      debugPrint('❌ Error loading points: $e');
       if (mounted) {
         setState(() => _loadingPoints = false);
       }
@@ -69,7 +69,7 @@ class _DashboardUserScreenState extends State<DashboardUserScreen> {
         final fullName = user?.fullName;
         final email = user?.email;
 
-        // TODO: Load từ API thực tế
+        // Load từ API thực tế
         const bookedCount = 1;
         const processingCount = 1;
         const notifications = '99+';

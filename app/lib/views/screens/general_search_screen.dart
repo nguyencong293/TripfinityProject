@@ -63,7 +63,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   // Recent viewed items from search history
   List<Map<String, dynamic>> _recentViewedItems = [];
   bool _loadingRecentViewed = false;
-  String _lastSearchQuery = ''; // Track the last search query
+  final String _lastSearchQuery = ''; // Track the last search query
 
   @override
   void initState() {
@@ -945,6 +945,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       itemThumbnailUrl: imageUrl,
     );
 
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => HotelDetailOverviewScreen(
@@ -1000,6 +1001,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       itemThumbnailUrl: imageUrl,
     );
 
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RestaurantDetailScreen(
@@ -1071,6 +1073,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       'tourId': id,
     };
 
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => TourServiceDetailScreen(tourId: id, tour: tourData),
@@ -1143,6 +1146,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       'attractionId': id,
     };
 
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AttractionsOverviewDetailScreen(
@@ -1605,9 +1609,11 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
 
   // Save search query to history
   Future<void> _saveSearchQuery(String query, String searchType) async {
-    print('🔍 _saveSearchQuery called: query="$query", type="$searchType"');
+    debugPrint(
+      '🔍 _saveSearchQuery called: query="$query", type="$searchType"',
+    );
     if (query.isEmpty) {
-      print('⚠️ Query is empty, skipping save');
+      debugPrint('⚠️ Query is empty, skipping save');
       return;
     }
 
@@ -1615,29 +1621,29 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       final prefs = await SharedPreferences.getInstance();
       // Check if user is logged in
       final token = prefs.getString('user_token');
-      print('🔑 Token exists: ${token != null && token.isNotEmpty}');
+      debugPrint('🔑 Token exists: ${token != null && token.isNotEmpty}');
       if (token == null || token.isEmpty) {
         // User not logged in - skip saving silently
-        print('⚠️ No token found, skipping save');
+        debugPrint('⚠️ No token found, skipping save');
         return;
       }
 
-      print('📡 Calling SearchHistoryService.saveSearchQuery...');
+      debugPrint('📡 Calling SearchHistoryService.saveSearchQuery...');
       final historyService = SearchHistoryService(dio: Dio(), prefs: prefs);
       await historyService.saveSearchQuery(
         searchQuery: query,
         searchType: searchType,
       );
-      print('✅ Saved search query: $query ($searchType)');
+      debugPrint('✅ Saved search query: $query ($searchType)');
     } catch (e) {
       // Silently fail - don't interrupt user experience
       if (e.toString().contains('authentication') ||
           e.toString().contains('token')) {
         // Auth error - user not logged in, skip silently
-        print('⚠️ Auth error, skipping: $e');
+        debugPrint('⚠️ Auth error, skipping: $e');
         return;
       }
-      print('❌ Failed to save search query: $e');
+      debugPrint('❌ Failed to save search query: $e');
     }
   }
 
@@ -1651,11 +1657,11 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     String? itemLocation,
     String? itemThumbnailUrl,
   }) async {
-    print(
+    debugPrint(
       '👆 _saveClickedItem called: query="$searchQuery", item="$itemTitle", type="$itemType", id=$itemId',
     );
     if (searchQuery.isEmpty) {
-      print('⚠️ Search query is empty, skipping save');
+      debugPrint('⚠️ Search query is empty, skipping save');
       return;
     }
 
@@ -1663,14 +1669,14 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       final prefs = await SharedPreferences.getInstance();
       // Check if user is logged in
       final token = prefs.getString('user_token');
-      print('🔑 Token exists: ${token != null && token.isNotEmpty}');
+      debugPrint('🔑 Token exists: ${token != null && token.isNotEmpty}');
       if (token == null || token.isEmpty) {
         // User not logged in - skip saving silently
-        print('⚠️ No token found, skipping save');
+        debugPrint('⚠️ No token found, skipping save');
         return;
       }
 
-      print('📡 Calling SearchHistoryService.saveClickedItem...');
+      debugPrint('📡 Calling SearchHistoryService.saveClickedItem...');
       final historyService = SearchHistoryService(dio: Dio(), prefs: prefs);
       await historyService.saveClickedItem(
         searchQuery: searchQuery,
@@ -1681,7 +1687,7 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         itemLocation: itemLocation,
         itemThumbnailUrl: itemThumbnailUrl,
       );
-      print(
+      debugPrint(
         '✅ Saved clicked item: $itemTitle ($itemType) for query "$searchQuery"',
       );
     } catch (e) {
@@ -1689,10 +1695,10 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       if (e.toString().contains('authentication') ||
           e.toString().contains('token')) {
         // Auth error - user not logged in, skip silently
-        print('⚠️ Auth error, skipping: $e');
+        debugPrint('⚠️ Auth error, skipping: $e');
         return;
       }
-      print('❌ Failed to save clicked item: $e');
+      debugPrint('❌ Failed to save clicked item: $e');
     }
   }
 }

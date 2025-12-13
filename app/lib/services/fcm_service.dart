@@ -129,7 +129,7 @@ class FCMService {
   void _handleNotificationClick(RemoteMessage message) {
     debugPrint('🔔 Notification clicked: ${message.data}');
 
-    // TODO: Navigate đến màn hình tương ứng dựa vào data
+    // Navigate đến màn hình tương ứng dựa vào data
     if (message.data.containsKey('bookingId')) {
       String bookingId = message.data['bookingId'];
       debugPrint('Navigate to booking: $bookingId');

@@ -17,10 +17,10 @@ class RestaurantReviewsListScreen extends StatefulWidget {
 
   @override
   State<RestaurantReviewsListScreen> createState() =>
-      _restaurantReviewsListScreenState();
+      _RestaurantReviewsListScreenState();
 }
 
-class _restaurantReviewsListScreenState
+class _RestaurantReviewsListScreenState
     extends State<RestaurantReviewsListScreen> {
   List<Map<String, dynamic>> _reviews = [];
   bool _isLoading = true;

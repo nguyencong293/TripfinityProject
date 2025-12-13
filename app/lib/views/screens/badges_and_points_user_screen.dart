@@ -40,17 +40,17 @@ class _BadgesAndPointsUserScreenState extends State<BadgesAndPointsUserScreen> {
       final userId = authController.currentUser?.userId;
 
       if (userId == null) {
-        print('❌ User ID is null from AuthController');
+        debugPrint('❌ User ID is null from AuthController');
         setState(() => _loading = false);
         return;
       }
 
       _userId = userId;
-      print('✅ User ID from AuthController: $_userId');
+      debugPrint('✅ User ID from AuthController: $_userId');
 
-      print('🔄 Calling API: /points/user/$_userId/summary');
+      debugPrint('🔄 Calling API: /points/user/$_userId/summary');
       final summary = await _pointsService.getUserPointsSummary(_userId);
-      print('✅ API Response: $summary');
+      debugPrint('✅ API Response: $summary');
 
       setState(() {
         _totalPoints = summary['totalPoints'] ?? 0;
@@ -67,12 +67,12 @@ class _BadgesAndPointsUserScreenState extends State<BadgesAndPointsUserScreen> {
         _loading = false;
       });
 
-      print('📊 Total Points: $_totalPoints');
-      print('📜 Points History: ${_pointsHistory.length} items');
-      print('🎖️ Unlocked Badges: ${_unlockedBadges.length} items');
-      print('🏆 All Badges: ${_allBadges.length} items');
+      debugPrint('📊 Total Points: $_totalPoints');
+      debugPrint('📜 Points History: ${_pointsHistory.length} items');
+      debugPrint('🎖️ Unlocked Badges: ${_unlockedBadges.length} items');
+      debugPrint('🏆 All Badges: ${_allBadges.length} items');
     } catch (e) {
-      print('❌ Error loading data: $e');
+      debugPrint('❌ Error loading data: $e');
       setState(() => _loading = false);
       if (mounted) {
         ScaffoldMessenger.of(
@@ -331,7 +331,7 @@ class _MemberLevelsTab extends StatelessWidget {
         return criteria['requiredPoints'] as int? ?? 0;
       }
     } catch (e) {
-      print('⚠️ Failed to parse criteriaJson: $e');
+      debugPrint('⚠️ Failed to parse criteriaJson: $e');
     }
 
     return 0;

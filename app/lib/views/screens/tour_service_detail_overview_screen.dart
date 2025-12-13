@@ -614,7 +614,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
 
   Widget _imageFallback(BuildContext context) {
     return Container(
-      color: context.primaryColor.withOpacity(0.08),
+      color: context.primaryColor.withValues(alpha: 0.08),
       alignment: Alignment.center,
       child: Icon(LucideIcons.image, color: context.primaryColor, size: 40),
     );
@@ -688,7 +688,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: context.primaryColor.withOpacity(0.1),
+                  color: context.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -1170,7 +1170,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: context.primaryColor.withOpacity(0.1),
+            color: context.primaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: context.primaryColor),
           ),
@@ -1430,7 +1430,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
       decoration: BoxDecoration(
         color: context.cardBackgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withOpacity(0.3)),
+        border: Border.all(color: context.dividerColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -1440,7 +1440,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: context.primaryColor.withOpacity(0.1),
+                  color: context.primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -1512,7 +1512,9 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
           decoration: BoxDecoration(
             color: context.cardBackgroundColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: context.dividerColor.withOpacity(0.5)),
+            border: Border.all(
+              color: context.dividerColor.withValues(alpha: 0.5),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1521,7 +1523,9 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: context.primaryColor.withOpacity(0.1),
+                    backgroundColor: context.primaryColor.withValues(
+                      alpha: 0.1,
+                    ),
                     child: Icon(
                       LucideIcons.user,
                       size: 18,

@@ -341,7 +341,7 @@ class _NotificationItem extends StatelessWidget {
             border: notification.isRead
                 ? null
                 : Border.all(
-                    color: context.primaryColor.withOpacity(0.3),
+                    color: context.primaryColor.withValues(alpha: 0.3),
                     width: 2,
                   ),
           ),
@@ -392,7 +392,7 @@ class _NotificationItem extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: context.primaryColor.withOpacity(0.1),
+                        color: context.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(

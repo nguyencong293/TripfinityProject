@@ -202,14 +202,14 @@ class _FCMDebugScreenState extends State<FCMDebugScreen> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           await _fcmService.subscribeToTopic('test-topic');
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('✅ Subscribed to test-topic'),
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('✅ Subscribed to test-topic'),
+                            ),
+                          );
                         },
                         icon: const Icon(Icons.add_alert),
                         label: const Text('Subscribe to Test Topic'),
@@ -220,14 +220,14 @@ class _FCMDebugScreenState extends State<FCMDebugScreen> {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           await _fcmService.unsubscribeFromTopic('test-topic');
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('✅ Unsubscribed from test-topic'),
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('✅ Unsubscribed from test-topic'),
+                            ),
+                          );
                         },
                         icon: const Icon(Icons.remove_circle_outline),
                         label: const Text('Unsubscribe from Test Topic'),

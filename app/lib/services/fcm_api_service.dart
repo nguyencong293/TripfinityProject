@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 
 class FCMApiService {
@@ -10,13 +11,13 @@ class FCMApiService {
     String? authToken,
   }) async {
     try {
-      print('🔄 FCMApiService: Calling PUT /fcm/token');
-      print('   userId: $userId');
-      print('   fcmToken: ${fcmToken.substring(0, 20)}...');
-      print('   authToken: ${authToken != null ? "present" : "null"}');
+      debugPrint('🔄 FCMApiService: Calling PUT /fcm/token');
+      debugPrint('   userId: $userId');
+      debugPrint('   fcmToken: ${fcmToken.substring(0, 20)}...');
+      debugPrint('   authToken: ${authToken != null ? "present" : "null"}');
 
       final url = Uri.parse('${AppConfig.baseUrl}/fcm/token');
-      print('   URL: $url');
+      debugPrint('   URL: $url');
 
       final headers = {
         'Content-Type': 'application/json',
@@ -26,18 +27,18 @@ class FCMApiService {
       final body = jsonEncode({'userId': userId, 'fcmToken': fcmToken});
 
       final response = await http.put(url, headers: headers, body: body);
-      print('   Response status: ${response.statusCode}');
-      print('   Response body: ${response.body}');
+      debugPrint('   Response status: ${response.statusCode}');
+      debugPrint('   Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        print('✅ FCM token updated successfully');
+        debugPrint('✅ FCM token updated successfully');
         return true;
       } else {
-        print('❌ Failed to update FCM token: ${response.statusCode}');
+        debugPrint('❌ Failed to update FCM token: ${response.statusCode}');
         return false;
       }
     } catch (e) {
-      print('❌ Error updating FCM token: $e');
+      debugPrint('❌ Error updating FCM token: $e');
       return false;
     }
   }
@@ -58,14 +59,14 @@ class FCMApiService {
       final response = await http.delete(url, headers: headers);
 
       if (response.statusCode == 200) {
-        print('✅ FCM token deleted successfully');
+        debugPrint('✅ FCM token deleted successfully');
         return true;
       } else {
-        print('❌ Failed to delete FCM token: ${response.statusCode}');
+        debugPrint('❌ Failed to delete FCM token: ${response.statusCode}');
         return false;
       }
     } catch (e) {
-      print('❌ Error deleting FCM token: $e');
+      debugPrint('❌ Error deleting FCM token: $e');
       return false;
     }
   }
