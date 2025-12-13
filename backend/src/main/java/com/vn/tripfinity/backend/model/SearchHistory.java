@@ -53,6 +53,7 @@ public class SearchHistory {
     @Column(name = "search_query", nullable = false, length = 255)
     private String searchQuery;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "search_type", nullable = false)
     private SearchType searchType = SearchType.general;
@@ -77,6 +78,7 @@ public class SearchHistory {
     @Column(name = "search_timestamp", nullable = false, updatable = false)
     private LocalDateTime searchTimestamp;
 
+    @Builder.Default
     @Column(name = "clicked", nullable = false)
     private Boolean clicked = false;
 

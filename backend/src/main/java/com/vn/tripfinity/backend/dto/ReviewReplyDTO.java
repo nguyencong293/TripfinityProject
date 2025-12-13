@@ -31,10 +31,14 @@ public class ReviewReplyDTO {
     @NotBlank(message = "Reply content is required")
     private String content;
 
+    @Builder.Default
     private Boolean isPublic = true;
+    @Builder.Default
     private Integer isProvider = 0; // 0 = user, 1 = provider
 
+    @Builder.Default
     private Integer likeCount = 0;
+    @Builder.Default
     private Boolean isLikedByCurrentUser = false;
 
     private LocalDateTime createdAt;

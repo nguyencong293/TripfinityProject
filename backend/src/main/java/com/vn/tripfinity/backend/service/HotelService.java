@@ -160,7 +160,7 @@ public class HotelService {
                 .slug(dto.getSlug())
                 .seoTitle(dto.getSeoTitle())
                 .seoDescription(dto.getSeoDescription())
-                .isFeatured(dto.getIsFeatured() != null ? dto.getIsFeatured() : false)
+                .isFeatured(Boolean.TRUE.equals(dto.getIsFeatured()))
                 .publishedAt(publishedAt)
                 .visibility(dto.getVisibility() != null ? Hotel.Visibility.valueOf(dto.getVisibility())
                         : Hotel.Visibility.public_)
@@ -459,31 +459,30 @@ public class HotelService {
      * @return LocalDateTime cho publishedAt
      */
     private LocalDateTime determinePublishedAt(Hotel.HotelStatus status, LocalDateTime currentPublishedAt) {
-        switch (status) {
-            case published:
-                // Nếu đang chuyển sang published và chưa có publishedAt thì set thời gian hiện
-                // tại
+        return switch (status) {
+            case published -> {
+                // Nếu đang chuyển sang published và chưa có publishedAt thì set thời gian hiện tại
                 if (currentPublishedAt == null) {
                     LocalDateTime now = LocalDateTime.now();
                     log.info("🕐 Set publishedAt = {} vì status = published và chưa có publishedAt", now);
-                    return now;
+                    yield now;
                 }
                 // Nếu đã có publishedAt thì giữ nguyên
                 log.info("📅 Giữ nguyên publishedAt = {} vì đã có sẵn", currentPublishedAt);
-                return currentPublishedAt;
-
-            case archived:
-            case disabled:
+                yield currentPublishedAt;
+            }
+            case archived, disabled -> {
                 // Nếu không phải published thì set publishedAt = null
                 if (currentPublishedAt != null) {
                     log.info("🚫 Set publishedAt = null vì status = {}", status);
                 }
-                return null;
-
-            default:
+                yield null;
+            }
+            default -> {
                 log.warn("⚠️ Unknown hotel status: {}, set publishedAt = null", status);
-                return null;
-        }
+                yield null;
+            }
+        };
     }
 
     private HotelDTO convertToDTO(Hotel hotel) {

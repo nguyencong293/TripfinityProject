@@ -1,11 +1,15 @@
 package com.vn.tripfinity.backend.service;
 
-import jakarta.mail.MessagingException;
-import lombok.extern.slf4j.Slf4j;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.stereotype.Service;
 
-import java.io.UnsupportedEncodingException;
-import java.util.*;
+import jakarta.mail.MessagingException;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -54,8 +58,8 @@ public class EmailTemplateService {
         private String ctaText;
         private String ctaUrl;
         private String warningMessage;
-        private List<FeatureItem> features;
-        private Map<String, String> additionalData;
+        private final List<FeatureItem> features;
+        private final Map<String, String> additionalData;
 
         public EmailData() {
             this.features = new ArrayList<>();
@@ -148,8 +152,8 @@ public class EmailTemplateService {
 
     // Class cho feature items
     public static class FeatureItem {
-        private String icon;
-        private String title;
+        private final String icon;
+        private final String title;
 
         public FeatureItem(String icon,
                 String title) {

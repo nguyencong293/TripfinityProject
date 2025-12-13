@@ -90,12 +90,12 @@ public class HotelReviewService {
                 .reviewId(null)
                 .hotel(hotel)
                 .user(user)
-                .rating(dto.getRating() != null ? dto.getRating() : 0)
+                .rating(java.util.Objects.requireNonNullElse(dto.getRating(), 0))
                 .title(dto.getTitle())
                 .content(dto.getContent())
                 .imageUrls(dto.getImageUrls() != null ? String.join(",", dto.getImageUrls()) : null)
-                .likesCount(dto.getLikesCount() != null ? dto.getLikesCount() : 0)
-                .replyCount(dto.getReplyCount() != null ? dto.getReplyCount() : 0)
+                .likesCount(java.util.Objects.requireNonNullElse(dto.getLikesCount(), 0))
+                .replyCount(java.util.Objects.requireNonNullElse(dto.getReplyCount(), 0))
                 .reviewStatus(dto.getReviewStatus() != null
                         ? HotelReview.ReviewStatus.valueOf(dto.getReviewStatus())
                         : HotelReview.ReviewStatus.approved)
@@ -226,7 +226,7 @@ public class HotelReviewService {
                 .replier(replier)
                 .content(dto.getContent())
                 .isPublic(Boolean.TRUE.equals(dto.getIsPublic()))
-                .isProvider(dto.getIsProvider() != null ? dto.getIsProvider() : 0)
+                .isProvider(java.util.Objects.requireNonNullElse(dto.getIsProvider(), 0))
                 .build();
         
         ReviewReply saved = reviewReplyRepository.save(reply);
@@ -277,7 +277,7 @@ public class HotelReviewService {
             int actualCount = reviewReplyRepository.countByReviewTypeAndReviewId(
                     ReviewReply.ReviewType.hotel, review.getReviewId());
             
-            Integer currentCount = review.getReplyCount() != null ? review.getReplyCount() : 0;
+            Integer currentCount = java.util.Objects.requireNonNullElse(review.getReplyCount(), 0);
             
             if (currentCount != actualCount) {
                 review.setReplyCount(actualCount);
