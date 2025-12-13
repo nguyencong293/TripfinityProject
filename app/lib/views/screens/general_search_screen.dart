@@ -6,6 +6,7 @@ import 'package:app/views/screens/hotel_detail_overview_screen.dart';
 import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
 import 'package:app/views/screens/attractions_overview_detail_screen.dart';
+import 'package:app/views/screens/nearby_search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -705,7 +706,12 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
             ),
           ),
           child: InkWell(
-            onTap: () {},
+            onTap: () {
+              // Chuyển đến màn hình Nearby Search
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NearbySearchScreen()),
+              );
+            },
             child: Row(
               children: [
                 Icon(LucideIcons.mapPin, color: context.primaryColor, size: 24),

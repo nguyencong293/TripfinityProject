@@ -45,5 +45,23 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- Camera Permission -->
+	<key>NSCameraUsageDescription</key>
+	<string>TripFinity cần truy cập camera để chụp và tải ảnh lên</string>
+	
+	<!-- Photo Library Permissions -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>TripFinity cần truy cập thư viện ảnh để chọn và tải ảnh lên</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>TripFinity cần quyền lưu ảnh vào thư viện của bạn</string>
+	
+	<!-- Location Permissions -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TripFinity cần truy cập vị trí của bạn để tìm kiếm các địa điểm xung quanh</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>TripFinity cần truy cập vị trí của bạn để tìm kiếm các địa điểm xung quanh</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>TripFinity cần truy cập vị trí của bạn để tìm kiếm các địa điểm xung quanh</string>
 </dict>
 </plist>
