@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/favorite_api_service.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import 'package:app/config/theme/app_colors.dart';
@@ -9,6 +10,7 @@ import 'package:app/services/search_api_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/localization_service.dart';
+import 'package:app/views/widgets/favorite_button.dart';
 
 class RestaurantOverviewSearchScreen extends StatefulWidget {
   final String searchQuery;
@@ -67,13 +69,43 @@ class _RestaurantOverviewSearchScreenState
 
   List<Map<String, String>> _allRestaurants = [];
   List<Map<String, String>> _restaurants = [];
+  Set<int> _favoriteRestaurantIds = {};
 
   bool _loading = false;
   String? _error;
   bool _filterApplied = false; // Track if user has applied filter
 
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+    _fetchRestaurants(widget.searchQuery);
+  }
+
+  Future<void> _loadFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('user_id');
+    if (userId == null) return;
+
+    final dio = Dio();
+    final favoriteApi = FavoriteApiService(dio: dio, prefs: prefs);
+    final ids = await favoriteApi.getFavoriteServiceIds(
+      userId: userId,
+      serviceType: 'restaurant',
+    );
+    setState(() {
+      _favoriteRestaurantIds = ids.toSet();
+    });
+  }
+
   bool get _hasAnyFilterApplied {
     return _filterApplied;
+  }
+
+  int? _tryParseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
   }
 
   void _navigateToRestaurantDetail(Map<String, String> restaurant) {
@@ -98,12 +130,6 @@ class _RestaurantOverviewSearchScreenState
         ),
       ),
     );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchRestaurants(widget.searchQuery);
   }
 
   @override
@@ -177,6 +203,7 @@ class _RestaurantOverviewSearchScreenState
                     separatorBuilder: (_, __) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
                       final r = _restaurants[index];
+                      final restaurantId = _tryParseInt(r['restaurantId']);
                       return _RestaurantCard(
                         imagePath: r['image']!,
                         name: r['name']!,
@@ -185,6 +212,10 @@ class _RestaurantOverviewSearchScreenState
                         rating: r['rating']!,
                         reviews: r['reviews']!,
                         tag: r['tag']!,
+                        restaurantId: restaurantId,
+                        isFavorite: _favoriteRestaurantIds.contains(
+                          restaurantId ?? 0,
+                        ),
                         onCardTap: () => _navigateToRestaurantDetail(r),
                         onViewPressed: () => _navigateToRestaurantDetail(r),
                       );
@@ -883,6 +914,8 @@ class _RestaurantCard extends StatelessWidget {
   final String rating;
   final String reviews;
   final String tag;
+  final int? restaurantId;
+  final bool isFavorite;
   final VoidCallback onCardTap;
   final VoidCallback onViewPressed;
 
@@ -894,6 +927,8 @@ class _RestaurantCard extends StatelessWidget {
     required this.rating,
     required this.reviews,
     required this.tag,
+    this.restaurantId,
+    required this.isFavorite,
     required this.onCardTap,
     required this.onViewPressed,
   });
@@ -934,24 +969,17 @@ class _RestaurantCard extends StatelessWidget {
                         : _imgFallback(context),
                   ),
                 ),
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: context.cardBackgroundColor.withValues(alpha: 0.9),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: context.dividerColor),
-                    ),
-                    child: Icon(
-                      LucideIcons.heart,
+                if (restaurantId != null)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: FavoriteButton(
+                      serviceType: 'restaurant',
+                      serviceId: restaurantId!,
+                      initialIsFavorite: isFavorite,
                       size: 18,
-                      color: context.textSecondaryColor,
                     ),
                   ),
-                ),
               ],
             ),
             Padding(

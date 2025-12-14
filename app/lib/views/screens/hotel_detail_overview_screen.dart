@@ -14,9 +14,11 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/hotel_api_service.dart';
 import 'package:app/services/review_api_service.dart';
+import 'package:app/services/favorite_api_service.dart';
 import 'package:app/views/screens/hotel_booking_checkout_screen.dart';
 import 'package:app/views/screens/detail_hotel_review_user_screen.dart';
 import 'package:app/views/screens/hotel_reviews_list_screen.dart';
+import 'package:app/views/widgets/favorite_button.dart';
 
 // Canonical dictionaries: keep in sync with Supplier (HotelViewPage / Create/Edit)
 const Map<int, String> kHighlightsDict = {
@@ -130,6 +132,7 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
   Map<String, dynamic>? _ratingSummaryData; // NEW: rating summary data
 
   int? _resolvedId;
+  bool _isFavorite = false;
 
   // Image slider state
   final PageController _imageController = PageController();
@@ -148,7 +151,31 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
   void initState() {
     super.initState();
     _resolvedId = widget.hotelId ?? _tryParseInt(widget.hotel?['hotelId']);
+    _loadFavoriteStatus();
     _fetchDetail();
+  }
+
+  Future<void> _loadFavoriteStatus() async {
+    if (_resolvedId == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('user_id');
+      if (userId == null) return;
+
+      final dio = Dio();
+      final favoriteApi = FavoriteApiService(dio: dio, prefs: prefs);
+      final isFav = await favoriteApi.isFavorite(
+        userId: userId,
+        serviceType: 'hotel',
+        serviceId: _resolvedId!,
+      );
+
+      if (mounted) {
+        setState(() => _isFavorite = isFav);
+      }
+    } catch (e) {
+      debugPrint('Error loading favorite status: $e');
+    }
   }
 
   @override
@@ -175,10 +202,14 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
             icon: Icon(LucideIcons.share2, color: context.textPrimaryColor),
             onPressed: () {},
           ),
-          IconButton(
-            icon: Icon(LucideIcons.heart, color: context.textPrimaryColor),
-            onPressed: () {},
-          ),
+          if (_resolvedId != null)
+            FavoriteButton(
+              serviceType: 'hotel',
+              serviceId: _resolvedId!,
+              size: 24,
+              initialIsFavorite: _isFavorite,
+            ),
+          const SizedBox(width: 8),
         ],
       ),
       body: _loading

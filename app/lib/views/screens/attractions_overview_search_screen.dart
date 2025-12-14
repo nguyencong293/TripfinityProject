@@ -10,6 +10,8 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/search_api_service.dart';
 import 'package:app/services/localization_service.dart';
+import 'package:app/services/favorite_api_service.dart';
+import 'package:app/views/widgets/favorite_button.dart';
 
 class AttractionOverviewSearchScreen extends StatefulWidget {
   final String searchQuery;
@@ -31,11 +33,29 @@ class _AttractionOverviewSearchScreenState
   bool _loading = false;
   String? _error;
   List<Map<String, dynamic>> _attractions = [];
+  Set<int> _favoriteAttractionIds = {};
 
   @override
   void initState() {
     super.initState();
     _fetchAttractions(widget.searchQuery);
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('user_id');
+    if (userId == null) return;
+
+    final dio = Dio();
+    final favoriteApi = FavoriteApiService(dio: dio, prefs: prefs);
+    final ids = await favoriteApi.getFavoriteServiceIds(
+      userId: userId,
+      serviceType: 'attraction',
+    );
+    setState(() {
+      _favoriteAttractionIds = ids.toSet();
+    });
   }
 
   bool get _hasAnyFilterApplied {
@@ -73,6 +93,12 @@ class _AttractionOverviewSearchScreenState
 
       return true;
     }).toList();
+  }
+
+  int? _tryParseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
   }
 
   void _openAttractionDetail(Map<String, dynamic> attraction) {
@@ -566,6 +592,7 @@ class _AttractionOverviewSearchScreenState
           final reviews = a['reviews']?.toString() ?? '';
           final priceText = a['price']?.toString() ?? '';
           final imageUrl = a['imageUrl']?.toString();
+          final attractionId = _tryParseInt(a['attractionId']);
 
           return _AttractionCard(
             imageUrl: imageUrl,
@@ -573,6 +600,8 @@ class _AttractionOverviewSearchScreenState
             rating: rating,
             reviews: reviews,
             price: priceText,
+            attractionId: attractionId,
+            isFavorite: _favoriteAttractionIds.contains(attractionId ?? 0),
             onTap: () => _openAttractionDetail(a),
           );
         },
@@ -725,6 +754,8 @@ class _AttractionCard extends StatelessWidget {
   final String rating;
   final String reviews;
   final String price;
+  final int? attractionId;
+  final bool isFavorite;
   final VoidCallback onTap;
 
   const _AttractionCard({
@@ -733,6 +764,8 @@ class _AttractionCard extends StatelessWidget {
     required this.rating,
     required this.reviews,
     required this.price,
+    this.attractionId,
+    required this.isFavorite,
     required this.onTap,
   });
 
@@ -765,25 +798,17 @@ class _AttractionCard extends StatelessWidget {
                       )
                     : _imageFallback(context),
               ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    // FIX: use withOpacity()
-                    color: context.cardBackgroundColor.withValues(alpha: 0.9),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: context.dividerColor),
-                  ),
-                  child: Icon(
-                    LucideIcons.heart,
+              if (attractionId != null)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: FavoriteButton(
+                    serviceType: 'attraction',
+                    serviceId: attractionId!,
+                    initialIsFavorite: isFavorite,
                     size: 18,
-                    color: context.textSecondaryColor,
                   ),
                 ),
-              ),
             ],
           ),
           // Tên

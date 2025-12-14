@@ -8,7 +8,9 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/search_api_service.dart';
+import 'package:app/services/favorite_api_service.dart';
 import 'package:app/services/localization_service.dart';
+import 'package:app/views/widgets/favorite_button.dart';
 
 class HotelOverviewSearchScreen extends StatefulWidget {
   final String searchQuery;
@@ -119,11 +121,34 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
   String? _error;
   List<Map<String, dynamic>> _allHotels = [];
   List<Map<String, dynamic>> _hotels = [];
+  Set<int> _favoriteHotelIds = {};
 
   @override
   void initState() {
     super.initState();
+    _loadFavorites();
     _fetchHotels(widget.searchQuery);
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('user_id');
+      if (userId == null) return;
+
+      final dio = Dio();
+      final favoriteApi = FavoriteApiService(dio: dio, prefs: prefs);
+      final ids = await favoriteApi.getFavoriteServiceIds(
+        userId: userId,
+        serviceType: 'hotel',
+      );
+
+      if (mounted) {
+        setState(() => _favoriteHotelIds = ids.toSet());
+      }
+    } catch (e) {
+      debugPrint('Error loading favorites: $e');
+    }
   }
 
   @override
@@ -203,6 +228,7 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
               h['reviews']?.toString() ?? ''; // backend chưa có -> rỗng
           final price = h['price']?.toString() ?? '';
           final imageUrl = h['imageUrl']?.toString();
+          final hotelId = _tryParseInt(h['hotelId']);
 
           return _HotelCard(
             imageUrl: imageUrl,
@@ -210,6 +236,8 @@ class _HotelOverviewSearchScreenState extends State<HotelOverviewSearchScreen> {
             rating: rating,
             reviews: reviews,
             price: price,
+            hotelId: hotelId,
+            isFavorite: _favoriteHotelIds.contains(hotelId ?? 0),
             onViewPressed: () =>
                 _openHotelDetail(h), // pass full map with hotelId
           );
@@ -1099,6 +1127,8 @@ class _HotelCard extends StatelessWidget {
   final String rating;
   final String reviews;
   final String price;
+  final int? hotelId;
+  final bool isFavorite;
   final VoidCallback onViewPressed;
 
   const _HotelCard({
@@ -1107,6 +1137,8 @@ class _HotelCard extends StatelessWidget {
     required this.rating,
     required this.reviews,
     required this.price,
+    this.hotelId,
+    required this.isFavorite,
     required this.onViewPressed,
   });
 
@@ -1140,24 +1172,17 @@ class _HotelCard extends StatelessWidget {
                       )
                     : _imageFallback(context),
               ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: context.cardBackgroundColor.withValues(alpha: 0.9),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: context.dividerColor),
-                  ),
-                  child: Icon(
-                    LucideIcons.heart,
+              if (hotelId != null)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: FavoriteButton(
+                    serviceType: 'hotel',
+                    serviceId: hotelId!,
+                    initialIsFavorite: isFavorite,
                     size: 18,
-                    color: context.textSecondaryColor,
                   ),
                 ),
-              ),
             ],
           ),
           Padding(

@@ -8,7 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/tour_api_service.dart';
+import 'package:app/services/favorite_api_service.dart';
 import 'package:app/views/screens/tour_booking_checkout_screen.dart';
+import 'package:app/views/widgets/favorite_button.dart';
 
 // Dictionaries for tour categories, services, languages (sync with backend)
 const Map<String, String> kCategoriesDict = {
@@ -130,6 +132,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
   List<Map<String, dynamic>> _reviews = [];
 
   int? _resolvedId;
+  bool _isFavorite = false;
 
   // Image slider
   final PageController _imageController = PageController();
@@ -139,7 +142,31 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
   void initState() {
     super.initState();
     _resolvedId = widget.tourId ?? _tryParseInt(widget.tour?['tourId']);
+    _loadFavoriteStatus();
     _fetchDetail();
+  }
+
+  Future<void> _loadFavoriteStatus() async {
+    if (_resolvedId == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('user_id');
+      if (userId == null) return;
+
+      final dio = Dio();
+      final favoriteApi = FavoriteApiService(dio: dio, prefs: prefs);
+      final isFav = await favoriteApi.isFavorite(
+        userId: userId,
+        serviceType: 'tour',
+        serviceId: _resolvedId!,
+      );
+
+      if (mounted) {
+        setState(() => _isFavorite = isFav);
+      }
+    } catch (e) {
+      debugPrint('Error loading favorite status: $e');
+    }
   }
 
   @override
@@ -181,10 +208,14 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
             icon: Icon(LucideIcons.share2, color: context.textPrimaryColor),
             onPressed: () {},
           ),
-          IconButton(
-            icon: Icon(LucideIcons.heart, color: context.textPrimaryColor),
-            onPressed: () {},
-          ),
+          if (_resolvedId != null)
+            FavoriteButton(
+              serviceType: 'tour',
+              serviceId: _resolvedId!,
+              size: 24,
+              initialIsFavorite: _isFavorite,
+            ),
+          const SizedBox(width: 8),
         ],
       ),
       body: _loading

@@ -2,6 +2,7 @@ import 'package:app/routes/app_router.dart';
 import 'package:app/services/area_api_service.dart';
 import 'package:app/services/search_api_service.dart';
 import 'package:app/services/notification_api_service.dart';
+import 'package:app/services/favorite_api_service.dart';
 import 'package:app/views/screens/attractions_overview_search_screen.dart';
 import 'package:app/views/screens/general_search_screen.dart';
 import 'package:app/views/screens/hotel_overview_search_screen.dart';
@@ -123,10 +124,67 @@ class _Category {
 }
 
 // Redesigned home content to match the provided UI
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
   final dynamic user;
   final ValueChanged<String> onSubmitSearch;
   const _HomeContent({required this.user, required this.onSubmitSearch});
+
+  @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
+  Set<int> _favoriteHotelIds = {};
+  Set<int> _favoriteRestaurantIds = {};
+  Set<int> _favoriteAttractionIds = {};
+  Set<int> _favoriteTourIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('user_id');
+
+      if (userId == null) {
+        return;
+      }
+
+      final dio = Dio();
+      final favoriteApi = FavoriteApiService(dio: dio, prefs: prefs);
+
+      // Load all favorite IDs in parallel
+      final results = await Future.wait([
+        favoriteApi.getFavoriteServiceIds(userId: userId, serviceType: 'hotel'),
+        favoriteApi.getFavoriteServiceIds(
+          userId: userId,
+          serviceType: 'restaurant',
+        ),
+        favoriteApi.getFavoriteServiceIds(
+          userId: userId,
+          serviceType: 'attraction',
+        ),
+        favoriteApi.getFavoriteServiceIds(userId: userId, serviceType: 'tour'),
+      ]);
+
+      setState(() {
+        _favoriteHotelIds = results[0].toSet();
+        _favoriteRestaurantIds = results[1].toSet();
+        _favoriteAttractionIds = results[2].toSet();
+        _favoriteTourIds = results[3].toSet();
+      });
+
+      debugPrint(
+        '✅ Loaded favorites: hotels=${_favoriteHotelIds.length}, restaurants=${_favoriteRestaurantIds.length}, attractions=${_favoriteAttractionIds.length}, tours=${_favoriteTourIds.length}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error loading favorites: $e');
+    }
+  }
 
   Future<List<HomeServiceItem>> _loadHomeRestaurants() async {
     final prefs = await SharedPreferences.getInstance();
@@ -157,6 +215,7 @@ class _HomeContent extends StatelessWidget {
           (m['thumbnailUrl'] ?? m['imageUrl'] ?? m['image'])?.toString() ?? '';
 
       final priceText = _formatPrice(m['price'], m['currencyCode']?.toString());
+      final serviceId = (m['restaurantId'] ?? m['id'] ?? 0) as int;
 
       items.add(
         HomeServiceItem(
@@ -164,6 +223,9 @@ class _HomeContent extends StatelessWidget {
           rating: rating,
           imageUrl: imageUrl,
           price: priceText,
+          serviceType: 'restaurant',
+          serviceId: serviceId,
+          isFavorite: _favoriteRestaurantIds.contains(serviceId),
         ),
       );
     }
@@ -201,6 +263,7 @@ class _HomeContent extends StatelessWidget {
           (m['thumbnailUrl'] ?? m['imageUrl'] ?? m['image'])?.toString() ?? '';
 
       final priceText = _formatPrice(m['price'], m['currencyCode']?.toString());
+      final serviceId = (m['hotelId'] ?? m['id'] ?? 0) as int;
 
       items.add(
         HomeServiceItem(
@@ -208,6 +271,9 @@ class _HomeContent extends StatelessWidget {
           rating: rating,
           imageUrl: imageUrl,
           price: priceText,
+          serviceType: 'hotel',
+          serviceId: serviceId,
+          isFavorite: _favoriteHotelIds.contains(serviceId),
         ),
       );
     }
@@ -243,6 +309,7 @@ class _HomeContent extends StatelessWidget {
           (m['thumbnailUrl'] ?? m['imageUrl'] ?? m['image'])?.toString() ?? '';
 
       final priceText = _formatPrice(m['price'], m['currencyCode']?.toString());
+      final serviceId = (m['tourId'] ?? m['id'] ?? 0) as int;
 
       items.add(
         HomeServiceItem(
@@ -250,6 +317,9 @@ class _HomeContent extends StatelessWidget {
           rating: rating,
           imageUrl: imageUrl,
           price: priceText,
+          serviceType: 'tour',
+          serviceId: serviceId,
+          isFavorite: _favoriteTourIds.contains(serviceId),
         ),
       );
     }
@@ -288,6 +358,7 @@ class _HomeContent extends StatelessWidget {
 
       // At attractions, price may be missing; empty string is fine for UI
       final priceText = _formatPrice(m['price'], m['currencyCode']?.toString());
+      final serviceId = (m['attractionId'] ?? m['id'] ?? 0) as int;
 
       items.add(
         HomeServiceItem(
@@ -295,6 +366,9 @@ class _HomeContent extends StatelessWidget {
           rating: rating,
           imageUrl: imageUrl,
           price: priceText,
+          serviceType: 'attraction',
+          serviceId: serviceId,
+          isFavorite: _favoriteAttractionIds.contains(serviceId),
         ),
       );
     }
@@ -387,7 +461,7 @@ class _HomeContent extends StatelessWidget {
                   color: context.textPrimaryColor,
                 ),
                 const Spacer(),
-                _NotificationBellIcon(user: user),
+                _NotificationBellIcon(user: widget.user),
                 IconButton(
                   icon: Icon(LucideIcons.menu, color: context.textPrimaryColor),
                   onPressed: () => Scaffold.maybeOf(context)?.openDrawer(),
@@ -414,14 +488,14 @@ class _HomeContent extends StatelessWidget {
               textInputAction:
                   TextInputAction.search, // show search action on keyboard
               onSubmitted: (value) =>
-                  onSubmitSearch(value), // trigger navigation + query
+                  widget.onSubmitSearch(value), // trigger navigation + query
               onTap: () {}, // keep existing if you want tap behavior
             ),
             const SizedBox(height: 20),
             // Optional greeting (uses user if available)
-            if (user != null) ...[
+            if (widget.user != null) ...[
               Text(
-                '${'hello'.tr}, ${user.fullName} 👋',
+                '${'hello'.tr}, ${widget.user.fullName} 👋',
                 style: context.subTitleTwoStyle.copyWith(
                   fontWeight: FontWeight.w600,
                 ),

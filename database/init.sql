@@ -967,6 +967,26 @@ CREATE TABLE search_history (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT = 'Stores user search history and clicked items for personalized recommendations';
 
+-- user_favorites table
+CREATE TABLE user_favorites (
+    favorite_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    service_type ENUM('hotel', 'restaurant', 'attraction', 'tour') NOT NULL,
+    service_id INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE KEY unique_user_service_favorite (user_id, service_type, service_id),
+    KEY idx_user_favorites_user_id (user_id),
+    KEY idx_user_favorites_service (service_type, service_id),
+    KEY idx_user_favorites_created_at (created_at),
+    
+    CONSTRAINT fk_user_favorites_user 
+        FOREIGN KEY (user_id) 
+        REFERENCES users(user_id) 
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT = 'User favorite services (hotels, restaurants, attractions, tours)';
+
 
 
 

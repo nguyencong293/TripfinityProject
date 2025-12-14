@@ -6,9 +6,11 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 
 import 'package:app/services/search_api_service.dart';
+import 'package:app/services/favorite_api_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/localization_service.dart'; // ADD: lang
+import 'package:app/views/widgets/favorite_button.dart';
 
 class TourServiceOverviewScreen extends StatefulWidget {
   final String searchQuery;
@@ -61,6 +63,7 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
 
   // Dynamic data fetched from API (replaces static mock list)
   List<Map<String, dynamic>> _tours = [];
+  Set<int> _favoriteTourIds = {};
 
   bool _loading = false;
   String? _error;
@@ -102,6 +105,23 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
   void initState() {
     super.initState();
     _fetchTours(widget.searchQuery);
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('user_id');
+    if (userId == null) return;
+
+    final dio = Dio();
+    final favoriteApi = FavoriteApiService(dio: dio, prefs: prefs);
+    final ids = await favoriteApi.getFavoriteServiceIds(
+      userId: userId,
+      serviceType: 'tour',
+    );
+    setState(() {
+      _favoriteTourIds = ids.toSet();
+    });
   }
 
   @override
@@ -176,6 +196,9 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                                 const SizedBox(height: 16),
                             itemBuilder: (context, i) {
                               final t = tours[i];
+                              final tourId = t['tourId'] is num
+                                  ? (t['tourId'] as num).toInt()
+                                  : null;
                               return InkWell(
                                 onTap: () => _openTourDetail(t),
                                 borderRadius: BorderRadius.circular(16),
@@ -187,6 +210,10 @@ class _TourServiceOverviewScreenState extends State<TourServiceOverviewScreen> {
                                   reviews: t['reviews'] ?? '(0)',
                                   price: t['price'] ?? '',
                                   duration: t['duration'] ?? '1 ${'day'.tr}',
+                                  tourId: tourId,
+                                  isFavorite: _favoriteTourIds.contains(
+                                    tourId ?? 0,
+                                  ),
                                   onViewPressed: () => _openTourDetail(t),
                                 ),
                               );
@@ -1045,6 +1072,8 @@ class _TourCard extends StatelessWidget {
   final String reviews;
   final String price;
   final String duration;
+  final int? tourId;
+  final bool isFavorite;
   final VoidCallback onViewPressed;
   const _TourCard({
     required this.imagePath,
@@ -1054,6 +1083,8 @@ class _TourCard extends StatelessWidget {
     required this.reviews,
     required this.price,
     required this.duration,
+    this.tourId,
+    required this.isFavorite,
     required this.onViewPressed,
   });
 
@@ -1079,24 +1110,17 @@ class _TourCard extends StatelessWidget {
                 ),
                 child: _buildImage(context),
               ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: context.cardBackgroundColor.withValues(alpha: 0.9),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: context.dividerColor),
-                  ),
-                  child: Icon(
-                    LucideIcons.heart,
+              if (tourId != null)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: FavoriteButton(
+                    serviceType: 'tour',
+                    serviceId: tourId!,
+                    initialIsFavorite: isFavorite,
                     size: 18,
-                    color: context.textSecondaryColor,
                   ),
                 ),
-              ),
             ],
           ),
           Padding(
