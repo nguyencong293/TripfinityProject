@@ -19,8 +19,11 @@ import com.vn.tripfinity.backend.model.UserFavorite;
 import com.vn.tripfinity.backend.model.UserFavorite.ServiceType;
 import com.vn.tripfinity.backend.repository.AttractionRepository;
 import com.vn.tripfinity.backend.repository.HotelRepository;
+import com.vn.tripfinity.backend.repository.HotelReviewRepository;
 import com.vn.tripfinity.backend.repository.RestaurantRepository;
+import com.vn.tripfinity.backend.repository.RestaurantReviewRepository;
 import com.vn.tripfinity.backend.repository.TourRepository;
+import com.vn.tripfinity.backend.repository.TourReviewRepository;
 import com.vn.tripfinity.backend.repository.UserFavoriteRepository;
 import com.vn.tripfinity.backend.repository.UserRepository;
 
@@ -39,6 +42,9 @@ public class UserFavoriteService {
     private final RestaurantRepository restaurantRepository;
     private final AttractionRepository attractionRepository;
     private final TourRepository tourRepository;
+    private final HotelReviewRepository hotelReviewRepository;
+    private final RestaurantReviewRepository restaurantReviewRepository;
+    private final TourReviewRepository tourReviewRepository;
     
     /**
      * Add service to favorites
@@ -218,6 +224,12 @@ public class UserFavoriteService {
                         dto.setServiceThumbnail(hotel.getThumbnailUrl());
                         dto.setServicePrice(hotel.getPricePerNight() != null ? hotel.getPricePerNight().doubleValue() : null);
                         dto.setServiceAddress(hotel.getAddress());
+                        
+                        Double avgRating = hotelReviewRepository.calculateAverageRating(hotel.getHotelId());
+                        dto.setAverageRating(avgRating != null ? avgRating : 0.0);
+                        
+                        List<com.vn.tripfinity.backend.model.HotelReview> reviews = hotelReviewRepository.findByHotel_HotelId(hotel.getHotelId());
+                        dto.setTotalReviews(reviews.size());
                     }
                 }
                 case restaurant -> {
@@ -227,6 +239,12 @@ public class UserFavoriteService {
                         dto.setServiceThumbnail(restaurant.getThumbnailUrl());
                         dto.setServicePrice(restaurant.getPrice() != null ? restaurant.getPrice().doubleValue() : null);
                         dto.setServiceAddress(restaurant.getAddress());
+                        
+                        Double avgRating = restaurantReviewRepository.calculateAverageRating(restaurant.getRestaurantId());
+                        dto.setAverageRating(avgRating != null ? avgRating : 0.0);
+                        
+                        List<com.vn.tripfinity.backend.model.RestaurantReview> reviews = restaurantReviewRepository.findByRestaurant_RestaurantId(restaurant.getRestaurantId());
+                        dto.setTotalReviews(reviews.size());
                     }
                 }
                 case attraction -> {
@@ -236,6 +254,8 @@ public class UserFavoriteService {
                         dto.setServiceThumbnail(attraction.getThumbnailUrl());
                         dto.setServicePrice(attraction.getPrice() != null ? attraction.getPrice().doubleValue() : null);
                         dto.setServiceAddress(attraction.getAddress());
+                        dto.setAverageRating(0.0);
+                        dto.setTotalReviews(0);
                     }
                 }
                 case tour -> {
@@ -245,6 +265,12 @@ public class UserFavoriteService {
                         dto.setServiceThumbnail(tour.getThumbnailUrl());
                         dto.setServicePrice(tour.getPrice() != null ? tour.getPrice().doubleValue() : null);
                         dto.setServiceAddress(tour.getAddress());
+                        
+                        Double avgRating = tourReviewRepository.calculateAverageRating(tour.getTourId());
+                        dto.setAverageRating(avgRating != null ? avgRating : 0.0);
+                        
+                        List<com.vn.tripfinity.backend.model.TourReview> reviews = tourReviewRepository.findByTour_TourId(tour.getTourId());
+                        dto.setTotalReviews(reviews.size());
                     }
                 }
             }

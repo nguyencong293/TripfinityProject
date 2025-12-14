@@ -1,6 +1,7 @@
 package com.vn.tripfinity.backend.dto;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -12,26 +13,32 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserFavoriteDTO {
-    
-    private Integer favoriteId;
-    
-    @NotNull(message = "User ID không được để trống")
-    private Integer userId;
-    
+public class TripItineraryItemDTO {
+
+    private Integer itemId;
+
+    @NotNull(message = "Itinerary ID không được để trống")
+    private Integer itineraryId;
+
     @NotNull(message = "Service type không được để trống")
     private String serviceType; // hotel, restaurant, attraction, tour
-    
+
     @NotNull(message = "Service ID không được để trống")
     private Integer serviceId;
-    
+
+    private Integer itemOrder;
+
+    private LocalTime startTime;
+
+    private LocalTime endTime;
+
     private LocalDateTime createdAt;
-    
-    // Additional fields for response
+
+    // Additional fields for response with service details
     private String serviceName;
     private String serviceThumbnail;
-    private Double servicePrice;
     private String serviceAddress;
-    private Double averageRating;
-    private Integer totalReviews;
+    private Double serviceRating;
+    private Double servicePrice;
+    private String serviceCurrency;
 }
