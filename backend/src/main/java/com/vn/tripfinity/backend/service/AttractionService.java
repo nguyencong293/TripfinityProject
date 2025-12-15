@@ -1,12 +1,15 @@
 package com.vn.tripfinity.backend.service;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +21,7 @@ import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.repository.AreaRepository;
 import com.vn.tripfinity.backend.repository.AttractionRepository;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
+import com.vn.tripfinity.backend.service.cloudinary.CloudinaryService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +36,7 @@ public class AttractionService {
     private final ProviderRepository providerRepository;
     private final AreaRepository areaRepository;
     private final NotificationService notificationService;
+    private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<AttractionDTO> getAll() {
@@ -360,5 +365,104 @@ public class AttractionService {
             log.warn("Không thể parse JSON object: {}", json, e);
             return null;
         }
+    }
+
+    // ==================== IMAGE MANAGEMENT ====================
+
+    public AttractionDTO uploadThumbnail(Integer attractionId, MultipartFile file) throws IOException {
+        log.debug("Upload thumbnail cho Attraction ID: {}", attractionId);
+        Attraction attraction = attractionRepository.findById(attractionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Attraction id: " + attractionId));
+
+        // Xóa thumbnail cũ nếu có
+        if (attraction.getThumbnailUrl() != null && !attraction.getThumbnailUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImage(attraction.getThumbnailUrl());
+                log.info("Đã xóa thumbnail cũ trên Cloudinary");
+            } catch (Exception e) {
+                log.error("Lỗi khi xóa thumbnail cũ: {}", e.getMessage());
+            }
+        }
+
+        // Upload thumbnail mới
+        Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
+        String thumbnailUrl = (String) uploadResult.get("secure_url");
+
+        attraction.setThumbnailUrl(thumbnailUrl);
+        Attraction savedAttraction = attractionRepository.save(attraction);
+        log.info("Đã upload thumbnail cho Attraction ID: {}", savedAttraction.getAttractionId());
+
+        return toDTO(savedAttraction);
+    }
+
+    public AttractionDTO deleteThumbnail(Integer attractionId) throws IOException {
+        log.debug("Xóa thumbnail cho Attraction ID: {}", attractionId);
+        Attraction attraction = attractionRepository.findById(attractionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Attraction id: " + attractionId));
+
+        if (attraction.getThumbnailUrl() != null && !attraction.getThumbnailUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteImage(attraction.getThumbnailUrl());
+                log.info("Đã xóa thumbnail trên Cloudinary");
+            } catch (Exception e) {
+                log.error("Lỗi khi xóa thumbnail trên Cloudinary: {}", e.getMessage());
+            }
+        }
+
+        attraction.setThumbnailUrl(null);
+        Attraction savedAttraction = attractionRepository.save(attraction);
+        log.info("Đã xóa thumbnail cho Attraction ID: {}", savedAttraction.getAttractionId());
+
+        return toDTO(savedAttraction);
+    }
+
+    public AttractionDTO addImages(Integer attractionId, List<MultipartFile> files) throws IOException {
+        log.debug("Thêm {} ảnh cho Attraction ID: {}", files.size(), attractionId);
+        Attraction attraction = attractionRepository.findById(attractionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Attraction id: " + attractionId));
+
+        List<String> currentImageUrls = readJsonListString(attraction.getImageUrls());
+        if (currentImageUrls == null) {
+            currentImageUrls = new ArrayList<>();
+        }
+        List<String> newImageUrls = new ArrayList<>(currentImageUrls);
+
+        for (MultipartFile file : files) {
+            Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
+            String imageUrl = (String) uploadResult.get("secure_url");
+            newImageUrls.add(imageUrl);
+        }
+
+        attraction.setImageUrls(writeJson(newImageUrls));
+        Attraction savedAttraction = attractionRepository.save(attraction);
+        log.info("Đã thêm {} ảnh cho Attraction ID: {}", files.size(), savedAttraction.getAttractionId());
+
+        return toDTO(savedAttraction);
+    }
+
+    public AttractionDTO deleteImage(Integer attractionId, String imageUrl) throws IOException {
+        log.debug("Xóa ảnh cho Attraction ID: {} - URL: {}", attractionId, imageUrl);
+        Attraction attraction = attractionRepository.findById(attractionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Attraction id: " + attractionId));
+
+        List<String> imageUrls = readJsonListString(attraction.getImageUrls());
+        if (imageUrls != null && imageUrls.contains(imageUrl)) {
+            try {
+                cloudinaryService.deleteImage(imageUrl);
+                log.info("Đã xóa ảnh trên Cloudinary");
+            } catch (Exception e) {
+                log.error("Lỗi khi xóa ảnh trên Cloudinary: {}", e.getMessage());
+            }
+
+            imageUrls.remove(imageUrl);
+            attraction.setImageUrls(writeJson(imageUrls));
+            Attraction savedAttraction = attractionRepository.save(attraction);
+            log.info("Đã xóa ảnh cho Attraction ID: {}", savedAttraction.getAttractionId());
+
+            return toDTO(savedAttraction);
+        }
+
+        log.warn("Ảnh không tồn tại trong Attraction ID: {}", attractionId);
+        return toDTO(attraction);
     }
 }
