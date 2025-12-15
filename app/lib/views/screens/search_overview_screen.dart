@@ -43,7 +43,6 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   // Area info (if present)
   String? _areaName;
   String? _areaCountryOrSlug;
-  String? _areaRating; // backend không trả rating cho area -> fallback '0.0'
 
   // Location coordinates for map
   double? _locationLat;
@@ -511,7 +510,6 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   Widget _buildLocationCard(BuildContext context) {
     final title = _areaName ?? _currentQuery;
     final sub = _areaCountryOrSlug ?? 'Việt Nam, Châu Á';
-    final rating = _areaRating ?? '0.0';
 
     return Container(
       width: double.infinity,
@@ -613,14 +611,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      _buildInfoChip(context, LucideIcons.star, rating),
-                      _buildInfoChip(context, LucideIcons.mapPin, sub),
-                    ],
-                  ),
+                  _buildInfoChip(context, LucideIcons.mapPin, sub),
                 ],
               ),
             ),
@@ -932,7 +923,6 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
       // Area
       String? areaName;
       String? areaCountryOrSlug;
-      String areaRating = '0.0';
       if (data['area'] is Map) {
         final area = Map<String, dynamic>.from(data['area'] as Map);
         areaName = area['name']?.toString();
@@ -1037,7 +1027,6 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
       setState(() {
         _areaName = areaName;
         _areaCountryOrSlug = areaCountryOrSlug;
-        _areaRating = areaRating;
 
         _hotels = hotels;
         _restaurants = restaurants;

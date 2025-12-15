@@ -451,33 +451,35 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.star_rounded,
-                                  color: context.primaryColor,
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _getRatingString(item['rating']),
-                                  style: context.captionStyle.copyWith(
-                                    fontWeight: FontWeight.w600,
+                            // Không hiển thị rating cho destination
+                            if (!isDestination)
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.star_rounded,
+                                    color: context.primaryColor,
+                                    size: 14,
                                   ),
-                                ),
-                                if ((item['price']?.toString() ?? '')
-                                    .isNotEmpty) ...[
-                                  const SizedBox(width: 10),
+                                  const SizedBox(width: 4),
                                   Text(
-                                    item['price'].toString(),
+                                    _getRatingString(item['rating']),
                                     style: context.captionStyle.copyWith(
-                                      color: context.primaryColor,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
+                                  if ((item['price']?.toString() ?? '')
+                                      .isNotEmpty) ...[
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      item['price'].toString(),
+                                      style: context.captionStyle.copyWith(
+                                        color: context.primaryColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
-                            ),
+                              ),
                           ],
                         ),
                       ),
@@ -1403,7 +1405,6 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
         dst.add({
           'name': area['name']?.toString() ?? 'Khu vực',
           'location': area['slug']?.toString() ?? '',
-          'rating': '0.0', // area không có rating
           'type': 'destination',
           // try common image keys so errorBuilder can trigger fallback if bad
           'imageUrl':

@@ -31,13 +31,6 @@ public class AreaDTO {
     @Size(max = 512)
     private String coverImageUrl;
 
-    @DecimalMin(value = "0.00", inclusive = true, message = "avgRating phải >= 0.00")
-    @DecimalMax(value = "5.00", inclusive = true, message = "avgRating phải <= 5.00")
-    private BigDecimal avgRating;
-
-    @Min(value = 0, message = "ratingsCount phải >= 0")
-    private Integer ratingsCount;
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

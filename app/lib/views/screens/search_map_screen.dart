@@ -259,7 +259,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
     try {
       final pictureRecorder = ui.PictureRecorder();
       final canvas = Canvas(pictureRecorder);
-      const size = 100.0; // Giảm size xuống
+      const size = 20.0; // Giảm size xuống 5 lần (từ 100 -> 20)
 
       // Vẽ vòng tròn nền
       final paint = Paint()
@@ -271,10 +271,10 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
       final borderPaint = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 6;
+        ..strokeWidth = 1.2; // Giảm từ 6 -> 1.2
       canvas.drawCircle(
         const Offset(size / 2, size / 2),
-        size / 2 - 3,
+        size / 2 - 0.6,
         borderPaint,
       );
 
@@ -283,7 +283,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
       textPainter.text = TextSpan(
         text: String.fromCharCode(icon.codePoint),
         style: TextStyle(
-          fontSize: 50,
+          fontSize: 10, // Giảm từ 50 -> 10
           fontFamily: icon.fontFamily,
           package: icon.fontPackage,
           color: Colors.white,
