@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:app/services/attraction_booking_api_service.dart';
 import 'package:app/services/zalopay_api_service.dart';
+import 'package:app/services/user_interaction_service.dart';
 import 'package:app/views/screens/payment_webview_screen.dart';
 
 class AttractionBookingCheckoutScreen extends StatefulWidget {
@@ -666,6 +667,18 @@ class _AttractionBookingCheckoutScreenState
           providerNotes: _buildProviderNotes(),
           paymentMethod: 'counter',
         );
+
+        // 🔥 Track BOOK action for AI
+        try {
+          final trackingService = await UserInteractionService.create();
+          await trackingService.recordBook(
+            itemId: widget.attractionId,
+            itemType: 'attraction',
+          );
+        } catch (e) {
+          // Silent fail
+        }
+
         if (!mounted) return;
         setState(() => _submitting = false);
         _showSnack('Đặt chỗ thành công. Thanh toán tại quầy khi đến.');
@@ -724,6 +737,18 @@ class _AttractionBookingCheckoutScreenState
                 createResponse.data is Map &&
                 (createResponse.data as Map)['success'] == true) {
               final bookingId = (createResponse.data as Map)['bookingId'];
+
+              // 🔥 Track BOOK action for AI
+              try {
+                final trackingService = await UserInteractionService.create();
+                await trackingService.recordBook(
+                  itemId: widget.attractionId,
+                  itemType: 'attraction',
+                );
+              } catch (e) {
+                // Silent fail
+              }
+
               if (mounted) {
                 showDialog(
                   context: context,

@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/restaurant_api_service.dart';
 import 'package:app/services/favorite_api_service.dart';
+import 'package:app/services/user_interaction_service.dart';
 import 'package:app/views/screens/detail_restaurant_review_user_screen.dart';
 import 'package:app/views/screens/restaurant_reviews_list_screen.dart';
 import 'package:app/views/screens/restaurant_booking_checkout_screen.dart';
@@ -147,6 +148,21 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         widget.restaurantId ?? _tryParseInt(widget.restaurant?['restaurantId']);
     _loadFavoriteStatus();
     _fetchDetail();
+    _trackView(); // 🔥 Track VIEW
+  }
+
+  /// 🔥 Track VIEW for AI
+  Future<void> _trackView() async {
+    if (_resolvedId == null) return;
+    try {
+      final trackingService = await UserInteractionService.create();
+      await trackingService.recordView(
+        itemId: _resolvedId!,
+        itemType: 'restaurant',
+      );
+    } catch (e) {
+      // Silent fail
+    }
   }
 
   Future<void> _loadFavoriteStatus() async {

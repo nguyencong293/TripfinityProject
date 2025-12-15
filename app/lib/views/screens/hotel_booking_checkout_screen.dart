@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:app/services/hotel_booking_api_service.dart';
 import 'package:app/services/zalopay_api_service.dart';
+import 'package:app/services/user_interaction_service.dart';
 import 'package:app/views/screens/payment_webview_screen.dart';
 
 class HotelBookingCheckoutScreen extends StatefulWidget {
@@ -787,6 +788,18 @@ class _HotelBookingCheckoutScreenState
           providerNotes: _buildProviderNotes(),
           paymentMethod: 'counter', // Important: specify payment method
         );
+
+        // 🔥 Track BOOK action for AI
+        try {
+          final trackingService = await UserInteractionService.create();
+          await trackingService.recordBook(
+            itemId: widget.hotelId,
+            itemType: 'hotel',
+          );
+        } catch (e) {
+          // Silent fail
+        }
+
         if (!mounted) return;
         setState(() => _submitting = false);
         _showSnack('Đặt chỗ thành công. Thanh toán tại quầy khi nhận phòng.');
@@ -856,6 +869,18 @@ class _HotelBookingCheckoutScreenState
                 (createResponse.data as Map)['success'] == true) {
               // Booking created successfully
               final bookingId = (createResponse.data as Map)['bookingId'];
+
+              // 🔥 Track BOOK action for AI
+              try {
+                final trackingService = await UserInteractionService.create();
+                await trackingService.recordBook(
+                  itemId: widget.hotelId,
+                  itemType: 'hotel',
+                );
+              } catch (e) {
+                // Silent fail
+              }
+
               if (mounted) {
                 showDialog(
                   context: context,

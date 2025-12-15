@@ -19,6 +19,7 @@ import 'dart:convert';
 
 // API centralized
 import 'package:app/services/search_api_service.dart';
+import 'package:app/services/user_interaction_service.dart';
 
 class SearchOverviewScreen extends StatefulWidget {
   final String searchQuery;
@@ -490,6 +491,22 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
     return int.tryParse(numbers) ?? 0;
   }
 
+  // Helper to get ID keys based on item type
+  List<String> _getIdKeys(String itemType) {
+    switch (itemType) {
+      case 'hotel':
+        return ['hotelId', 'id', 'hotel_id'];
+      case 'restaurant':
+        return ['restaurantId', 'id', 'restaurant_id'];
+      case 'tour':
+        return ['tourId', 'id', 'tour_id'];
+      case 'attraction':
+        return ['attractionId', 'id', 'attraction_id'];
+      default:
+        return ['id'];
+    }
+  }
+
   // Card địa điểm chính
   Widget _buildLocationCard(BuildContext context) {
     final title = _areaName ?? _currentQuery;
@@ -717,7 +734,14 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
         border: Border.all(color: context.dividerColor.withValues(alpha: 0.3)),
       ),
       child: InkWell(
-        onTap: () {
+        onTap: () async {
+          // 🔥 Track CLICK for AI recommendation
+          final id = _parseId(item, _getIdKeys(itemType));
+          if (id != null && id > 0) {
+            final trackingService = await UserInteractionService.create();
+            trackingService.recordClick(itemId: id, itemType: itemType);
+          }
+
           switch (itemType) {
             case 'hotel':
               _openHotelDetail(item);

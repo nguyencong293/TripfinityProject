@@ -10,6 +10,7 @@ import 'dart:ui' as ui;
 
 // API service
 import 'package:app/services/search_api_service.dart';
+import 'package:app/services/user_interaction_service.dart';
 
 // Navigation imports
 import 'package:app/views/screens/hotel_detail_overview_screen.dart';
@@ -520,8 +521,14 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     return 0;
   }
 
-  void _navigateToHotelDetail(Map<String, dynamic> item) {
+  void _navigateToHotelDetail(Map<String, dynamic> item) async {
     final id = _parseId(item, ['hotelId', 'id', 'hotel_id']);
+
+    // 🔥 Track CLICK for AI recommendation
+    final trackingService = await UserInteractionService.create();
+    trackingService.recordClick(itemId: id, itemType: 'hotel');
+
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => HotelDetailOverviewScreen(
@@ -540,8 +547,14 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     );
   }
 
-  void _navigateToRestaurantDetail(Map<String, dynamic> item) {
+  void _navigateToRestaurantDetail(Map<String, dynamic> item) async {
     final id = _parseId(item, ['restaurantId', 'id', 'restaurant_id']);
+
+    // 🔥 Track CLICK for AI recommendation
+    final trackingService = await UserInteractionService.create();
+    trackingService.recordClick(itemId: id, itemType: 'restaurant');
+
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RestaurantDetailScreen(
@@ -572,8 +585,14 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     );
   }
 
-  void _navigateToTourDetail(Map<String, dynamic> item) {
+  void _navigateToTourDetail(Map<String, dynamic> item) async {
     final id = _parseId(item, ['tourId', 'id', 'tour_id']);
+
+    // 🔥 Track CLICK for AI recommendation
+    final trackingService = await UserInteractionService.create();
+    trackingService.recordClick(itemId: id, itemType: 'tour');
+
+    if (!mounted) return;
     final tourData = {
       'name': item['name']?.toString() ?? '',
       'location': item['address']?.toString() ?? '',
@@ -595,8 +614,14 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     );
   }
 
-  void _navigateToAttractionDetail(Map<String, dynamic> item) {
+  void _navigateToAttractionDetail(Map<String, dynamic> item) async {
     final id = _parseId(item, ['attractionId', 'id', 'attraction_id']);
+
+    // 🔥 Track CLICK for AI recommendation
+    final trackingService = await UserInteractionService.create();
+    trackingService.recordClick(itemId: id, itemType: 'attraction');
+
+    if (!mounted) return;
     final attractionData = {
       'name': item['name']?.toString() ?? '',
       'location': item['address']?.toString() ?? '',

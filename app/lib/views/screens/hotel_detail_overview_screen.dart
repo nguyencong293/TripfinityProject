@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/hotel_api_service.dart';
 import 'package:app/services/review_api_service.dart';
 import 'package:app/services/favorite_api_service.dart';
+import 'package:app/services/user_interaction_service.dart';
 import 'package:app/views/screens/hotel_booking_checkout_screen.dart';
 import 'package:app/views/screens/detail_hotel_review_user_screen.dart';
 import 'package:app/views/screens/hotel_reviews_list_screen.dart';
@@ -153,6 +154,18 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
     _resolvedId = widget.hotelId ?? _tryParseInt(widget.hotel?['hotelId']);
     _loadFavoriteStatus();
     _fetchDetail();
+    _trackView(); // 🔥 Track VIEW
+  }
+
+  /// 🔥 Track VIEW for AI
+  Future<void> _trackView() async {
+    if (_resolvedId == null) return;
+    try {
+      final trackingService = await UserInteractionService.create();
+      await trackingService.recordView(itemId: _resolvedId!, itemType: 'hotel');
+    } catch (e) {
+      // Silent fail
+    }
   }
 
   Future<void> _loadFavoriteStatus() async {

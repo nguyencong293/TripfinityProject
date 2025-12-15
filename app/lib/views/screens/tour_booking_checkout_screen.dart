@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:app/services/tour_booking_api_service.dart';
 import 'package:app/services/zalopay_api_service.dart';
+import 'package:app/services/user_interaction_service.dart';
 import 'package:app/views/screens/payment_webview_screen.dart';
 
 class TourBookingCheckoutScreen extends StatefulWidget {
@@ -711,6 +712,18 @@ class _TourBookingCheckoutScreenState extends State<TourBookingCheckoutScreen> {
           providerNotes: _buildProviderNotes(),
           paymentMethod: 'counter', // Important: specify payment method
         );
+
+        // 🔥 Track BOOK action for AI
+        try {
+          final trackingService = await UserInteractionService.create();
+          await trackingService.recordBook(
+            itemId: widget.tourId,
+            itemType: 'tour',
+          );
+        } catch (e) {
+          // Silent fail
+        }
+
         if (!mounted) return;
         setState(() => _submitting = false);
         _showSnack('Đặt tour thành công. Thanh toán trực tiếp khi tham gia.');
@@ -777,6 +790,18 @@ class _TourBookingCheckoutScreenState extends State<TourBookingCheckoutScreen> {
                 (createResponse.data as Map)['success'] == true) {
               // Booking created successfully
               final bookingId = (createResponse.data as Map)['bookingId'];
+
+              // 🔥 Track BOOK action for AI
+              try {
+                final trackingService = await UserInteractionService.create();
+                await trackingService.recordBook(
+                  itemId: widget.tourId,
+                  itemType: 'tour',
+                );
+              } catch (e) {
+                // Silent fail
+              }
+
               if (mounted) {
                 showDialog(
                   context: context,

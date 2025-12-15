@@ -10,6 +10,7 @@ import 'package:app/views/screens/hotel_detail_overview_screen.dart';
 import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 import 'package:app/views/screens/attractions_overview_detail_screen.dart';
 import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
+import 'package:app/services/user_interaction_service.dart';
 
 class HomeServiceItem {
   final String title;
@@ -264,9 +265,14 @@ class _HomeServiceCard extends StatelessWidget {
     );
   }
 
-  void _navigateToDetail(BuildContext context) {
+  void _navigateToDetail(BuildContext context) async {
+    // 🔥 Track CLICK for AI recommendation
+    final trackingService = await UserInteractionService.create();
+    if (!context.mounted) return;
+
     switch (serviceType) {
       case 'hotel':
+        trackingService.recordClick(itemId: serviceId, itemType: 'hotel');
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -275,6 +281,7 @@ class _HomeServiceCard extends StatelessWidget {
         );
         break;
       case 'restaurant':
+        trackingService.recordClick(itemId: serviceId, itemType: 'restaurant');
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -284,6 +291,7 @@ class _HomeServiceCard extends StatelessWidget {
         );
         break;
       case 'attraction':
+        trackingService.recordClick(itemId: serviceId, itemType: 'attraction');
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -293,6 +301,7 @@ class _HomeServiceCard extends StatelessWidget {
         );
         break;
       case 'tour':
+        trackingService.recordClick(itemId: serviceId, itemType: 'tour');
         Navigator.push(
           context,
           MaterialPageRoute(

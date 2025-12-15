@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import '../../services/favorite_api_service.dart';
+import '../../services/user_interaction_service.dart';
 
 class FavoriteButton extends StatefulWidget {
   final String serviceType; // hotel, restaurant, attraction, tour
@@ -86,6 +87,8 @@ class _FavoriteButtonState extends State<FavoriteButton> {
             serviceType: widget.serviceType,
             serviceId: widget.serviceId,
           );
+          // 🔥 Track FAVORITE action for AI
+          _trackFavorite();
         } else {
           // Remove from favorites
           await _favoriteService!.removeFavorite(
@@ -117,6 +120,19 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       if (mounted) {
         setState(() => _isProcessing = false);
       }
+    }
+  }
+
+  /// 🔥 Track FAVORITE for AI
+  Future<void> _trackFavorite() async {
+    try {
+      final trackingService = await UserInteractionService.create();
+      await trackingService.recordFavorite(
+        itemId: widget.serviceId,
+        itemType: widget.serviceType,
+      );
+    } catch (e) {
+      // Silent fail
     }
   }
 

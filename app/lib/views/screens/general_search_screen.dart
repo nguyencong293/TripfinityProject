@@ -26,6 +26,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Use centralized API service and config
 import 'package:app/services/search_api_service.dart';
 import 'package:app/services/search_history_service.dart';
+import 'package:app/services/user_interaction_service.dart';
 import 'package:app/services/hotel_api_service.dart';
 import 'package:app/services/restaurant_api_service.dart';
 import 'package:app/services/tour_api_service.dart';
@@ -945,6 +946,12 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       itemThumbnailUrl: imageUrl,
     );
 
+    // 🔥 Track CLICK for AI recommendation
+    if (id != null && id > 0) {
+      final trackingService = await UserInteractionService.create();
+      trackingService.recordClick(itemId: id, itemType: 'hotel');
+    }
+
     if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -1000,6 +1007,12 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       itemLocation: location,
       itemThumbnailUrl: imageUrl,
     );
+
+    // 🔥 Track CLICK for AI recommendation
+    if (id != null && id > 0) {
+      final trackingService = await UserInteractionService.create();
+      trackingService.recordClick(itemId: id, itemType: 'restaurant');
+    }
 
     if (!mounted) return;
     Navigator.of(context).push(
@@ -1058,6 +1071,12 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       itemLocation: location,
       itemThumbnailUrl: imageUrl,
     );
+
+    // 🔥 Track CLICK for AI recommendation
+    if (id != null && id > 0) {
+      final trackingService = await UserInteractionService.create();
+      trackingService.recordClick(itemId: id, itemType: 'tour');
+    }
 
     final tourData = {
       'name': title,
@@ -1118,6 +1137,12 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       itemLocation: location,
       itemThumbnailUrl: imageUrl,
     );
+
+    // 🔥 Track CLICK for AI recommendation
+    if (id != null && id > 0) {
+      final trackingService = await UserInteractionService.create();
+      trackingService.recordClick(itemId: id, itemType: 'attraction');
+    }
 
     final attractionData = {
       'name': title,
@@ -1310,7 +1335,52 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     // Save search query to history
     await _saveSearchQuery(trimmed, searchType);
 
+    // 🔥 Track SEARCH action for AI
+    _trackSearch(searchType);
+
     _fetchSearch(trimmed);
+  }
+
+  /// 🔥 Track SEARCH for AI
+  Future<void> _trackSearch(String searchType) async {
+    try {
+      final trackingService = await UserInteractionService.create();
+
+      // Map searchType to itemType
+      String itemType;
+      switch (searchType) {
+        case 'hotel':
+          itemType = 'hotel';
+          break;
+        case 'restaurant':
+          itemType = 'restaurant';
+          break;
+        case 'tour':
+          itemType = 'tour';
+          break;
+        case 'attraction':
+          itemType = 'attraction';
+          break;
+        default:
+          // General search: track theo loại có nhiều kết quả nhất
+          final counts = {
+            'hotel': _hotelItems.length,
+            'restaurant': _restaurantItems.length,
+            'tour': _tourItems.length,
+            'attraction': _attractionItems.length,
+          };
+          final maxEntry = counts.entries.reduce(
+            (a, b) => a.value > b.value ? a : b,
+          );
+          itemType = maxEntry.value > 0
+              ? maxEntry.key
+              : 'tour'; // Fallback to tour
+      }
+
+      await trackingService.recordSearch(itemType: itemType);
+    } catch (e) {
+      // Silent fail
+    }
   }
 
   // ===== API =====

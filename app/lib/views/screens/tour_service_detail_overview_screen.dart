@@ -9,6 +9,7 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/tour_api_service.dart';
 import 'package:app/services/favorite_api_service.dart';
+import 'package:app/services/user_interaction_service.dart';
 import 'package:app/views/screens/tour_booking_checkout_screen.dart';
 import 'package:app/views/widgets/favorite_button.dart';
 
@@ -144,6 +145,18 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     _resolvedId = widget.tourId ?? _tryParseInt(widget.tour?['tourId']);
     _loadFavoriteStatus();
     _fetchDetail();
+    _trackView(); // 🔥 Track VIEW action
+  }
+
+  /// 🔥 Track VIEW interaction for AI
+  Future<void> _trackView() async {
+    if (_resolvedId == null) return;
+    try {
+      final trackingService = await UserInteractionService.create();
+      await trackingService.recordView(itemId: _resolvedId!, itemType: 'tour');
+    } catch (e) {
+      // Silent fail
+    }
   }
 
   Future<void> _loadFavoriteStatus() async {
