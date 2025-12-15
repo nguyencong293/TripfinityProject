@@ -21,8 +21,8 @@ CREATE TABLE `user_item_interactions` (
   `user_id` INT NOT NULL COMMENT 'ID người dùng',
   `item_id` INT NOT NULL COMMENT 'ID dịch vụ (tour_id, hotel_id, attraction_id, restaurant_id)',
   `item_type` ENUM('tour', 'hotel', 'attraction', 'restaurant') NOT NULL COMMENT 'Loại dịch vụ',
-  `action_type` ENUM('search', 'view', 'click', 'book') NOT NULL COMMENT 'Hành động: search=tìm kiếm, view=xem, click=nhấp vào, book=đặt',
-  `action_weight` TINYINT NOT NULL COMMENT 'Trọng số: search=1, view=2, click=3, book=5',
+  `action_type` ENUM('search', 'view', 'click', 'favorite', 'book') NOT NULL COMMENT 'Hành động: search=tìm kiếm, view=xem, click=nhấp vào, favorite=yêu thích, book=đặt',
+  `action_weight` TINYINT NOT NULL COMMENT 'Trọng số: search=1, view=2, click=3, favorite=4, book=5',
   `interaction_timestamp` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian tương tác',
   
   -- ============================================================
@@ -156,6 +156,29 @@ INSERT INTO user_item_interactions (
 ) VALUES (?, 'search', 1, ?, NOW());
 
 
+// Khi user THÊM YÊU THÍCH:
+INSERT INTO user_item_interactions (
+  user_id, item_id, item_type, action_type, action_weight,
+  item_title, area_id, area_name, item_location, item_price,
+  item_thumbnail_url, interaction_timestamp
+)
+SELECT 
+  ?, -- userId
+  t.tour_id,
+  'tour',
+  'favorite',
+  4,
+  t.title,
+  t.area_id,
+  (SELECT name FROM areas WHERE area_id = t.area_id),
+  t.location,
+  t.price,
+  t.thumbnail_url,
+  NOW()
+FROM tours t
+WHERE t.tour_id = ?; -- tourId
+
+
 // Khi user BOOK:
 INSERT INTO user_item_interactions (
   user_id, item_id, item_type, action_type, action_weight,
@@ -191,7 +214,7 @@ SELECT
   item_title,
   interaction_timestamp
 FROM user_item_interactions
-WHERE action_type IN ('view', 'click', 'book')
+WHERE action_type IN ('view', 'click', 'favorite', 'book')
 ORDER BY interaction_timestamp DESC
 """
 
@@ -265,7 +288,7 @@ SELECT
   MAX(item_price) as max_price
 FROM user_item_interactions
 WHERE user_id = ?
-  AND action_type IN ('book', 'click')
+  AND action_type IN ('book', 'favorite', 'click')
   AND item_price IS NOT NULL;
 
 */
