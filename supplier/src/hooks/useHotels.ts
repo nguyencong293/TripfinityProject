@@ -4,13 +4,9 @@ import type { HotelDTO, HotelFilters } from "../types";
 import {
   getHotelsByProvider,
   createHotel,
+  uploadHotelThumbnail,
+  uploadHotelImages,
 } from "../services/hotelService";
-import {
-  uploadSingleImage,
-  uploadMultipleImages,
-  deleteImage,
-  deleteMultipleImages,
-} from "../services/uploadService";
 import { getProviderByUserId } from "../services/providerService";
 
 /* ============================================
@@ -320,8 +316,10 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
   }, []);
 
   useEffect(() => {
+    console.log("🔄 thumbnailFile changed:", thumbnailFile);
     if (thumbnailFile) {
       const url = URL.createObjectURL(thumbnailFile);
+      console.log("✅ Created thumbnail preview:", url);
       setThumbnailPreview(url);
       return () => URL.revokeObjectURL(url);
     } else {
@@ -330,7 +328,9 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
   }, [thumbnailFile]);
 
   useEffect(() => {
+    console.log("🔄 imageFiles changed:", imageFiles.length, "files");
     const urls = imageFiles.map((file) => URL.createObjectURL(file));
+    console.log("✅ Created image previews:", urls.length);
     setImagePreviews(urls);
     return () => urls.forEach((url) => URL.revokeObjectURL(url));
   }, [imageFiles]);
@@ -469,25 +469,8 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
       setSubmitting(true);
       setErrors({});
 
-      let uploadedThumbnailUrl: string | null = null;
-      let uploadedImageUrls: string[] = [];
-
       try {
-        // STEP 1: Upload thumbnail first (independent of hotel ID)
-        if (thumbnailFile) {
-          // DEBUG: console.log("📸 Uploading thumbnail...");
-          uploadedThumbnailUrl = await uploadSingleImage(thumbnailFile);
-          // DEBUG: console.log("✅ Thumbnail uploaded:", uploadedThumbnailUrl);
-        }
-
-        // STEP 2: Upload gallery images (independent of hotel ID)
-        if (imageFiles.length > 0) {
-          // DEBUG: console.log("🖼️ Uploading", imageFiles.length, "images...");
-          uploadedImageUrls = await uploadMultipleImages(imageFiles);
-          // DEBUG: console.log("✅ Images uploaded:", uploadedImageUrls);
-        }
-
-        // STEP 3: Prepare hotel data
+        // STEP 1: Prepare hotel data (without images)
         const hotelData: Partial<HotelDTO> = {
           providerId,
           areaId: formData.areaId!,
@@ -542,45 +525,28 @@ export const useHotelCreate = (): UseHotelCreateReturn => {
         if (formData.checkoutTime)
           hotelData.checkoutTime = formData.checkoutTime;
 
-        // STEP 4: Attach uploaded URLs to hotel data
-        if (uploadedThumbnailUrl) {
-          hotelData.thumbnailUrl = uploadedThumbnailUrl;
-        }
-        if (uploadedImageUrls.length > 0) {
-          hotelData.imageUrls = uploadedImageUrls;
-        }
-
-        // DEBUG: console.log("🔍 Final hotel payload:", hotelData);
-
-        // STEP 5: Create hotel with complete data (atomic DB operation)
+        // STEP 2: Create hotel first (without images)
         const createdHotel = await createHotel(hotelData);
-        // DEBUG: console.log("✅ Hotel created:", createdHotel);
+        console.log("✅ Hotel created:", createdHotel);
 
         if (!createdHotel.hotelId) {
           throw new Error("Hotel created but ID not returned");
         }
 
-        // DEBUG: console.log("🎉 Hotel creation completed successfully!");
+        // STEP 3: Upload thumbnail (using FormData like EDIT does)
+        if (thumbnailFile) {
+          await uploadHotelThumbnail(createdHotel.hotelId, thumbnailFile);
+        }
+
+        // STEP 4: Upload images (using FormData like EDIT does)
+        if (imageFiles.length > 0) {
+          await uploadHotelImages(createdHotel.hotelId, imageFiles);
+        }
+
         navigate("/supplier/service/hotel");
-        // Reload trang để map không bị loading
         setTimeout(() => window.location.reload(), 100);
       } catch (err) {
         console.error("❌ Error creating hotel:", err);
-        
-        // ROLLBACK: Delete uploaded images if hotel creation failed
-        try {
-          if (uploadedThumbnailUrl) {
-            // DEBUG: console.log("🔄 Rolling back thumbnail...");
-            await deleteImage(uploadedThumbnailUrl);
-          }
-          if (uploadedImageUrls.length > 0) {
-            // DEBUG: console.log("🔄 Rolling back", uploadedImageUrls.length, "images...");
-            await deleteMultipleImages(uploadedImageUrls);
-          }
-        } catch (rollbackErr) {
-          console.error("❌ Rollback failed:", rollbackErr);
-        }
-
         setErrors({
           general: err instanceof Error ? err.message : "Lỗi tạo khách sạn",
         });

@@ -328,8 +328,10 @@ export const useAttractionCreate = (): UseAttractionCreateReturn => {
   }, []);
 
   useEffect(() => {
+    console.log("🔄 [Attraction] thumbnailFile changed:", thumbnailFile);
     if (thumbnailFile) {
       const url = URL.createObjectURL(thumbnailFile);
+      console.log("✅ [Attraction] Created thumbnail preview:", url);
       setThumbnailPreview(url);
       return () => URL.revokeObjectURL(url);
     } else {
@@ -338,7 +340,9 @@ export const useAttractionCreate = (): UseAttractionCreateReturn => {
   }, [thumbnailFile]);
 
   useEffect(() => {
+    console.log("🔄 [Attraction] imageFiles changed:", imageFiles.length, "files");
     const urls = imageFiles.map((file) => URL.createObjectURL(file));
+    console.log("✅ [Attraction] Created image previews:", urls.length);
     setImagePreviews(urls);
     return () => urls.forEach((url) => URL.revokeObjectURL(url));
   }, [imageFiles]);
@@ -479,14 +483,22 @@ export const useAttractionCreate = (): UseAttractionCreateReturn => {
       let uploadedImageUrls: string[] = [];
 
       try {
+        console.log("🚀 [Attraction] Starting upload process...");
+        console.log("📦 [Attraction] thumbnailFile:", thumbnailFile);
+        console.log("📦 [Attraction] imageFiles:", imageFiles);
+        
         // STEP 1: Upload thumbnail first (independent of attraction ID)
         if (thumbnailFile) {
+          console.log("📸 [Attraction] Uploading thumbnail...", thumbnailFile.name);
           uploadedThumbnailUrl = await uploadSingleImage(thumbnailFile);
+          console.log("✅ [Attraction] Thumbnail uploaded:", uploadedThumbnailUrl);
         }
 
         // STEP 2: Upload gallery images (independent of attraction ID)
         if (imageFiles.length > 0) {
+          console.log("🖼️ [Attraction] Uploading", imageFiles.length, "images...");
           uploadedImageUrls = await uploadMultipleImages(imageFiles);
+          console.log("✅ [Attraction] Images uploaded:", uploadedImageUrls);
         }
 
         // STEP 3: Prepare attraction data

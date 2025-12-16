@@ -1028,10 +1028,12 @@ const AttractionCreatePage: React.FC = () => {
             <ImageUpload
               label="Ảnh đại diện"
               onSelect={(files) => {
+                console.log(`🔄 [Attraction] Thumbnail selected:`, files[0]?.name, files[0]);
                 setThumbnailFile(files[0]);
               }}
               preview={thumbnailPreview}
               onRemove={() => {
+                console.log(`🔄 [Attraction] Thumbnail removed`);
                 setThumbnailFile(null);
               }}
             />
@@ -1042,10 +1044,16 @@ const AttractionCreatePage: React.FC = () => {
               label="Thư viện ảnh"
               multiple
               onSelect={(files) => {
+                console.log(
+                  `🔄 [Attraction] Images selected:`,
+                  files.map((f) => f.name),
+                  'Current imageFiles:', imageFiles.length
+                );
                 setImageFiles([...imageFiles, ...files]);
               }}
               preview={imagePreviews}
               onRemoveMultiple={(index) => {
+                console.log(`🔄 [Attraction] Image removed at index:`, index);
                 removeImageFile(index);
               }}
             />

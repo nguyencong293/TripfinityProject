@@ -1046,12 +1046,12 @@ const HotelCreatePage: React.FC = () => {
             <ImageUpload
               label="Ảnh đại diện"
               onSelect={(files) => {
-                // DEBUG: console.log(`🔄 Thumbnail selected:`, files[0]?.name);
+                console.log(`🔄 Thumbnail selected:`, files[0]?.name, files[0]);
                 setThumbnailFile(files[0]);
               }}
               preview={thumbnailPreview}
               onRemove={() => {
-                // DEBUG: console.log(`🔄 Thumbnail removed`);
+                console.log(`🔄 Thumbnail removed`);
                 setThumbnailFile(null);
               }}
             />
@@ -1062,15 +1062,18 @@ const HotelCreatePage: React.FC = () => {
               label="Thư viện ảnh"
               multiple
               onSelect={(files) => {
-                // DEBUG: console.log(
-                //   `🔄 Images selected:`,
-                //   files.map((f) => f.name)
-                // );
-                setImageFiles([...imageFiles, ...files]);
+                console.log(
+                  `🔄 Images selected:`,
+                  files.map((f) => f.name),
+                  'Current imageFiles:', imageFiles.length
+                );
+                const newFiles = [...imageFiles, ...files];
+                console.log('New imageFiles count:', newFiles.length);
+                setImageFiles(newFiles);
               }}
               preview={imagePreviews}
               onRemoveMultiple={(index) => {
-                // DEBUG: console.log(`🔄 Image removed at index:`, index);
+                console.log(`🔄 Image removed at index:`, index);
                 removeImageFile(index);
               }}
             />
