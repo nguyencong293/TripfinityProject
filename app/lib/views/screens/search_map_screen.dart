@@ -595,7 +595,17 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
 
   // Hiển thị chi tiết pin khi được tap
   void _showPinDetails(Map<String, dynamic> location) {
-    // Mở rộng bottom sheet khi tap vào pin
+    // Tìm index của item trong danh sách
+    final index = _items.indexWhere((item) => item['id'] == location['id']);
+    if (index == -1) return;
+
+    // Set selected index
+    setState(() {
+      selectedPinIndex = index;
+    });
+
+    // Scroll bottom sheet đến item được chọn
+    // Expand sheet lên 50% trước
     _scrollController.animateTo(
       0.5,
       duration: const Duration(milliseconds: 300),

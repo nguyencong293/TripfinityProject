@@ -243,14 +243,18 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     }
   }
 
-  // Lấy tọa độ từ data
+  // Lấy tọa độ từ data (giống search_map - xử lý num type)
   LatLng? _getCoordinatesFromData(Map<String, dynamic> data) {
-    final lat = data['latitude'] != null
-        ? double.tryParse(data['latitude'].toString())
-        : null;
-    final lng = data['longitude'] != null
-        ? double.tryParse(data['longitude'].toString())
-        : null;
+    final latitude = data['latitude'];
+    final longitude = data['longitude'];
+
+    double? lat;
+    double? lng;
+
+    if (latitude != null && longitude != null) {
+      if (latitude is num) lat = latitude.toDouble();
+      if (longitude is num) lng = longitude.toDouble();
+    }
 
     if (lat != null && lng != null) {
       return LatLng(lat, lng);
@@ -483,6 +487,17 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
 
   // Hiển thị chi tiết pin khi được tap
   void _showPinDetails(Map<String, dynamic> location) {
+    // Tìm index của item trong danh sách
+    final index = _items.indexWhere((item) => item['id'] == location['id']);
+    if (index == -1) return;
+
+    // Set selected index
+    setState(() {
+      selectedPinIndex = index;
+    });
+
+    // Scroll bottom sheet đến item được chọn
+    // Expand sheet lên 50% trước
     _scrollController.animateTo(
       0.5,
       duration: const Duration(milliseconds: 300),
@@ -764,6 +779,12 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
       myLocationEnabled: true,
       zoomControlsEnabled: false,
       mapToolbarEnabled: false,
+      compassEnabled: true,
+      rotateGesturesEnabled: true,
+      scrollGesturesEnabled: true,
+      zoomGesturesEnabled: true,
+      tiltGesturesEnabled: true,
+      liteModeEnabled: false, // Full mode để có thể fit bounds và tương tác
       minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
       onTap: (position) {
         setState(() {
