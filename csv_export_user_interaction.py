@@ -29,11 +29,8 @@ def export_user_interactions_to_csv():
             item_id,
             item_type,
             action_type,
-            action_weight,
-            interaction_timestamp,
-            created_at
+            action_weight
         FROM user_item_interactions
-        ORDER BY interaction_timestamp DESC
         """
         
         print("Đang truy vấn dữ liệu...")
