@@ -737,11 +737,13 @@ class _RestaurantBookingCheckoutScreenState
         );
 
         final orderUrl = orderResult['order_url']!;
-        final appTransId = orderResult['apptransid']!;
+        final appTransId =
+            orderResult['apptransid']!; // Note: lowercase from backend
 
         setState(() => _submitting = false);
 
         if (!mounted) return;
+        // Open WebView for payment
         final result = await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => PaymentWebViewScreen(url: orderUrl),
@@ -749,8 +751,10 @@ class _RestaurantBookingCheckoutScreenState
         );
 
         if (result == true) {
+          // Payment completed successfully - now create booking via test endpoint
           setState(() => _submitting = true);
           try {
+            // Call test endpoint to create booking from pending payment
             final testDio = Dio();
             testDio.options.baseUrl = 'http://10.0.2.2:8080/api';
             final token = prefs.getString('user_token');
@@ -759,7 +763,7 @@ class _RestaurantBookingCheckoutScreenState
             }
 
             final createResponse = await testDio.post(
-              '/test/create-restaurant-booking-from-pending',
+              '/test/create-booking-from-pending',
               queryParameters: {'appTransId': appTransId},
             );
 
@@ -768,6 +772,7 @@ class _RestaurantBookingCheckoutScreenState
             if (createResponse.statusCode == 200 &&
                 createResponse.data is Map &&
                 (createResponse.data as Map)['success'] == true) {
+              // Booking created successfully
               final bookingId = (createResponse.data as Map)['bookingId'];
 
               // 🔥 Track BOOK action for AI
@@ -805,7 +810,7 @@ class _RestaurantBookingCheckoutScreenState
                           ),
                         SizedBox(height: 8),
                         Text(
-                          'Bạn có thể kiểm tra chi tiết trong "Đơn của tôi".',
+                          'Bạn có thể kiểm tra chi tiết đặt bàn trong mục "Đơn của tôi".',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[600],
@@ -816,8 +821,8 @@ class _RestaurantBookingCheckoutScreenState
                     actions: [
                       ElevatedButton(
                         onPressed: () {
-                          Navigator.of(context).pop();
-                          Navigator.of(context).pop();
+                          Navigator.of(context).pop(); // Close dialog
+                          Navigator.of(context).pop(); // Close checkout screen
                         },
                         child: Text('Đóng'),
                       ),
@@ -826,6 +831,7 @@ class _RestaurantBookingCheckoutScreenState
                 );
               }
             } else {
+              // Failed to create booking
               _showSnack(
                 'Thanh toán thành công nhưng không tạo được đặt bàn. Vui lòng liên hệ hỗ trợ.',
               );
@@ -837,6 +843,7 @@ class _RestaurantBookingCheckoutScreenState
             );
           }
         } else {
+          // Payment cancelled or failed
           _showSnack('Thanh toán chưa hoàn tất. Vui lòng thử lại nếu cần.');
         }
       } catch (e) {
