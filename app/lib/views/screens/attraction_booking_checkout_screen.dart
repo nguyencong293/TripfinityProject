@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:app/services/attraction_booking_api_service.dart';
 import 'package:app/services/zalopay_api_service.dart';
 import 'package:app/services/user_interaction_service.dart';
+import 'package:app/services/user_service.dart';
 import 'package:app/views/screens/payment_webview_screen.dart';
 
 class AttractionBookingCheckoutScreen extends StatefulWidget {
@@ -65,9 +66,15 @@ class _AttractionBookingCheckoutScreenState
   Future<void> _loadUserInfo() async {
     try {
       final authController = context.read<AuthController>();
-      final user = authController.currentUser;
+      final userId = authController.currentUser?.userId;
+      final token = authController.rawToken;
 
-      if (user != null) {
+      // Gọi API để lấy đầy đủ thông tin user từ backend
+      if (userId != null && token != null) {
+        debugPrint('📥 Fetching full user info from API for userId=$userId');
+        final userService = UserService(dio: Dio());
+        final user = await userService.getUserById(userId, token);
+
         if (mounted) {
           setState(() {
             _nameCtrl.text = user.fullName;
@@ -75,29 +82,25 @@ class _AttractionBookingCheckoutScreenState
             _phoneCtrl.text = user.phoneNumber ?? '';
           });
         }
-        debugPrint('✅ Loaded user info from AuthController');
-      } else {
-        final prefs = await SharedPreferences.getInstance();
-        final name =
-            prefs.getString('user_name') ?? prefs.getString('full_name') ?? '';
-        final email =
-            prefs.getString('user_email') ?? prefs.getString('email') ?? '';
-        final phone =
-            prefs.getString('user_phone') ??
-            prefs.getString('phone_number') ??
-            '';
+        debugPrint('✅ Loaded user info from API: phone=${user.phoneNumber}');
 
-        if (mounted) {
+        // Cập nhật AuthController với data mới nhất
+        authController.updateCurrentUser(user);
+      } else {
+        // Fallback: Lấy từ AuthController nếu không có token/userId
+        final user = authController.currentUser;
+        if (user != null && mounted) {
           setState(() {
-            _nameCtrl.text = name;
-            _emailCtrl.text = email;
-            _phoneCtrl.text = phone;
+            _nameCtrl.text = user.fullName;
+            _emailCtrl.text = user.email;
+            _phoneCtrl.text = user.phoneNumber ?? '';
           });
         }
-        debugPrint('⚠️ Loaded user info from SharedPreferences (fallback)');
+        debugPrint('⚠️ Loaded user info from AuthController (no API call)');
       }
     } catch (e) {
       debugPrint('❌ Error loading user info: $e');
+      // Silent fail - user can input manually
     }
   }
 

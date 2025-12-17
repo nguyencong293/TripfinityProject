@@ -228,4 +228,10 @@ class AuthController with ChangeNotifier {
     }
     return false;
   }
+
+  /// Cập nhật thông tin user hiện tại
+  void updateCurrentUser(UserDTO user) {
+    _currentUser = user;
+    notifyListeners();
+  }
 }

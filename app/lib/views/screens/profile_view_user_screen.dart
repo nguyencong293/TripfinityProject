@@ -2,6 +2,8 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/controllers/language_controller.dart';
 import 'package:app/services/localization_service.dart';
+import 'package:app/services/user_service.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -10,8 +12,45 @@ import '../../controllers/auth_controller.dart';
 import '../../dto/user_dto.dart';
 
 /// Profile details screen for user: follows theme + localization
-class ProfileViewUserScreen extends StatelessWidget {
+class ProfileViewUserScreen extends StatefulWidget {
   const ProfileViewUserScreen({super.key});
+
+  @override
+  State<ProfileViewUserScreen> createState() => _ProfileViewUserScreenState();
+}
+
+class _ProfileViewUserScreenState extends State<ProfileViewUserScreen> {
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final authController = context.read<AuthController>();
+      final userId = authController.currentUser?.userId;
+      final token = authController.rawToken;
+
+      if (userId != null && token != null) {
+        debugPrint('📥 Fetching full user info from API for profile...');
+        final userService = UserService(dio: Dio());
+        final user = await userService.getUserById(userId, token);
+
+        // Cập nhật AuthController với data mới nhất
+        authController.updateCurrentUser(user);
+        debugPrint('✅ Profile loaded with phone: ${user.phoneNumber}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading profile data: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,121 +89,137 @@ class ProfileViewUserScreen extends StatelessWidget {
             title: Text('account_info'.tr, style: context.h5Style),
           ),
           backgroundColor: context.backgroundColor,
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 34,
-                        backgroundColor: context.secondaryColor,
-                        child: Text(
-                          (user?.fullName.isNotEmpty == true
-                              ? user!.fullName[0].toUpperCase()
-                              : '?'),
-                          style: context.h3Style,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      TextButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('feature_coming_soon'.tr)),
-                          );
-                        },
-                        icon: const Icon(LucideIcons.camera),
-                        label: Text('profile_edit_photo'.tr),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  _ProfileItem(
-                    label: 'profile_full_name'.tr,
-                    value: user?.fullName ?? '-',
-                  ),
-                  _ProfileItem(
-                    label: 'profile_email'.tr,
-                    value: user?.email ?? '-',
-                  ),
-                  _ProfileItem(
-                    label: 'profile_phone'.tr,
-                    value: user?.phoneNumber ?? '-',
-                  ),
-                  _ProfileItem(label: 'profile_dob'.tr, value: displayDob()),
-                  _ProfileItem(
-                    label: 'profile_gender'.tr,
-                    value: displayGender(),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('feature_coming_soon'.tr)),
-                        );
-                      },
-                      child: Text('profile_edit_account'.tr),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
                     ),
-                  ),
-                  const SizedBox(height: 50),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: SizedBox(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: context.errorColor),
-                          foregroundColor: context.errorColor,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            CircleAvatar(
+                              radius: 34,
+                              backgroundColor: context.secondaryColor,
+                              child: Text(
+                                (user?.fullName.isNotEmpty == true
+                                    ? user!.fullName[0].toUpperCase()
+                                    : '?'),
+                                style: context.h3Style,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            TextButton.icon(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('feature_coming_soon'.tr),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(LucideIcons.camera),
+                              label: Text('profile_edit_photo'.tr),
+                            ),
+                          ],
                         ),
-                        onPressed: () async {
-                          // Capture messenger before the async gap to avoid using context after await
-                          final messenger = ScaffoldMessenger.of(context);
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) {
-                              return AlertDialog(
-                                title: Text('confirm_delete_title'.tr),
-                                content: Text('confirm_delete_desc'.tr),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: Text('cancel'.tr),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    child: Text(
-                                      'delete'.tr,
-                                      style: TextStyle(
-                                        color: context.errorColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                        const SizedBox(height: 24),
+
+                        _ProfileItem(
+                          label: 'profile_full_name'.tr,
+                          value: user?.fullName ?? '-',
+                        ),
+                        _ProfileItem(
+                          label: 'profile_email'.tr,
+                          value: user?.email ?? '-',
+                        ),
+                        _ProfileItem(
+                          label: 'profile_phone'.tr,
+                          value: user?.phoneNumber ?? '-',
+                        ),
+                        _ProfileItem(
+                          label: 'profile_dob'.tr,
+                          value: displayDob(),
+                        ),
+                        _ProfileItem(
+                          label: 'profile_gender'.tr,
+                          value: displayGender(),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('feature_coming_soon'.tr),
+                                ),
                               );
                             },
-                          );
-                          if (!context.mounted) return;
-                          if (confirm == true) {
-                            messenger.showSnackBar(
-                              SnackBar(content: Text('feature_coming_soon'.tr)),
-                            );
-                          }
-                        },
-                        child: Text('profile_delete_account'.tr),
-                      ),
+                            child: Text('profile_edit_account'.tr),
+                          ),
+                        ),
+                        const SizedBox(height: 50),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: SizedBox(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: context.errorColor),
+                                foregroundColor: context.errorColor,
+                              ),
+                              onPressed: () async {
+                                // Capture messenger before the async gap to avoid using context after await
+                                final messenger = ScaffoldMessenger.of(context);
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) {
+                                    return AlertDialog(
+                                      title: Text('confirm_delete_title'.tr),
+                                      content: Text('confirm_delete_desc'.tr),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, false),
+                                          child: Text('cancel'.tr),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, true),
+                                          child: Text(
+                                            'delete'.tr,
+                                            style: TextStyle(
+                                              color: context.errorColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                                if (!context.mounted) return;
+                                if (confirm == true) {
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text('feature_coming_soon'.tr),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Text('profile_delete_account'.tr),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
+                ),
         );
       },
     );
