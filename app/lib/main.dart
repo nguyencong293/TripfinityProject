@@ -3,6 +3,7 @@ import 'package:app/routes/app_router.dart';
 import 'package:app/services/auth_service.dart';
 import 'package:app/services/user_service.dart';
 import 'package:app/services/fcm_service.dart';
+import 'package:app/services/recommendation_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -91,10 +92,12 @@ void main() async {
   final dio = Dio();
   final authService = AuthService(dio: dio, prefs: prefs);
   final userService = UserService(dio: dio);
+  final recommendationService = RecommendationService(dio: dio);
   final authController = AuthController(
     authService: authService,
     prefs: prefs,
     userService: userService,
+    recommendationService: recommendationService,
   );
   final userController = UserController(userService: userService);
 

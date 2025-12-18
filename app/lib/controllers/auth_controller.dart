@@ -12,11 +12,13 @@ import '../exceptions/api_exceptions.dart';
 import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
 import '../services/user_service.dart';
+import '../services/recommendation_service.dart';
 
 class AuthController with ChangeNotifier {
   final AuthService _authService;
   final SharedPreferences _prefs;
   final UserService _userService;
+  final RecommendationService _recommendationService;
   FCMService? _fcmService;
 
   String? _rawToken;
@@ -28,9 +30,11 @@ class AuthController with ChangeNotifier {
     required AuthService authService,
     required SharedPreferences prefs,
     required UserService userService,
+    required RecommendationService recommendationService,
   }) : _authService = authService,
        _prefs = prefs,
-       _userService = userService {
+       _userService = userService,
+       _recommendationService = recommendationService {
     _loadFromPrefs();
   }
 
@@ -97,6 +101,9 @@ class AuthController with ChangeNotifier {
       } else {
         debugPrint('❌ FCM service is null!');
       }
+
+      // Gọi API gợi ý sau khi login thành công
+      _fetchRecommendations(resp.userId);
 
       return true;
     } on ApiException catch (e) {
@@ -215,6 +222,9 @@ class AuthController with ChangeNotifier {
         }
       }
 
+      // Gọi API gợi ý sau khi Google login thành công
+      _fetchRecommendations(resp.userId);
+
       return true;
     } on PlatformException catch (e) {
       _errorMessage = 'Lỗi Google Sign-In: [${e.code}] ${e.message}';
@@ -233,5 +243,34 @@ class AuthController with ChangeNotifier {
   void updateCurrentUser(UserDTO user) {
     _currentUser = user;
     notifyListeners();
+  }
+
+  /// Gọi API gợi ý (không chặn flow đăng nhập)
+  void _fetchRecommendations(int userId) {
+    // Chạy async mà không await để không chặn đăng nhập
+    _recommendationService
+        .getRecommendations(userId)
+        .then((response) {
+          if (response.success && response.data != null) {
+            debugPrint(
+              '✅ Fetched ${response.data!.length} recommendations for user $userId',
+            );
+            // Có thể lưu vào state hoặc cache nếu cần
+            // Ở đây chỉ log ra console
+            for (var item in response.data!) {
+              debugPrint(
+                '  - ${item.title} (${item.itemType}) - ${item.priceFmt}',
+              );
+            }
+          } else {
+            debugPrint(
+              'ℹ️ No recommendations for user $userId: ${response.message}',
+            );
+          }
+        })
+        .catchError((error) {
+          debugPrint('⚠️ Failed to fetch recommendations: $error');
+          // Không hiển thị lỗi cho user, chỉ log
+        });
   }
 }

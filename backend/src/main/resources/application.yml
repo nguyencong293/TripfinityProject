@@ -90,6 +90,10 @@ app:
     returnUrl: "" # Empty = no redirect after payment
     callbackUrl: https://c389af231df2.ngrok-free.app/api/zalopay/callback
 
+recommendation:
+  api:
+    url: ${RECOMMENDATION_API_URL:http://localhost:5000}
+
 server:
   port: ${SERVER_PORT:8080}
   compression:
