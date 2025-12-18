@@ -173,7 +173,10 @@ def get_smart_recommendations(user_id):
         final = pd.concat([in_zone.head(10), out_zone.head(5)])
         final['price_fmt'] = final['price'].apply(lambda x: f"{int(x):,} đ")
 
-        return final[['title', 'item_type', 'price_fmt', 'dist_km', 'score']], status, desc
+        # Rename columns to match Flutter expectations (camelCase or keep snake_case)
+        result_df = final[['item_id', 'title', 'item_type', 'price_fmt', 'dist_km', 'score']].copy()
+        
+        return result_df, status, desc
     
     return None, "Error", "Unknown"
 
@@ -207,7 +210,17 @@ def get_recommendations(user_id):
         }), 200
     else:
         # Convert DataFrame to dict for JSON response
-        recommendations = df_res.to_dict('records')
+        # Explicitly convert to ensure all fields are included
+        recommendations = []
+        for _, row in df_res.iterrows():
+            recommendations.append({
+                'item_id': int(row['item_id']),
+                'title': str(row['title']),
+                'item_type': str(row['item_type']),
+                'price_fmt': str(row['price_fmt']),
+                'dist_km': float(row['dist_km']),
+                'score': float(row['score'])
+            })
         
         print(f"\n{'='*80}")
         print(f"✅ TRẠNG THÁI: {status}")
@@ -217,7 +230,7 @@ def get_recommendations(user_id):
         print("-" * 80)
         for idx, item in enumerate(recommendations, 1):
             print(f"{idx}. {item['title']}")
-            print(f"   Loại: {item['item_type']} | Giá: {item['price_fmt']} | Khoảng cách: {item['dist_km']:.1f}km | Score: {item['score']:.4f}")
+            print(f"   ID: {item['item_id']} | Loại: {item['item_type']} | Giá: {item['price_fmt']} | Khoảng cách: {item['dist_km']:.1f}km | Score: {item['score']:.4f}")
         print("-" * 80 + "\n")
         
         return jsonify({

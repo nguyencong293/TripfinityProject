@@ -36,14 +36,14 @@ class HomeHorizontalSection extends StatelessWidget {
   final String title;
   final String pageStorageKey;
   final Future<List<HomeServiceItem>> futureItems;
-  final VoidCallback onSeeMore;
+  final VoidCallback? onSeeMore;
 
   const HomeHorizontalSection({
     super.key,
     required this.title,
     required this.pageStorageKey,
     required this.futureItems,
-    required this.onSeeMore,
+    this.onSeeMore,
   });
 
   @override
@@ -51,11 +51,14 @@ class HomeHorizontalSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(
-          title: title,
-          actionLabel: 'see_more'.tr,
-          onAction: onSeeMore,
-        ),
+        if (onSeeMore != null)
+          SectionHeader(
+            title: title,
+            actionLabel: 'see_more'.tr,
+            onAction: onSeeMore!,
+          )
+        else
+          SectionHeader(title: title),
         const SizedBox(height: 8),
         SizedBox(
           // Tăng chiều cao danh sách để tránh overflow khi có 2 dòng tiêu đề + giá

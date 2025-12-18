@@ -3,16 +3,22 @@ import 'package:app/services/area_api_service.dart';
 import 'package:app/services/search_api_service.dart';
 import 'package:app/services/notification_api_service.dart';
 import 'package:app/services/favorite_api_service.dart';
+import 'package:app/services/recommendation_service.dart';
+import 'package:app/services/search_history_service.dart';
 import 'package:app/views/screens/attractions_overview_search_screen.dart';
+import 'package:app/views/screens/attractions_overview_detail_screen.dart';
 import 'package:app/views/screens/general_search_screen.dart';
+import 'package:app/views/screens/search_overview_screen.dart';
 import 'package:app/views/screens/hotel_overview_search_screen.dart';
+import 'package:app/views/screens/hotel_detail_overview_screen.dart';
 import 'package:app/views/screens/restaurant_overview_search_screen.dart';
+import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 import 'package:app/views/screens/tour_service_overview_search_screen.dart';
+import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
 import 'package:app/views/screens/trip_user_screen.dart';
 import 'package:app/views/screens/trip_review_user_screen.dart';
 import 'package:app/views/widgets/article_banner_card.dart';
 import 'package:app/views/widgets/bottom_nav.dart';
-import 'package:app/views/widgets/experience_card.dart';
 import 'package:app/views/widgets/home_service_item.dart';
 import 'package:app/views/widgets/recent_item_tile.dart';
 import 'package:app/views/widgets/section_header.dart';
@@ -139,10 +145,28 @@ class _HomeContentState extends State<_HomeContent> {
   Set<int> _favoriteAttractionIds = {};
   Set<int> _favoriteTourIds = {};
 
+  // Cache futures to avoid reloading on every rebuild
+  late final Future<List<HomeServiceItem>> _hotelsFuture;
+  late final Future<List<HomeServiceItem>> _toursFuture;
+  late final Future<List<HomeServiceItem>> _attractionsFuture;
+  late final Future<List<HomeServiceItem>> _restaurantsFuture;
+  late final Future<List<AreaPreviewItem>> _areasFuture;
+  late final Future<List<HomeServiceItem>> _recommendationsFuture;
+  late final Future<List<Map<String, dynamic>>> _recentViewedFuture;
+
   @override
   void initState() {
     super.initState();
     _loadFavorites();
+
+    // Initialize all futures once
+    _hotelsFuture = _loadHomeHotels();
+    _toursFuture = _loadHomeTours();
+    _attractionsFuture = _loadHomeAttractions();
+    _restaurantsFuture = _loadHomeRestaurants();
+    _areasFuture = _loadHomeAreas();
+    _recommendationsFuture = _loadRecommendations();
+    _recentViewedFuture = _loadRecentViewed();
   }
 
   Future<void> _loadFavorites() async {
@@ -430,7 +454,239 @@ class _HomeContentState extends State<_HomeContent> {
     }
 
     items.shuffle();
-    return items.length > 10 ? items.sublist(0, 10) : items;
+    return items.length > 5 ? items.sublist(0, 5) : items;
+  }
+
+  Future<List<Map<String, dynamic>>> _loadRecentViewed() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final historyService = SearchHistoryService(dio: Dio(), prefs: prefs);
+      final viewedItems = await historyService.getRecentViewedItems(limit: 5);
+
+      // Convert to format expected by UI
+      final List<Map<String, dynamic>> items = [];
+      for (final item in viewedItems) {
+        items.add({
+          'itemType': item['itemType'],
+          'itemId': item['itemId'],
+          'itemTitle': item['itemTitle'],
+          'itemLocation': item['itemLocation'],
+          'itemThumbnailUrl': item['itemThumbnailUrl'],
+          'itemPrice': item['itemPrice'],
+          'itemCurrencyCode': item['itemCurrencyCode'],
+          'itemRating': item['itemRating'],
+        });
+      }
+
+      return items;
+    } catch (e) {
+      debugPrint('❌ Error loading recent viewed: $e');
+      return [];
+    }
+  }
+
+  Future<List<HomeServiceItem>> _loadRecommendations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('user_id');
+
+      if (userId == null) {
+        debugPrint('⚠️ Cannot load recommendations: user_id not found');
+        return [];
+      }
+
+      final dio = Dio();
+      final recommendationService = RecommendationService(dio: dio);
+      final response = await recommendationService.getRecommendations(userId);
+
+      if (!response.success || response.data == null) {
+        debugPrint('⚠️ No recommendations available');
+        return [];
+      }
+
+      debugPrint('🔍 Processing ${response.data!.length} recommendations');
+
+      // Load all service data in parallel for better performance
+      final searchApi = SearchApiService(dio: dio, prefs: prefs);
+      final futures = <Future<Map<String, dynamic>>>[];
+      final serviceTypes = <String>{
+        'hotel',
+        'restaurant',
+        'attraction',
+        'tour',
+      };
+
+      for (final type in serviceTypes) {
+        futures.add(searchApi.search(q: '', type: type));
+      }
+
+      final searchResults = await Future.wait(futures);
+      final serviceDataCache = <String, List<Map<String, dynamic>>>{};
+
+      // Build cache
+      int idx = 0;
+      for (final type in serviceTypes) {
+        final result = searchResults[idx];
+        List? serviceList;
+
+        if (type == 'hotel') {
+          serviceList = result['hotels'] as List?;
+        } else if (type == 'restaurant') {
+          serviceList = result['restaurants'] as List?;
+        } else if (type == 'attraction') {
+          serviceList = result['attractions'] as List?;
+        } else if (type == 'tour') {
+          serviceList = result['tours'] as List?;
+        }
+
+        if (serviceList != null) {
+          serviceDataCache[type] = serviceList
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
+          debugPrint('📦 Cached ${serviceList.length} $type items');
+        }
+        idx++;
+      }
+
+      final items = <HomeServiceItem>[];
+
+      for (final item in response.data!) {
+        final serviceType = item.itemType.toLowerCase();
+        final serviceId = item.itemId;
+
+        debugPrint('🔎 Looking for $serviceType #$serviceId: ${item.title}');
+
+        // Determine if this item is favorited
+        bool isFavorite = false;
+        if (serviceType == 'hotel') {
+          isFavorite = _favoriteHotelIds.contains(serviceId);
+        } else if (serviceType == 'restaurant') {
+          isFavorite = _favoriteRestaurantIds.contains(serviceId);
+        } else if (serviceType == 'attraction') {
+          isFavorite = _favoriteAttractionIds.contains(serviceId);
+        } else if (serviceType == 'tour') {
+          isFavorite = _favoriteTourIds.contains(serviceId);
+        }
+
+        // Find item in cache
+        final serviceList = serviceDataCache[serviceType];
+        if (serviceList == null) {
+          debugPrint('⚠️ No cache for service type: $serviceType');
+          continue;
+        }
+
+        String idKey = '';
+        if (serviceType == 'hotel') {
+          idKey = 'hotelId';
+        } else if (serviceType == 'restaurant') {
+          idKey = 'restaurantId';
+        } else if (serviceType == 'attraction') {
+          idKey = 'attractionId';
+        } else if (serviceType == 'tour') {
+          idKey = 'tourId';
+        }
+
+        debugPrint(
+          '   Searching with key: $idKey in ${serviceList.length} items',
+        );
+
+        final matchedItem = serviceList.firstWhere((m) {
+          final foundId = m[idKey] ?? m['id'] ?? 0;
+          return foundId == serviceId;
+        }, orElse: () => <String, dynamic>{});
+
+        if (matchedItem.isEmpty) {
+          debugPrint('   ❌ Not found in search results');
+          // Fallback: use basic info from recommendation
+          items.add(
+            HomeServiceItem(
+              title: item.title,
+              rating: 0.0,
+              imageUrl: '',
+              price: item.priceFmt,
+              serviceType: serviceType,
+              serviceId: serviceId,
+              isFavorite: isFavorite,
+            ),
+          );
+          debugPrint('   ✅ Added with fallback data');
+        } else {
+          debugPrint('   ✅ Found match!');
+          final ratingAny =
+              matchedItem['ratingAverage'] ??
+              matchedItem['rating'] ??
+              matchedItem['ratingAvg'] ??
+              matchedItem['avg_rating'];
+          final rating = (ratingAny is num)
+              ? ratingAny.toDouble()
+              : (double.tryParse(ratingAny?.toString() ?? '') ?? 0.0);
+
+          final imageUrl =
+              (matchedItem['thumbnailUrl'] ??
+                      matchedItem['imageUrl'] ??
+                      matchedItem['image'])
+                  ?.toString() ??
+              '';
+
+          items.add(
+            HomeServiceItem(
+              title: item.title,
+              rating: rating,
+              imageUrl: imageUrl,
+              price: item.priceFmt,
+              serviceType: serviceType,
+              serviceId: serviceId,
+              isFavorite: isFavorite,
+            ),
+          );
+          debugPrint('   ✅ Added with full data');
+        }
+      }
+
+      debugPrint('✅ Loaded ${items.length} recommendation items');
+      return items;
+    } catch (e) {
+      debugPrint('❌ Error loading recommendations: $e');
+      return [];
+    }
+  }
+
+  void _navigateToDetail(
+    BuildContext context,
+    String serviceType,
+    int serviceId,
+  ) {
+    switch (serviceType.toLowerCase()) {
+      case 'hotel':
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => HotelDetailOverviewScreen(hotelId: serviceId),
+          ),
+        );
+        break;
+      case 'restaurant':
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RestaurantDetailScreen(restaurantId: serviceId),
+          ),
+        );
+        break;
+      case 'attraction':
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) =>
+                AttractionsOverviewDetailScreen(attractionId: serviceId),
+          ),
+        );
+        break;
+      case 'tour':
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TourServiceDetailScreen(tourId: serviceId),
+          ),
+        );
+        break;
+    }
   }
 
   @override
@@ -566,55 +822,105 @@ class _HomeContentState extends State<_HomeContent> {
             ),
             const SizedBox(height: 30),
 
+            // Recommendations for you - prioritized to show first
+            FutureBuilder<List<HomeServiceItem>>(
+              future: _recommendationsFuture,
+              builder: (context, snapshot) {
+                // Show loading indicator while waiting
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Column(
+                    children: [
+                      SectionHeader(title: 'Gợi ý dành cho bạn'),
+                      const SizedBox(height: 16),
+                      const Center(child: CircularProgressIndicator()),
+                      const SizedBox(height: 30),
+                    ],
+                  );
+                }
+
+                // Don't show if error or no data
+                if (snapshot.hasError ||
+                    !snapshot.hasData ||
+                    snapshot.data!.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                // Show section with data
+                return Column(
+                  children: [
+                    HomeHorizontalSection(
+                      title: 'Gợi ý dành cho bạn',
+                      pageStorageKey: 'recommendations',
+                      futureItems: Future.value(snapshot.data!),
+                    ),
+                    const SizedBox(height: 30),
+                  ],
+                );
+              },
+            ),
+
             // Recently viewed
-            SectionHeader(title: 'recently_viewed'.tr),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: RecentItemTile.kHeight,
-              child: ListView.separated(
-                key: const PageStorageKey('recently_viewed'),
-                primary: false,
-                physics: const BouncingScrollPhysics(),
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.zero,
-                itemBuilder: (_, i) => RecentItemTile(
-                  leftImageAsset: i.isEven
-                      ? 'assets/images/onboarding1.png'
-                      : 'assets/images/onboarding2.png',
-                  title: 'Cầu vàng',
-                  subtitle: 'Chuyến tham quan ngắm cảnh...',
-                  rating: 4.0,
-                ),
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemCount: 10,
-              ),
-            ),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _recentViewedFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SectionHeader(title: 'recently_viewed'.tr),
+                      const SizedBox(height: 16),
+                      const Center(child: CircularProgressIndicator()),
+                    ],
+                  );
+                }
 
-            const SizedBox(height: 30),
+                final items = snapshot.data ?? [];
+                if (items.isEmpty) {
+                  return const SizedBox.shrink();
+                }
 
-            // Fun experiences in city
-            SectionHeader(
-              title: 'fun_experiences_city'.tr,
-              actionLabel: 'see_more'.tr,
-              onAction: () {},
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: ExperienceCard.listHeight(context),
-              child: ListView.separated(
-                key: const PageStorageKey('experiences'),
-                primary: false,
-                physics: const BouncingScrollPhysics(),
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                itemBuilder: (_, i) => const ExperienceCard(
-                  imageAsset: 'assets/images/onboarding1.png',
-                  title: 'Sun World Bà Nà Hills',
-                  rating: 4,
-                ),
-                separatorBuilder: (_, __) => const SizedBox(width: 16),
-                itemCount: 8,
-              ),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SectionHeader(title: 'recently_viewed'.tr),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: RecentItemTile.kHeight,
+                      child: ListView.separated(
+                        key: const PageStorageKey('recently_viewed'),
+                        primary: false,
+                        physics: const BouncingScrollPhysics(),
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.zero,
+                        itemBuilder: (_, i) {
+                          final item = items[i];
+                          final rating = (item['itemRating'] is num)
+                              ? (item['itemRating'] as num).toDouble()
+                              : (double.tryParse(
+                                      item['itemRating']?.toString() ?? '',
+                                    ) ??
+                                    0.0);
+
+                          return RecentItemTile(
+                            leftImageUrl:
+                                item['itemThumbnailUrl']?.toString() ?? '',
+                            title: item['itemTitle']?.toString() ?? '',
+                            subtitle: item['itemLocation']?.toString() ?? '',
+                            rating: rating,
+                            onTap: () => _navigateToDetail(
+                              context,
+                              item['itemType']?.toString() ?? '',
+                              item['itemId'] ?? 0,
+                            ),
+                          );
+                        },
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemCount: items.length,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
 
             const SizedBox(height: 30),
@@ -625,7 +931,7 @@ class _HomeContentState extends State<_HomeContent> {
             SizedBox(
               height: AreaPreviewCard.kHeight,
               child: FutureBuilder<List<AreaPreviewItem>>(
-                future: _loadHomeAreas(),
+                future: _areasFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -655,10 +961,20 @@ class _HomeContentState extends State<_HomeContent> {
                     scrollDirection: Axis.horizontal,
                     itemBuilder: (_, i) {
                       final it = items[i];
-                      return AreaPreviewCard(
-                        imageUrl: it.imageUrl,
-                        city: it.name,
-                        country: it.country,
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  SearchOverviewScreen(searchQuery: it.name),
+                            ),
+                          );
+                        },
+                        child: AreaPreviewCard(
+                          imageUrl: it.imageUrl,
+                          city: it.name,
+                          country: it.country,
+                        ),
                       );
                     },
                     separatorBuilder: (_, __) => const SizedBox(width: 16),
@@ -684,7 +1000,7 @@ class _HomeContentState extends State<_HomeContent> {
             HomeHorizontalSection(
               title: 'nearby_hotels'.tr,
               pageStorageKey: 'hotels',
-              futureItems: _loadHomeHotels(),
+              futureItems: _hotelsFuture,
               onSeeMore: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -700,7 +1016,7 @@ class _HomeContentState extends State<_HomeContent> {
             HomeHorizontalSection(
               title: 'nearby_tours'.tr,
               pageStorageKey: 'tours',
-              futureItems: _loadHomeTours(),
+              futureItems: _toursFuture,
               onSeeMore: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -716,7 +1032,7 @@ class _HomeContentState extends State<_HomeContent> {
             HomeHorizontalSection(
               title: 'nearby_attractions'.tr,
               pageStorageKey: 'attractions',
-              futureItems: _loadHomeAttractions(),
+              futureItems: _attractionsFuture,
               onSeeMore: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -733,7 +1049,7 @@ class _HomeContentState extends State<_HomeContent> {
             HomeHorizontalSection(
               title: 'nearby_restaurants'.tr,
               pageStorageKey: 'restaurants',
-              futureItems: _loadHomeRestaurants(),
+              futureItems: _restaurantsFuture,
               onSeeMore: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(

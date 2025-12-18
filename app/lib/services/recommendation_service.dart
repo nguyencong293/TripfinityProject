@@ -26,6 +26,8 @@ class RecommendationService {
       );
 
       if (response.statusCode == 200) {
+        debugPrint('📦 Raw response data: ${response.data}');
+
         final recommendationResponse = RecommendationResponse.fromJson(
           response.data,
         );
@@ -33,6 +35,15 @@ class RecommendationService {
         if (recommendationResponse.success) {
           final itemCount = recommendationResponse.data?.length ?? 0;
           debugPrint('✅ Successfully fetched $itemCount recommendations');
+
+          // Debug each item
+          if (recommendationResponse.data != null) {
+            for (var item in recommendationResponse.data!) {
+              debugPrint(
+                '   Item: id=${item.itemId}, type=${item.itemType}, title=${item.title}',
+              );
+            }
+          }
         } else {
           debugPrint(
             '⚠️ No recommendations: ${recommendationResponse.message}',
