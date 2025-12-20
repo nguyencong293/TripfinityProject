@@ -9,7 +9,9 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 class ChatHelpBotScreen extends StatefulWidget {
-  const ChatHelpBotScreen({super.key});
+  final bool isFromBottomBar;
+
+  const ChatHelpBotScreen({super.key, this.isFromBottomBar = false});
 
   @override
   State<ChatHelpBotScreen> createState() => _ChatHelpBotScreenState();
@@ -665,7 +667,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.backgroundColor,
-      appBar: _buildAppBar(context),
+      appBar: widget.isFromBottomBar ? null : _buildAppBar(context),
       body: Column(
         children: [
           Expanded(

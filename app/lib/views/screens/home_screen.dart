@@ -16,7 +16,7 @@ import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 import 'package:app/views/screens/tour_service_overview_search_screen.dart';
 import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
 import 'package:app/views/screens/trip_user_screen.dart';
-import 'package:app/views/screens/trip_review_user_screen.dart';
+import 'package:app/views/screens/chat_help_bot_screen.dart';
 import 'package:app/views/widgets/article_banner_card.dart';
 import 'package:app/views/widgets/bottom_nav.dart';
 import 'package:app/views/widgets/home_service_item.dart';
@@ -77,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
         initialQuery: _initialSearchQuery,
       ),
       const TripUserScreen(),
-      const TripReviewUserScreen(),
+      const ChatHelpBotScreen(isFromBottomBar: true),
       const DashboardUserScreen(),
     ];
 
