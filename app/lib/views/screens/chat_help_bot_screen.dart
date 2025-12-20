@@ -7,6 +7,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:app/views/screens/hotel_detail_overview_screen.dart';
+import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
+import 'package:app/views/screens/attractions_overview_detail_screen.dart';
+import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
 
 class ChatHelpBotScreen extends StatefulWidget {
   final bool isFromBottomBar;
@@ -172,6 +176,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
 
   /// Xử lý phản hồi từ TripBot
   Future<void> _handleBotResponse(String userMessage) async {
+    debugPrint('📤 Sending to TripBot: $userMessage');
     try {
       // Hiển thị typing indicator
       setState(() {
@@ -188,6 +193,8 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
 
       // Gọi TripBot service
       final response = await TripBotService.sendMessage(userMessage);
+      debugPrint('📥 TripBot response success: ${response.isSuccess}');
+      debugPrint('📥 TripBot response message: ${response.message}');
 
       // Xóa typing indicator
       setState(() {
@@ -205,7 +212,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
         botResponse = botResponse.replaceAll('[TRANSFER_TO_STAFF]', '').trim();
       }
 
-      // Thêm phản hồi từ bot
+      // Thêm phản hồi từ bot với items nếu có
       setState(() {
         _messages.add(
           ChatMessage(
@@ -215,6 +222,7 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
             isFromUser: false,
             timestamp: DateTime.now(),
             isError: !response.isSuccess,
+            serviceItems: response.items, // NEW: Lưu items từ response
           ),
         );
         _isLoading = false;
@@ -227,8 +235,10 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
           _showStaffTransferDialog();
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Xử lý lỗi không mong muốn
+      debugPrint('❌ Exception in _handleBotResponse: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
       setState(() {
         _messages.removeWhere((msg) => msg.isTyping);
         _messages.add(
@@ -1126,8 +1136,200 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
               ),
             ),
           ],
+
+          // NEW: Hiển thị service items cards nếu có
+          if (!isUser && message.hasServiceItems) ...[
+            const SizedBox(height: 12),
+            _buildServiceItemsGrid(context, message.serviceItems),
+          ],
         ],
       ),
+    );
+  }
+
+  /// NEW: Widget hiển thị grid các service items
+  Widget _buildServiceItemsGrid(
+    BuildContext context,
+    List<ChatServiceItem> items,
+  ) {
+    return SizedBox(
+      height: 160,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return _buildServiceItemCard(context, item);
+        },
+      ),
+    );
+  }
+
+  /// NEW: Widget card cho mỗi service item - Với hình ảnh
+  Widget _buildServiceItemCard(BuildContext context, ChatServiceItem item) {
+    return InkWell(
+      onTap: () => _showServiceDetailDialog(context, item),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 140,
+        decoration: BoxDecoration(
+          color: context.backgroundColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: context.borderLineColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Icon theo loại dịch vụ
+            Container(
+              height: 60,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: _getServiceColor(item.itemType).withValues(alpha: 0.15),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  _getServiceIcon(item.itemType),
+                  size: 28,
+                  color: _getServiceColor(item.itemType),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.captionStyle.copyWith(
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Location
+                    Row(
+                      children: [
+                        Icon(
+                          LucideIcons.mapPin,
+                          size: 10,
+                          color: context.textSecondaryColor,
+                        ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            item.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.captionStyle.copyWith(
+                              fontSize: 9,
+                              color: context.textSecondaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    // Price
+                    Text(
+                      item.formattedPrice,
+                      style: context.captionStyle.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: context.primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// NEW: Get icon theo loại dịch vụ
+  IconData _getServiceIcon(String itemType) {
+    switch (itemType) {
+      case 'hotel':
+        return LucideIcons.hotel;
+      case 'restaurant':
+        return LucideIcons.utensils;
+      case 'attraction':
+        return LucideIcons.landmark;
+      case 'tour':
+        return LucideIcons.compass;
+      default:
+        return LucideIcons.mapPin;
+    }
+  }
+
+  /// NEW: Get color theo loại dịch vụ
+  Color _getServiceColor(String itemType) {
+    switch (itemType) {
+      case 'hotel':
+        return Colors.blue;
+      case 'restaurant':
+        return Colors.orange;
+      case 'attraction':
+        return Colors.purple;
+      case 'tour':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  /// NEW: Hiển thị dialog chi tiết dịch vụ
+  void _showServiceDetailDialog(BuildContext context, ChatServiceItem item) {
+    // Navigate đến trang detail tương ứng
+    // Khi back sẽ quay lại trang chat
+    Widget detailScreen;
+
+    switch (item.itemType) {
+      case 'hotel':
+        detailScreen = HotelDetailOverviewScreen(hotelId: item.itemId);
+        break;
+      case 'restaurant':
+        detailScreen = RestaurantDetailScreen(restaurantId: item.itemId);
+        break;
+      case 'attraction':
+        detailScreen = AttractionsOverviewDetailScreen(
+          attractionId: item.itemId,
+        );
+        break;
+      case 'tour':
+        detailScreen = TourServiceDetailScreen(tourId: item.itemId);
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể mở chi tiết dịch vụ: ${item.itemType}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => detailScreen),
     );
   }
 
@@ -1332,6 +1534,7 @@ class ChatMessage {
   final String? imagePath;
   final bool isTyping;
   final bool isError;
+  final List<ChatServiceItem> serviceItems; // NEW: danh sách items từ bot
 
   ChatMessage({
     required this.text,
@@ -1343,5 +1546,8 @@ class ChatMessage {
     this.imagePath,
     this.isTyping = false,
     this.isError = false,
+    this.serviceItems = const [], // NEW
   });
+
+  bool get hasServiceItems => serviceItems.isNotEmpty;
 }

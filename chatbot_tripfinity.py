@@ -62,7 +62,7 @@ def load_data(csv_path):
     return df
 
 # Load data
-csv_path = "/content/drive/MyDrive/tripfinity/data/ai_item_tower_export_20251217_181044.csv"
+csv_path = "E:\\CodeWork\\TripfinityProject\\data\\ai_item_tower_export_20251217_181044.csv"
 if not os.path.exists(csv_path):
     csv_path = "ai_item_tower_export_20251217_181044.csv"
 if not os.path.exists(csv_path):
@@ -733,14 +733,236 @@ conversation = LLMChain(llm=llm, prompt=prompt, memory=memory, verbose=True)
 class Message(BaseModel):
     message: str
 
+# ==========================================
+# HÀM PHÂN LOẠI CÂU HỎI (NEW!)
+# ==========================================
+def classify_query(query):
+    """
+    Phân loại câu hỏi của người dùng:
+    - 'greeting': Chào hỏi, hỏi thăm
+    - 'service': Hỏi về dịch vụ du lịch (tour, hotel, restaurant, attraction)
+    - 'off_topic': Hỏi ngoài lề (âm nhạc, chính trị, y tế, etc.)
+    - 'general_travel': Hỏi chung về du lịch nhưng không cần items
+    """
+    query_lower = query.lower()
+    query_no_accent = unidecode(query_lower)
+    
+    # 1. GREETING patterns
+    greeting_patterns = [
+        'xin chào', 'xin chao', 'chào', 'chao', 'hello', 'hi', 'hey',
+        'bạn là ai', 'ban la ai', 'who are you',
+        'bạn có thể giúp gì', 'ban co the giup gi', 'giúp gì', 'giup gi',
+        'bạn làm được gì', 'ban lam duoc gi',
+        'cảm ơn', 'cam on', 'thank', 'thanks',
+        'tạm biệt', 'tam biet', 'bye', 'goodbye',
+        'ok', 'okay', 'được', 'duoc', 'tốt', 'tot', 'good',
+    ]
+    
+    # Check if query is ONLY greeting (short and matches pattern)
+    if len(query_lower.split()) <= 10:
+        for pattern in greeting_patterns:
+            if pattern in query_lower or pattern in query_no_accent:
+                # Make sure it's not asking for services
+                service_indicators = ['tour', 'khách sạn', 'khach san', 'hotel', 'nhà hàng', 'nha hang', 
+                                     'địa điểm', 'dia diem', 'dịch vụ', 'dich vu', 'tìm', 'tim', 
+                                     'gợi ý', 'goi y', 'đặt', 'dat', 'book']
+                if not any(si in query_lower or si in query_no_accent for si in service_indicators):
+                    return 'greeting'
+    
+    # 2. OFF-TOPIC patterns (từ chối)
+    off_topic_patterns = [
+        # Âm nhạc
+        'âm nhạc', 'am nhac', 'music', 'bài hát', 'bai hat', 'ca sĩ', 'ca si', 'nhạc', 'nhac',
+        # Chính trị
+        'chính trị', 'chinh tri', 'politic', 'bầu cử', 'bau cu', 'đảng', 'dang', 'chính phủ', 'chinh phu',
+        # Y tế
+        'bệnh', 'benh', 'thuốc', 'thuoc', 'điều trị', 'dieu tri', 'bác sĩ', 'bac si', 'y tế', 'y te',
+        # Tài chính
+        'cổ phiếu', 'co phieu', 'stock', 'bitcoin', 'crypto', 'đầu tư', 'dau tu', 'chứng khoán', 'chung khoan',
+        # Tôn giáo
+        'tôn giáo', 'ton giao', 'religion', 'đạo', 'dao',
+        # Pháp lý
+        'luật', 'luat', 'law', 'pháp lý', 'phap ly', 'kiện', 'kien',
+        # Tình yêu cá nhân
+        'người yêu', 'nguoi yeu', 'bạn gái', 'ban gai', 'bạn trai', 'ban trai', 'hẹn hò', 'hen ho',
+        # Khác
+        'code', 'lập trình', 'lap trinh', 'programming', 'hack', 'game', 'phim', 'movie',
+    ]
+    
+    for pattern in off_topic_patterns:
+        if pattern in query_lower or pattern in query_no_accent:
+            return 'off_topic'
+    
+    # 3. SERVICE patterns (cần search items)
+    service_patterns = [
+        # Địa điểm cụ thể
+        'ở', 'o', 'tại', 'tai', 'đến', 'den', 'đi', 'di',
+        # Loại dịch vụ
+        'tour', 'khách sạn', 'khach san', 'hotel', 'resort', 'homestay',
+        'nhà hàng', 'nha hang', 'restaurant', 'quán ăn', 'quan an', 'ăn gì', 'an gi',
+        'địa điểm', 'dia diem', 'điểm đến', 'diem den', 'attraction', 'tham quan',
+        'dịch vụ', 'dich vu', 'service',
+        # Hành động tìm kiếm
+        'tìm', 'tim', 'find', 'search', 'kiếm', 'kiem',
+        'gợi ý', 'goi y', 'suggest', 'recommend', 'đề xuất', 'de xuat',
+        'giới thiệu', 'gioi thieu', 'cho tôi', 'cho toi', 'show',
+        'đặt', 'dat', 'book', 'booking',
+        'giá', 'gia', 'price', 'bao nhiêu', 'bao nhieu',
+        # Đặc điểm dịch vụ
+        'sao', 'star', 'hồ bơi', 'ho boi', 'pool', 'spa', 'gym', 'view',
+        'rẻ', 're', 'cheap', 'cao cấp', 'cao cap', 'luxury',
+    ]
+    
+    for pattern in service_patterns:
+        if pattern in query_lower or pattern in query_no_accent:
+            return 'service'
+    
+    # 4. GENERAL TRAVEL (hỏi chung về du lịch, không cần items)
+    travel_patterns = [
+        'du lịch', 'du lich', 'travel', 'trip', 'chuyến đi', 'chuyen di',
+        'nên đi đâu', 'nen di dau', 'đi đâu', 'di dau',
+        'kinh nghiệm', 'kinh nghiem', 'tips', 'mẹo', 'meo',
+        'thời tiết', 'thoi tiet', 'weather', 'mùa', 'mua', 'season',
+        'visa', 'hộ chiếu', 'ho chieu', 'passport',
+    ]
+    
+    for pattern in travel_patterns:
+        if pattern in query_lower or pattern in query_no_accent:
+            return 'general_travel'
+    
+    # Default: treat as greeting/general
+    return 'greeting'
+
+
+# ==========================================
+# HÀM EXTRACT ITEMS CHO FLUTTER (NEW!)
+# ==========================================
+def extract_items_for_flutter(results):
+    """Trích xuất thông tin items để gửi cho Flutter app hiển thị cards"""
+    items = []
+    for r in results:
+        item_id = r.get('item_id', 0)
+        # CHỈ thêm item nếu có item_id hợp lệ
+        if item_id and int(item_id) > 0:
+            item = {
+                'item_id': int(item_id),
+                'item_type': str(r.get('item_type', '')),
+                'title': str(r.get('title', '')),
+                'location': str(r.get('location', '')),
+                'price': float(r.get('price', 0)),
+                'star_rating': float(r.get('star_rating', 0)) if r.get('star_rating') and not pd.isna(r.get('star_rating')) else 0.0,
+            }
+            items.append(item)
+    return items
+
+
 @app.post("/api/chat")
 async def chat(message: Message):
     try:
-        context = smart_search(message.message, df_data)
-        print(f"\n📤 Context cho LLM:\n{context[:500]}...\n")
+        user_message = message.message
+        
+        # 1. PHÂN LOẠI CÂU HỎI
+        query_type = classify_query(user_message)
+        print(f"\n🏷️ Query type: {query_type}")
+        
+        # 2. XỬ LÝ THEO LOẠI
+        if query_type == 'off_topic':
+            # Từ chối câu hỏi ngoài lề
+            return {
+                "response": "Xin lỗi, tôi là TripBOT - trợ lý du lịch của Tripfinity. Tôi chỉ có thể hỗ trợ bạn các vấn đề liên quan đến du lịch như tìm khách sạn, tour, nhà hàng, điểm tham quan. Bạn cần tôi giúp gì về du lịch không? 🗺️",
+                "items": [],
+                "has_items": False,
+                "query_type": "off_topic"
+            }
+        
+        elif query_type == 'greeting':
+            # Chào hỏi - trả lời thân thiện, KHÔNG search items
+            response = conversation.predict(
+                input=user_message, 
+                context="[GREETING] Người dùng đang chào hỏi hoặc hỏi thăm. Hãy trả lời ngắn gọn, thân thiện và giới thiệu bản thân là TripBOT - trợ lý du lịch. KHÔNG liệt kê dịch vụ."
+            )
+            return {
+                "response": response,
+                "items": [],
+                "has_items": False,
+                "query_type": "greeting"
+            }
+        
+        elif query_type == 'general_travel':
+            # Hỏi chung về du lịch - trả lời tư vấn, KHÔNG search items
+            response = conversation.predict(
+                input=user_message, 
+                context="[GENERAL_TRAVEL] Người dùng hỏi chung về du lịch. Hãy tư vấn ngắn gọn và hỏi xem họ cần tìm dịch vụ cụ thể nào không."
+            )
+            return {
+                "response": response,
+                "items": [],
+                "has_items": False,
+                "query_type": "general_travel"
+            }
+        
+        else:  # query_type == 'service'
+            # Hỏi về dịch vụ - SEARCH và trả về items
+            analysis = analyze_query(user_message, df_data)
+            results = search_in_data(analysis, df_data)
+            
+            # Trích xuất items (chỉ những item có ID hợp lệ)
+            items = extract_items_for_flutter(results)
+            
+            if len(items) > 0:
+                # Có items - tạo context CHI TIẾT với thông tin items thực tế
+                location_text = analysis['location'] or 'theo yêu cầu của bạn'
+                
+                # Map item_type sang tiếng Việt
+                type_map = {
+                    'tour': 'Tour du lịch',
+                    'hotel': 'Khách sạn',
+                    'restaurant': 'Nhà hàng',
+                    'attraction': 'Điểm tham quan'
+                }
+                
+                # Tạo mô tả cho TẤT CẢ items (không giới hạn 5)
+                items_summary = []
+                for idx, item in enumerate(items, 1):
+                    price_str = f"{int(item['price']):,}".replace(',', '.') + " VND"
+                    type_vi = type_map.get(item['item_type'], item['item_type'])
+                    items_summary.append(f"{idx}. {item['title']} ({type_vi}) - {price_str}")
+                
+                items_text = "\n".join(items_summary)
+                
+                context = f"""[SERVICE_FOUND] Tìm thấy {len(items)} dịch vụ tại {location_text}.
 
-        response = conversation.predict(input=message.message, context=context)
-        return {"response": response}
+DANH SÁCH DỊCH VỤ THỰC TẾ TỪ HỆ THỐNG (PHẢI MÔ TẢ ĐẦY ĐỦ {len(items)} DỊCH VỤ):
+{items_text}
+
+QUY TẮC TRẢ LỜI BẮT BUỘC:
+- MÔ TẢ ĐẦY ĐỦ TẤT CẢ {len(items)} dịch vụ trong danh sách trên
+- Sử dụng ĐÚNG tên tiếng Việt cho loại dịch vụ: Tour du lịch, Khách sạn, Nhà hàng, Điểm tham quan
+- CHỈ nhắc đến TÊN và GIÁ ĐÚNG như danh sách trên
+- KHÔNG tự tạo dữ liệu mới hoặc thêm dịch vụ không có trong danh sách
+- KHÔNG bỏ sót bất kỳ dịch vụ nào
+- Có thể gợi ý 1-2 dịch vụ nổi bật cuối cùng"""
+
+                response = conversation.predict(input=user_message, context=context)
+                
+                return {
+                    "response": response,
+                    "items": items,
+                    "has_items": True,
+                    "query_type": "service"
+                }
+            else:
+                # Không tìm thấy items
+                location_text = analysis['location'] or 'bạn tìm kiếm'
+                response = f"Xin lỗi, dịch vụ tại **{location_text}** hiện chưa có trên hệ thống Tripfinity. Bạn có thể thử tìm ở địa điểm khác hoặc liên hệ nhân viên hỗ trợ nhé! 📞"
+                
+                return {
+                    "response": response,
+                    "items": [],
+                    "has_items": False,
+                    "query_type": "service_not_found"
+                }
+    
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
