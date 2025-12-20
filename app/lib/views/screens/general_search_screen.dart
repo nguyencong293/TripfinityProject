@@ -10,6 +10,7 @@ import 'package:app/views/screens/nearby_search_screen.dart';
 import 'package:app/views/screens/search_history_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:app/services/recommendation_service.dart';
 
 // Theme & i18n
 import 'package:app/config/theme/app_colors.dart';
@@ -66,10 +67,14 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   bool _loadingRecentViewed = false;
   final String _lastSearchQuery = ''; // Track the last search query
 
+  // Recommendations future
+  late final Future<List<Map<String, dynamic>>> _recommendationsFuture;
+
   @override
   void initState() {
     super.initState();
     _loadRecentViewedItems();
+    _recommendationsFuture = _loadRecommendations();
     final iq = widget.initialQuery?.trim();
     if (iq != null && iq.isNotEmpty) {
       _searchController.text = iq;
@@ -554,31 +559,44 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
     }
   }
 
-  // Suggested places
+  // Suggested places (Recommendations)
   Widget _buildSuggestedPlaces(BuildContext context) {
-    final suggestions = [
-      {
-        'name': 'Bãi biển Đồ Sơn',
-        'location': 'Hải Phòng, Việt Nam',
-        'rating': '4.5',
-      },
-      {
-        'name': 'Thủy cung Times City',
-        'location': 'Hà Nội, Việt Nam',
-        'rating': '4.7',
-      },
-      {
-        'name': 'Vịnh Hạ Long',
-        'location': 'Quảng Ninh, Việt Nam',
-        'rating': '4.9',
-      },
-    ];
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _recommendationsFuture,
+      builder: (context, snapshot) {
+        // Show loading indicator while waiting
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Có thể bạn quan tâm',
+                style: context.subTitleOneStyle.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Center(
+                child: SizedBox(
+                  height: 26,
+                  width: 26,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+              ),
+            ],
+          );
+        }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // Don't show if error or no data
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        // Show section with data (only 3 items)
+        final items = snapshot.data!.take(3).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Có thể bạn quan tâm',
@@ -586,102 +604,124 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            TextButton(
-              onPressed: () {},
-              child: Text(
-                'Xem thêm',
-                style: context.captionStyle.copyWith(
-                  color: context.primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: suggestions.length,
-          itemBuilder: (context, index) {
-            final s = suggestions[index];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          SearchOverviewScreen(searchQuery: s['name']!),
-                    ),
-                  );
-                },
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'assets/images/onboarding${(index % 3) + 2}.png',
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => SizedBox(
-                          width: 60,
-                          height: 60,
-                          child: _imageFallback(context),
+            const SizedBox(height: 12),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                final imageUrl =
+                    item['imageUrl']?.toString() ??
+                    item['image']?.toString() ??
+                    '';
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    onTap: () {
+                      final type =
+                          item['type']?.toString() ??
+                          item['itemType']?.toString() ??
+                          '';
+                      final itemId = item['itemId'] ?? 0;
+
+                      // Navigate to detail screen based on type
+                      _navigateToServiceDetail(type, itemId);
+                    },
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: imageUrl.isNotEmpty
+                              ? Image.network(
+                                  imageUrl,
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => SizedBox(
+                                    width: 60,
+                                    height: 60,
+                                    child: _imageFallback(context),
+                                  ),
+                                )
+                              : SizedBox(
+                                  width: 60,
+                                  height: 60,
+                                  child: _imageFallback(context),
+                                ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            s['name']!,
-                            style: context.bodyOneStyle.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            s['location']!,
-                            style: context.captionStyle.copyWith(
-                              color: context.textSecondaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.star_rounded,
-                                color: context.primaryColor,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 4),
                               Text(
-                                s['rating']!,
-                                style: context.captionStyle.copyWith(
+                                item['name']?.toString() ??
+                                    item['title']?.toString() ??
+                                    '',
+                                style: context.bodyOneStyle.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              if ((item['location']?.toString() ?? '')
+                                  .isNotEmpty)
+                                Text(
+                                  item['location']!.toString(),
+                                  style: context.captionStyle.copyWith(
+                                    color: context.textSecondaryColor,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.star_rounded,
+                                    color: context.primaryColor,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _getRatingString(item['rating']),
+                                    style: context.captionStyle.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  if ((item['price']?.toString() ?? '')
+                                      .isNotEmpty) ...[
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      item['price'].toString(),
+                                      style: context.captionStyle.copyWith(
+                                        color: context.primaryColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        Icon(
+                          LucideIcons.chevronRight,
+                          color: context.textSecondaryColor,
+                          size: 20,
+                        ),
+                      ],
                     ),
-                    Icon(
-                      LucideIcons.chevronRight,
-                      color: context.textSecondaryColor,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ],
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -920,6 +960,32 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
   }
 
   // ===== NAVIGATION HELPERS =====
+  void _navigateToServiceDetail(String serviceType, int serviceId) {
+    // Create a simple item map with required fields
+    final item = {'itemId': serviceId, 'id': serviceId};
+
+    switch (serviceType.toLowerCase()) {
+      case 'hotel':
+        item['hotelId'] = serviceId;
+        _openHotelDetail(item);
+        break;
+      case 'restaurant':
+        item['restaurantId'] = serviceId;
+        _openRestaurantDetail(item);
+        break;
+      case 'tour':
+        item['tourId'] = serviceId;
+        _openTourDetail(item);
+        break;
+      case 'attraction':
+        item['attractionId'] = serviceId;
+        _openAttractionDetail(item);
+        break;
+      default:
+        debugPrint('⚠️ Unknown service type: $serviceType');
+    }
+  }
+
   Future<void> _openHotelDetail(Map<String, dynamic> hotel) async {
     final id = _parseId(hotel, ['hotelId', 'id', 'hotel_id', 'itemId']);
     final title =
@@ -1675,6 +1741,163 @@ class _GeneralSearchScreenState extends State<GeneralSearchScreen> {
       }
     } catch (e) {
       return 0.0;
+    }
+  }
+
+  // Load recommendations
+  Future<List<Map<String, dynamic>>> _loadRecommendations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('user_id');
+
+      if (userId == null) {
+        debugPrint('⚠️ Cannot load recommendations: user_id not found');
+        return [];
+      }
+
+      final dio = Dio();
+      final recommendationService = RecommendationService(dio: dio);
+      final response = await recommendationService.getRecommendations(userId);
+
+      if (!response.success || response.data == null) {
+        debugPrint('⚠️ No recommendations available');
+        return [];
+      }
+
+      debugPrint('🔍 Processing ${response.data!.length} recommendations');
+
+      // Load all service data in parallel for better performance
+      final searchApi = SearchApiService(dio: dio, prefs: prefs);
+      final futures = <Future<Map<String, dynamic>>>[];
+      final serviceTypes = <String>{
+        'hotel',
+        'restaurant',
+        'attraction',
+        'tour',
+      };
+
+      for (final type in serviceTypes) {
+        futures.add(searchApi.search(q: '', type: type));
+      }
+
+      final searchResults = await Future.wait(futures);
+      final serviceDataCache = <String, List<Map<String, dynamic>>>{};
+
+      // Build cache
+      int idx = 0;
+      for (final type in serviceTypes) {
+        final result = searchResults[idx];
+        List? serviceList;
+
+        if (type == 'hotel') {
+          serviceList = result['hotels'] as List?;
+        } else if (type == 'restaurant') {
+          serviceList = result['restaurants'] as List?;
+        } else if (type == 'attraction') {
+          serviceList = result['attractions'] as List?;
+        } else if (type == 'tour') {
+          serviceList = result['tours'] as List?;
+        }
+
+        if (serviceList != null) {
+          serviceDataCache[type] = serviceList
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
+          debugPrint('📦 Cached ${serviceList.length} $type items');
+        }
+        idx++;
+      }
+
+      final items = <Map<String, dynamic>>[];
+
+      for (final item in response.data!) {
+        final serviceType = item.itemType.toLowerCase();
+        final serviceId = item.itemId;
+
+        debugPrint('🔎 Looking for $serviceType #$serviceId: ${item.title}');
+
+        // Find item in cache
+        final serviceList = serviceDataCache[serviceType];
+        if (serviceList == null) {
+          debugPrint('⚠️ No cache for service type: $serviceType');
+          continue;
+        }
+
+        String idKey = '';
+        if (serviceType == 'hotel') {
+          idKey = 'hotelId';
+        } else if (serviceType == 'restaurant') {
+          idKey = 'restaurantId';
+        } else if (serviceType == 'attraction') {
+          idKey = 'attractionId';
+        } else if (serviceType == 'tour') {
+          idKey = 'tourId';
+        }
+
+        debugPrint(
+          '   Searching with key: $idKey in ${serviceList.length} items',
+        );
+
+        final matchedItem = serviceList.firstWhere((m) {
+          final foundId = m[idKey] ?? m['id'] ?? 0;
+          return foundId == serviceId;
+        }, orElse: () => <String, dynamic>{});
+
+        if (matchedItem.isEmpty) {
+          debugPrint('   ❌ Not found in search results');
+          // Fallback: use basic info from recommendation
+          items.add({
+            'name': item.title,
+            'title': item.title,
+            'rating': 0.0,
+            'image': '',
+            'imageUrl': '',
+            'price': item.priceFmt,
+            'type': serviceType,
+            'itemType': serviceType,
+            'itemId': serviceId,
+            'location': '',
+          });
+          debugPrint('   ✅ Added with fallback data');
+        } else {
+          debugPrint('   ✅ Found match!');
+          final ratingAny =
+              matchedItem['ratingAverage'] ??
+              matchedItem['rating'] ??
+              matchedItem['ratingAvg'] ??
+              matchedItem['avg_rating'];
+          final rating = (ratingAny is num)
+              ? ratingAny.toDouble()
+              : (double.tryParse(ratingAny?.toString() ?? '') ?? 0.0);
+
+          final imageUrl =
+              (matchedItem['thumbnailUrl'] ??
+                      matchedItem['imageUrl'] ??
+                      matchedItem['image'])
+                  ?.toString() ??
+              '';
+
+          items.add({
+            'name': item.title,
+            'title': item.title,
+            'rating': rating,
+            'image': imageUrl,
+            'imageUrl': imageUrl,
+            'price': item.priceFmt,
+            'type': serviceType,
+            'itemType': serviceType,
+            'itemId': serviceId,
+            'location': matchedItem['location'] ?? matchedItem['address'] ?? '',
+          });
+          debugPrint('   ✅ Added with full data');
+        }
+      }
+
+      debugPrint('✅ Loaded ${items.length} recommendation items');
+      return items;
+    } catch (e) {
+      debugPrint('❌ Error loading recommendations: $e');
+      return [];
     }
   }
 
