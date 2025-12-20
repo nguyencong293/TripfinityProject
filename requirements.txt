@@ -1,8 +1,40 @@
+# Web framework
 flask>=3.0.0
 flask-cors>=4.0.0
+fastapi==0.118.0
+uvicorn==0.30.6
+
+# Core data & ML
+numpy==1.26.4
 pandas>=2.1.0
-numpy>=1.26.0
+scikit-learn
 tensorflow>=2.16.1
+
+# PyTorch stack
+torch==2.9.0
+torchvision==0.24.0
+torchaudio==2.9.0
+
+# Database
 sqlalchemy>=2.0.0
 mysql-connector-python>=8.2.0
-scikit-learn
+
+# LangChain & RAG
+langchain==0.1.20
+langchain-community==0.0.38
+langchain-core==0.1.53
+langchain-huggingface==0.0.3
+langchain-groq
+
+# Embedding / Vector DB
+sentence-transformers
+faiss-cpu
+
+# Utilities
+requests==2.32.4
+fsspec==2025.3.0
+jedi==0.19.1
+pydantic==2.12.3
+nest-asyncio
+pyngrok
+unidecode
