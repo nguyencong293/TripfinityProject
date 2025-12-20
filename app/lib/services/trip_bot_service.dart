@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class TripBotService {
-  static const String _baseUrl = 'https://61adf89b1d31.ngrok-free.app';
+  //  static const String _baseUrl = 'http://10.0.2.2:8000';
+  static const String _baseUrl = 'https://4e23b80d8bcc.ngrok-free.app';
   static const String _chatEndpoint = '/api/chat';
   static const Duration _timeout = Duration(seconds: 30);
 
