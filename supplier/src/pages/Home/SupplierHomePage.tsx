@@ -1,25 +1,26 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Calendar,
-  Plus,
   DollarSign,
   Star,
-  CreditCard,
-  Package,
-  Bell,
-  MessageSquare,
   TrendingUp,
   TrendingDown,
-  AlertTriangle,
   Clock,
-  FileText,
-  ChevronDown,
-  X,
-  ExternalLink,
+  Eye,
+  CheckCircle2,
+  XCircle,
+  Package,
+  Route,
+  Building2,
+  Utensils,
+  MapPin,
+  ChevronRight,
+  Users,
+  BarChart3,
+  RefreshCw,
 } from "lucide-react";
 import {
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -28,320 +29,453 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
+  Legend,
 } from "recharts";
 import { useTheme } from "../../hooks/useTheme";
 import { useLanguage } from "../../hooks/useLanguage";
+import { getProviderByUserId } from "../../services/providerService";
+import { getToursByProvider, getTourBookingsByProvider } from "../../services/tourService";
+import { getHotelsByProvider } from "../../services/hotelService";
+import { getRestaurantsByProvider, getRestaurantBookingsByProvider } from "../../services/restaurantService";
+import { getAttractionsByProvider, getAttractionBookingsByProvider } from "../../services/attractionService";
+import api from "../../services/api";
+import type {
+  TourDTO,
+  TourBookingDTO,
+  HotelDTO,
+  HotelBookingDTO,
+  RestaurantDTO,
+  RestaurantBookingDTO,
+  AttractionDTO,
+  AttractionBookingDTO,
+  ProviderDTO,
+} from "../../types";
 
-// TypeScript interfaces
-interface SparklineDataPoint {
-  value: number;
-  index: number;
-}
-
-interface KPIDataItem {
-  key: string;
-  value: number;
-  change: number;
-  trend: "up" | "down" | "stable";
-  sparklineData: number[];
+// Interfaces
+interface ServiceSummary {
+  type: "tour" | "hotel" | "restaurant" | "attraction";
   icon: React.ComponentType<{ className?: string }>;
   color: string;
+  bgColor: string;
+  totalItems: number;
+  publishedItems: number;
+  totalBookings: number;
+  pendingBookings: number;
+  totalRevenue: number;
+  avgRating: number;
+  link: string;
+}
+
+interface RecentBooking {
+  id: number;
+  type: "tour" | "hotel" | "restaurant" | "attraction";
+  serviceName: string;
+  customerName: string;
+  date: string;
+  amount: number;
+  status: string;
+  providerConfirmed: number;
 }
 
 interface RevenueDataPoint {
-  day: string;
+  date: string;
   tour: number;
   hotel: number;
   restaurant: number;
   attraction: number;
 }
 
-interface BookingTypeData {
-  name: string;
-  value: number;
-  color: string;
-}
-
-interface Activity {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  timestamp: string;
-  link: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-}
-
-interface Alert {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  priority: "urgent" | "high" | "medium";
-  link: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-interface ProviderInfo {
-  logo: string;
-  name: string;
-  currentBalance: number;
-  currency: string;
-}
-
-interface QuickLink {
-  key: string;
-  icon: React.ComponentType<{ className?: string }>;
-  link: string;
-}
-
 const SupplierHomePage: React.FC = () => {
+  const navigate = useNavigate();
   const { dark } = useTheme();
   const { t } = useLanguage();
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("30days");
-  const [showQuickActions, setShowQuickActions] = useState<boolean>(false);
-  const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
-  const [accountStatus] = useState<"approved" | "pending" | "rejected">(
-    "pending"
-  );
 
-  // Mock data - Provider info
-  const providerInfo: ProviderInfo = {
-    logo: "/logo.png",
-    name: "TripFinity Travel Co.",
-    currentBalance: 45250000, // VND
-    currency: "VND",
+  // State
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [providerId, setProviderId] = useState<number | undefined>();
+  const [provider, setProvider] = useState<ProviderDTO | null>(null);
+
+  // Service data
+  const [tours, setTours] = useState<TourDTO[]>([]);
+  const [tourBookings, setTourBookings] = useState<TourBookingDTO[]>([]);
+  const [hotels, setHotels] = useState<HotelDTO[]>([]);
+  const [hotelBookings, setHotelBookings] = useState<HotelBookingDTO[]>([]);
+  const [restaurants, setRestaurants] = useState<RestaurantDTO[]>([]);
+  const [restaurantBookings, setRestaurantBookings] = useState<RestaurantBookingDTO[]>([]);
+  const [attractions, setAttractions] = useState<AttractionDTO[]>([]);
+  const [attractionBookings, setAttractionBookings] = useState<AttractionBookingDTO[]>([]);
+
+  // User cache for booking names
+  const [userCache, setUserCache] = useState<Map<number, string>>(new Map());
+
+  // Fetch provider and all data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const userStr = localStorage.getItem("user");
+        if (!userStr) return;
+
+        const user = JSON.parse(userStr);
+        const providerData = await getProviderByUserId(user.userId);
+        if (!providerData?.providerId) return;
+
+        setProviderId(providerData.providerId);
+        setProvider(providerData);
+
+        // Fetch all service data in parallel
+        const [
+          toursRes,
+          tourBookingsRes,
+          hotelsRes,
+          hotelBookingsRes,
+          restaurantsRes,
+          restaurantBookingsRes,
+          attractionsRes,
+          attractionBookingsRes,
+        ] = await Promise.all([
+          getToursByProvider(providerData.providerId),
+          getTourBookingsByProvider(providerData.providerId),
+          getHotelsByProvider(providerData.providerId),
+          api.get<HotelBookingDTO[]>(`/hotel-bookings/provider/${providerData.providerId}`),
+          getRestaurantsByProvider(providerData.providerId),
+          getRestaurantBookingsByProvider(providerData.providerId),
+          getAttractionsByProvider(providerData.providerId),
+          getAttractionBookingsByProvider(providerData.providerId),
+        ]);
+
+        setTours(toursRes || []);
+        setTourBookings(tourBookingsRes || []);
+        setHotels(hotelsRes || []);
+        setHotelBookings(hotelBookingsRes.data || []);
+        setRestaurants(restaurantsRes || []);
+        setRestaurantBookings(restaurantBookingsRes || []);
+        setAttractions(attractionsRes || []);
+        setAttractionBookings(attractionBookingsRes || []);
+
+        // Fetch user names for bookings
+        const allBookings = [
+          ...tourBookingsRes,
+          ...hotelBookingsRes.data,
+          ...restaurantBookingsRes,
+          ...attractionBookingsRes,
+        ];
+        const userIds = [...new Set(allBookings.map((b) => b.userId))];
+        const newUserCache = new Map<number, string>();
+
+        for (const userId of userIds.slice(0, 20)) {
+          try {
+            const userRes = await api.get(`/users/${userId}`);
+            newUserCache.set(userId, userRes.data.fullName || `Khách #${userId}`);
+          } catch {
+            newUserCache.set(userId, `Khách #${userId}`);
+          }
+        }
+        setUserCache(newUserCache);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Refresh data
+  const handleRefresh = async () => {
+    if (!providerId) return;
+    setRefreshing(true);
+    try {
+      const [
+        toursRes,
+        tourBookingsRes,
+        hotelsRes,
+        hotelBookingsRes,
+        restaurantsRes,
+        restaurantBookingsRes,
+        attractionsRes,
+        attractionBookingsRes,
+      ] = await Promise.all([
+        getToursByProvider(providerId),
+        getTourBookingsByProvider(providerId),
+        getHotelsByProvider(providerId),
+        api.get<HotelBookingDTO[]>(`/hotel-bookings/provider/${providerId}`),
+        getRestaurantsByProvider(providerId),
+        getRestaurantBookingsByProvider(providerId),
+        getAttractionsByProvider(providerId),
+        getAttractionBookingsByProvider(providerId),
+      ]);
+
+      setTours(toursRes || []);
+      setTourBookings(tourBookingsRes || []);
+      setHotels(hotelsRes || []);
+      setHotelBookings(hotelBookingsRes.data || []);
+      setRestaurants(restaurantsRes || []);
+      setRestaurantBookings(restaurantBookingsRes || []);
+      setAttractions(attractionsRes || []);
+      setAttractionBookings(attractionBookingsRes || []);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
-  // Sample KPI data with sparklines
-  const kpiData: KPIDataItem[] = [
-    {
-      key: "today_bookings",
-      value: 8,
-      change: 12.5,
-      trend: "up",
-      sparklineData: [3, 5, 4, 6, 7, 5, 8],
-      icon: Calendar,
-      color: "theme-bg-info",
-    },
-    {
-      key: "upcoming_bookings",
-      value: 24,
-      change: 8.3,
-      trend: "up",
-      sparklineData: [18, 20, 19, 22, 21, 23, 24],
-      icon: Clock,
-      color: "theme-bg-warning",
-    },
-    {
-      key: "monthly_revenue",
-      value: 125500000, // VND
-      change: 15.7,
-      trend: "up",
-      sparklineData: [95, 105, 110, 115, 118, 122, 125],
-      icon: DollarSign,
-      color: "theme-bg-success",
-    },
-    {
-      key: "pending_payouts",
-      value: 12300000, // VND
-      change: -2.1,
-      trend: "down",
-      sparklineData: [15, 14, 13, 12, 13, 12, 12],
-      icon: CreditCard,
-      color: "theme-bg-secondary",
-    },
-    {
-      key: "open_tickets",
-      value: 3,
-      change: 0,
-      trend: "stable",
-      sparklineData: [4, 3, 4, 3, 3, 3, 3],
-      icon: Bell,
-      color: "theme-bg-error",
-    },
-    {
-      key: "new_messages",
-      value: 7,
-      change: 16.7,
-      trend: "up",
-      sparklineData: [4, 5, 6, 5, 6, 6, 7],
-      icon: MessageSquare,
-      color: "theme-bg-info",
-    },
-  ];
+  // Calculate service summaries
+  const serviceSummaries: ServiceSummary[] = useMemo(() => {
+    const calculateRevenue = (bookings: Array<{ providerConfirmed?: number; totalPrice?: number }>, confirmedOnly = true) => {
+      return bookings
+        .filter((b) => !confirmedOnly || b.providerConfirmed === 1)
+        .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+    };
 
-  // Revenue chart data (last 30 days)
-  const revenueData: RevenueDataPoint[] = [
-    {
-      day: "1",
-      tour: 2500000,
-      hotel: 1800000,
-      restaurant: 800000,
-      attraction: 400000,
-    },
-    {
-      day: "2",
-      tour: 1800000,
-      hotel: 2200000,
-      restaurant: 600000,
-      attraction: 300000,
-    },
-    {
-      day: "3",
-      tour: 3200000,
-      hotel: 1500000,
-      restaurant: 900000,
-      attraction: 500000,
-    },
-    {
-      day: "4",
-      tour: 2100000,
-      hotel: 1900000,
-      restaurant: 700000,
-      attraction: 350000,
-    },
-    {
-      day: "5",
-      tour: 2800000,
-      hotel: 2100000,
-      restaurant: 800000,
-      attraction: 450000,
-    },
-    {
-      day: "6",
-      tour: 3100000,
-      hotel: 1700000,
-      restaurant: 850000,
-      attraction: 420000,
-    },
-    {
-      day: "7",
-      tour: 2700000,
-      hotel: 2000000,
-      restaurant: 750000,
-      attraction: 380000,
-    },
-    {
-      day: "8",
-      tour: 3300000,
-      hotel: 1600000,
-      restaurant: 900000,
-      attraction: 500000,
-    },
-    {
-      day: "9",
-      tour: 2400000,
-      hotel: 2300000,
-      restaurant: 650000,
-      attraction: 320000,
-    },
-    {
-      day: "10",
-      tour: 2900000,
-      hotel: 1800000,
-      restaurant: 800000,
-      attraction: 450000,
-    },
-  ];
+    const calculateAvgRating = (items: Array<{ ratingAverage?: number | null }>) => {
+      const rated = items.filter((i) => i.ratingAverage);
+      if (rated.length === 0) return 0;
+      return rated.reduce((sum, i) => sum + (i.ratingAverage || 0), 0) / rated.length;
+    };
 
-  // Bookings by type pie chart
-  const bookingsTypeData: BookingTypeData[] = [
-    { name: "tour", value: 35, color: "#10B981" },
-    { name: "hotel", value: 28, color: "#3B82F6" },
-    { name: "restaurant", value: 22, color: "#F59E0B" },
-    { name: "attraction", value: 15, color: "#EF4444" },
-  ];
+    return [
+      {
+        type: "tour",
+        icon: Route,
+        color: "text-emerald-600",
+        bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+        totalItems: tours.length,
+        publishedItems: tours.filter((t) => t.tourStatus === "published").length,
+        totalBookings: tourBookings.length,
+        pendingBookings: tourBookings.filter((b) => b.providerConfirmed === 0).length,
+        totalRevenue: calculateRevenue(tourBookings),
+        avgRating: calculateAvgRating(tours),
+        link: "/supplier/service/tour",
+      },
+      {
+        type: "hotel",
+        icon: Building2,
+        color: "text-blue-600",
+        bgColor: "bg-blue-100 dark:bg-blue-900/30",
+        totalItems: hotels.length,
+        publishedItems: hotels.filter((h) => h.hotelStatus === "published").length,
+        totalBookings: hotelBookings.length,
+        pendingBookings: hotelBookings.filter((b) => b.providerConfirmed === 0).length,
+        totalRevenue: calculateRevenue(hotelBookings),
+        avgRating: calculateAvgRating(hotels),
+        link: "/supplier/service/hotel",
+      },
+      {
+        type: "restaurant",
+        icon: Utensils,
+        color: "text-amber-600",
+        bgColor: "bg-amber-100 dark:bg-amber-900/30",
+        totalItems: restaurants.length,
+        publishedItems: restaurants.filter((r) => r.restaurantStatus === "published").length,
+        totalBookings: restaurantBookings.length,
+        pendingBookings: restaurantBookings.filter((b) => b.providerConfirmed === 0).length,
+        totalRevenue: calculateRevenue(restaurantBookings),
+        avgRating: calculateAvgRating(restaurants),
+        link: "/supplier/service/restaurant",
+      },
+      {
+        type: "attraction",
+        icon: MapPin,
+        color: "text-red-600",
+        bgColor: "bg-red-100 dark:bg-red-900/30",
+        totalItems: attractions.length,
+        publishedItems: attractions.filter((a) => a.attractionStatus === "published").length,
+        totalBookings: attractionBookings.length,
+        pendingBookings: attractionBookings.filter((b) => b.providerConfirmed === 0).length,
+        totalRevenue: calculateRevenue(attractionBookings),
+        avgRating: calculateAvgRating(attractions),
+        link: "/supplier/service/attraction",
+      },
+    ];
+  }, [tours, tourBookings, hotels, hotelBookings, restaurants, restaurantBookings, attractions, attractionBookings]);
 
-  // Recent activities
-  const recentActivities: Activity[] = [
-    {
-      id: "1",
-      type: "new_booking",
-      title: "Đặt tour Hạ Long Bay",
-      description: "Nguyễn Văn A - 2 người - 15/10/2025",
-      timestamp: "2 hours ago",
-      link: "/bookings/1",
-      icon: Calendar,
-      color: "theme-text-success",
-    },
-    {
-      id: "2",
-      type: "refund_processed",
-      title: "Hoàn tiền thành công",
-      description: "Booking #2024 - 1,500,000 VND",
-      timestamp: "4 hours ago",
-      link: "/transactions/2024",
-      icon: CreditCard,
-      color: "theme-text-info",
-    },
-    {
-      id: "3",
-      type: "document_approved",
-      title: "Tài liệu KYC đã được duyệt",
-      description: "Giấy phép kinh doanh mới",
-      timestamp: "1 day ago",
-      link: "/documents",
-      icon: FileText,
-      color: "theme-text-success",
-    },
-    {
-      id: "4",
-      type: "webhook_failed",
-      title: "Webhook delivery failed",
-      description: "Payment confirmation endpoint",
-      timestamp: "2 days ago",
-      link: "/webhooks",
-      icon: AlertTriangle,
-      color: "theme-text-error",
-    },
-  ];
+  // Total stats
+  const totalStats = useMemo(() => {
+    const allBookings = [...tourBookings, ...hotelBookings, ...restaurantBookings, ...attractionBookings];
+    const confirmedBookings = allBookings.filter((b) => b.providerConfirmed === 1);
+    const pendingBookings = allBookings.filter((b) => b.providerConfirmed === 0);
 
-  // Alerts and tasks
-  const alerts: Alert[] = [
-    {
-      id: "low_inventory_1",
-      type: "low_inventory",
-      title: "Hạ Long Bay Day Tour",
-      description: "Chỉ còn 2 chỗ cho ngày 20/10/2025",
-      priority: "high",
-      link: "/listings/123",
-      icon: Package,
-    },
-    {
-      id: "hold_expiring_1",
-      type: "hold_expiring",
-      title: "Giữ chỗ #5678 sắp hết hạn",
-      description: "Hết hạn trong 2 giờ nữa",
-      priority: "urgent",
-      link: "/bookings/5678",
-      icon: Clock,
-    },
-    {
-      id: "pending_kyc_1",
-      type: "pending_kyc",
-      title: "Tài liệu KYC chờ bổ sung",
-      description: "Thiếu ảnh CCCD mặt sau",
-      priority: "medium",
-      link: "/documents/kyc",
-      icon: FileText,
-    },
-  ];
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-  // Quick links data
-  const quickLinks: QuickLink[] = [
-    { key: "go_to_listings", icon: Package, link: "/listings" },
-    { key: "bookings_inbox", icon: Calendar, link: "/bookings" },
-    { key: "calendar", icon: Calendar, link: "/calendar" },
-    { key: "messages", icon: MessageSquare, link: "/messages" },
-    { key: "payouts", icon: CreditCard, link: "/payouts" },
-  ];
+    const currentMonthRevenue = confirmedBookings
+      .filter((b) => {
+        if (!b.createdAt) return false;
+        const date = new Date(b.createdAt);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      })
+      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+    const lastMonthRevenue = confirmedBookings
+      .filter((b) => {
+        if (!b.createdAt) return false;
+        const date = new Date(b.createdAt);
+        return date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear;
+      })
+      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+    const revenueGrowth =
+      lastMonthRevenue > 0
+        ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+        : currentMonthRevenue > 0
+        ? 100
+        : 0;
+
+    const today = new Date().toISOString().split("T")[0];
+    const todayBookings = allBookings.filter((b) => {
+      const bookingDate = b.createdAt?.split("T")[0];
+      return bookingDate === today;
+    }).length;
+
+    return {
+      totalServices: tours.length + hotels.length + restaurants.length + attractions.length,
+      publishedServices:
+        tours.filter((t) => t.tourStatus === "published").length +
+        hotels.filter((h) => h.hotelStatus === "published").length +
+        restaurants.filter((r) => r.restaurantStatus === "published").length +
+        attractions.filter((a) => a.attractionStatus === "published").length,
+      totalBookings: allBookings.length,
+      pendingBookings: pendingBookings.length,
+      confirmedBookings: confirmedBookings.length,
+      todayBookings,
+      totalRevenue: confirmedBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0),
+      currentMonthRevenue,
+      revenueGrowth,
+    };
+  }, [tours, hotels, restaurants, attractions, tourBookings, hotelBookings, restaurantBookings, attractionBookings]);
+
+  // Recent bookings
+  const recentBookings: RecentBooking[] = useMemo(() => {
+    const getServiceName = (type: string, serviceId: number): string => {
+      switch (type) {
+        case "tour":
+          return tours.find((t) => t.tourId === serviceId)?.title || `Tour #${serviceId}`;
+        case "hotel":
+          return hotels.find((h) => h.hotelId === serviceId)?.title || `Hotel #${serviceId}`;
+        case "restaurant":
+          return restaurants.find((r) => r.restaurantId === serviceId)?.title || `Restaurant #${serviceId}`;
+        case "attraction":
+          return attractions.find((a) => a.attractionId === serviceId)?.title || `Attraction #${serviceId}`;
+        default:
+          return `#${serviceId}`;
+      }
+    };
+
+    const allBookings: RecentBooking[] = [
+      ...tourBookings.map((b) => ({
+        id: b.bookingId!,
+        type: "tour" as const,
+        serviceName: getServiceName("tour", b.tourId),
+        customerName: userCache.get(b.userId) || `Khách #${b.userId}`,
+        date: b.createdAt || "",
+        amount: b.totalPrice || 0,
+        status: b.bookingStatus || "pending",
+        providerConfirmed: b.providerConfirmed || 0,
+      })),
+      ...hotelBookings.map((b) => ({
+        id: b.bookingId!,
+        type: "hotel" as const,
+        serviceName: getServiceName("hotel", b.hotelId),
+        customerName: userCache.get(b.userId) || `Khách #${b.userId}`,
+        date: b.createdAt || "",
+        amount: b.totalPrice || 0,
+        status: b.bookingStatus || "pending",
+        providerConfirmed: b.providerConfirmed || 0,
+      })),
+      ...restaurantBookings.map((b) => ({
+        id: b.bookingId!,
+        type: "restaurant" as const,
+        serviceName: getServiceName("restaurant", b.restaurantId),
+        customerName: userCache.get(b.userId) || `Khách #${b.userId}`,
+        date: b.createdAt || "",
+        amount: b.totalPrice || 0,
+        status: b.bookingStatus || "pending",
+        providerConfirmed: b.providerConfirmed || 0,
+      })),
+      ...attractionBookings.map((b) => ({
+        id: b.bookingId!,
+        type: "attraction" as const,
+        serviceName: getServiceName("attraction", b.attractionId),
+        customerName: userCache.get(b.userId) || `Khách #${b.userId}`,
+        date: b.createdAt || "",
+        amount: b.totalPrice || 0,
+        status: b.bookingStatus || "pending",
+        providerConfirmed: b.providerConfirmed || 0,
+      })),
+    ];
+
+    return allBookings
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 10);
+  }, [tours, hotels, restaurants, attractions, tourBookings, hotelBookings, restaurantBookings, attractionBookings, userCache]);
+
+  // Revenue chart data (last 7 days)
+  const revenueChartData: RevenueDataPoint[] = useMemo(() => {
+    const data: RevenueDataPoint[] = [];
+    const now = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+      const dayLabel = date.toLocaleDateString("vi-VN", { weekday: "short", day: "numeric" });
+
+      const tourRev = tourBookings
+        .filter((b) => b.providerConfirmed === 1 && b.createdAt?.split("T")[0] === dateStr)
+        .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+      const hotelRev = hotelBookings
+        .filter((b) => b.providerConfirmed === 1 && b.createdAt?.split("T")[0] === dateStr)
+        .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+      const restaurantRev = restaurantBookings
+        .filter((b) => b.providerConfirmed === 1 && b.createdAt?.split("T")[0] === dateStr)
+        .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+      const attractionRev = attractionBookings
+        .filter((b) => b.providerConfirmed === 1 && b.createdAt?.split("T")[0] === dateStr)
+        .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+      data.push({
+        date: dayLabel,
+        tour: tourRev,
+        hotel: hotelRev,
+        restaurant: restaurantRev,
+        attraction: attractionRev,
+      });
+    }
+
+    return data;
+  }, [tourBookings, hotelBookings, restaurantBookings, attractionBookings]);
+
+  // Booking distribution for pie chart
+  const bookingDistribution = useMemo(() => {
+    return [
+      { name: "Tour", value: tourBookings.length, color: "#10B981" },
+      { name: "Hotel", value: hotelBookings.length, color: "#3B82F6" },
+      { name: "Restaurant", value: restaurantBookings.length, color: "#F59E0B" },
+      { name: "Attraction", value: attractionBookings.length, color: "#EF4444" },
+    ].filter((item) => item.value > 0);
+  }, [tourBookings, hotelBookings, restaurantBookings, attractionBookings]);
 
   // Format currency
   const formatCurrency = (amount: number): string => {
+    if (amount >= 1000000000) {
+      return `${(amount / 1000000000).toFixed(1)}T đ`;
+    } else if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(1)}Tr đ`;
+    } else if (amount >= 1000) {
+      return `${(amount / 1000).toFixed(0)}K đ`;
+    }
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
@@ -349,137 +483,83 @@ const SupplierHomePage: React.FC = () => {
     }).format(amount);
   };
 
-  // Format number with units
-  const formatValue = (key: string, value: number): string => {
-    if (key === "monthly_revenue" || key === "pending_payouts") {
-      return formatCurrency(value);
+  const formatFullCurrency = (amount: number): string => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Format date
+  const formatDate = (dateStr: string): string => {
+    if (!dateStr) return "N/A";
+    return new Date(dateStr).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // Get status badge
+  const getStatusBadge = (providerConfirmed: number) => {
+    switch (providerConfirmed) {
+      case 1:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            <CheckCircle2 className="w-3 h-3" />
+            {t("confirmed") || "Đã xác nhận"}
+          </span>
+        );
+      case 2:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+            <XCircle className="w-3 h-3" />
+            {t("cancelled") || "Đã hủy"}
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+            <Clock className="w-3 h-3" />
+            {t("pending") || "Chờ xác nhận"}
+          </span>
+        );
     }
-    return value.toString();
   };
 
-  // KPI Card Component
-  const KPICard: React.FC<{ item: KPIDataItem }> = ({ item }) => (
-    <div className="theme-bg-card p-6 rounded-2xl border theme-border hover:shadow-lg transition-all duration-300">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-xl ${item.color}`}>
-          <item.icon className="w-6 h-6" />
-        </div>
-        <div className="flex items-center text-sm font-medium">
-          {item.trend === "up" && (
-            <>
-              <TrendingUp className="w-4 h-4 theme-text-success mr-1" />
-              <span className="theme-text-success">+{item.change}%</span>
-            </>
-          )}
-          {item.trend === "down" && (
-            <>
-              <TrendingDown className="w-4 h-4 theme-text-error mr-1" />
-              <span className="theme-text-error">{item.change}%</span>
-            </>
-          )}
-          {item.trend === "stable" && (
-            <span className="theme-text-secondary">0%</span>
-          )}
-        </div>
-      </div>
-      <h3 className="theme-text-primary text-2xl font-bold mb-1">
-        {formatValue(item.key, item.value)}
-      </h3>
-      <p className="theme-text-secondary text-sm mb-3">{t(item.key)}</p>
-
-      {/* Mini Sparkline */}
-      <div className="h-8">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={item.sparklineData.map(
-              (value: number, index: number): SparklineDataPoint => ({
-                value,
-                index,
-              })
-            )}
-          >
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke={
-                item.trend === "up"
-                  ? "#10B981"
-                  : item.trend === "down"
-                  ? "#EF4444"
-                  : "#6B7280"
-              }
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-
-  // Activity Item Component
-  const ActivityItem: React.FC<{ activity: Activity }> = ({ activity }) => (
-    <div className="flex items-start gap-4 p-4 theme-bg-card rounded-lg border theme-border hover:shadow-md transition-all duration-200">
-      <div className="p-2 theme-bg-secondary rounded-lg">
-        <activity.icon className={`w-4 h-4 ${activity.color}`} />
-      </div>
-      <div className="flex-1">
-        <h4 className="font-medium theme-text-primary">{activity.title}</h4>
-        <p className="text-sm theme-text-secondary">{activity.description}</p>
-        <p className="text-xs theme-text-secondary mt-1">
-          {activity.timestamp}
-        </p>
-      </div>
-      <button className="p-1 hover:theme-bg-secondary rounded transition-colors">
-        <ExternalLink className="w-4 h-4 theme-text-secondary" />
-      </button>
-    </div>
-  );
-
-  // Alert Item Component
-  const AlertItem: React.FC<{ alert: Alert }> = ({ alert }) => {
-    if (dismissedAlerts.includes(alert.id)) return null;
-
-    const priorityColors: Record<Alert["priority"], string> = {
-      urgent: "border-l-red-500 theme-bg-error",
-      high: "border-l-orange-500 theme-bg-warning",
-      medium: "border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20",
-    };
-
-    return (
-      <div
-        className={`p-4 rounded-lg border-l-4 ${
-          priorityColors[alert.priority]
-        } theme-border`}
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <alert.icon className="w-5 h-5 theme-text-error mt-0.5" />
-            <div>
-              <h4 className="font-medium theme-text-primary">{alert.title}</h4>
-              <p className="text-sm theme-text-secondary">
-                {alert.description}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="text-xs theme-text-brand hover:underline">
-              {t("view_details")}
-            </button>
-            <button
-              onClick={() => setDismissedAlerts([...dismissedAlerts, alert.id])}
-              className="p-1 hover:theme-bg-secondary rounded transition-colors"
-            >
-              <X className="w-4 h-4 theme-text-secondary" />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  // Get type icon
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "tour":
+        return <Route className="w-4 h-4 text-emerald-600" />;
+      case "hotel":
+        return <Building2 className="w-4 h-4 text-blue-600" />;
+      case "restaurant":
+        return <Utensils className="w-4 h-4 text-amber-600" />;
+      case "attraction":
+        return <MapPin className="w-4 h-4 text-red-600" />;
+      default:
+        return <Package className="w-4 h-4" />;
+    }
   };
 
-  // Custom Tooltip Component for Charts
-  const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
+  // Custom Tooltip
+  interface TooltipPayloadEntry {
+    color: string;
+    name: string;
+    value: number;
+  }
+
+  interface CustomTooltipProps {
+    active?: boolean;
+    payload?: TooltipPayloadEntry[];
+    label?: string;
+  }
+
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div
@@ -489,10 +569,10 @@ const SupplierHomePage: React.FC = () => {
             border: `1px solid ${dark ? "#374151" : "#e5e7eb"}`,
           }}
         >
-          <p className="theme-text-primary font-medium">{`Ngày ${label}`}</p>
-          {payload.map((entry: any, index: number) => (
+          <p className="theme-text-primary font-medium mb-2">{label}</p>
+          {payload.map((entry: TooltipPayloadEntry, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {`${t(entry.dataKey)}: ${formatCurrency(entry.value)}`}
+              {entry.name}: {formatFullCurrency(entry.value)}
             </p>
           ))}
         </div>
@@ -501,274 +581,294 @@ const SupplierHomePage: React.FC = () => {
     return null;
   };
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      {/* Account Status Banner */}
-      {accountStatus !== "approved" && (
-        <div className="theme-bg-warning p-4 rounded-2xl border-l-4 border-l-orange-500">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-6 h-6 theme-text-warning" />
-              <div>
-                <h3 className="font-semibold theme-text-primary">
-                  {t("account_inactive")}
-                </h3>
-                <p className="text-sm theme-text-secondary">
-                  {t("account_inactive_desc")}
-                </p>
-              </div>
-            </div>
-            <button className="btn-primary px-4 py-2">
-              {t("view_details")}
-            </button>
-          </div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-t-transparent theme-border rounded-full animate-spin mx-auto mb-4 border-t-emerald-500"></div>
+          <p className="theme-text-secondary">{t("loading") || "Đang tải dữ liệu..."}</p>
         </div>
-      )}
+      </div>
+    );
+  }
 
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm border border-gray-100 p-2">
-            <img
-              src={providerInfo.logo}
-              alt={providerInfo.name}
-              className="w-8 h-8 object-contain"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = "none";
-                const nextElement = target.nextElementSibling as HTMLElement;
-                if (nextElement) {
-                  nextElement.classList.remove("hidden");
-                }
-              }}
-            />
-            <Package className="w-6 h-6 theme-text-secondary hidden" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold theme-text-primary">
-              {providerInfo.name}
-            </h1>
-            <p className="theme-text-secondary">
-              {t("current_balance")}:
-              <span className="font-semibold theme-text-success ml-2">
-                {formatCurrency(providerInfo.currentBalance)}
-              </span>
-            </p>
+        <div>
+          <h1 className="text-2xl font-bold theme-text-primary">
+            {t("dashboard") || "Tổng quan"}
+          </h1>
+          <p className="theme-text-secondary mt-1">
+            {t("welcome_back") || "Xin chào"}, {provider?.companyName || "Nhà cung cấp"}
+          </p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg theme-bg-secondary hover:theme-bg-tertiary transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+          <span className="hidden sm:inline">{t("refresh") || "Làm mới"}</span>
+        </button>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="theme-bg-card p-4 rounded-xl border theme-border">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+              <Package className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold theme-text-primary">{totalStats.publishedServices}</p>
+              <p className="text-sm theme-text-secondary">{t("published_services") || "Dịch vụ đang hoạt động"}</p>
+            </div>
           </div>
         </div>
 
-        <div className="relative">
-          <button
-            onClick={() => setShowQuickActions(!showQuickActions)}
-            className="btn-primary px-6 py-3 flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            {t("quick_actions")}
-            <ChevronDown className="w-4 h-4" />
-          </button>
+        <div className="theme-bg-card p-4 rounded-xl border theme-border">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+              <Calendar className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold theme-text-primary">{totalStats.pendingBookings}</p>
+              <p className="text-sm theme-text-secondary">{t("pending_bookings") || "Đơn chờ xác nhận"}</p>
+            </div>
+          </div>
+        </div>
 
-          {showQuickActions && (
-            <div className="absolute right-0 top-full mt-2 w-64 theme-bg-card border theme-border rounded-2xl shadow-lg py-2 z-50">
-              <button className="w-full flex items-center gap-3 px-4 py-3 hover:theme-bg-secondary transition-colors text-left">
-                <Plus className="w-5 h-5 theme-text-primary" />
-                <span className="theme-text-primary">
-                  {t("create_listing")}
-                </span>
-              </button>
-              <button className="w-full flex items-center gap-3 px-4 py-3 hover:theme-bg-secondary transition-colors text-left">
-                <Star className="w-5 h-5 theme-text-primary" />
-                <span className="theme-text-primary">{t("new_promo")}</span>
-              </button>
-              <button className="w-full flex items-center gap-3 px-4 py-3 hover:theme-bg-secondary transition-colors text-left">
-                <CreditCard className="w-5 h-5 theme-text-primary" />
-                <span className="theme-text-primary">
-                  {t("request_payout")}
-                </span>
-              </button>
+        <div className="theme-bg-card p-4 rounded-xl border theme-border">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+              <DollarSign className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold theme-text-primary">{formatCurrency(totalStats.currentMonthRevenue)}</p>
+              <p className="text-sm theme-text-secondary">{t("monthly_revenue") || "Doanh thu tháng"}</p>
+            </div>
+          </div>
+          {totalStats.revenueGrowth !== 0 && (
+            <div className={`flex items-center gap-1 mt-2 text-sm ${totalStats.revenueGrowth > 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {totalStats.revenueGrowth > 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              <span>{totalStats.revenueGrowth > 0 ? "+" : ""}{totalStats.revenueGrowth.toFixed(1)}%</span>
+              <span className="theme-text-secondary">{t("vs_last_month") || "so với tháng trước"}</span>
             </div>
           )}
         </div>
+
+        <div className="theme-bg-card p-4 rounded-xl border theme-border">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+              <Users className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold theme-text-primary">{totalStats.todayBookings}</p>
+              <p className="text-sm theme-text-secondary">{t("today_bookings") || "Đơn hôm nay"}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {kpiData.map((item: KPIDataItem) => (
-          <KPICard key={item.key} item={item} />
+      {/* Service Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {serviceSummaries.map((service) => (
+          <Link
+            key={service.type}
+            to={service.link}
+            className="theme-bg-card p-5 rounded-xl border theme-border hover:shadow-lg transition-all duration-300 group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className={`p-3 rounded-xl ${service.bgColor}`}>
+                <service.icon className={`w-6 h-6 ${service.color}`} />
+              </div>
+              <ChevronRight className="w-5 h-5 theme-text-secondary group-hover:theme-text-primary transition-colors" />
+            </div>
+
+            <h3 className="text-lg font-semibold theme-text-primary mb-3 capitalize">
+              {t(service.type) || service.type}
+            </h3>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="theme-text-secondary">{t("total_items") || "Tổng số"}:</span>
+                <span className="font-medium theme-text-primary">{service.totalItems}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="theme-text-secondary">{t("published") || "Đang hoạt động"}:</span>
+                <span className="font-medium text-emerald-600">{service.publishedItems}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="theme-text-secondary">{t("bookings") || "Đặt chỗ"}:</span>
+                <span className="font-medium theme-text-primary">{service.totalBookings}</span>
+              </div>
+              {service.pendingBookings > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="theme-text-secondary">{t("pending") || "Chờ xử lý"}:</span>
+                  <span className="font-medium text-amber-600">{service.pendingBookings}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm pt-2 border-t theme-border">
+                <span className="theme-text-secondary">{t("revenue") || "Doanh thu"}:</span>
+                <span className="font-semibold text-emerald-600">{formatCurrency(service.totalRevenue)}</span>
+              </div>
+              {service.avgRating > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="theme-text-secondary">{t("rating") || "Đánh giá"}:</span>
+                  <span className="flex items-center gap-1 font-medium theme-text-primary">
+                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                    {service.avgRating.toFixed(1)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </Link>
         ))}
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
-        <div className="theme-bg-card p-6 rounded-2xl border theme-border">
+        <div className="lg:col-span-2 theme-bg-card p-6 rounded-xl border theme-border">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold theme-text-primary">
-              {t("revenue_chart_title")}
+            <h2 className="text-lg font-semibold theme-text-primary flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              {t("revenue_chart") || "Biểu đồ doanh thu 7 ngày qua"}
             </h2>
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="px-3 py-1 rounded-lg theme-bg-secondary theme-text-primary border theme-border text-sm focus-ring-primary"
-            >
-              <option value="7days">{t("7days")}</option>
-              <option value="30days">{t("30days")}</option>
-              <option value="month">{t("month")}</option>
-            </select>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={revenueData}>
-              <defs>
-                <linearGradient
-                  id="revenueGradient"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={dark ? "#374151" : "#e5e7eb"}
+            <BarChart data={revenueChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={dark ? "#374151" : "#e5e7eb"} />
+              <XAxis dataKey="date" tick={{ fill: dark ? "#9ca3af" : "#6b7280", fontSize: 12 }} />
+              <YAxis
+                tick={{ fill: dark ? "#9ca3af" : "#6b7280", fontSize: 12 }}
+                tickFormatter={(value) => formatCurrency(value)}
               />
-              <XAxis
-                dataKey="day"
-                tick={{ fill: dark ? "#9ca3af" : "#6b7280" }}
-              />
-              <YAxis tick={{ fill: dark ? "#9ca3af" : "#6b7280" }} />
               <Tooltip content={<CustomTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="tour"
-                stackId="1"
-                stroke="#10B981"
-                fill="url(#revenueGradient)"
-              />
-              <Area
-                type="monotone"
-                dataKey="hotel"
-                stackId="1"
-                stroke="#3B82F6"
-                fill="#3B82F6"
-                fillOpacity={0.2}
-              />
-              <Area
-                type="monotone"
-                dataKey="restaurant"
-                stackId="1"
-                stroke="#F59E0B"
-                fill="#F59E0B"
-                fillOpacity={0.2}
-              />
-              <Area
-                type="monotone"
-                dataKey="attraction"
-                stackId="1"
-                stroke="#EF4444"
-                fill="#EF4444"
-                fillOpacity={0.2}
-              />
-            </AreaChart>
+              <Legend />
+              <Bar dataKey="tour" name="Tour" fill="#10B981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="hotel" name="Hotel" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="restaurant" name="Restaurant" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="attraction" name="Attraction" fill="#EF4444" radius={[4, 4, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Bookings by Type Pie Chart */}
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={bookingsTypeData}
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              dataKey="value"
-              label={({ name, value }) => `${t(name)}: ${value}%`}
-            >
-              {bookingsTypeData.map((entry: BookingTypeData, index: number) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip
-              formatter={(value: number, name: string) => [
-                `${value}%`,
-                t(name),
-              ]}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Bottom Row - Activities and Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
-        <div className="theme-bg-card p-6 rounded-2xl border theme-border">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold theme-text-primary">
-              {t("recent_activity")}
-            </h2>
-            <button className="text-sm theme-text-brand hover:underline">
-              View all
-            </button>
-          </div>
-          <div className="space-y-4">
-            {recentActivities.map((activity: Activity) => (
-              <ActivityItem key={activity.id} activity={activity} />
+        {/* Booking Distribution */}
+        <div className="theme-bg-card p-6 rounded-xl border theme-border">
+          <h2 className="text-lg font-semibold theme-text-primary mb-6">
+            {t("booking_distribution") || "Phân bố đặt chỗ"}
+          </h2>
+          {bookingDistribution.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={bookingDistribution}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name}: ${(Number(percent || 0) * 100).toFixed(0)}%`}
+                  labelLine={false}
+                >
+                  {bookingDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => [`${value} đơn`, ""]} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[250px] theme-text-secondary">
+              {t("no_bookings") || "Chưa có đơn đặt chỗ nào"}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            {bookingDistribution.map((item) => (
+              <div key={item.name} className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                <span className="theme-text-secondary">{item.name}:</span>
+                <span className="font-medium theme-text-primary">{item.value}</span>
+              </div>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Alerts & Tasks */}
-        <div className="theme-bg-card p-6 rounded-2xl border theme-border">
-          <h2 className="text-xl font-semibold theme-text-primary mb-6">
-            {t("alerts_tasks")}
+      {/* Recent Bookings */}
+      <div className="theme-bg-card p-6 rounded-xl border theme-border">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold theme-text-primary flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            {t("recent_bookings") || "Đơn đặt chỗ gần đây"}
           </h2>
-          <div className="space-y-4">
-            {alerts
-              .filter((alert: Alert) => !dismissedAlerts.includes(alert.id))
-              .map((alert: Alert) => (
-                <AlertItem key={alert.id} alert={alert} />
-              ))}
-            {alerts.filter(
-              (alert: Alert) => !dismissedAlerts.includes(alert.id)
-            ).length === 0 && (
-              <p className="text-center theme-text-secondary py-8">
-                Không có cảnh báo nào
-              </p>
-            )}
+          <span className="text-sm theme-text-secondary">
+            {t("total") || "Tổng"}: {totalStats.totalBookings} {t("bookings") || "đơn"}
+          </span>
+        </div>
+
+        {recentBookings.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b theme-border">
+                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("type") || "Loại"}</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("service") || "Dịch vụ"}</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("customer") || "Khách hàng"}</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("date") || "Ngày đặt"}</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium theme-text-secondary">{t("amount") || "Số tiền"}</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium theme-text-secondary">{t("status") || "Trạng thái"}</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium theme-text-secondary">{t("action") || "Thao tác"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentBookings.map((booking) => (
+                  <tr key={`${booking.type}-${booking.id}`} className="border-b theme-border hover:theme-bg-secondary/50 transition-colors">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        {getTypeIcon(booking.type)}
+                        <span className="text-sm capitalize theme-text-secondary">{booking.type}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm font-medium theme-text-primary line-clamp-1">{booking.serviceName}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm theme-text-secondary">{booking.customerName}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm theme-text-secondary">{formatDate(booking.date)}</span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <span className="text-sm font-medium theme-text-primary">{formatFullCurrency(booking.amount)}</span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {getStatusBadge(booking.providerConfirmed)}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        onClick={() => navigate(`/supplier/service/${booking.type}/bookings/${booking.id}`)}
+                        className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-lg theme-bg-secondary hover:theme-bg-tertiary transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        {t("view") || "Xem"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        ) : (
+          <div className="text-center py-12 theme-text-secondary">
+            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>{t("no_bookings_yet") || "Chưa có đơn đặt chỗ nào"}</p>
+          </div>
+        )}
       </div>
-
-      {/* Quick Links */}
-      <div className="theme-bg-card p-6 rounded-2xl border theme-border">
-        <h2 className="text-xl font-semibold theme-text-primary mb-6">
-          {t("quick_links")}
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {quickLinks.map((item: QuickLink) => (
-            <button
-              key={item.key}
-              className="flex flex-col items-center gap-3 p-4 rounded-xl hover:theme-bg-secondary transition-all duration-200 group"
-            >
-              <div className="p-3 theme-bg-primary rounded-xl group-hover:scale-110 transition-transform duration-200">
-                <item.icon className="w-6 h-6 theme-text-button" />
-              </div>
-              <span className="text-sm font-medium theme-text-primary text-center">
-                {t(item.key)}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Click outside to close dropdown */}
-      {showQuickActions && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowQuickActions(false)}
-        />
-      )}
     </div>
   );
 };
