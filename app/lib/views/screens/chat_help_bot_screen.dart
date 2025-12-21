@@ -11,6 +11,8 @@ import 'package:app/views/screens/hotel_detail_overview_screen.dart';
 import 'package:app/views/screens/restaurant_overview_detail_screen.dart';
 import 'package:app/views/screens/attractions_overview_detail_screen.dart';
 import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
+import 'package:app/views/screens/select_provider_chat_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatHelpBotScreen extends StatefulWidget {
   final bool isFromBottomBar;
@@ -408,35 +410,35 @@ class _ChatHelpBotScreenState extends State<ChatHelpBotScreen> {
     );
   }
 
-  void _connectToStaff() {
-    setState(() {
-      _isConnectedToStaff = true;
-      _messages.add(
-        ChatMessage(
-          text:
-              'Đã chuyển hướng đến nhân viên hỗ trợ. Vui lòng chờ trong giây lát...',
-          isFromUser: false,
-          timestamp: DateTime.now(),
-          isSystemMessage: true,
-        ),
-      );
-    });
-    _scrollToBottom();
+  void _connectToStaff() async {
+    // Lấy user ID từ SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('user_id');
 
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text:
-                'Xin chào! Tôi là nhân viên hỗ trợ. Tôi có thể giúp gì cho bạn?',
-            isFromUser: false,
-            timestamp: DateTime.now(),
-            senderName: 'Nhân viên hỗ trợ',
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Vui lòng đăng nhập để chat với nhân viên hỗ trợ'),
+            backgroundColor: Colors.red,
           ),
         );
-      });
-      _scrollToBottom();
-    });
+      }
+      return;
+    }
+
+    // Điều hướng đến screen chọn Provider
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SelectProviderChatScreen(
+            userId: userId,
+            subject: 'Hỗ trợ từ TripBot',
+          ),
+        ),
+      );
+    }
   }
 
   void _onChatHistory() {

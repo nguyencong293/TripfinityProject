@@ -18,10 +18,17 @@ import {
 import { useTheme } from "../../hooks/useTheme";
 import { useLanguage } from "../../hooks/useLanguage";
 import { getProviderByUserId } from "../../services/providerService";
-import api from "../../services/api";
-import type { ProviderDTO, UserDTO } from "../../types";
+import {
+  getConversationsByProvider,
+  getMessages,
+  sendMessage,
+  markAsRead,
+  type ConversationDTO,
+  type ConversationMessageDTO,
+} from "../../services/chatService";
+import type { ProviderDTO } from "../../types";
 
-// Types
+// Local types for component use
 interface Message {
   messageId: number;
   conversationId: number;
@@ -30,9 +37,10 @@ interface Message {
   content: string;
   messageType: "text" | "image" | "file";
   imageUrl?: string;
-  fileUrl?: string;
   isRead: boolean;
   createdAt: string;
+  senderName?: string;
+  senderAvatar?: string;
 }
 
 interface Conversation {
@@ -44,8 +52,8 @@ interface Conversation {
   unreadCount: number;
   createdAt: string;
   updatedAt: string;
-  // Joined data
-  user?: UserDTO;
+  userName?: string;
+  userAvatar?: string;
 }
 
 const MessagesPage: React.FC = () => {
@@ -91,27 +99,27 @@ const MessagesPage: React.FC = () => {
 
         setProvider(providerData);
 
-        // Fetch conversations
-        const conversationsRes = await api.get<Conversation[]>(
-          `/messages/provider/${providerData.providerId}/conversations`
-        );
+        // Fetch conversations using chatService
+        const conversationsData = await getConversationsByProvider(providerData.providerId);
         
-        // Fetch user info for each conversation
-        const conversationsWithUsers = await Promise.all(
-          conversationsRes.data.map(async (conv) => {
-            try {
-              const userRes = await api.get<UserDTO>(`/users/${conv.userId}`);
-              return { ...conv, user: userRes.data };
-            } catch {
-              return { ...conv, user: undefined };
-            }
-          })
-        );
+        // Map to local Conversation type
+        const mappedConversations: Conversation[] = conversationsData.map((conv: ConversationDTO) => ({
+          conversationId: conv.conversationId,
+          userId: conv.userId,
+          providerId: conv.providerId,
+          lastMessage: conv.lastMessageContent,
+          lastMessageAt: conv.lastMessageAt,
+          unreadCount: conv.providerUnreadCount,
+          createdAt: conv.createdAt,
+          updatedAt: conv.updatedAt,
+          userName: conv.userName,
+          userAvatar: conv.userAvatar,
+        }));
 
-        setConversations(conversationsWithUsers);
+        setConversations(mappedConversations);
       } catch (error) {
         console.error("Error fetching messages data:", error);
-        // Mock data for demo
+        // Mock data for demo when API not available
         setConversations([
           {
             conversationId: 1,
@@ -122,12 +130,8 @@ const MessagesPage: React.FC = () => {
             unreadCount: 2,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            user: {
-              userId: 1,
-              email: "customer1@example.com",
-              fullName: "Nguyễn Văn A",
-              avatarUrl: "",
-            },
+            userName: "Nguyễn Văn A",
+            userAvatar: "",
           },
           {
             conversationId: 2,
@@ -138,12 +142,8 @@ const MessagesPage: React.FC = () => {
             unreadCount: 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            user: {
-              userId: 2,
-              email: "customer2@example.com",
-              fullName: "Trần Thị B",
-              avatarUrl: "",
-            },
+            userName: "Trần Thị B",
+            userAvatar: "",
           },
           {
             conversationId: 3,
@@ -154,12 +154,8 @@ const MessagesPage: React.FC = () => {
             unreadCount: 1,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            user: {
-              userId: 3,
-              email: "customer3@example.com",
-              fullName: "Lê Văn C",
-              avatarUrl: "",
-            },
+            userName: "Lê Văn C",
+            userAvatar: "",
           },
         ]);
       } finally {
@@ -174,13 +170,28 @@ const MessagesPage: React.FC = () => {
   const fetchMessages = useCallback(async (conversationId: number) => {
     setLoadingMessages(true);
     try {
-      const messagesRes = await api.get<Message[]>(
-        `/messages/conversation/${conversationId}`
-      );
-      setMessages(messagesRes.data);
+      // Fetch messages using chatService
+      const messagesData = await getMessages(conversationId);
       
-      // Mark as read
-      await api.patch(`/messages/conversation/${conversationId}/read`);
+      // Map to local Message type
+      const mappedMessages: Message[] = messagesData.map((msg: ConversationMessageDTO) => ({
+        messageId: msg.messageId,
+        conversationId: msg.conversationId,
+        senderId: msg.senderId,
+        senderType: msg.senderType,
+        content: msg.content,
+        messageType: msg.messageType as "text" | "image" | "file",
+        imageUrl: msg.imageUrl,
+        isRead: msg.isRead,
+        createdAt: msg.createdAt,
+        senderName: msg.senderName,
+        senderAvatar: msg.senderAvatar,
+      }));
+      
+      setMessages(mappedMessages);
+      
+      // Mark as read using chatService
+      await markAsRead(conversationId, "provider");
       
       // Update unread count
       setConversations((prev) =>
@@ -266,9 +277,9 @@ const MessagesPage: React.FC = () => {
       // Optimistic update
       setMessages((prev) => [...prev, newMsg]);
 
-      // Send to API
-      await api.post(`/messages/conversation/${selectedConversation.conversationId}`, {
-        senderId: provider.providerId,
+      // Send to API using chatService
+      await sendMessage(selectedConversation.conversationId, {
+        senderId: provider.providerId!,
         senderType: "provider",
         content: messageContent,
         messageType: "text",
@@ -314,7 +325,7 @@ const MessagesPage: React.FC = () => {
 
   // Filter conversations
   const filteredConversations = conversations.filter((conv) =>
-    conv.user?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    conv.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     conv.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -386,15 +397,15 @@ const MessagesPage: React.FC = () => {
                 >
                   {/* Avatar */}
                   <div className="relative flex-shrink-0">
-                    {conv.user?.avatarUrl ? (
+                    {conv.userAvatar ? (
                       <img
-                        src={conv.user.avatarUrl}
-                        alt={conv.user.fullName}
+                        src={conv.userAvatar}
+                        alt={conv.userName}
                         className="w-12 h-12 rounded-full object-cover"
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 font-semibold">
-                        {getInitials(conv.user?.fullName)}
+                        {getInitials(conv.userName)}
                       </div>
                     )}
                     {/* Online indicator */}
@@ -405,7 +416,7 @@ const MessagesPage: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <h4 className="font-semibold theme-text-primary truncate">
-                        {conv.user?.fullName || `Khách #${conv.userId}`}
+                        {conv.userName || `Khách #${conv.userId}`}
                       </h4>
                       <span className="text-xs theme-text-secondary flex-shrink-0">
                         {formatTime(conv.lastMessageAt || conv.updatedAt)}
@@ -447,20 +458,20 @@ const MessagesPage: React.FC = () => {
                       <ArrowLeft className="w-5 h-5" />
                     </button>
                   )}
-                  {selectedConversation.user?.avatarUrl ? (
+                  {selectedConversation.userAvatar ? (
                     <img
-                      src={selectedConversation.user.avatarUrl}
-                      alt={selectedConversation.user.fullName}
+                      src={selectedConversation.userAvatar}
+                      alt={selectedConversation.userName}
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 font-semibold">
-                      {getInitials(selectedConversation.user?.fullName)}
+                      {getInitials(selectedConversation.userName)}
                     </div>
                   )}
                   <div>
                     <h3 className="font-semibold theme-text-primary">
-                      {selectedConversation.user?.fullName || `Khách #${selectedConversation.userId}`}
+                      {selectedConversation.userName || `Khách #${selectedConversation.userId}`}
                     </h3>
                     <p className="text-xs text-green-500 flex items-center gap-1">
                       <Circle className="w-2 h-2 fill-green-500" />
@@ -507,15 +518,15 @@ const MessagesPage: React.FC = () => {
                         >
                           {/* Avatar */}
                           {!isProvider && showAvatar ? (
-                            selectedConversation.user?.avatarUrl ? (
+                            selectedConversation.userAvatar ? (
                               <img
-                                src={selectedConversation.user.avatarUrl}
+                                src={selectedConversation.userAvatar}
                                 alt=""
                                 className="w-8 h-8 rounded-full object-cover"
                               />
                             ) : (
                               <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-semibold theme-text-secondary">
-                                {getInitials(selectedConversation.user?.fullName)}
+                                {getInitials(selectedConversation.userName)}
                               </div>
                             )
                           ) : (
