@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vn.tripfinity.backend.dto.TourDTO;
+import com.vn.tripfinity.backend.dto.TourRatingSummaryDTO;
 import com.vn.tripfinity.backend.dto.TourReviewDTO;
 import com.vn.tripfinity.backend.dto.TourReviewReplyDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
@@ -678,5 +679,88 @@ public class TourService {
             log.error("Error converting JSON to string list: {}", json, e);
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * Tính rating summary động từ tour_reviews và tour_review_aspects
+     */
+    public TourRatingSummaryDTO calculateRatingSummary(Integer tourId) {
+        log.debug("Tính rating summary cho Tour ID: {}", tourId);
+
+        // Lấy tất cả reviews đã approved của tour
+        List<TourReview> reviews = tourReviewRepository.findByTourAndStatus(
+            tourId, TourReview.ReviewStatus.approved);
+
+        TourRatingSummaryDTO summary = TourRatingSummaryDTO.builder()
+            .tourId(tourId)
+            .totalReviews(reviews.size())
+            .build();
+
+        if (reviews.isEmpty()) {
+            // Không có review, trả về giá trị mặc định
+            summary.setAvgRating(java.math.BigDecimal.ZERO);
+            summary.setCount1(0);
+            summary.setCount2(0);
+            summary.setCount3(0);
+            summary.setCount4(0);
+            summary.setCount5(0);
+            return summary;
+        }
+
+        // Tính avg rating tổng thể
+        double avgRating = reviews.stream()
+            .mapToInt(TourReview::getRating)
+            .average()
+            .orElse(0.0);
+        summary.setAvgRating(java.math.BigDecimal.valueOf(avgRating).setScale(2, java.math.RoundingMode.HALF_UP));
+
+        // Đếm số lượng từng loại rating
+        summary.setCount1((int) reviews.stream().filter(r -> r.getRating() == 1).count());
+        summary.setCount2((int) reviews.stream().filter(r -> r.getRating() == 2).count());
+        summary.setCount3((int) reviews.stream().filter(r -> r.getRating() == 3).count());
+        summary.setCount4((int) reviews.stream().filter(r -> r.getRating() == 4).count());
+        summary.setCount5((int) reviews.stream().filter(r -> r.getRating() == 5).count());
+
+        // Tính trung bình các aspects
+        List<Integer> reviewIds = reviews.stream()
+            .map(TourReview::getReviewId)
+            .collect(Collectors.toList());
+
+        List<TourReviewAspects> aspects = tourReviewAspectsRepository.findAllById(reviewIds);
+
+        if (!aspects.isEmpty()) {
+            double avgGuideQuality = aspects.stream()
+                .mapToInt(TourReviewAspects::getGuideQuality)
+                .average()
+                .orElse(0.0);
+            summary.setAvgGuideQuality(java.math.BigDecimal.valueOf(avgGuideQuality).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgItineraryQuality = aspects.stream()
+                .mapToInt(TourReviewAspects::getItineraryQuality)
+                .average()
+                .orElse(0.0);
+            summary.setAvgItineraryQuality(java.math.BigDecimal.valueOf(avgItineraryQuality).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgValueForMoney = aspects.stream()
+                .mapToInt(TourReviewAspects::getValueForMoney)
+                .average()
+                .orElse(0.0);
+            summary.setAvgValueForMoney(java.math.BigDecimal.valueOf(avgValueForMoney).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgOrganization = aspects.stream()
+                .mapToInt(TourReviewAspects::getOrganization)
+                .average()
+                .orElse(0.0);
+            summary.setAvgOrganization(java.math.BigDecimal.valueOf(avgOrganization).setScale(2, java.math.RoundingMode.HALF_UP));
+
+            double avgSafety = aspects.stream()
+                .mapToInt(TourReviewAspects::getSafety)
+                .average()
+                .orElse(0.0);
+            summary.setAvgSafety(java.math.BigDecimal.valueOf(avgSafety).setScale(2, java.math.RoundingMode.HALF_UP));
+        }
+
+        log.info("✅ Đã tính rating summary cho Tour ID: {} với {} reviews", tourId, reviews.size());
+        return summary;
     }
 }

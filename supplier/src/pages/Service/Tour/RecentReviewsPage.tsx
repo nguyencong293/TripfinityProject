@@ -2,13 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Star, User, ThumbsUp } from "lucide-react";
 import { getProviderByUserId, getUserById } from "../../../services/providerService";
-import { getHotelsByProvider, getHotelReviewsByHotel } from "../../../services/hotelService";
+import { getToursByProvider, getTourReviewsByTour } from "../../../services/tourService";
 import { toggleReviewLike, checkIsLiked } from "../../../services/reviewService";
-import type { HotelReviewDTO, UserDTO } from "../../../types";
+import type { TourReviewDTO, UserDTO } from "../../../types";
 
-interface ReviewWithUser extends HotelReviewDTO {
+interface ReviewWithUser extends TourReviewDTO {
   user?: UserDTO;
-  hotelName?: string;
+  tourName?: string;
   isLikedByCurrentUser?: boolean;
 }
 
@@ -38,16 +38,16 @@ const RecentReviewsPage: React.FC = () => {
 
         const provider = await getProviderByUserId(user.userId);
         if (!provider?.providerId) return;
-        const hotelsData = await getHotelsByProvider(provider.providerId);
+        const toursData = await getToursByProvider(provider.providerId);
 
-        // Fetch reviews for all hotels
+        // Fetch reviews for all tours
         const allReviews: ReviewWithUser[] = [];
-        for (const hotel of hotelsData) {
-          if (!hotel.hotelId) continue;
-          const hotelReviews = await getHotelReviewsByHotel(hotel.hotelId);
+        for (const tour of toursData) {
+          if (!tour.tourId) continue;
+          const tourReviews = await getTourReviewsByTour(tour.tourId);
           
           // Fetch user info and like status for each review
-          for (const review of hotelReviews) {
+          for (const review of tourReviews) {
             try {
               const userData = await getUserById(review.userId);
               
@@ -57,7 +57,7 @@ const RecentReviewsPage: React.FC = () => {
                 try {
                   isLiked = await checkIsLiked(
                     user.userId,
-                    "hotel",
+                    "tour",
                     review.reviewId
                   );
                 } catch (err) {
@@ -68,14 +68,14 @@ const RecentReviewsPage: React.FC = () => {
               allReviews.push({
                 ...review,
                 user: userData,
-                hotelName: hotel.title,
+                tourName: tour.title,
                 isLikedByCurrentUser: isLiked,
               });
             } catch (error) {
               console.error(`Error fetching user ${review.userId}:`, error);
               allReviews.push({
                 ...review,
-                hotelName: hotel.title,
+                tourName: tour.title,
                 isLikedByCurrentUser: false,
               });
             }
@@ -187,7 +187,7 @@ const RecentReviewsPage: React.FC = () => {
                       <h3 className="font-semibold text-gray-900">
                         {review.user?.fullName || "Khách hàng"}
                       </h3>
-                      <p className="text-sm text-gray-600">{review.hotelName}</p>
+                      <p className="text-sm text-gray-600">{review.tourName}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       {Array.from({ length: 5 }).map((_, i) => (
@@ -252,7 +252,7 @@ const RecentReviewsPage: React.FC = () => {
                       try {
                         const result = await toggleReviewLike({
                           userId: currentUserId,
-                          reviewType: "hotel",
+                          reviewType: "tour",
                           reviewId: review.reviewId!,
                         });
                         // Update review like status in list
@@ -285,7 +285,7 @@ const RecentReviewsPage: React.FC = () => {
                   </span>
                 </div>
                 <button
-                  onClick={() => navigate(`/supplier/service/hotel/reviews/${review.reviewId}`)}
+                  onClick={() => navigate(`/supplier/service/tour/reviews/${review.reviewId}`)}
                   className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
                 >
                   Xem chi tiết →

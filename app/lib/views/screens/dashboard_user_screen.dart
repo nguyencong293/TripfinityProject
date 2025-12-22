@@ -3,13 +3,21 @@ import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/controllers/language_controller.dart';
 import 'package:app/services/localization_service.dart';
 import 'package:app/services/points_service.dart';
+import 'package:app/services/hotel_booking_api_service.dart';
+import 'package:app/services/tour_booking_api_service.dart';
+import 'package:app/services/restaurant_booking_api_service.dart';
+import 'package:app/services/attraction_booking_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../routes/app_router.dart';
 import 'package:go_router/go_router.dart';
+import 'confirmed_bookings_screen.dart';
+import 'pending_bookings_screen.dart';
 
 /// Dashboard tài khoản: bám theo theme và hỗ trợ đa ngôn ngữ
 class DashboardUserScreen extends StatefulWidget {
@@ -23,11 +31,113 @@ class _DashboardUserScreenState extends State<DashboardUserScreen> {
   final PointsService _pointsService = PointsService();
   int _totalPoints = 0;
   bool _loadingPoints = true;
+  int _bookedCount = 0;
+  int _processingCount = 0;
+  bool _loadingBookings = true;
 
   @override
   void initState() {
     super.initState();
     _loadUserPoints();
+    _loadBookingCounts();
+  }
+
+  Future<void> _loadBookingCounts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dio = Dio();
+      final userId = prefs.getInt('user_id');
+
+      if (userId == null) {
+        setState(() => _loadingBookings = false);
+        return;
+      }
+
+      int confirmed = 0;
+      int pending = 0;
+
+      final hotelApi = HotelBookingApiService(dio: dio, prefs: prefs);
+      final tourApi = TourBookingApiService(dio: dio, prefs: prefs);
+      final restaurantApi = RestaurantBookingApiService(dio: dio, prefs: prefs);
+      final attractionApi = AttractionBookingApiService(dio: dio, prefs: prefs);
+
+      // Hotel bookings
+      try {
+        final hotelBookings = await hotelApi.getBookingsByUser(userId);
+        for (var b in hotelBookings) {
+          if (b['providerConfirmed'] == 1) {
+            confirmed++;
+          } else if (b['providerConfirmed'] == 0 ||
+              b['providerConfirmed'] == null) {
+            pending++;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error loading hotel bookings: $e');
+      }
+
+      // Tour bookings
+      try {
+        final tourBookings = await tourApi.getBookingsByUser(userId);
+        for (var b in tourBookings) {
+          if (b['providerConfirmed'] == 1) {
+            confirmed++;
+          } else if (b['providerConfirmed'] == 0 ||
+              b['providerConfirmed'] == null) {
+            pending++;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error loading tour bookings: $e');
+      }
+
+      // Restaurant bookings
+      try {
+        final restaurantBookings = await restaurantApi.getBookingsByUser(
+          userId,
+        );
+        for (var b in restaurantBookings) {
+          if (b['providerConfirmed'] == 1) {
+            confirmed++;
+          } else if (b['providerConfirmed'] == 0 ||
+              b['providerConfirmed'] == null) {
+            pending++;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error loading restaurant bookings: $e');
+      }
+
+      // Attraction bookings
+      try {
+        final attractionBookings = await attractionApi.getBookingsByUser(
+          userId,
+        );
+        for (var b in attractionBookings) {
+          if (b['providerConfirmed'] == 1) {
+            confirmed++;
+          } else if (b['providerConfirmed'] == 0 ||
+              b['providerConfirmed'] == null) {
+            pending++;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error loading attraction bookings: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _bookedCount = confirmed;
+          _processingCount = pending;
+          _loadingBookings = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading booking counts: $e');
+      if (mounted) {
+        setState(() => _loadingBookings = false);
+      }
+    }
   }
 
   Future<void> _loadUserPoints() async {
@@ -69,9 +179,6 @@ class _DashboardUserScreenState extends State<DashboardUserScreen> {
         final fullName = user?.fullName;
         final email = user?.email;
 
-        // Load từ API thực tế
-        const bookedCount = 1;
-        const processingCount = 1;
         const notifications = '99+';
 
         return SafeArea(
@@ -90,11 +197,28 @@ class _DashboardUserScreenState extends State<DashboardUserScreen> {
 
                 // Grid các thẻ thống kê
                 _StatsGrid(
-                  booked: bookedCount,
-                  processing: processingCount,
+                  booked: _loadingBookings ? 0 : _bookedCount,
+                  processing: _loadingBookings ? 0 : _processingCount,
                   points: _loadingPoints ? 0 : _totalPoints,
                   notifications: notifications,
                   loadingPoints: _loadingPoints,
+                  loadingBookings: _loadingBookings,
+                  onBookedTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ConfirmedBookingsScreen(),
+                      ),
+                    );
+                  },
+                  onProcessingTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PendingBookingsScreen(),
+                      ),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 12),
@@ -206,6 +330,9 @@ class _StatsGrid extends StatelessWidget {
   final int points;
   final String notifications;
   final bool loadingPoints;
+  final bool loadingBookings;
+  final VoidCallback? onBookedTap;
+  final VoidCallback? onProcessingTap;
 
   const _StatsGrid({
     required this.booked,
@@ -213,6 +340,9 @@ class _StatsGrid extends StatelessWidget {
     required this.points,
     required this.notifications,
     this.loadingPoints = false,
+    this.loadingBookings = false,
+    this.onBookedTap,
+    this.onProcessingTap,
   });
 
   @override
@@ -234,14 +364,16 @@ class _StatsGrid extends StatelessWidget {
         ),
         children: [
           _StatCard(
-            value: '$booked',
+            value: loadingBookings ? '...' : '$booked',
             label: 'account_booked'.tr,
             icon: LucideIcons.checkCircle,
+            onTap: onBookedTap,
           ),
           _StatCard(
-            value: '$processing',
+            value: loadingBookings ? '...' : '$processing',
             label: 'account_processing'.tr,
             icon: LucideIcons.timer,
+            onTap: onProcessingTap,
           ),
           _StatCard(
             value: loadingPoints ? '...' : '$points',

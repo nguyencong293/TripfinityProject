@@ -15,6 +15,7 @@ import 'package:app/services/attraction_api_service.dart';
 import 'package:app/services/favorite_api_service.dart';
 import 'package:app/services/user_interaction_service.dart';
 import 'package:app/views/screens/attraction_booking_checkout_screen.dart';
+import 'package:app/views/screens/detail_attraction_review_user_screen.dart';
 import 'package:app/views/widgets/favorite_button.dart';
 
 // ===== ATTRACTION CONSTANTS (từ Supplier Portal) =====
@@ -147,6 +148,11 @@ class _AttractionsOverviewDetailScreenState
   int? _resolvedId;
   bool _isFavorite = false;
 
+  // Reviews data
+  List<Map<String, dynamic>> _reviews = [];
+  Map<String, dynamic>? _ratingSummaryData;
+  final Set<int> _expandedReviews = {};
+
   // Image slider state (COPY FROM HOTEL)
   final PageController _imageController = PageController();
   int _imageIndex = 0;
@@ -230,8 +236,30 @@ class _AttractionsOverviewDetailScreenState
       debugPrint('🔍 Latitude: ${data['latitude']}');
       debugPrint('🔍 Longitude: ${data['longitude']}');
 
+      // Fetch reviews
+      List<Map<String, dynamic>> reviews = [];
+      try {
+        reviews = await api.getAttractionReviews(_resolvedId!);
+        // Sort by newest first
+        reviews.sort((a, b) {
+          final aDate = a['createdAt'] as String? ?? '';
+          final bDate = b['createdAt'] as String? ?? '';
+          return bDate.compareTo(aDate);
+        });
+      } catch (e) {
+        debugPrint('❌ Error loading attraction reviews: $e');
+      }
+
+      // Fetch rating summary from API
+      Map<String, dynamic>? ratingSummary;
+      try {
+        ratingSummary = await api.getRatingSummary(_resolvedId!);
+      } catch (_) {}
+
       setState(() {
         _detail = data;
+        _reviews = reviews;
+        _ratingSummaryData = ratingSummary;
         _loading = false;
       });
     } catch (e) {
@@ -418,6 +446,35 @@ class _AttractionsOverviewDetailScreenState
                   context,
                   title: 'Vị trí',
                   child: _locationBlock(context, data),
+                ),
+
+                // Rating summary (Thông tin khách du lịch)
+                _sectionWrapper(
+                  context,
+                  title: 'Thông tin khách du lịch',
+                  child: _ratingSummary(context, data),
+                ),
+
+                // Reviews
+                _sectionWrapper(
+                  context,
+                  title: 'Nhận xét từ khách du lịch',
+                  trailing: _reviews.isNotEmpty
+                      ? TextButton(
+                          onPressed: () {
+                            //  Navigate to all reviews screen
+                          },
+                          child: Text(
+                            'Xem tất cả',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          ),
+                        )
+                      : null,
+                  child: _reviewsBlock(context),
                 ),
 
                 const SizedBox(height: 28),
@@ -995,18 +1052,26 @@ class _AttractionsOverviewDetailScreenState
     BuildContext context, {
     required String title,
     required Widget child,
+    Widget? trailing,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: context.bodyOneStyle.copyWith(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: context.bodyOneStyle.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              if (trailing != null) trailing,
+            ],
           ),
           const SizedBox(height: 10),
           child,
@@ -1055,11 +1120,16 @@ class _AttractionsOverviewDetailScreenState
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
-        final filled = rating >= (i + 1) - 0.25;
+        final isFull = rating >= i + 1;
+        final isHalf = !isFull && rating >= i + 0.5;
         return Icon(
-          filled ? Icons.star_rounded : Icons.star_border_rounded,
-          color: context.primaryColor,
-          size: 16,
+          isFull
+              ? Icons.star_rounded
+              : isHalf
+              ? Icons.star_half_rounded
+              : Icons.star_border_rounded,
+          color: const Color(0xFFFFC107),
+          size: 18,
         );
       }),
     );
@@ -1353,6 +1423,344 @@ class _AttractionsOverviewDetailScreenState
         ),
       ),
     );
+  }
+
+  // ===== RATING SUMMARY (như Hotel) =====
+  Widget _ratingSummary(BuildContext context, Map<String, dynamic> d) {
+    // Use rating summary data from API if available
+    final summary = _ratingSummaryData;
+    if (summary == null) {
+      return Text(
+        'Chưa có đánh giá',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
+      );
+    }
+
+    final avgRating = _toDouble(summary['avgRating']) ?? 0.0;
+
+    // Aspects for attraction reviews
+    final avgExperience = _toDouble(summary['avgExperience']) ?? 0.0;
+    final avgValueForMoney = _toDouble(summary['avgValueForMoney']) ?? 0.0;
+    final avgAccessibility = _toDouble(summary['avgAccessibility']) ?? 0.0;
+    final avgFacilities = _toDouble(summary['avgFacilities']) ?? 0.0;
+    final avgStaff = _toDouble(summary['avgStaff']) ?? 0.0;
+
+    final label = avgRating >= 4.5
+        ? 'Xuất sắc'
+        : avgRating >= 4.0
+        ? 'Rất tốt'
+        : avgRating >= 3.5
+        ? 'Tốt'
+        : avgRating >= 2.5
+        ? 'Khá'
+        : 'Trung bình';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left: Overall rating
+            Column(
+              children: [
+                Text(
+                  avgRating.toStringAsFixed(1),
+                  style: context.h5Style.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 32,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: context.bodyTwoStyle.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _starsRow(context, avgRating),
+              ],
+            ),
+            const SizedBox(width: 24),
+            // Right: 5 Aspects for attraction
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAspectRow(context, 'Trải nghiệm', avgExperience),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Giá trị', avgValueForMoney),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Tiếp cận', avgAccessibility),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Tiện nghi', avgFacilities),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Nhân viên', avgStaff),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+              ),
+            ),
+            onPressed: () async {
+              // Navigate to review screen
+              if (_resolvedId != null) {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => _buildReviewScreen()),
+                );
+                // Refresh if review was submitted successfully
+                if (result == true) {
+                  _fetchDetail();
+                }
+              }
+            },
+            icon: const Icon(LucideIcons.pencil),
+            label: Text(
+              'Viết đánh giá',
+              style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewScreen() {
+    final data = _data;
+    return DetailAttractionReviewUserScreen(
+      attractionId: _resolvedId!,
+      attractionName: data['title']?.toString() ?? 'Điểm tham quan',
+      attractionImage: _imageList(data).isNotEmpty
+          ? _imageList(data).first
+          : null,
+    );
+  }
+
+  // Helper: Build aspect row with progress bar
+  Widget _buildAspectRow(BuildContext context, String label, double value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 70,
+          child: Text(
+            label,
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: (value / 5.0).clamp(0.0, 1.0),
+              backgroundColor: context.dividerColor,
+              valueColor: AlwaysStoppedAnimation(_getColorForRating(value)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 24,
+          child: Text(
+            value.toStringAsFixed(1),
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
+            textAlign: TextAlign.end,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper: Get color based on rating value
+  Color _getColorForRating(double rating) {
+    if (rating >= 4.0) {
+      return const Color(0xFF23A455); // Green
+    } else if (rating >= 3.0) {
+      return Colors.orange; // Orange
+    } else {
+      return Colors.red; // Red
+    }
+  }
+
+  // ===== REVIEWS BLOCK =====
+  Widget _reviewsBlock(BuildContext context) {
+    if (_reviews.isEmpty) {
+      return Text(
+        'Chưa có đánh giá',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
+      );
+    }
+
+    // Show only first 3 reviews
+    final visible = _reviews.take(3).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [...visible.map((r) => _reviewItem(context, r))],
+    );
+  }
+
+  Widget _reviewItem(BuildContext context, Map<String, dynamic> r) {
+    final userName = r['userName']?.toString() ?? 'Người dùng';
+    final rating = _toDouble(r['rating']) ?? 5.0;
+    final content = r['content']?.toString() ?? '';
+    final createdAt = r['createdAt']?.toString() ?? '';
+    final date = _formatDate(createdAt);
+    final reviewId = _toInt(r['reviewId']) ?? 0;
+    final isExpanded = _expandedReviews.contains(reviewId);
+
+    // Parse imageUrls (comma-separated string or list)
+    List<String> imageUrls = [];
+    final imageUrlsRaw = r['imageUrls'];
+    if (imageUrlsRaw is String && imageUrlsRaw.isNotEmpty) {
+      imageUrls = imageUrlsRaw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    } else if (imageUrlsRaw is List) {
+      imageUrls = imageUrlsRaw
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: context.primaryColor.withValues(alpha: 0.1),
+                child: Text(
+                  userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                  style: TextStyle(
+                    color: context.primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  userName,
+                  style: context.bodyOneStyle.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                date,
+                style: context.captionStyle.copyWith(
+                  color: context.textSecondaryColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          _starsRow(context, rating),
+          const SizedBox(height: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                content,
+                style: context.bodyTwoStyle.copyWith(height: 1.35),
+                maxLines: isExpanded ? null : 4,
+                overflow: isExpanded
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
+                textAlign: TextAlign.justify,
+              ),
+              if (content.length > 150) ...[
+                // Show button if content is long
+                const SizedBox(height: 4),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (isExpanded) {
+                        _expandedReviews.remove(reviewId);
+                      } else {
+                        _expandedReviews.add(reviewId);
+                      }
+                    });
+                  },
+                  child: Text(
+                    isExpanded ? 'Thu gọn' : 'Xem thêm',
+                    style: context.captionStyle.copyWith(
+                      color: context.primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          // Image gallery (if any)
+          if (imageUrls.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 72,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemBuilder: (_, i) {
+                  final url = imageUrls[i];
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: url.startsWith('http')
+                        ? Image.network(
+                            url,
+                            width: 72,
+                            height: 72,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _imagePlaceholder(context),
+                          )
+                        : Image.asset(url, fit: BoxFit.cover),
+                  );
+                },
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemCount: imageUrls.length,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _imagePlaceholder(BuildContext context) {
+    return Container(
+      width: 72,
+      height: 72,
+      color: context.dividerColor,
+      child: Icon(LucideIcons.image, color: context.textSecondaryColor),
+    );
+  }
+
+  String _formatDate(String createdAt) {
+    if (createdAt.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(createdAt);
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (e) {
+      return '';
+    }
   }
 
   int? _toInt(dynamic v) {

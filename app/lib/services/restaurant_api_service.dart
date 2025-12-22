@@ -109,6 +109,20 @@ class RestaurantApiService {
     throw Exception(msg);
   }
 
+  // Get rating summary for a restaurant
+  Future<Map<String, dynamic>> getRatingSummary(int restaurantId) async {
+    final res = await _dio.get('/restaurants/$restaurantId/rating-summary');
+
+    if (res.statusCode == 200 && res.data is Map<String, dynamic>) {
+      return res.data as Map<String, dynamic>;
+    }
+
+    final msg = (res.data is Map && (res.data as Map)['message'] != null)
+        ? (res.data as Map)['message'].toString()
+        : 'Get rating summary failed with status ${res.statusCode}';
+    throw Exception(msg);
+  }
+
   // Create restaurant review
   Future<Map<String, dynamic>> createRestaurantReview({
     required int restaurantId,

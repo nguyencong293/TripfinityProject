@@ -1,6 +1,8 @@
 package com.vn.tripfinity.backend.service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,12 +16,17 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vn.tripfinity.backend.dto.AttractionDTO;
+import com.vn.tripfinity.backend.dto.AttractionRatingSummaryDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
 import com.vn.tripfinity.backend.model.Area;
 import com.vn.tripfinity.backend.model.Attraction;
+import com.vn.tripfinity.backend.model.AttractionReview;
+import com.vn.tripfinity.backend.model.AttractionReviewAspects;
 import com.vn.tripfinity.backend.model.Provider;
 import com.vn.tripfinity.backend.repository.AreaRepository;
 import com.vn.tripfinity.backend.repository.AttractionRepository;
+import com.vn.tripfinity.backend.repository.AttractionReviewAspectsRepository;
+import com.vn.tripfinity.backend.repository.AttractionReviewRepository;
 import com.vn.tripfinity.backend.repository.ProviderRepository;
 import com.vn.tripfinity.backend.service.cloudinary.CloudinaryService;
 
@@ -33,6 +40,8 @@ import lombok.extern.slf4j.Slf4j;
 public class AttractionService {
 
     private final AttractionRepository attractionRepository;
+    private final AttractionReviewRepository attractionReviewRepository;
+    private final AttractionReviewAspectsRepository attractionReviewAspectsRepository;
     private final ProviderRepository providerRepository;
     private final AreaRepository areaRepository;
     private final NotificationService notificationService;
@@ -464,5 +473,101 @@ public class AttractionService {
 
         log.warn("Ảnh không tồn tại trong Attraction ID: {}", attractionId);
         return toDTO(attraction);
+    }
+
+    // ==================== RATING SUMMARY ====================
+    
+    /**
+     * Tính rating summary cho một attraction (tương tự HotelService)
+     * Thay thế cho việc lưu DB
+     */
+    public AttractionRatingSummaryDTO calculateRatingSummary(Integer attractionId) {
+        log.debug("Tính rating summary cho Attraction ID: {}", attractionId);
+
+        // Lấy tất cả reviews đã approved của attraction
+        List<AttractionReview> reviews = attractionReviewRepository.findByAttractionAndStatus(
+            attractionId, AttractionReview.ReviewStatus.approved);
+
+        AttractionRatingSummaryDTO summary = AttractionRatingSummaryDTO.builder()
+            .attractionId(attractionId)
+            .totalReviews(reviews.size())
+            .build();
+
+        if (reviews.isEmpty()) {
+            // Không có review, trả về giá trị mặc định
+            summary.setAvgRating(BigDecimal.ZERO);
+            summary.setCount1(0);
+            summary.setCount2(0);
+            summary.setCount3(0);
+            summary.setCount4(0);
+            summary.setCount5(0);
+            return summary;
+        }
+
+        // Tính avg rating tổng thể
+        double avgRating = reviews.stream()
+            .mapToInt(AttractionReview::getRating)
+            .average()
+            .orElse(0.0);
+        summary.setAvgRating(BigDecimal.valueOf(avgRating).setScale(2, RoundingMode.HALF_UP));
+
+        // Đếm số lượng từng loại rating
+        summary.setCount1((int) reviews.stream().filter(r -> r.getRating() == 1).count());
+        summary.setCount2((int) reviews.stream().filter(r -> r.getRating() == 2).count());
+        summary.setCount3((int) reviews.stream().filter(r -> r.getRating() == 3).count());
+        summary.setCount4((int) reviews.stream().filter(r -> r.getRating() == 4).count());
+        summary.setCount5((int) reviews.stream().filter(r -> r.getRating() == 5).count());
+
+        // Tính trung bình các aspects
+        List<Integer> reviewIds = reviews.stream()
+            .map(AttractionReview::getReviewId)
+            .collect(Collectors.toList());
+
+        List<AttractionReviewAspects> aspects = attractionReviewAspectsRepository.findAllById(reviewIds);
+
+        if (!aspects.isEmpty()) {
+            // beauty -> avgExperience
+            double avgExperience = aspects.stream()
+                .filter(a -> a.getBeauty() != null)
+                .mapToInt(AttractionReviewAspects::getBeauty)
+                .average()
+                .orElse(0.0);
+            summary.setAvgExperience(BigDecimal.valueOf(avgExperience).setScale(2, RoundingMode.HALF_UP));
+
+            // price -> avgValueForMoney
+            double avgValueForMoney = aspects.stream()
+                .filter(a -> a.getPrice() != null)
+                .mapToInt(AttractionReviewAspects::getPrice)
+                .average()
+                .orElse(0.0);
+            summary.setAvgValueForMoney(BigDecimal.valueOf(avgValueForMoney).setScale(2, RoundingMode.HALF_UP));
+
+            // accessibility -> avgAccessibility
+            double avgAccessibility = aspects.stream()
+                .filter(a -> a.getAccessibility() != null)
+                .mapToInt(AttractionReviewAspects::getAccessibility)
+                .average()
+                .orElse(0.0);
+            summary.setAvgAccessibility(BigDecimal.valueOf(avgAccessibility).setScale(2, RoundingMode.HALF_UP));
+
+            // facilities -> avgFacilities
+            double avgFacilities = aspects.stream()
+                .filter(a -> a.getFacilities() != null)
+                .mapToInt(AttractionReviewAspects::getFacilities)
+                .average()
+                .orElse(0.0);
+            summary.setAvgFacilities(BigDecimal.valueOf(avgFacilities).setScale(2, RoundingMode.HALF_UP));
+
+            // culture -> avgStaff
+            double avgStaff = aspects.stream()
+                .filter(a -> a.getCulture() != null)
+                .mapToInt(AttractionReviewAspects::getCulture)
+                .average()
+                .orElse(0.0);
+            summary.setAvgStaff(BigDecimal.valueOf(avgStaff).setScale(2, RoundingMode.HALF_UP));
+        }
+
+        log.info("✅ Đã tính rating summary cho Attraction ID: {} với {} reviews", attractionId, reviews.size());
+        return summary;
     }
 }

@@ -1,28 +1,30 @@
 package com.vn.tripfinity.backend.dto;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
-import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class TourReviewDTO {
+public class AttractionReviewDTO {
 
     private Integer reviewId;
 
-    @JsonAlias({ "tour_id" })
-    private Integer tourId;
+    private Integer attractionId;
 
     @NotNull(message = "userId không được để trống")
-    @JsonAlias({ "user_id" })
     private Integer userId;
 
     private String userName; // Tên người dùng để hiển thị
@@ -38,18 +40,15 @@ public class TourReviewDTO {
     @NotBlank
     private String content;
 
-    @JsonAlias({ "image_urls" })
     private List<@Size(max = 1024) String> imageUrls;
 
     private Integer likesCount;
     private Integer replyCount;
 
-    // approved | rejected
-    @JsonAlias({ "review_status" })
     private String reviewStatus;
 
     @Valid
-    private TourReviewAspectsDTO aspects;
+    private AttractionReviewAspectsDTO aspects;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -58,35 +57,26 @@ public class TourReviewDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
-    public static class TourReviewAspectsDTO {
-        @JsonAlias({ "guide_quality" })
+    public static class AttractionReviewAspectsDTO {
         @NotNull
         @Min(1)
         @Max(5)
-        private Integer guideQuality;
-
-        @JsonAlias({ "itinerary_quality" })
+        private Integer beauty;
         @NotNull
         @Min(1)
         @Max(5)
-        private Integer itineraryQuality;
-
-        @JsonAlias({ "value_for_money" })
+        private Integer culture;
         @NotNull
         @Min(1)
         @Max(5)
-        private Integer valueForMoney;
-
-        @JsonAlias({ "organization" })
+        private Integer accessibility;
         @NotNull
         @Min(1)
         @Max(5)
-        private Integer organization;
-
-        @JsonAlias({ "safety" })
+        private Integer price;
         @NotNull
         @Min(1)
         @Max(5)
-        private Integer safety;
+        private Integer facilities;
     }
 }

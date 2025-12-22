@@ -39,6 +39,12 @@ import ReviewDetailPage from "../pages/Service/Hotel/ReviewDetailPage";
 import RestaurantAllReviewsPage from "../pages/Service/Restaurant/AllReviewsPage";
 import RestaurantRecentReviewsPage from "../pages/Service/Restaurant/RecentReviewsPage";
 import RestaurantReviewDetailPage from "../pages/Service/Restaurant/ReviewDetailPage";
+import AttractionAllReviewsPage from "../pages/Service/Attraction/AllReviewsPage";
+import AttractionRecentReviewsPage from "../pages/Service/Attraction/RecentReviewsPage";
+import AttractionReviewDetailPage from "../pages/Service/Attraction/ReviewDetailPage";
+import TourAllReviewsPage from "../pages/Service/Tour/AllReviewsPage";
+import TourRecentReviewsPage from "../pages/Service/Tour/RecentReviewsPage";
+import TourReviewDetailPage from "../pages/Service/Tour/ReviewDetailPage";
 import ListRestaurantBookingPage from "../pages/Service/Restaurant/ListRestaurantBookingPage";
 import RestaurantBookingViewPage from "../pages/Service/Restaurant/RestaurantBookingViewPage";
 import ListTourBookingPage from "../pages/Service/Tour/ListTourBookingPage";
@@ -86,14 +92,11 @@ const AppRoutes: React.FC = () => {
             <Route path="service/tour/bookings" element={<ListTourBookingPage />} />
             <Route path="service/tour/bookings/:bookingId" element={<TourBookingViewPage />} />
             <Route path="service/tour/create" element={<TourCreatePage />} />
-            <Route
-              path="service/tour/:tourId/edit"
-              element={<TourEditPage />}
-            />
-            <Route
-              path="service/tour/:tourId/view"
-              element={<TourViewPage />}
-            />
+            <Route path="service/tour/:tourId/edit" element={<TourEditPage />} />
+            <Route path="service/tour/:tourId/view" element={<TourViewPage />} />
+            <Route path="service/tour/all-reviews" element={<TourAllReviewsPage />} />
+            <Route path="service/tour/recent-reviews" element={<TourRecentReviewsPage />} />
+            <Route path="service/tour/reviews/:reviewId" element={<TourReviewDetailPage />} />
             <Route path="service/hotel" element={<DashboardHotelPage />} />
             <Route path="service/hotel/list" element={<ListHotelPage />} />
             <Route path="service/hotel/all-reviews" element={<AllReviewsPage />} />
@@ -138,6 +141,9 @@ const AppRoutes: React.FC = () => {
               path="service/attraction/bookings/:bookingId"
               element={<AttractionBookingViewPage />}
             />
+            <Route path="service/attraction/all-reviews" element={<AttractionAllReviewsPage />} />
+            <Route path="service/attraction/recent-reviews" element={<AttractionRecentReviewsPage />} />
+            <Route path="service/attraction/reviews/:reviewId" element={<AttractionReviewDetailPage />} />
             <Route
               path="service/restaurant"
               element={<DashboardRestaurantPage />}

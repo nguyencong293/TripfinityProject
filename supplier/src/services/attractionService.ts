@@ -192,6 +192,18 @@ export const cancelAttractionBooking = async (
 // ==========================================
 
 /**
+ * Get review by ID
+ */
+export const getAttractionReviewById = async (
+  reviewId: number
+): Promise<AttractionReviewDTO> => {
+  const response = await api.get<AttractionReviewDTO>(
+    `/attraction-reviews/${reviewId}`
+  );
+  return response.data;
+};
+
+/**
  * Get reviews by attraction ID
  */
 export const getAttractionReviewsByAttraction = async (
@@ -215,10 +227,10 @@ export const getAttractionReviewsByAttraction = async (
 export const getAttractionReviewsCountByProvider = async (
   providerId: number
 ): Promise<number> => {
-  const response = await api.get<number>(
+  const response = await api.get<{ totalReviews: number }>(
     `/attraction-reviews/provider/${providerId}/count`
   );
-  return response.data;
+  return response.data.totalReviews;
 };
 
 /**
@@ -228,7 +240,7 @@ export const getAttractionRatingSummaryByAttraction = async (
   attractionId: number
 ): Promise<AttractionRatingSummaryDTO> => {
   const response = await api.get<AttractionRatingSummaryDTO>(
-    `/attraction-reviews/attraction/${attractionId}/summary`
+    `/attractions/${attractionId}/rating-summary`
   );
   return response.data;
 };

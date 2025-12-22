@@ -18,6 +18,7 @@ import {
   XCircle,
   User,
   Phone,
+  Star,
 } from "lucide-react";
 import {
   BarChart,
@@ -37,11 +38,13 @@ import {
   getAttractionReviewsByAttraction,
   getAttractionReviewsCountByProvider,
   getAttractionBookingsByProvider,
+  getAttractionRatingSummaryByAttraction,
 } from "../../../services/attractionService";
 import type {
   AttractionDTO,
   AttractionBookingDTO,
   AttractionReviewDTO,
+  AttractionRatingSummaryDTO,
   UserDTO,
 } from "../../../types";
 import api from "../../../services/api";
@@ -63,6 +66,196 @@ interface BackendNotification {
   category: string;
 }
 
+// Attraction Rating Summary Card Component
+interface AttractionRatingSummaryCardProps {
+  summary: AttractionRatingSummaryDTO;
+  attractionName: string;
+}
+
+const AttractionRatingSummaryCard: React.FC<AttractionRatingSummaryCardProps> = ({
+  summary,
+  attractionName,
+}) => {
+  const getPercentage = (count: number) => {
+    if (summary.totalReviews === 0) return 0;
+    return ((count / summary.totalReviews) * 100).toFixed(1);
+  };
+
+  const getBarColor = (rating: number) => {
+    if (rating === 5) return "bg-green-500";
+    if (rating === 4) return "bg-blue-500";
+    if (rating === 3) return "bg-yellow-500";
+    if (rating === 2) return "bg-orange-500";
+    return "bg-red-500";
+  };
+
+  const ratingDistribution = [
+    { stars: 5, count: summary.count5 },
+    { stars: 4, count: summary.count4 },
+    { stars: 3, count: summary.count3 },
+    { stars: 2, count: summary.count2 },
+    { stars: 1, count: summary.count1 },
+  ];
+
+  const aspects = [
+    { label: "Trải nghiệm", value: summary.avgExperience },
+    { label: "Giá trị", value: summary.avgValueForMoney },
+    { label: "Tiếp cận", value: summary.avgAccessibility },
+    { label: "Tiện nghi", value: summary.avgFacilities },
+    { label: "Nhân viên", value: summary.avgStaff },
+  ];
+
+  return (
+    <div className="rounded-xl border theme-border theme-bg-card p-5">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1">
+          <h4 className="font-semibold text-base mb-1 theme-text-primary">
+            {attractionName}
+          </h4>
+          <p className="text-sm theme-text-secondary">
+            {summary.totalReviews} đánh giá
+          </p>
+        </div>
+
+        <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-green-100">
+          <div className="flex items-center gap-1 mb-1">
+            <Star className="w-5 h-5 text-green-600" />
+            <span className="text-2xl font-bold text-green-600">
+              {summary.avgRating.toFixed(1)}
+            </span>
+          </div>
+          <p className="text-xs text-green-600">Trung bình</p>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <h5 className="text-sm font-semibold mb-3 theme-text-primary">
+          Phân bố đánh giá
+        </h5>
+        <div className="space-y-2">
+          {ratingDistribution.map((item) => (
+            <div key={item.stars} className="flex items-center gap-3">
+              <div className="flex items-center gap-1 w-16">
+                <span className="text-sm font-medium theme-text-primary">
+                  {item.stars}
+                </span>
+                <Star className="w-3.5 h-3.5 icon-primary" />
+              </div>
+
+              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${getBarColor(item.stars)} transition-all`}
+                  style={{ width: `${getPercentage(item.count)}%` }}
+                />
+              </div>
+
+              <div className="w-16 text-right">
+                <span className="text-sm font-medium theme-text-secondary">
+                  {item.count} ({getPercentage(item.count)}%)
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {(summary.avgExperience ||
+        summary.avgValueForMoney ||
+        summary.avgAccessibility ||
+        summary.avgFacilities ||
+        summary.avgStaff) && (
+        <div>
+          <h5 className="text-sm font-semibold mb-3 theme-text-primary">
+            Điểm chi tiết
+          </h5>
+          <div className="grid grid-cols-5 gap-3">
+            {aspects.map((aspect) => (
+              <div key={aspect.label} className="text-center">
+                <p className="text-xs mb-1 theme-text-secondary">
+                  {aspect.label}
+                </p>
+                <p className="text-lg font-bold theme-text-primary">
+                  {aspect.value ? aspect.value.toFixed(1) : "N/A"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Attraction Review Card Component
+interface AttractionReviewCardProps {
+  review: AttractionReviewDTO;
+  attractionName: string;
+  readOnly?: boolean;
+}
+
+const AttractionReviewCard: React.FC<AttractionReviewCardProps> = ({
+  review,
+  attractionName,
+}) => {
+  return (
+    <div className="rounded-xl border theme-border theme-bg-card p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h4 className="font-semibold theme-text-primary">{attractionName}</h4>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-yellow-500">
+              {"⭐".repeat(Math.round(review.rating || 0))}
+            </span>
+            <span className="text-sm theme-text-secondary">
+              {review.rating?.toFixed(1)}
+            </span>
+          </div>
+        </div>
+        <span className="text-sm theme-text-secondary">
+          {review.createdAt
+            ? new Date(review.createdAt).toLocaleDateString("vi-VN")
+            : "N/A"}
+        </span>
+      </div>
+      {review.title && (
+        <h5 className="font-medium theme-text-primary mb-2">{review.title}</h5>
+      )}
+      <p className="text-sm theme-text-secondary mb-3 line-clamp-3">
+        {review.content}
+      </p>
+      {review.aspects && (
+        <div className="flex flex-wrap gap-2 text-xs">
+          {review.aspects.experience !== undefined && (
+            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+              Trải nghiệm: {review.aspects.experience}/5
+            </span>
+          )}
+          {review.aspects.valueForMoney !== undefined && (
+            <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+              Giá trị: {review.aspects.valueForMoney}/5
+            </span>
+          )}
+          {review.aspects.accessibility !== undefined && (
+            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
+              Tiếp cận: {review.aspects.accessibility}/5
+            </span>
+          )}
+          {review.aspects.facilities !== undefined && (
+            <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+              Tiện nghi: {review.aspects.facilities}/5
+            </span>
+          )}
+          {review.aspects.staff !== undefined && (
+            <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded">
+              Nhân viên: {review.aspects.staff}/5
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Main Dashboard
 const DashboardAttractionPage: React.FC = () => {
   const navigate = useNavigate();
@@ -70,6 +263,9 @@ const DashboardAttractionPage: React.FC = () => {
   const [providerId, setProviderId] = useState<number | undefined>();
   const [attractions, setAttractions] = useState<AttractionDTO[]>([]);
   const [bookings, setBookings] = useState<AttractionBookingDTO[]>([]);
+  const [ratingSummaries, setRatingSummaries] = useState<
+    AttractionRatingSummaryDTO[]
+  >([]);
   const [recentReviews, setRecentReviews] = useState<AttractionReviewDTO[]>([]);
   const [totalReviews, setTotalReviews] = useState<number>(0);
   const [userCache, setUserCache] = useState<Map<number, UserDTO>>(new Map());
@@ -257,6 +453,24 @@ const DashboardAttractionPage: React.FC = () => {
         console.log("📊 Loaded attractions:", attrs.length);
         setAttractions(attrs);
 
+        // Fetch rating summaries for all attractions
+        const summaryPromises = attrs.map(async (attraction) => {
+          try {
+            if (!attraction.attractionId) return null;
+            return await getAttractionRatingSummaryByAttraction(attraction.attractionId);
+          } catch (e) {
+            console.error(
+              `Failed to load rating summary for attraction ${attraction.attractionId}:`,
+              e
+            );
+            return null;
+          }
+        });
+        const summaries = (await Promise.all(summaryPromises)).filter(
+          (s) => s !== null
+        ) as AttractionRatingSummaryDTO[];
+        setRatingSummaries(summaries);
+
         // Try to fetch bookings (API not implemented yet)
         try {
           const bks = await getAttractionBookingsByProvider(providerId);
@@ -282,14 +496,26 @@ const DashboardAttractionPage: React.FC = () => {
           setBookings([]);
         }
 
-        // Fetch reviews for the first attraction (if available)
-        const firstAttractionId = attrs[0]?.attractionId;
-        if (firstAttractionId) {
-          const revs = await getAttractionReviewsByAttraction(firstAttractionId);
-          setRecentReviews(revs.slice(0, 2));
-        } else {
-          setRecentReviews([]);
+        // Fetch reviews from all attractions
+        const allReviews: AttractionReviewDTO[] = [];
+        for (const attraction of attrs) {
+          if (attraction.attractionId) {
+            try {
+              const revs = await getAttractionReviewsByAttraction(attraction.attractionId);
+              allReviews.push(...revs);
+            } catch (e) {
+              console.error(`Failed to load reviews for attraction ${attraction.attractionId}:`, e);
+            }
+          }
         }
+        
+        // Sort by newest and take 2 most recent
+        allReviews.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        setRecentReviews(allReviews.slice(0, 2));
 
         // Fetch total reviews count for provider
         const reviewsCount = await getAttractionReviewsCountByProvider(providerId);
@@ -420,16 +646,15 @@ const DashboardAttractionPage: React.FC = () => {
     fetchNotifications();
   }, [t]);
 
-  // Calculate average visit duration
-  const averageVisitDuration = useMemo(() => {
-    const validDurations = attractions
-      .filter((a) => a.averageVisitMinutes && a.averageVisitMinutes > 0)
-      .map((a) => a.averageVisitMinutes!);
-    
-    if (validDurations.length === 0) return 0;
-    
-    const sum = validDurations.reduce((acc, val) => acc + val, 0);
-    return Math.round(sum / validDurations.length);
+  // Derived selections - get 2 most recent attractions (sorted by creation date)
+  const recentAttractions = useMemo(() => {
+    return [...attractions]
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Newest first
+      })
+      .slice(0, 2);
   }, [attractions]);
 
   return (
@@ -528,7 +753,7 @@ const DashboardAttractionPage: React.FC = () => {
             icon={<MessageSquare className="w-6 h-6" />}
             label="Quản lý đánh giá"
             description="Xem và trả lời đánh giá"
-            onClick={() => navigate("/supplier/service/attraction/all-reviews")}
+            onClick={() => navigate("/supplier/services/attraction/reviews/all")}
           />
           <QuickAction
             icon={<BarChart2 className="w-6 h-6" />}
@@ -882,51 +1107,38 @@ const DashboardAttractionPage: React.FC = () => {
         )}
       </div>
 
-      {/* SECTION 7: Thống kê thời gian tham quan */}
+      {/* SECTION 7: Thống kê & đánh giá */}
       <div className="rounded-xl border theme-border theme-bg-card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Clock className="w-5 h-5 icon-brand" />
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Thống kê thời gian tham quan
+            Tổng quan đánh giá
           </h2>
+          <button
+            className="link-brand flex items-center gap-1"
+            onClick={() => navigate("/supplier/services/attraction/reviews/all")}
+          >
+            Xem tất cả <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 rounded-lg theme-bg-secondary">
-            <p className="text-sm theme-text-secondary mb-1">
-              Thời gian trung bình
-            </p>
-            <p className="text-2xl font-bold theme-text-primary">
-              {averageVisitDuration > 0 ? `${averageVisitDuration} phút` : "N/A"}
-            </p>
-          </div>
-          <div className="p-4 rounded-lg theme-bg-secondary">
-            <p className="text-sm theme-text-secondary mb-1">
-              Điểm ngắn nhất
-            </p>
-            <p className="text-2xl font-bold theme-text-primary">
-              {attractions.length > 0
-                ? `${Math.min(
-                    ...attractions
-                      .filter((a) => a.averageVisitMinutes && a.averageVisitMinutes > 0)
-                      .map((a) => a.averageVisitMinutes!)
-                  )} phút`
-                : "N/A"}
-            </p>
-          </div>
-          <div className="p-4 rounded-lg theme-bg-secondary">
-            <p className="text-sm theme-text-secondary mb-1">
-              Điểm dài nhất
-            </p>
-            <p className="text-2xl font-bold theme-text-primary">
-              {attractions.length > 0
-                ? `${Math.max(
-                    ...attractions
-                      .filter((a) => a.averageVisitMinutes && a.averageVisitMinutes > 0)
-                      .map((a) => a.averageVisitMinutes!)
-                  )} phút`
-                : "N/A"}
-            </p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {recentAttractions.length === 0 ? (
+            <div className="col-span-full text-center py-8 theme-text-secondary">
+              <p>Chưa có dữ liệu đánh giá</p>
+            </div>
+          ) : (
+            recentAttractions.map((attraction) => {
+              const summary = ratingSummaries.find(
+                (s) => s.attractionId === attraction.attractionId
+              );
+              return summary ? (
+                <AttractionRatingSummaryCard
+                  key={attraction.attractionId}
+                  summary={summary}
+                  attractionName={attraction.title || "Điểm tham quan"}
+                />
+              ) : null;
+            })
+          )}
         </div>
       </div>
 
@@ -934,7 +1146,7 @@ const DashboardAttractionPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Đánh giá gần đây
+            Nhận xét gần đây
           </h2>
           <button
             className="link-brand flex items-center gap-1"
@@ -955,35 +1167,12 @@ const DashboardAttractionPage: React.FC = () => {
                 (a) => a.attractionId === r.attractionId
               );
               return (
-                <div
+                <AttractionReviewCard
                   key={r.reviewId}
-                  className="rounded-lg border theme-border theme-bg-card p-4"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium theme-text-primary">
-                      {reviewAttraction?.title || "Điểm tham quan"}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-yellow-500">★</span>
-                      <span className="font-medium theme-text-primary">
-                        {r.rating.toFixed(1)}
-                      </span>
-                    </div>
-                  </div>
-                  {r.title && (
-                    <h4 className="font-medium theme-text-primary mb-1">
-                      {r.title}
-                    </h4>
-                  )}
-                  <p className="text-sm theme-text-secondary line-clamp-2">
-                    {r.content}
-                  </p>
-                  <p className="text-xs theme-text-tertiary mt-2">
-                    {r.createdAt
-                      ? new Date(r.createdAt).toLocaleDateString("vi-VN")
-                      : ""}
-                  </p>
-                </div>
+                  review={r}
+                  attractionName={reviewAttraction?.title || "Điểm tham quan"}
+                  readOnly={true}
+                />
               );
             })
           )}

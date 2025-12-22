@@ -11,6 +11,7 @@ import 'package:app/services/tour_api_service.dart';
 import 'package:app/services/favorite_api_service.dart';
 import 'package:app/services/user_interaction_service.dart';
 import 'package:app/views/screens/tour_booking_checkout_screen.dart';
+import 'package:app/views/screens/detail_tour_review_user_screen.dart';
 import 'package:app/views/widgets/favorite_button.dart';
 
 // Dictionaries for tour categories, services, languages (sync with backend)
@@ -131,6 +132,8 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
   String? _error;
   Map<String, dynamic>? _detail;
   List<Map<String, dynamic>> _reviews = [];
+  Map<String, dynamic>? _ratingSummaryData;
+  final Set<int> _expandedReviews = {};
 
   int? _resolvedId;
   bool _isFavorite = false;
@@ -483,6 +486,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     try {
       Map<String, dynamic>? detail;
       List<Map<String, dynamic>> reviews = [];
+      Map<String, dynamic>? ratingSummary;
 
       if (_resolvedId != null) {
         final prefs = await SharedPreferences.getInstance();
@@ -500,11 +504,17 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
         } catch (e) {
           debugPrint('❌ Error loading tour reviews: $e');
         }
+
+        // Fetch rating summary from API
+        try {
+          ratingSummary = await api.getRatingSummary(_resolvedId!);
+        } catch (_) {}
       }
 
       setState(() {
         _detail = detail;
         _reviews = reviews;
+        _ratingSummaryData = ratingSummary;
         _loading = false;
       });
     } catch (e) {
@@ -1464,163 +1474,347 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     );
   }
 
-  // ===== RATING SUMMARY =====
+  // ===== RATING SUMMARY (như Hotel) =====
   Widget _ratingSummary(BuildContext context, Map<String, dynamic> data) {
-    final rating = _parseDouble(data['ratingAverage']) ?? 0.0;
-    final reviewCount = _reviews.length;
+    // Use rating summary data from API if available
+    final summary = _ratingSummaryData;
+    if (summary == null) {
+      return Text(
+        'Chưa có đánh giá',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
+      );
+    }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cardBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.dividerColor.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: context.primaryColor.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    rating.toStringAsFixed(1),
-                    style: context.bodyTwoStyle.copyWith(
-                      color: context.primaryColor,
-                      fontWeight: FontWeight.w700,
-                    ),
+    final avgRating = _parseDouble(summary['avgRating']) ?? 0.0;
+
+    // Aspects for tour reviews
+    final avgGuideQuality = _parseDouble(summary['avgGuideQuality']) ?? 0.0;
+    final avgItineraryQuality =
+        _parseDouble(summary['avgItineraryQuality']) ?? 0.0;
+    final avgValueForMoney = _parseDouble(summary['avgValueForMoney']) ?? 0.0;
+    final avgOrganization = _parseDouble(summary['avgOrganization']) ?? 0.0;
+    final avgSafety = _parseDouble(summary['avgSafety']) ?? 0.0;
+
+    final label = avgRating >= 4.5
+        ? 'Xuất sắc'
+        : avgRating >= 4.0
+        ? 'Rất tốt'
+        : avgRating >= 3.5
+        ? 'Tốt'
+        : avgRating >= 2.5
+        ? 'Khá'
+        : 'Trung bình';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left: Overall rating
+            Column(
+              children: [
+                Text(
+                  avgRating.toStringAsFixed(1),
+                  style: context.h5Style.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 32,
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _starsRow(context, rating),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$reviewCount đánh giá',
-                      style: context.captionStyle.copyWith(
-                        color: context.textSecondaryColor,
-                      ),
-                    ),
-                  ],
+                Text(
+                  label,
+                  style: context.bodyTwoStyle.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                const SizedBox(height: 6),
+                _starsRow(context, avgRating),
+              ],
+            ),
+            const SizedBox(width: 24),
+            // Right: 5 Aspects for tour
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAspectRow(context, 'Hướng dẫn', avgGuideQuality),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Lịch trình', avgItineraryQuality),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Giá trị', avgValueForMoney),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Tổ chức', avgOrganization),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'An toàn', avgSafety),
+                ],
               ),
-            ],
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+              ),
+            ),
+            onPressed: () async {
+              // Navigate to review screen
+              if (_resolvedId != null) {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => _buildReviewScreen()),
+                );
+                // Refresh if review was submitted successfully
+                if (result == true) {
+                  _fetchDetail();
+                }
+              }
+            },
+            icon: const Icon(LucideIcons.pencil),
+            label: Text(
+              'Viết đánh giá',
+              style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
+  }
+
+  Widget _buildReviewScreen() {
+    final d = _data;
+    return DetailTourReviewUserScreen(
+      tourId: _resolvedId!,
+      tourName: d['title']?.toString() ?? 'Tour',
+      tourImage: _imageList(d).isNotEmpty ? _imageList(d).first : null,
+    );
+  }
+
+  // Helper: Build aspect row with progress bar
+  Widget _buildAspectRow(BuildContext context, String label, double value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 70,
+          child: Text(
+            label,
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: (value / 5.0).clamp(0.0, 1.0),
+              backgroundColor: context.dividerColor,
+              valueColor: AlwaysStoppedAnimation(_getColorForRating(value)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 24,
+          child: Text(
+            value.toStringAsFixed(1),
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
+            textAlign: TextAlign.end,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper: Get color based on rating value
+  Color _getColorForRating(double rating) {
+    if (rating >= 4.0) {
+      return const Color(0xFF23A455); // Green
+    } else if (rating >= 3.0) {
+      return Colors.orange; // Orange
+    } else {
+      return Colors.red; // Red
+    }
   }
 
   // ===== REVIEWS BLOCK =====
   Widget _reviewsBlock(BuildContext context) {
     if (_reviews.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: context.cardBackgroundColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.dividerColor),
-        ),
-        child: Center(
-          child: Text(
-            'Chưa có đánh giá',
-            style: context.captionStyle.copyWith(
-              color: context.textSecondaryColor,
-            ),
-          ),
-        ),
+      return Text(
+        'Chưa có đánh giá',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
       );
     }
 
+    // Show only first 3 reviews
     final visible = _reviews.take(3).toList();
-
     return Column(
-      children: visible.map((review) {
-        final rating = _parseDouble(review['rating']) ?? 0.0;
-        final title = review['title']?.toString();
-        final content = review['content']?.toString() ?? '';
-        final createdAt = review['createdAt']?.toString();
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [...visible.map((r) => _reviewItem(context, r))],
+    );
+  }
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: context.cardBackgroundColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: context.dividerColor.withValues(alpha: 0.5),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _reviewItem(BuildContext context, Map<String, dynamic> r) {
+    final userName = r['userName']?.toString() ?? 'Khách du lịch';
+    final rating = _parseDouble(r['rating']) ?? 5.0;
+    final content = r['content']?.toString() ?? '';
+    final createdAt = r['createdAt']?.toString() ?? '';
+    final date = _formatDate(createdAt);
+    final reviewId = _parseInt(r['reviewId']) ?? 0;
+    final isExpanded = _expandedReviews.contains(reviewId);
+
+    // Parse imageUrls (comma-separated string or list)
+    List<String> imageUrls = [];
+    final imageUrlsRaw = r['imageUrls'];
+    if (imageUrlsRaw is String && imageUrlsRaw.isNotEmpty) {
+      imageUrls = imageUrlsRaw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    } else if (imageUrlsRaw is List) {
+      imageUrls = imageUrlsRaw
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: context.primaryColor.withValues(
-                      alpha: 0.1,
-                    ),
-                    child: Icon(
-                      LucideIcons.user,
-                      size: 18,
-                      color: context.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Khách du lịch',
-                          style: context.bodyTwoStyle.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (createdAt != null)
-                          Text(
-                            createdAt,
-                            style: context.captionStyle.copyWith(
-                              color: context.textSecondaryColor,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  _starsRow(context, rating),
-                ],
-              ),
-              if (title != null && title.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: context.bodyTwoStyle.copyWith(
-                    fontWeight: FontWeight.w700,
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: context.primaryColor.withValues(alpha: 0.1),
+                child: Text(
+                  userName.isNotEmpty ? userName[0].toUpperCase() : 'K',
+                  style: TextStyle(
+                    color: context.primaryColor,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ],
-              const SizedBox(height: 8),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  userName,
+                  style: context.bodyOneStyle.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
               Text(
-                content,
-                style: context.captionStyle,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
+                date,
+                style: context.captionStyle.copyWith(
+                  color: context.textSecondaryColor,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
-        );
-      }).toList(),
+          const SizedBox(height: 6),
+          _starsRow(context, rating),
+          const SizedBox(height: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                content,
+                style: context.bodyTwoStyle.copyWith(height: 1.35),
+                maxLines: isExpanded ? null : 4,
+                overflow: isExpanded
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
+                textAlign: TextAlign.justify,
+              ),
+              if (content.length > 150) ...[
+                // Show button if content is long
+                const SizedBox(height: 4),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (isExpanded) {
+                        _expandedReviews.remove(reviewId);
+                      } else {
+                        _expandedReviews.add(reviewId);
+                      }
+                    });
+                  },
+                  child: Text(
+                    isExpanded ? 'Thu gọn' : 'Xem thêm',
+                    style: context.captionStyle.copyWith(
+                      color: context.primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          // Image gallery (if any)
+          if (imageUrls.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 72,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemBuilder: (_, i) {
+                  final url = imageUrls[i];
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: url.startsWith('http')
+                        ? Image.network(
+                            url,
+                            width: 72,
+                            height: 72,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _imagePlaceholder(context),
+                          )
+                        : Image.asset(url, fit: BoxFit.cover),
+                  );
+                },
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemCount: imageUrls.length,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
+  }
+
+  Widget _imagePlaceholder(BuildContext context) {
+    return Container(
+      width: 72,
+      height: 72,
+      color: context.dividerColor,
+      child: Icon(LucideIcons.image, color: context.textSecondaryColor),
+    );
+  }
+
+  String _formatDate(String createdAt) {
+    if (createdAt.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(createdAt);
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  int? _parseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
   }
 
   // ===== STARS ROW =====
@@ -1628,11 +1822,16 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
-        final filled = rating >= i + 1;
+        final isFull = rating >= i + 1;
+        final isHalf = !isFull && rating >= i + 0.5;
         return Icon(
-          filled ? Icons.star : Icons.star_border,
-          size: 16,
-          color: context.primaryColor,
+          isFull
+              ? Icons.star_rounded
+              : isHalf
+              ? Icons.star_half_rounded
+              : Icons.star_border_rounded,
+          color: const Color(0xFFFFC107),
+          size: 18,
         );
       }),
     );

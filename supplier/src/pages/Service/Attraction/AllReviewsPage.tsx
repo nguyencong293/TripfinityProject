@@ -2,16 +2,16 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Star, Filter, Search } from "lucide-react";
 import { getProviderByUserId } from "../../../services/providerService";
-import { getRestaurantsByProvider, getRestaurantRatingSummaryByRestaurant } from "../../../services/restaurantService";
-import type { RestaurantDTO, RestaurantRatingSummaryDTO } from "../../../types";
+import { getAttractionsByProvider, getAttractionRatingSummaryByAttraction } from "../../../services/attractionService";
+import type { AttractionDTO, AttractionRatingSummaryDTO } from "../../../types";
 
-interface RestaurantWithRating extends RestaurantDTO {
-  ratingSummary?: RestaurantRatingSummaryDTO;
+interface AttractionWithRating extends AttractionDTO {
+  ratingSummary?: AttractionRatingSummaryDTO;
 }
 
 const AllReviewsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [restaurants, setRestaurants] = useState<RestaurantWithRating[]>([]);
+  const [attractions, setAttractions] = useState<AttractionWithRating[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"rating" | "reviews">("rating");
@@ -25,24 +25,24 @@ const AllReviewsPage: React.FC = () => {
 
         const provider = await getProviderByUserId(user.userId);
         if (!provider?.providerId) return;
-        const restaurantsData = await getRestaurantsByProvider(provider.providerId);
+        const attractionsData = await getAttractionsByProvider(provider.providerId);
 
-        // Fetch rating summary for each restaurant
-        const restaurantsWithRatings = await Promise.all(
-          restaurantsData.map(async (restaurant) => {
+        // Fetch rating summary for each attraction
+        const attractionsWithRatings = await Promise.all(
+          attractionsData.map(async (attraction) => {
             try {
-              if (!restaurant.restaurantId) return null;
-              const summary = await getRestaurantRatingSummaryByRestaurant(restaurant.restaurantId);
-              return { ...restaurant, ratingSummary: summary };
+              if (!attraction.attractionId) return null;
+              const summary = await getAttractionRatingSummaryByAttraction(attraction.attractionId);
+              return { ...attraction, ratingSummary: summary };
             } catch {
-              return { ...restaurant, ratingSummary: undefined };
+              return { ...attraction, ratingSummary: undefined };
             }
           })
         );
 
-        setRestaurants(restaurantsWithRatings.filter((r): r is RestaurantWithRating => r !== null));
+        setAttractions(attractionsWithRatings.filter((a): a is AttractionWithRating => a !== null));
       } catch (error) {
-        console.error("Error loading restaurants:", error);
+        console.error("Error loading attractions:", error);
       } finally {
         setLoading(false);
       }
@@ -51,9 +51,9 @@ const AllReviewsPage: React.FC = () => {
     loadData();
   }, []);
 
-  const filteredRestaurants = restaurants
-    .filter((restaurant) =>
-      restaurant.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredAttractions = attractions
+    .filter((attraction) =>
+      attraction.title.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
       if (sortBy === "rating") {
@@ -79,10 +79,10 @@ const AllReviewsPage: React.FC = () => {
           Quay lại
         </button>
         <h1 className="text-3xl font-bold text-gray-900">
-          Tất cả đánh giá nhà hàng
+          Tất cả đánh giá điểm tham quan
         </h1>
         <p className="text-gray-600 mt-2">
-          Xem tổng quan đánh giá của các nhà hàng
+          Xem tổng quan đánh giá của các điểm tham quan
         </p>
       </div>
 
@@ -94,7 +94,7 @@ const AllReviewsPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Tìm kiếm nhà hàng..."
+              placeholder="Tìm kiếm điểm tham quan..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -127,7 +127,7 @@ const AllReviewsPage: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nhà hàng
+                  Điểm tham quan
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Vị trí
@@ -144,9 +144,9 @@ const AllReviewsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredRestaurants.map((restaurant) => {
-                const rating = restaurant.ratingSummary?.avgRating || 0;
-                const totalReviews = restaurant.ratingSummary?.totalReviews || 0;
+              {filteredAttractions.map((attraction) => {
+                const rating = attraction.ratingSummary?.avgRating || 0;
+                const totalReviews = attraction.ratingSummary?.totalReviews || 0;
                 const statusColor =
                   rating >= 4.5
                     ? "text-green-600 bg-green-100"
@@ -158,7 +158,7 @@ const AllReviewsPage: React.FC = () => {
 
                 return (
                   <tr
-                    key={restaurant.restaurantId}
+                    key={attraction.attractionId}
                     className="hover:bg-gray-50"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -166,22 +166,22 @@ const AllReviewsPage: React.FC = () => {
                         <div className="flex-shrink-0 h-10 w-10">
                           <img
                             className="h-10 w-10 rounded-lg object-cover"
-                            src={restaurant.thumbnailUrl || "/placeholder.jpg"}
-                            alt={restaurant.title}
+                            src={attraction.thumbnailUrl || "/placeholder.jpg"}
+                            alt={attraction.title}
                           />
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {restaurant.title}
+                            {attraction.title}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {restaurant.cuisinesJson?.[0] || "Nhà hàng"}
+                            {attraction.attractionType || "Điểm tham quan"}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{restaurant.location}</div>
+                      <div className="text-sm text-gray-900">{attraction.location}</div>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center">
@@ -193,7 +193,7 @@ const AllReviewsPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="text-sm font-medium text-gray-900">
-                        {totalReviews} đánh giá
+                        {typeof totalReviews === 'number' ? totalReviews : 0} đánh giá
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -215,9 +215,9 @@ const AllReviewsPage: React.FC = () => {
             </tbody>
           </table>
 
-          {filteredRestaurants.length === 0 && (
+          {filteredAttractions.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-500">Không tìm thấy nhà hàng nào</p>
+              <p className="text-gray-500">Không tìm thấy điểm tham quan nào</p>
             </div>
           )}
         </div>

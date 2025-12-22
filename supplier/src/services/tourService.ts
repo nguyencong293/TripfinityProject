@@ -192,6 +192,18 @@ export const cancelTourBooking = async (
 // ==========================================
 
 /**
+ * Get review by ID
+ */
+export const getTourReviewById = async (
+  reviewId: number
+): Promise<TourReviewDTO> => {
+  const response = await api.get<TourReviewDTO>(
+    `/tour-reviews/${reviewId}`
+  );
+  return response.data;
+};
+
+/**
  * Get reviews by tour ID
  */
 export const getTourReviewsByTour = async (
@@ -215,10 +227,10 @@ export const getTourReviewsByTour = async (
 export const getTourReviewsCountByProvider = async (
   providerId: number
 ): Promise<number> => {
-  const response = await api.get<number>(
+  const response = await api.get<{ totalReviews: number }>(
     `/tour-reviews/provider/${providerId}/count`
   );
-  return response.data;
+  return response.data.totalReviews;
 };
 
 /**

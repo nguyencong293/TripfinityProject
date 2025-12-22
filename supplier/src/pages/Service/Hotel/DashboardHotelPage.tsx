@@ -48,7 +48,6 @@ import {
   HotelCard,
   BookingRow,
   RatingSummaryCard,
-  ReviewCard,
 } from "../../../components/hotel";
 import { useLanguage } from "../../../hooks/useLanguage";
 import ConfirmModal from "../../../components/common/ConfirmModal";
@@ -63,7 +62,75 @@ interface BackendNotification {
   category: string;
 }
 
-// merged into hotelService
+// Hotel Review Card Component
+interface HotelReviewCardProps {
+  review: HotelReviewDTO;
+  hotelName: string;
+  readOnly?: boolean;
+}
+
+const HotelReviewCard: React.FC<HotelReviewCardProps> = ({
+  review,
+  hotelName,
+}) => {
+  return (
+    <div className="rounded-xl border theme-border theme-bg-card p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h4 className="font-semibold theme-text-primary">{hotelName}</h4>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-yellow-500">
+              {"⭐".repeat(Math.round(review.rating || 0))}
+            </span>
+            <span className="text-sm theme-text-secondary">
+              {review.rating?.toFixed(1)}
+            </span>
+          </div>
+        </div>
+        <span className="text-sm theme-text-secondary">
+          {review.createdAt
+            ? new Date(review.createdAt).toLocaleDateString("vi-VN")
+            : "N/A"}
+        </span>
+      </div>
+      {review.title && (
+        <h5 className="font-medium theme-text-primary mb-2">{review.title}</h5>
+      )}
+      <p className="text-sm theme-text-secondary mb-3 line-clamp-3">
+        {review.content}
+      </p>
+      {review.aspects && (
+        <div className="flex flex-wrap gap-2 text-xs">
+          {review.aspects.cleanliness !== undefined && (
+            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+              Sạch sẽ: {review.aspects.cleanliness}/5
+            </span>
+          )}
+          {review.aspects.service !== undefined && (
+            <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+              Dịch vụ: {review.aspects.service}/5
+            </span>
+          )}
+          {review.aspects.comfort !== undefined && (
+            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
+              Thoải mái: {review.aspects.comfort}/5
+            </span>
+          )}
+          {review.aspects.location !== undefined && (
+            <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+              Vị trí: {review.aspects.location}/5
+            </span>
+          )}
+          {review.aspects.facilities !== undefined && (
+            <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded">
+              Tiện nghi: {review.aspects.facilities}/5
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Main Dashboard
 const DashboardHotelPage: React.FC = () => {
@@ -298,23 +365,26 @@ const DashboardHotelPage: React.FC = () => {
         ) as HotelRatingSummaryDTO[];
         setRatingSummaries(summaries);
 
-        // Fetch reviews for the first hotel (if available)
-        const firstHotelId = hs[0]?.hotelId;
-        if (firstHotelId) {
-          // DEBUG: console.log(`📥 Dashboard loading reviews for hotel ${firstHotelId}`);
-          const revs = await getHotelReviewsByHotel(firstHotelId);
-          // DEBUG: console.log(`📤 Dashboard received ${revs.length} reviews`);
-          if (revs.length > 0) {
-            // DEBUG: console.log("🔍 Sample review:", {
-            //   reviewId: revs[0].reviewId,
-            //   likesCount: revs[0].likesCount,
-            //   replyCount: revs[0].replyCount,
-            // });
+        // Fetch reviews from all hotels
+        const allReviews: HotelReviewDTO[] = [];
+        for (const hotel of hs) {
+          if (hotel.hotelId) {
+            try {
+              const revs = await getHotelReviewsByHotel(hotel.hotelId);
+              allReviews.push(...revs);
+            } catch (e) {
+              console.error(`Failed to load reviews for hotel ${hotel.hotelId}:`, e);
+            }
           }
-          setRecentReviews(revs.slice(0, 2));
-        } else {
-          setRecentReviews([]);
         }
+        
+        // Sort by newest and take 2 most recent
+        allReviews.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        setRecentReviews(allReviews.slice(0, 2));
 
         // Fetch total reviews count for provider
         const reviewsCount = await getHotelReviewsCountByProvider(providerId);
@@ -797,7 +867,7 @@ const DashboardHotelPage: React.FC = () => {
           {recentReviews.map((r) => {
             const reviewHotel = hotels.find((h) => h.hotelId === r.hotelId);
             return (
-              <ReviewCard
+              <HotelReviewCard
                 key={r.reviewId}
                 review={r}
                 hotelName={reviewHotel?.title || t("hotel")}

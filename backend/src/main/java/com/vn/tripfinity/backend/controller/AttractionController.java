@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.vn.tripfinity.backend.dto.AttractionDTO;
+import com.vn.tripfinity.backend.dto.AttractionRatingSummaryDTO;
 import com.vn.tripfinity.backend.service.AttractionService;
 
 import jakarta.validation.Valid;
@@ -150,5 +151,17 @@ public class AttractionController {
             log.error("Error deleting image for attraction {}: {}", id, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    // ==================== RATING SUMMARY ENDPOINT ====================
+    
+    @GetMapping("/{attractionId}/rating-summary")
+    public ResponseEntity<AttractionRatingSummaryDTO> getRatingSummary(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Integer attractionId) {
+        requireBearer(authorization);
+        log.info("GET /api/attractions/{}/rating-summary - Getting rating summary", attractionId);
+        AttractionRatingSummaryDTO summary = attractionService.calculateRatingSummary(attractionId);
+        return ResponseEntity.ok(summary);
     }
 }

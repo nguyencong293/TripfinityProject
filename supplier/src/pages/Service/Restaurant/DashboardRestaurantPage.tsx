@@ -196,92 +196,112 @@ const RestaurantRatingSummaryCard: React.FC<RestaurantRatingSummaryCardProps> = 
   summary,
   restaurantName,
 }) => {
+  const getPercentage = (count: number) => {
+    if (summary.totalReviews === 0) return 0;
+    return ((count / summary.totalReviews) * 100).toFixed(1);
+  };
+
+  const getBarColor = (rating: number) => {
+    if (rating === 5) return "bg-green-500";
+    if (rating === 4) return "bg-blue-500";
+    if (rating === 3) return "bg-yellow-500";
+    if (rating === 2) return "bg-orange-500";
+    return "bg-red-500";
+  };
+
+  const ratingDistribution = [
+    { stars: 5, count: summary.count5 },
+    { stars: 4, count: summary.count4 },
+    { stars: 3, count: summary.count3 },
+    { stars: 2, count: summary.count2 },
+    { stars: 1, count: summary.count1 },
+  ];
+
+  const aspects = [
+    { label: "Chất lượng", value: summary.avgQuality },
+    { label: "Dịch vụ", value: summary.avgService },
+    { label: "Giá cả", value: summary.avgPrice },
+    { label: "Vị trí", value: summary.avgLocation },
+    { label: "Không khí", value: summary.avgAmbience },
+  ];
+
   return (
-    <div className="rounded-xl border theme-border theme-bg-card p-4">
-      <h4 className="font-semibold theme-text-primary mb-3">{restaurantName}</h4>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="text-3xl font-bold theme-text-primary">
-          {summary.avgRating?.toFixed(1) || "0.0"}
-        </div>
+    <div className="rounded-xl border theme-border theme-bg-card p-5">
+      <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <div className="text-yellow-500 mb-1">⭐⭐⭐⭐⭐</div>
+          <h4 className="font-semibold text-base mb-1 theme-text-primary">
+            {restaurantName}
+          </h4>
           <p className="text-sm theme-text-secondary">
             {summary.totalReviews || 0} đánh giá
           </p>
         </div>
+
+        <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-green-100">
+          <div className="flex items-center gap-1 mb-1">
+            <span className="text-yellow-500">★</span>
+            <span className="text-2xl font-bold text-green-600">
+              {summary.avgRating?.toFixed(1) || "0.0"}
+            </span>
+          </div>
+          <p className="text-xs text-green-600">Trung bình</p>
+        </div>
       </div>
-      <div className="space-y-2">
-        {summary.avgQuality !== undefined && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-24">Chất lượng:</span>
-            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-orange-500"
-                style={{ width: `${(summary.avgQuality / 5) * 100}%` }}
-              />
+
+      <div className="mb-4">
+        <h5 className="text-sm font-semibold mb-3 theme-text-primary">
+          Phân bố đánh giá
+        </h5>
+        <div className="space-y-2">
+          {ratingDistribution.map((item) => (
+            <div key={item.stars} className="flex items-center gap-3">
+              <div className="flex items-center gap-1 w-16">
+                <span className="text-sm font-medium theme-text-primary">
+                  {item.stars}
+                </span>
+                <span className="text-yellow-500 text-sm">★</span>
+              </div>
+
+              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${getBarColor(item.stars)} transition-all`}
+                  style={{ width: `${getPercentage(item.count)}%` }}
+                />
+              </div>
+
+              <div className="w-16 text-right">
+                <span className="text-sm font-medium theme-text-secondary">
+                  {item.count} ({getPercentage(item.count)}%)
+                </span>
+              </div>
             </div>
-            <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgQuality?.toFixed(1)}
-            </span>
-          </div>
-        )}
-        {summary.avgService !== undefined && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-24">Dịch vụ:</span>
-            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500"
-                style={{ width: `${(summary.avgService / 5) * 100}%` }}
-              />
-            </div>
-            <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgService?.toFixed(1)}
-            </span>
-          </div>
-        )}
-        {summary.avgPrice !== undefined && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-24">Giá cả:</span>
-            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500"
-                style={{ width: `${(summary.avgPrice / 5) * 100}%` }}
-              />
-            </div>
-            <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgPrice?.toFixed(1)}
-            </span>
-          </div>
-        )}
-        {summary.avgLocation !== undefined && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-24">Vị trí:</span>
-            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-purple-500"
-                style={{ width: `${(summary.avgLocation / 5) * 100}%` }}
-              />
-            </div>
-            <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgLocation?.toFixed(1)}
-            </span>
-          </div>
-        )}
-        {summary.avgAmbience !== undefined && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-24">Không khí:</span>
-            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-pink-500"
-                style={{ width: `${(summary.avgAmbience / 5) * 100}%` }}
-              />
-            </div>
-            <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgAmbience?.toFixed(1)}
-            </span>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
+
+      {(summary.avgQuality ||
+        summary.avgService ||
+        summary.avgPrice ||
+        summary.avgLocation ||
+        summary.avgAmbience) && (
+        <div>
+          <h5 className="text-sm font-semibold mb-3 theme-text-primary">
+            Điểm chi tiết
+          </h5>
+          <div className="grid grid-cols-5 gap-3">
+            {aspects.map((aspect) => (
+              <div key={aspect.label} className="text-center">
+                <p className="text-xs mb-1 theme-text-secondary">
+                  {aspect.label}
+                </p>
+                <p className="text-lg font-bold theme-text-primary">
+                  {aspect.value ? aspect.value.toFixed(1) : "N/A"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1039,7 +1059,7 @@ const DashboardRestaurantPage: React.FC = () => {
       {/* SECTION 7: Thống kê & đánh giá */}
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold theme-text-primary mb-4">
+          <h2 className="text-lg font-semibold theme-text-primary">
             Tổng quan đánh giá
           </h2>
           <button
@@ -1059,19 +1079,13 @@ const DashboardRestaurantPage: React.FC = () => {
               const summary = ratingSummaries.find(
                 (s) => s.restaurantId === restaurant.restaurantId
               );
-              console.log(`🔍 Restaurant ${restaurant.restaurantId} (${restaurant.title}):`, summary ? 'Has summary' : 'No summary');
               return summary ? (
                 <RestaurantRatingSummaryCard
                   key={restaurant.restaurantId}
                   summary={summary}
                   restaurantName={restaurant.title || "Nhà hàng"}
                 />
-              ) : (
-                <div key={restaurant.restaurantId} className="rounded-xl border theme-border theme-bg-card p-4">
-                  <h4 className="font-semibold theme-text-primary mb-3">{restaurant.title || "Nhà hàng"}</h4>
-                  <p className="text-sm theme-text-secondary">Chưa có đánh giá nào</p>
-                </div>
-              );
+              ) : null;
             })
           )}
         </div>

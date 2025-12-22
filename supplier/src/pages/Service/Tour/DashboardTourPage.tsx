@@ -20,12 +20,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from "recharts";
-import type { PieLabelRenderProps } from "recharts";
 import {
   getProviderByUserId,
   getUserById,
@@ -62,14 +57,6 @@ interface BackendNotification {
   sent_at: string;
   is_read: boolean;
   category: string;
-}
-
-// PieEntry interface for pie charts
-interface PieEntry {
-  name: string;
-  value: number;
-  color: string;
-  [key: string]: string | number;
 }
 
 // Tour Booking Row Component
@@ -175,92 +162,112 @@ const TourRatingSummaryCard: React.FC<TourRatingSummaryCardProps> = ({
   summary,
   tourName,
 }) => {
+  const getPercentage = (count: number) => {
+    if (summary.totalReviews === 0) return 0;
+    return ((count / summary.totalReviews) * 100).toFixed(1);
+  };
+
+  const getBarColor = (rating: number) => {
+    if (rating === 5) return "bg-green-500";
+    if (rating === 4) return "bg-blue-500";
+    if (rating === 3) return "bg-yellow-500";
+    if (rating === 2) return "bg-orange-500";
+    return "bg-red-500";
+  };
+
+  const ratingDistribution = [
+    { stars: 5, count: summary.count5 },
+    { stars: 4, count: summary.count4 },
+    { stars: 3, count: summary.count3 },
+    { stars: 2, count: summary.count2 },
+    { stars: 1, count: summary.count1 },
+  ];
+
+  const aspects = [
+    { label: "HDV", value: summary.avgGuideQuality },
+    { label: "Lịch trình", value: summary.avgItineraryQuality },
+    { label: "Giá trị", value: summary.avgValueForMoney },
+    { label: "Tổ chức", value: summary.avgOrganization },
+    { label: "An toàn", value: summary.avgSafety },
+  ];
+
   return (
-    <div className="rounded-xl border theme-border theme-bg-card p-4">
-      <h4 className="font-semibold theme-text-primary mb-3">{tourName}</h4>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="text-3xl font-bold theme-text-primary">
-          {summary.avgRating?.toFixed(1) || "0.0"}
-        </div>
+    <div className="rounded-xl border theme-border theme-bg-card p-5">
+      <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <div className="text-yellow-500 mb-1">⭐⭐⭐⭐⭐</div>
+          <h4 className="font-semibold text-base mb-1 theme-text-primary">
+            {tourName}
+          </h4>
           <p className="text-sm theme-text-secondary">
             {summary.totalReviews || 0} đánh giá
           </p>
         </div>
+
+        <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-green-100">
+          <div className="flex items-center gap-1 mb-1">
+            <span className="text-yellow-500">★</span>
+            <span className="text-2xl font-bold text-green-600">
+              {summary.avgRating?.toFixed(1) || "0.0"}
+            </span>
+          </div>
+          <p className="text-xs text-green-600">Trung bình</p>
+        </div>
       </div>
-      <div className="space-y-2">
-        {summary.avgGuideQuality !== undefined && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-28">Hướng dẫn viên:</span>
-            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500"
-                style={{ width: `${(summary.avgGuideQuality / 5) * 100}%` }}
-              />
+
+      <div className="mb-4">
+        <h5 className="text-sm font-semibold mb-3 theme-text-primary">
+          Phân bố đánh giá
+        </h5>
+        <div className="space-y-2">
+          {ratingDistribution.map((item) => (
+            <div key={item.stars} className="flex items-center gap-3">
+              <div className="flex items-center gap-1 w-16">
+                <span className="text-sm font-medium theme-text-primary">
+                  {item.stars}
+                </span>
+                <span className="text-yellow-500 text-sm">★</span>
+              </div>
+
+              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${getBarColor(item.stars)} transition-all`}
+                  style={{ width: `${getPercentage(item.count)}%` }}
+                />
+              </div>
+
+              <div className="w-16 text-right">
+                <span className="text-sm font-medium theme-text-secondary">
+                  {item.count} ({getPercentage(item.count)}%)
+                </span>
+              </div>
             </div>
-            <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgGuideQuality?.toFixed(1)}
-            </span>
-          </div>
-        )}
-        {summary.avgItineraryQuality !== undefined && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-28">Lịch trình:</span>
-            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500"
-                style={{ width: `${(summary.avgItineraryQuality / 5) * 100}%` }}
-              />
-            </div>
-            <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgItineraryQuality?.toFixed(1)}
-            </span>
-          </div>
-        )}
-        {summary.avgValueForMoney !== undefined && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-28">Giá trị:</span>
-            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-orange-500"
-                style={{ width: `${(summary.avgValueForMoney / 5) * 100}%` }}
-              />
-            </div>
-            <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgValueForMoney?.toFixed(1)}
-            </span>
-          </div>
-        )}
-        {summary.avgOrganization !== undefined && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-28">Tổ chức:</span>
-            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-purple-500"
-                style={{ width: `${(summary.avgOrganization / 5) * 100}%` }}
-              />
-            </div>
-            <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgOrganization?.toFixed(1)}
-            </span>
-          </div>
-        )}
-        {summary.avgSafety !== undefined && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm theme-text-secondary w-28">An toàn:</span>
-            <div className="flex-1 h-2 theme-bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-red-500"
-                style={{ width: `${(summary.avgSafety / 5) * 100}%` }}
-              />
-            </div>
-            <span className="text-sm font-medium theme-text-primary w-8">
-              {summary.avgSafety?.toFixed(1)}
-            </span>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
+
+      {(summary.avgGuideQuality ||
+        summary.avgItineraryQuality ||
+        summary.avgValueForMoney ||
+        summary.avgOrganization ||
+        summary.avgSafety) && (
+        <div>
+          <h5 className="text-sm font-semibold mb-3 theme-text-primary">
+            Điểm chi tiết
+          </h5>
+          <div className="grid grid-cols-5 gap-3">
+            {aspects.map((aspect) => (
+              <div key={aspect.label} className="text-center">
+                <p className="text-xs mb-1 theme-text-secondary">
+                  {aspect.label}
+                </p>
+                <p className="text-lg font-bold theme-text-primary">
+                  {aspect.value ? aspect.value.toFixed(1) : "N/A"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -553,40 +560,47 @@ const DashboardTourPage: React.FC = () => {
 
         // TODO: Uncomment when tour review API is ready
         // Fetch rating summaries for each tour
-        // const summaryPromises = toursData.map((t) =>
-        //   t.tourId
-        //     ? getTourRatingSummaryByTour(t.tourId).catch((e) => {
-        //         console.error(
-        //           `Failed to fetch rating for tour ${t.tourId}:`,
-        //           e
-        //         );
-        //         return null;
-        //       })
-        //     : Promise.resolve(null)
-        // );
-        // const summaries = (await Promise.all(summaryPromises)).filter(
-        //   (s) => s !== null
-        // ) as TourRatingSummaryDTO[];
-        // setRatingSummaries(summaries);
-        setRatingSummaries([]);
+        const summaryPromises = toursData.map((t) =>
+          t.tourId
+            ? getTourRatingSummaryByTour(t.tourId).catch((e) => {
+                console.error(
+                  `Failed to fetch rating for tour ${t.tourId}:`,
+                  e
+                );
+                return null;
+              })
+            : Promise.resolve(null)
+        );
+        const summaries = (await Promise.all(summaryPromises)).filter(
+          (s) => s !== null
+        ) as TourRatingSummaryDTO[];
+        setRatingSummaries(summaries);
 
-        // Fetch reviews for the first tour (if available)
-        // const firstTourId = toursData[0]?.tourId;
-        // if (firstTourId) {
-        //   console.log(`📥 Dashboard loading reviews for tour ${firstTourId}`);
-        //   const revs = await getTourReviewsByTour(firstTourId);
-        //   console.log(`📤 Dashboard received ${revs.length} reviews`);
-        //   setRecentReviews(revs.slice(0, 2));
-        // } else {
-        //   setRecentReviews([]);
-        // }
-        setRecentReviews([]);
+        // Fetch reviews from all tours
+        const allReviews: TourReviewDTO[] = [];
+        for (const tour of toursData) {
+          if (tour.tourId) {
+            try {
+              const revs = await getTourReviewsByTour(tour.tourId);
+              allReviews.push(...revs);
+            } catch (e) {
+              console.error(`Failed to load reviews for tour ${tour.tourId}:`, e);
+            }
+          }
+        }
+        
+        // Sort by newest and take 2 most recent
+        allReviews.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        setRecentReviews(allReviews.slice(0, 2));
 
         // Fetch total reviews count for provider
-        // const reviewsCount = await getTourReviewsCountByProvider(providerId);
-        // console.log("📊 Total reviews for provider:", reviewsCount);
-        // setTotalReviews(reviewsCount);
-        setTotalReviews(0);
+        const reviewsCount = await getTourReviewsCountByProvider(providerId);
+        console.log("📊 Total reviews for provider:", reviewsCount);
+        setTotalReviews(reviewsCount);
       } catch (e) {
         console.error("❌ Error loading dashboard data:", e);
       }
@@ -664,79 +678,6 @@ const DashboardTourPage: React.FC = () => {
       });
     }
   }, [bookings, revenueFilter]);
-
-  // Difficulty Distribution Data
-  const difficultyDistributionData = useMemo((): PieEntry[] => {
-    const counts = { easy: 0, moderate: 0, hard: 0 };
-    tours.forEach((tour) => {
-      if (tour.difficultyLevel === "easy") counts.easy++;
-      else if (tour.difficultyLevel === "moderate") counts.moderate++;
-      else if (tour.difficultyLevel === "hard") counts.hard++;
-    });
-
-    return [
-      { name: "Dễ", value: counts.easy, color: "#10b981" },
-      { name: "Trung bình", value: counts.moderate, color: "#f59e0b" },
-      { name: "Khó", value: counts.hard, color: "#ef4444" },
-    ].filter((entry) => entry.value > 0);
-  }, [tours]);
-
-  // Tour Type Breakdown Data
-  const tourTypeBreakdownData = useMemo((): PieEntry[] => {
-    const counts = { group: 0, private: 0, custom: 0 };
-    tours.forEach((tour) => {
-      if (tour.tourType === "group") counts.group++;
-      else if (tour.tourType === "private") counts.private++;
-      else if (tour.tourType === "custom") counts.custom++;
-    });
-
-    return [
-      { name: "Nhóm", value: counts.group, color: "#3b82f6" },
-      { name: "Riêng tư", value: counts.private, color: "#8b5cf6" },
-      { name: "Tùy chỉnh", value: counts.custom, color: "#ec4899" },
-    ].filter((entry) => entry.value > 0);
-  }, [tours]);
-
-  // Categories Distribution Data
-  const categoriesDistributionData = useMemo(() => {
-    const categoryCounts = new Map<string, number>();
-    
-    tours.forEach((tour) => {
-      if (tour.categoriesJson) {
-        let categories: string[] = [];
-        
-        if (typeof tour.categoriesJson === "string") {
-          try {
-            categories = JSON.parse(tour.categoriesJson);
-          } catch {
-            categories = [tour.categoriesJson];
-          }
-        } else if (Array.isArray(tour.categoriesJson)) {
-          categories = tour.categoriesJson;
-        }
-        
-        categories.forEach((cat) => {
-          categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
-        });
-      }
-    });
-
-    const categoryLabels: Record<string, string> = {
-      culture: "Văn hóa",
-      nature: "Thiên nhiên",
-      adventure: "Phiêu lưu",
-      food: "Ẩm thực",
-      beach: "Biển",
-      mountain: "Núi",
-      city: "Thành phố",
-      historical: "Lịch sử",
-    };
-
-    return Array.from(categoryCounts.entries()).map(([category, count]) => ({
-      category: categoryLabels[category] || category,
-      count,
-    }));
-  }, [tours]);
 
   // Fetch notifications from API
   useEffect(() => {
@@ -895,7 +836,7 @@ const DashboardTourPage: React.FC = () => {
             icon={<MessageSquare className="w-6 h-6" />}
             label="Quản lý đánh giá"
             description="Phản hồi khách hàng"
-            onClick={() => navigate("/supplier/service/tour/all-reviews")}
+            onClick={() => navigate("/supplier/services/tour/reviews/all")}
           />
           <QuickAction
             icon={<BarChart2 className="w-6 h-6" />}
@@ -1080,12 +1021,12 @@ const DashboardTourPage: React.FC = () => {
       {/* SECTION 7: Thống kê & đánh giá */}
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold theme-text-primary mb-4">
+          <h2 className="text-lg font-semibold theme-text-primary">
             Tổng quan đánh giá
           </h2>
           <button
             className="link-brand flex items-center gap-1"
-            onClick={() => navigate("/supplier/service/tour/all-reviews")}
+            onClick={() => navigate("/supplier/services/tour/reviews/all")}
           >
             {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
@@ -1143,115 +1084,6 @@ const DashboardTourPage: React.FC = () => {
             );
           })}
         </div>
-      </div>
-
-      {/* SECTION 9: Difficulty Distribution (Tour-Specific) */}
-      <div className="rounded-xl border theme-border theme-bg-card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart2 className="w-5 h-5 icon-brand" />
-          <h2 className="text-lg font-semibold theme-text-primary">
-            Phân bố độ khó
-          </h2>
-        </div>
-        {difficultyDistributionData.length === 0 ? (
-          <div className="text-center py-8 theme-text-secondary">
-            <p>Chưa có dữ liệu</p>
-          </div>
-        ) : (
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={difficultyDistributionData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(props: PieLabelRenderProps) => {
-                    const { name, percent } = props as PieLabelRenderProps & { name: string; percent: number };
-                    return `${name}: ${(percent * 100).toFixed(0)}%`;
-                  }}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {difficultyDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-      {/* SECTION 10: Tour Type Breakdown (Tour-Specific) */}
-      <div className="rounded-xl border theme-border theme-bg-card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart2 className="w-5 h-5 icon-brand" />
-          <h2 className="text-lg font-semibold theme-text-primary">
-            Phân loại tour
-          </h2>
-        </div>
-        {tourTypeBreakdownData.length === 0 ? (
-          <div className="text-center py-8 theme-text-secondary">
-            <p>Chưa có dữ liệu</p>
-          </div>
-        ) : (
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={tourTypeBreakdownData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(props: PieLabelRenderProps) => {
-                    const { name, percent } = props as PieLabelRenderProps & { name: string; percent: number };
-                    return `${name}: ${(percent * 100).toFixed(0)}%`;
-                  }}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {tourTypeBreakdownData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-      {/* SECTION 11: Categories Distribution (Tour-Specific) */}
-      <div className="rounded-xl border theme-border theme-bg-card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart2 className="w-5 h-5 icon-brand" />
-          <h2 className="text-lg font-semibold theme-text-primary">
-            Phân loại danh mục
-          </h2>
-        </div>
-        {categoriesDistributionData.length === 0 ? (
-          <div className="text-center py-8 theme-text-secondary">
-            <p>Chưa có dữ liệu</p>
-          </div>
-        ) : (
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={categoriesDistributionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#8b5cf6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
       </div>
 
       {/* Confirm Modal */}

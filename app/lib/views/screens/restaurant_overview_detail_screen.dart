@@ -399,7 +399,35 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 // Reviews
                 _sectionWrapper(
                   context,
-                  title: 'Đánh giá',
+                  title: 'Nhận xét từ khách hàng',
+                  trailing: _reviews.isNotEmpty
+                      ? TextButton(
+                          onPressed: () {
+                            if (_resolvedId != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      RestaurantReviewsListScreen(
+                                        restaurantId: _resolvedId!,
+                                        restaurantName:
+                                            data['title']?.toString() ??
+                                            'Nhà hàng',
+                                      ),
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(
+                            'Xem tất cả',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          ),
+                        )
+                      : null,
                   child: _reviewsBlock(context),
                 ),
 
@@ -510,60 +538,11 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         });
       } catch (_) {}
 
-      // Calculate rating summary from reviews
+      // Fetch rating summary from API
       Map<String, dynamic>? ratingSummary;
-      if (reviews.isNotEmpty) {
-        int total = reviews.length;
-        double avgRating = 0;
-        Map<int, int> ratingCounts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-
-        double totalQuality = 0,
-            totalService = 0,
-            totalPrice = 0,
-            totalLocation = 0,
-            totalAmbience = 0;
-        int aspectCount = 0;
-
-        for (var review in reviews) {
-          final rating = (review['rating'] as num?)?.toInt() ?? 0;
-          if (rating >= 1 && rating <= 5) {
-            avgRating += rating;
-            ratingCounts[rating] = (ratingCounts[rating] ?? 0) + 1;
-          }
-
-          // Calculate aspect averages
-          final aspects = review['aspects'] as Map<String, dynamic>?;
-          if (aspects != null) {
-            totalQuality += (aspects['quality'] as num?)?.toDouble() ?? 0;
-            totalService += (aspects['service'] as num?)?.toDouble() ?? 0;
-            totalPrice += (aspects['price'] as num?)?.toDouble() ?? 0;
-            totalLocation += (aspects['location'] as num?)?.toDouble() ?? 0;
-            totalAmbience += (aspects['ambience'] as num?)?.toDouble() ?? 0;
-            aspectCount++;
-          }
-        }
-
-        ratingSummary = {
-          'averageRating': total > 0
-              ? (avgRating / total).toStringAsFixed(1)
-              : '0.0',
-          'totalReviews': total,
-          'rating5Count': ratingCounts[5],
-          'rating4Count': ratingCounts[4],
-          'rating3Count': ratingCounts[3],
-          'rating2Count': ratingCounts[2],
-          'rating1Count': ratingCounts[1],
-          'averageQuality': aspectCount > 0 ? totalQuality / aspectCount : 0.0,
-          'averageService': aspectCount > 0 ? totalService / aspectCount : 0.0,
-          'averagePrice': aspectCount > 0 ? totalPrice / aspectCount : 0.0,
-          'averageLocation': aspectCount > 0
-              ? totalLocation / aspectCount
-              : 0.0,
-          'averageAmbience': aspectCount > 0
-              ? totalAmbience / aspectCount
-              : 0.0,
-        };
-      }
+      try {
+        ratingSummary = await api.getRatingSummary(_resolvedId!);
+      } catch (_) {}
 
       setState(() {
         _detail = detail;
@@ -1108,158 +1087,191 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   }
 
   Widget _ratingSummary(BuildContext context, Map<String, dynamic> data) {
-    if (_ratingSummaryData == null) {
-      return Text('Chưa có đánh giá', style: context.bodyOneStyle);
+    // Use rating summary data from API if available
+    final summary = _ratingSummaryData;
+    if (summary == null) {
+      return Text(
+        'Chưa có đánh giá',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
+      );
     }
 
-    final summary = _ratingSummaryData!;
-    final avgRating = summary['averageRating']?.toString() ?? '0.0';
-    final totalReviews = summary['totalReviews']?.toString() ?? '0';
+    final avgRating = _toDouble(summary['avgRating']) ?? 0.0;
+
+    // Aspects for restaurant reviews
+    final avgQuality = _toDouble(summary['avgQuality']) ?? 0.0;
+    final avgService = _toDouble(summary['avgService']) ?? 0.0;
+    final avgPrice = _toDouble(summary['avgPrice']) ?? 0.0;
+    final avgLocation = _toDouble(summary['avgLocation']) ?? 0.0;
+    final avgAmbience = _toDouble(summary['avgAmbience']) ?? 0.0;
+
+    final label = avgRating >= 4.5
+        ? 'Xuất sắc'
+        : avgRating >= 4.0
+        ? 'Rất tốt'
+        : avgRating >= 3.5
+        ? 'Tốt'
+        : avgRating >= 2.5
+        ? 'Khá'
+        : 'Trung bình';
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Left: Overall rating
             Column(
               children: [
                 Text(
-                  avgRating,
-                  style: context.h2Style.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: context.primaryColor,
+                  avgRating.toStringAsFixed(1),
+                  style: context.h5Style.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 32,
                   ),
-                ),
-                Row(
-                  children: List.generate(5, (i) {
-                    final ratingNum = double.tryParse(avgRating) ?? 0.0;
-                    final isFilled = ratingNum >= i + 1;
-                    return Icon(
-                      isFilled ? Icons.star_rounded : Icons.star_border_rounded,
-                      size: 16,
-                      color: context.primaryColor,
-                    );
-                  }),
                 ),
                 Text(
-                  '$totalReviews đánh giá',
-                  style: context.captionStyle.copyWith(
-                    color: context.textSecondaryColor,
+                  label,
+                  style: context.bodyTwoStyle.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+                const SizedBox(height: 6),
+                _starsRow(context, avgRating),
               ],
             ),
             const SizedBox(width: 24),
+            // Right: 5 Aspects for restaurant
             Expanded(
               child: Column(
-                children: List.generate(5, (i) {
-                  final star = 5 - i;
-                  final count = summary['rating${star}Count'] ?? 0;
-                  final total = int.tryParse(totalReviews) ?? 1;
-                  final percent = (count / total * 100).toInt();
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      children: [
-                        Text('$star', style: context.captionStyle),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.star_rounded,
-                          size: 12,
-                          color: context.primaryColor,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: LinearProgressIndicator(
-                            value: percent / 100,
-                            backgroundColor: context.dividerColor,
-                            valueColor: AlwaysStoppedAnimation(
-                              _getColorForRating(star.toDouble()),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text('$percent%', style: context.captionStyle),
-                      ],
-                    ),
-                  );
-                }),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAspectRow(context, 'Chất lượng', avgQuality),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Dịch vụ', avgService),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Giá cả', avgPrice),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Vị trí', avgLocation),
+                  const SizedBox(height: 6),
+                  _buildAspectRow(context, 'Không khí', avgAmbience),
+                ],
               ),
             ),
           ],
         ),
 
-        // Restaurant aspect ratings
-        const SizedBox(height: 24),
-        _buildAspectRatings(context, summary),
+        const SizedBox(height: 12),
+
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+              ),
+            ),
+            onPressed: () async {
+              // Navigate to review screen
+              if (_resolvedId != null) {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => _buildReviewScreen()),
+                );
+                // Refresh if review was submitted successfully
+                if (result == true) {
+                  _fetchDetail();
+                }
+              }
+            },
+            icon: const Icon(LucideIcons.pencil),
+            label: Text(
+              'Viết đánh giá',
+              style: context.bodyOneStyle.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildAspectRatings(
-    BuildContext context,
-    Map<String, dynamic> summary,
-  ) {
-    // Get aspect averages from summary
-    final quality = (summary['averageQuality'] ?? 0.0).toDouble();
-    final service = (summary['averageService'] ?? 0.0).toDouble();
-    final price = (summary['averagePrice'] ?? 0.0).toDouble();
-    final location = (summary['averageLocation'] ?? 0.0).toDouble();
-    final ambience = (summary['averageAmbience'] ?? 0.0).toDouble();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _aspectRatingRow(context, 'Chất lượng', quality),
-        const SizedBox(height: 8),
-        _aspectRatingRow(context, 'Dịch vụ', service),
-        const SizedBox(height: 8),
-        _aspectRatingRow(context, 'Giá cả', price),
-        const SizedBox(height: 8),
-        _aspectRatingRow(context, 'Vị trí', location),
-        const SizedBox(height: 8),
-        _aspectRatingRow(context, 'Không khí', ambience),
-      ],
+  Widget _buildReviewScreen() {
+    final data = _data;
+    return DetailRestaurantReviewUserScreen(
+      restaurantId: _resolvedId!,
+      restaurantName: data['title']?.toString() ?? 'Nhà hàng',
+      restaurantLocation:
+          data['address']?.toString() ?? data['location']?.toString() ?? '',
+      restaurantImage: _imageList(data).isNotEmpty
+          ? _imageList(data).first
+          : 'assets/images/onboarding1.png',
     );
   }
 
-  Widget _aspectRatingRow(BuildContext context, String label, double rating) {
+  // Helper: Build aspect row with progress bar
+  Widget _buildAspectRow(BuildContext context, String label, double value) {
     return Row(
       children: [
         SizedBox(
-          width: 90,
+          width: 70,
           child: Text(
             label,
-            style: context.bodyTwoStyle.copyWith(
-              color: context.textSecondaryColor,
-            ),
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: rating / 5.0,
-              backgroundColor: context.dividerColor,
-              valueColor: AlwaysStoppedAnimation(_getColorForRating(rating)),
               minHeight: 8,
+              value: (value / 5.0).clamp(0.0, 1.0),
+              backgroundColor: context.dividerColor,
+              valueColor: AlwaysStoppedAnimation(_getColorForRating(value)),
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         SizedBox(
-          width: 30,
+          width: 24,
           child: Text(
-            rating.toStringAsFixed(1),
-            style: context.bodyTwoStyle.copyWith(
-              color: context.textPrimaryColor,
-              fontWeight: FontWeight.w600,
-            ),
+            value.toStringAsFixed(1),
+            style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
             textAlign: TextAlign.end,
           ),
         ),
       ],
     );
+  }
+
+  // Helper: Stars row
+  Widget _starsRow(BuildContext context, double rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final isFull = rating >= i + 1;
+        final isHalf = !isFull && rating >= i + 0.5;
+        return Icon(
+          isFull
+              ? Icons.star_rounded
+              : isHalf
+              ? Icons.star_half_rounded
+              : Icons.star_border_rounded,
+          color: const Color(0xFFFFC107),
+          size: 18,
+        );
+      }),
+    );
+  }
+
+  // Helper: Parse double from any type
+  double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
   }
 
   // Helper: Get color based on rating value
@@ -1275,106 +1287,17 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
   Widget _reviewsBlock(BuildContext context) {
     if (_reviews.isEmpty) {
-      return Column(
-        children: [
-          Text('Chưa có đánh giá', style: context.bodyOneStyle),
-          const SizedBox(height: 12),
-          ElevatedButton.icon(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DetailRestaurantReviewUserScreen(
-                    restaurantId: _resolvedId!,
-                    restaurantName: _data['title']?.toString() ?? 'Restaurant',
-                    restaurantLocation: _data['location']?.toString() ?? '',
-                    restaurantImage: _imageList(_data).isNotEmpty
-                        ? _imageList(_data).first
-                        : '',
-                  ),
-                ),
-              );
-              if (result == true) {
-                _fetchDetail();
-              }
-            },
-            icon: const Icon(LucideIcons.edit, size: 18),
-            label: const Text('Viết đánh giá đầu tiên'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.primaryColor,
-              foregroundColor: context.buttonTextColor,
-            ),
-          ),
-        ],
+      return Text(
+        'Chưa có đánh giá',
+        style: context.captionStyle.copyWith(color: context.textSecondaryColor),
       );
     }
 
     // Show only first 3 reviews
     final visible = _reviews.take(3).toList();
-
     return Column(
-      children: [
-        ...visible.map((r) => _reviewItem(context, r)),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => RestaurantReviewsListScreen(
-                        restaurantId: _resolvedId!,
-                        restaurantName:
-                            _data['title']?.toString() ?? 'Restaurant',
-                      ),
-                    ),
-                  );
-                  if (result == true) {
-                    _fetchDetail();
-                  }
-                },
-                icon: const Icon(LucideIcons.eye, size: 18),
-                label: Text('Xem tất cả (${_reviews.length})'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: context.primaryColor,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => DetailRestaurantReviewUserScreen(
-                        restaurantId: _resolvedId!,
-                        restaurantName:
-                            _data['title']?.toString() ?? 'Restaurant',
-                        restaurantLocation: _data['location']?.toString() ?? '',
-                        restaurantImage: _imageList(_data).isNotEmpty
-                            ? _imageList(_data).first
-                            : '',
-                      ),
-                    ),
-                  );
-                  if (result == true) {
-                    _fetchDetail();
-                  }
-                },
-                icon: const Icon(LucideIcons.edit, size: 18),
-                label: const Text('Viết đánh giá'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: context.primaryColor,
-                  foregroundColor: context.buttonTextColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [...visible.map((r) => _reviewItem(context, r))],
     );
   }
 

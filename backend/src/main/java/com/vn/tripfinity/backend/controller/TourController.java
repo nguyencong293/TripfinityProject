@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.vn.tripfinity.backend.dto.TourDTO;
+import com.vn.tripfinity.backend.dto.TourRatingSummaryDTO;
 import com.vn.tripfinity.backend.dto.TourReviewDTO;
 import com.vn.tripfinity.backend.dto.TourReviewReplyDTO;
 import com.vn.tripfinity.backend.exception.ResourceNotFoundException;
@@ -208,5 +209,16 @@ public class TourController {
             @PathVariable Integer reviewId) {
         requireBearer(authorization);
         return ResponseEntity.ok(tourService.getTourReviewReplies(reviewId));
+    }
+
+    // ==================== RATING SUMMARY ENDPOINT ====================
+    @GetMapping("/{tourId}/rating-summary")
+    public ResponseEntity<TourRatingSummaryDTO> getRatingSummary(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Integer tourId) {
+        requireBearer(authorization);
+        log.info("GET /api/tours/{}/rating-summary - Getting rating summary", tourId);
+        TourRatingSummaryDTO summary = tourService.calculateRatingSummary(tourId);
+        return ResponseEntity.ok(summary);
     }
 }

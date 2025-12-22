@@ -132,12 +132,14 @@ class _ChatWithProviderScreenState extends State<ChatWithProviderScreen> {
       _scrollToBottom();
     } catch (e) {
       debugPrint('❌ Error sending message: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Không thể gửi tin nhắn. Vui lòng thử lại.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể gửi tin nhắn. Vui lòng thử lại.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       setState(() => _isSending = false);
     }
@@ -248,9 +250,11 @@ class _ChatWithProviderScreenState extends State<ChatWithProviderScreen> {
       if (e.code == 'camera_access_denied') {
         errorMessage = 'Quyền truy cập camera bị từ chối.';
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -271,9 +275,11 @@ class _ChatWithProviderScreenState extends State<ChatWithProviderScreen> {
       if (e.code == 'photo_access_denied') {
         errorMessage = 'Quyền truy cập thư viện ảnh bị từ chối.';
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -308,7 +314,7 @@ class _ChatWithProviderScreenState extends State<ChatWithProviderScreen> {
           // Avatar
           CircleAvatar(
             radius: 18,
-            backgroundColor: context.primaryColor.withOpacity(0.1),
+            backgroundColor: context.primaryColor.withValues(alpha: 0.1),
             backgroundImage: conversation?.providerLogo != null
                 ? NetworkImage(conversation!.providerLogo!)
                 : (widget.providerLogo != null
@@ -497,7 +503,7 @@ class _ChatWithProviderScreenState extends State<ChatWithProviderScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 5,
                     offset: const Offset(0, 2),
                   ),
@@ -622,7 +628,7 @@ class _ChatWithProviderScreenState extends State<ChatWithProviderScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: context.primaryColor.withOpacity(0.1),
+              color: context.primaryColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -664,7 +670,7 @@ class _ChatWithProviderScreenState extends State<ChatWithProviderScreen> {
         color: context.cardBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),

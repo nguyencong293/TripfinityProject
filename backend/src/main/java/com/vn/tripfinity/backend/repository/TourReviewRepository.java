@@ -1,12 +1,13 @@
 package com.vn.tripfinity.backend.repository;
 
-import com.vn.tripfinity.backend.model.TourReview;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import com.vn.tripfinity.backend.model.TourReview;
 
 @Repository
 public interface TourReviewRepository extends JpaRepository<TourReview, Integer> {
@@ -16,6 +17,9 @@ public interface TourReviewRepository extends JpaRepository<TourReview, Integer>
     @Query("SELECT r FROM TourReview r WHERE r.tour.tourId = :tourId AND r.reviewStatus = :status ORDER BY r.createdAt DESC")
     List<TourReview> findByTourAndStatus(@Param("tourId") Integer tourId,
             @Param("status") TourReview.ReviewStatus status);
+
+    @Query("SELECT COUNT(r) FROM TourReview r WHERE r.tour.provider.providerId = :providerId")
+    Long countByTour_Provider_ProviderId(@Param("providerId") Integer providerId);
 
     /**
      * Tính trung bình rating của tour (chỉ tính reviews đã approved)
