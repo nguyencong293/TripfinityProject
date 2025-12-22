@@ -47,6 +47,9 @@ import ListAttractionBookingPage from "../pages/Service/Attraction/ListAttractio
 import AttractionBookingViewPage from "../pages/Service/Attraction/AttractionBookingViewPage";
 import NotificationListPage from "../pages/NotificationListPage";
 import MessagesPage from "../pages/Messages/MessagesPage";
+import BlogsPage from "../pages/Blog/BlogsPage";
+import CreateBlogPage from "../pages/Blog/CreateBlogPage";
+import EditBlogPage from "../pages/Blog/EditBlogPage";
 import ScrollToTop from "../components/ScrollToTop";
 
 const AppRoutes: React.FC = () => {
@@ -175,6 +178,10 @@ const AppRoutes: React.FC = () => {
               path="service/restaurant/bookings/:bookingId"
               element={<RestaurantBookingViewPage />}
             />
+            {/* Blog Routes */}
+            <Route path="blogs" element={<BlogsPage />} />
+            <Route path="blogs/create" element={<CreateBlogPage />} />
+            <Route path="blogs/edit/:blogId" element={<EditBlogPage />} />
           </Route>
         </Route>
 

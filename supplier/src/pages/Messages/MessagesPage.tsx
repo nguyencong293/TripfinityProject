@@ -545,7 +545,8 @@ const MessagesPage: React.FC = () => {
                               <img
                                 src={message.imageUrl}
                                 alt=""
-                                className="max-w-full rounded-lg mb-2"
+                                className="max-w-[200px] max-h-[200px] rounded-lg mb-2 cursor-pointer hover:opacity-90 transition-opacity object-cover"
+                                onClick={() => window.open(message.imageUrl, '_blank')}
                               />
                             )}
                             <p className="text-sm whitespace-pre-wrap">{message.content}</p>

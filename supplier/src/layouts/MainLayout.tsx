@@ -23,11 +23,14 @@ import {
   Utensils,
   Building2,
   Route,
+  FileText,
 } from "lucide-react";
 import type { LoginResponse } from "../types";
 import { logoutSupplier } from "../services/supplierAuthService";
 import { useTheme } from "../hooks/useTheme";
 import { useLanguage } from "../hooks/useLanguage";
+import { getUnreadConversationsCount } from "../services/chatService";
+import { getProviderByUserId } from "../services/providerService";
 
 // Navigation menu items with badges
 const sidebarMenuItems = [
@@ -68,6 +71,12 @@ const sidebarMenuItems = [
     badge: "unreadMessages",
   },
   {
+    icon: FileText,
+    label: "blogs",
+    to: "/supplier/blogs",
+    badge: null,
+  },
+  {
     icon: Settings,
     label: "settings",
     to: "/supplier/settings",
@@ -81,14 +90,14 @@ const sidebarMenuItems = [
   },
 ];
 
-// Mock badge data - this would come from your state management/API
-const mockBadgeData = {
-  totalPublishedListings: 24,
-  pendingBookings: 5,
-  unreadMessages: 3,
-  newReviews: 2,
-  openTickets: 1,
-};
+// Badge data type
+interface BadgeData {
+  totalPublishedListings: number;
+  pendingBookings: number;
+  unreadMessages: number;
+  newReviews: number;
+  openTickets: number;
+}
 
 const SidebarMenuItem = ({
   icon: Icon,
@@ -211,6 +220,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     is_read: boolean;
   }>>([]);
   const notificationRef = useRef<HTMLDivElement>(null);
+  
+  // Badge data state - real data from API
+  const [badgeData, setBadgeData] = useState<BadgeData>({
+    totalPublishedListings: 0,
+    pendingBookings: 0,
+    unreadMessages: 0,
+    newReviews: 0,
+    openTickets: 0,
+  });
 
   // Save sidebar collapsed state to localStorage
   useEffect(() => {
@@ -287,6 +305,36 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     fetchNotifications();
     // Refresh every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [authUser]);
+
+  // Fetch unread messages count for sidebar badge
+  useEffect(() => {
+    const fetchUnreadMessages = async () => {
+      if (!authUser?.userId) return;
+
+      try {
+        // Get provider by userId
+        const provider = await getProviderByUserId(authUser.userId);
+        if (provider?.providerId) {
+          // Get unread conversations count for provider
+          const unreadMessages = await getUnreadConversationsCount(
+            provider.providerId,
+            "provider"
+          );
+          setBadgeData((prev) => ({
+            ...prev,
+            unreadMessages: unreadMessages,
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch unread messages:", error);
+      }
+    };
+
+    fetchUnreadMessages();
+    // Refresh every 15 seconds
+    const interval = setInterval(fetchUnreadMessages, 15000);
     return () => clearInterval(interval);
   }, [authUser]);
 
@@ -589,7 +637,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   badge={item.badge}
                   badgeCount={
                     item.badge
-                      ? mockBadgeData[item.badge as keyof typeof mockBadgeData]
+                      ? badgeData[item.badge as keyof typeof badgeData]
                       : undefined
                   }
                   isDropdown={item.isDropdown}

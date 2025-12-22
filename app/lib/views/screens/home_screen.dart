@@ -5,6 +5,7 @@ import 'package:app/services/notification_api_service.dart';
 import 'package:app/services/favorite_api_service.dart';
 import 'package:app/services/recommendation_service.dart';
 import 'package:app/services/search_history_service.dart';
+import 'package:app/services/blog_api_service.dart';
 import 'package:app/views/screens/attractions_overview_search_screen.dart';
 import 'package:app/views/screens/attractions_overview_detail_screen.dart';
 import 'package:app/views/screens/general_search_screen.dart';
@@ -17,6 +18,8 @@ import 'package:app/views/screens/tour_service_overview_search_screen.dart';
 import 'package:app/views/screens/tour_service_detail_overview_screen.dart';
 import 'package:app/views/screens/trip_user_screen.dart';
 import 'package:app/views/screens/chat_help_bot_screen.dart';
+import 'package:app/views/screens/blogs_screen.dart';
+import 'package:app/views/screens/blog_detail_screen.dart';
 import 'package:app/views/widgets/article_banner_card.dart';
 import 'package:app/views/widgets/bottom_nav.dart';
 import 'package:app/views/widgets/home_service_item.dart';
@@ -153,6 +156,7 @@ class _HomeContentState extends State<_HomeContent> {
   late final Future<List<AreaPreviewItem>> _areasFuture;
   late final Future<List<HomeServiceItem>> _recommendationsFuture;
   late final Future<List<Map<String, dynamic>>> _recentViewedFuture;
+  late final Future<Map<String, dynamic>?> _latestBlogFuture;
 
   @override
   void initState() {
@@ -167,6 +171,19 @@ class _HomeContentState extends State<_HomeContent> {
     _areasFuture = _loadHomeAreas();
     _recommendationsFuture = _loadRecommendations();
     _recentViewedFuture = _loadRecentViewed();
+    _latestBlogFuture = _loadLatestBlog();
+  }
+
+  Future<Map<String, dynamic>?> _loadLatestBlog() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dio = Dio();
+      final blogService = BlogApiService(dio: dio, prefs: prefs);
+      return await blogService.getLatestBlog();
+    } catch (e) {
+      debugPrint('Error loading latest blog: $e');
+      return null;
+    }
   }
 
   Future<void> _loadFavorites() async {
@@ -986,13 +1003,65 @@ class _HomeContentState extends State<_HomeContent> {
 
             const SizedBox(height: 30),
 
-            // Interesting articles banner
-            SectionHeader(title: 'discover_interesting_posts'.tr),
+            // Interesting articles banner - Dynamic from API
+            SectionHeader(
+              title: 'discover_interesting_posts'.tr,
+              actionLabel: 'see_more'.tr,
+              onAction: () {
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const BlogsScreen()));
+              },
+            ),
             const SizedBox(height: 8),
-            ArticleBannerCard(
-              imageAsset: 'assets/images/onboarding4.png',
-              title: 'Top 8 cây cầu Đà Nẵng',
-              ctaLabel: 'explore_now'.tr,
+            FutureBuilder<Map<String, dynamic>?>(
+              future: _latestBlogFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return SizedBox(
+                    height: 300,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: context.primaryColor,
+                      ),
+                    ),
+                  );
+                }
+
+                final blog = snapshot.data;
+                if (blog == null) {
+                  // Fallback to static content if no blog available
+                  return ArticleBannerCard(
+                    imageAsset: 'assets/images/onboarding4.png',
+                    title: 'Khám phá các điểm đến tuyệt vời',
+                    ctaLabel: 'explore_now'.tr,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const BlogsScreen()),
+                      );
+                    },
+                  );
+                }
+
+                final blogId = blog['blogId'] ?? blog['blog_id'] ?? 0;
+                final title = blog['title'] ?? 'Bài viết mới';
+                final coverImageUrl =
+                    blog['coverImageUrl'] ?? blog['cover_image_url'];
+
+                return _DynamicBlogBannerCard(
+                  blogId: blogId,
+                  title: title,
+                  coverImageUrl: coverImageUrl,
+                  ctaLabel: 'explore_now'.tr,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BlogDetailScreen(blogId: blogId),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
 
             const SizedBox(height: 24),
@@ -1185,6 +1254,14 @@ class _AppDrawer extends StatelessWidget {
               },
             ),
             _DrawerTile(
+              title: 'drawer_blogs'.tr,
+              icon: LucideIcons.fileText,
+              onTap: () => {
+                Navigator.pop(context),
+                context.push(AppRouter.blogs),
+              },
+            ),
+            _DrawerTile(
               title: 'drawer_about'.tr,
               icon: LucideIcons.info,
               onTap: () => {
@@ -1320,6 +1397,108 @@ class _NotificationBellIconState extends State<_NotificationBellIcon> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dynamic Blog Banner Card - hiển thị blog mới nhất từ API
+class _DynamicBlogBannerCard extends StatelessWidget {
+  final int blogId;
+  final String title;
+  final String? coverImageUrl;
+  final String ctaLabel;
+  final VoidCallback? onTap;
+
+  const _DynamicBlogBannerCard({
+    required this.blogId,
+    required this.title,
+    this.coverImageUrl,
+    required this.ctaLabel,
+    this.onTap,
+  });
+
+  static const double kRadius = 28;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(kRadius),
+      child: Stack(
+        children: [
+          AspectRatio(
+            aspectRatio: 3 / 4,
+            child: coverImageUrl != null
+                ? Image.network(
+                    coverImageUrl!,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        'assets/images/onboarding4.png',
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      );
+                    },
+                  )
+                : Image.asset(
+                    'assets/images/onboarding4.png',
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                  ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.65),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: context.subTitleTwoStyle.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: onTap,
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: context.primaryColor,
+                    backgroundColor: context.backgroundColor,
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: Text(
+                    ctaLabel,
+                    style: TextStyle(color: context.textPrimaryColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -2,6 +2,8 @@ import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/localization_service.dart';
 import 'package:app/views/screens/badges_and_points_user_screen.dart';
+import 'package:app/views/screens/blogs_screen.dart';
+import 'package:app/views/screens/blog_detail_screen.dart';
 import 'package:app/views/screens/chat_help_bot_screen.dart';
 import 'package:app/views/screens/contact_user_screen.dart';
 import 'package:app/views/screens/forget_account_screen.dart';
@@ -42,6 +44,8 @@ class AppRouter {
   static const String aboutTripfinity = '/about-tripfinity';
   static const String termsPolicies = '/terms-policies';
   static const String chatHelpBot = '/chat-help-bot';
+  static const String blogs = '/blogs';
+  static const String blogDetail = '/blog-detail';
 
   // router configurations
   static late final GoRouter _router;
@@ -170,6 +174,20 @@ class AppRouter {
         path: chatHelpBot,
         name: 'chat-help-bot',
         builder: (context, state) => const ChatHelpBotScreen(),
+      ),
+      GoRoute(
+        path: blogs,
+        name: 'blogs',
+        builder: (context, state) => const BlogsScreen(),
+      ),
+      GoRoute(
+        path: '$blogDetail/:blogId',
+        name: 'blog-detail',
+        builder: (context, state) {
+          final blogId =
+              int.tryParse(state.pathParameters['blogId'] ?? '0') ?? 0;
+          return BlogDetailScreen(blogId: blogId);
+        },
       ),
     ];
   }
