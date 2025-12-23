@@ -53,7 +53,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: AppColors.lightBackground,
+                          color: context.backgroundColor,
                           shape: BoxShape.circle,
                         ),
                         child: Image.asset('assets/images/logo_1.png'),
@@ -68,7 +68,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: TextButton(
                 onPressed: _completeOnboarding,
                 style: TextButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  backgroundColor: context.backgroundColor.withValues(
+                    alpha: 0.2,
+                  ),
                 ),
                 child: Text('skip'.tr, style: context.buttonStyle),
               ),
@@ -106,8 +108,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4),
                             color: _currentPage == index
-                                ? AppColors.lightPrimary
-                                : Colors.white.withValues(alpha: 0.7),
+                                ? context.primaryColor
+                                : context.backgroundColor.withValues(
+                                    alpha: 0.7,
+                                  ),
                           ),
                         ),
                       ),
@@ -129,13 +133,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               );
                             },
                             style: TextButton.styleFrom(
-                              backgroundColor: Colors.white.withValues(
-                                alpha: 0.2,
-                              ),
+                              backgroundColor: context.backgroundColor
+                                  .withValues(alpha: 0.2),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(25),
                                 side: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.3),
+                                  color: context.backgroundColor.withValues(
+                                    alpha: 0.3,
+                                  ),
                                 ),
                               ),
                             ),
@@ -204,12 +209,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Text(
                 page.title,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontFamily: AppTextStyles.primaryFontFamily,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+                style: context.h2Style.copyWith(color: context.backgroundColor),
               ),
               const SizedBox(height: 150),
             ],
