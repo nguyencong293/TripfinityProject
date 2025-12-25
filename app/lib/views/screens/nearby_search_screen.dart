@@ -50,6 +50,9 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
   // Bán kính tìm kiếm (km)
   final double _searchRadiusKm = 10.0;
 
+  // 🔥 Giới hạn số lượng kết quả để tránh UI bị treo
+  final int _maxResults = 50;
+
   @override
   void initState() {
     super.initState();
@@ -120,7 +123,7 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     }
   }
 
-  // Tìm kiếm các địa điểm trong bán kính 10km
+  // 🔥 FIX: Tìm kiếm các địa điểm với timeout và giới hạn kết quả
   Future<void> _searchNearbyPlaces() async {
     if (_currentLocation == null) return;
 
@@ -130,96 +133,76 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
       final prefs = await SharedPreferences.getInstance();
       final api = SearchApiService(dio: Dio(), prefs: prefs);
 
-      // Tìm kiếm tất cả các loại địa điểm (không cần query cụ thể)
-      final data = await api.search(q: '');
+      // 🔥 FIX 1: Thêm timeout 15 giây để tránh API call bị treo
+      final data = await api
+          .search(q: '')
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception(
+                'Timeout: Không thể tải dữ liệu. Vui lòng thử lại.',
+              );
+            },
+          );
 
       final List<Map<String, dynamic>> items = [];
       final Set<Marker> markers = {};
       int idx = 0;
+      int totalProcessed = 0;
 
-      // Xử lý Hotels
-      if (data['hotels'] is List) {
-        for (final e in List.from(data['hotels'])) {
-          final m = Map<String, dynamic>.from(e);
-          final coords = _getCoordinatesFromData(m);
+      // 🔥 FIX 2: Xử lý từng loại địa điểm với giới hạn
+      totalProcessed += await _processLocationCategory(
+        data['hotels'],
+        'hotel',
+        'Khách sạn',
+        items,
+        markers,
+        idx,
+        _maxResults - totalProcessed,
+      );
+      idx = items.length;
 
-          if (coords != null && _isWithinRadius(coords)) {
-            final item = _createItemData(m, 'hotel', 'Khách sạn', coords, idx);
-            items.add(item);
-
-            markers.add(_createMarker(item, 'hotel', idx));
-            idx++;
-          }
-        }
+      if (totalProcessed < _maxResults) {
+        totalProcessed += await _processLocationCategory(
+          data['restaurants'],
+          'restaurant',
+          'Nhà hàng',
+          items,
+          markers,
+          idx,
+          _maxResults - totalProcessed,
+        );
+        idx = items.length;
       }
 
-      // Xử lý Restaurants
-      if (data['restaurants'] is List) {
-        for (final e in List.from(data['restaurants'])) {
-          final m = Map<String, dynamic>.from(e);
-          final coords = _getCoordinatesFromData(m);
-
-          if (coords != null && _isWithinRadius(coords)) {
-            final item = _createItemData(
-              m,
-              'restaurant',
-              'Nhà hàng',
-              coords,
-              idx,
-            );
-            items.add(item);
-
-            markers.add(_createMarker(item, 'restaurant', idx));
-            idx++;
-          }
-        }
+      if (totalProcessed < _maxResults) {
+        totalProcessed += await _processLocationCategory(
+          data['tours'],
+          'tour',
+          'Tour dịch vụ',
+          items,
+          markers,
+          idx,
+          _maxResults - totalProcessed,
+        );
+        idx = items.length;
       }
 
-      // Xử lý Tours
-      if (data['tours'] is List) {
-        for (final e in List.from(data['tours'])) {
-          final m = Map<String, dynamic>.from(e);
-          final coords = _getCoordinatesFromData(m);
-
-          if (coords != null && _isWithinRadius(coords)) {
-            final item = _createItemData(
-              m,
-              'tour',
-              'Tour dịch vụ',
-              coords,
-              idx,
-            );
-            items.add(item);
-
-            markers.add(_createMarker(item, 'tour', idx));
-            idx++;
-          }
-        }
-      }
-
-      // Xử lý Attractions
-      if (data['attractions'] is List) {
-        for (final e in List.from(data['attractions'])) {
-          final m = Map<String, dynamic>.from(e);
-          final coords = _getCoordinatesFromData(m);
-
-          if (coords != null && _isWithinRadius(coords)) {
-            final item = _createItemData(
-              m,
-              'attraction',
-              'Hoạt động giải trí',
-              coords,
-              idx,
-            );
-            items.add(item);
-
-            markers.add(_createMarker(item, 'attraction', idx));
-            idx++;
-          }
-        }
+      if (totalProcessed < _maxResults) {
+        totalProcessed += await _processLocationCategory(
+          data['attractions'],
+          'attraction',
+          'Hoạt động giải trí',
+          items,
+          markers,
+          idx,
+          _maxResults - totalProcessed,
+        );
       }
 
       debugPrint('✅ Found ${items.length} places within $_searchRadiusKm km');
+
+      if (!mounted) return;
 
       setState(() {
         _items.clear();
@@ -232,15 +215,62 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
       // Fit map bounds sau khi load xong markers
       if (_markers.isNotEmpty && _mapController != null) {
         await Future.delayed(const Duration(milliseconds: 500));
-        await _fitMapBounds();
+        if (mounted) {
+          await _fitMapBounds();
+        }
       }
     } catch (e) {
       debugPrint('❌ Error searching nearby: $e');
+      if (!mounted) return;
+
       setState(() {
-        _error = 'Lỗi tìm kiếm: $e';
+        _error = e.toString().contains('Timeout')
+            ? 'Không thể tải dữ liệu. Vui lòng thử lại.'
+            : 'Lỗi tìm kiếm: $e';
         _loading = false;
       });
     }
+  }
+
+  // 🔥 FIX 3: Xử lý từng loại địa điểm với giới hạn số lượng
+  Future<int> _processLocationCategory(
+    dynamic dataList,
+    String category,
+    String typeLabel,
+    List<Map<String, dynamic>> items,
+    Set<Marker> markers,
+    int startIdx,
+    int maxToProcess,
+  ) async {
+    if (dataList == null || dataList is! List || maxToProcess <= 0) {
+      return 0;
+    }
+
+    int processed = 0;
+    int idx = startIdx;
+
+    for (final e in List.from(dataList)) {
+      if (processed >= maxToProcess) break;
+
+      try {
+        final m = Map<String, dynamic>.from(e);
+        final coords = _getCoordinatesFromData(m);
+
+        if (coords != null && _isWithinRadius(coords)) {
+          final item = _createItemData(m, category, typeLabel, coords, idx);
+          items.add(item);
+
+          markers.add(_createMarker(item, category, idx));
+          idx++;
+          processed++;
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error processing $category item: $e');
+        continue;
+      }
+    }
+
+    return processed;
   }
 
   // Lấy tọa độ từ data (giống search_map - xử lý num type)
@@ -412,7 +442,7 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     try {
       final pictureRecorder = ui.PictureRecorder();
       final canvas = Canvas(pictureRecorder);
-      const size = 20.0; // Giảm size xuống 5 lần (từ 100 -> 20)
+      const size = 20.0;
 
       // Vẽ vòng tròn nền
       final paint = Paint()
@@ -424,7 +454,7 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
       final borderPaint = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2; // Giảm từ 6 -> 1.2
+        ..strokeWidth = 1.2;
       canvas.drawCircle(
         const Offset(size / 2, size / 2),
         size / 2 - 0.6,
@@ -436,7 +466,7 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
       textPainter.text = TextSpan(
         text: String.fromCharCode(icon.codePoint),
         style: TextStyle(
-          fontSize: 10, // Giảm từ 50 -> 10
+          fontSize: 10,
           fontFamily: icon.fontFamily,
           package: icon.fontPackage,
           color: Colors.white,
@@ -487,17 +517,13 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
 
   // Hiển thị chi tiết pin khi được tap
   void _showPinDetails(Map<String, dynamic> location) {
-    // Tìm index của item trong danh sách
     final index = _items.indexWhere((item) => item['id'] == location['id']);
     if (index == -1) return;
 
-    // Set selected index
     setState(() {
       selectedPinIndex = index;
     });
 
-    // Scroll bottom sheet đến item được chọn
-    // Expand sheet lên 50% trước
     _scrollController.animateTo(
       0.5,
       duration: const Duration(milliseconds: 300),
@@ -539,7 +565,6 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
   void _navigateToHotelDetail(Map<String, dynamic> item) async {
     final id = _parseId(item, ['hotelId', 'id', 'hotel_id']);
 
-    // 🔥 Track CLICK for AI recommendation
     final trackingService = await UserInteractionService.create();
     trackingService.recordClick(itemId: id, itemType: 'hotel');
 
@@ -565,7 +590,6 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
   void _navigateToRestaurantDetail(Map<String, dynamic> item) async {
     final id = _parseId(item, ['restaurantId', 'id', 'restaurant_id']);
 
-    // 🔥 Track CLICK for AI recommendation
     final trackingService = await UserInteractionService.create();
     trackingService.recordClick(itemId: id, itemType: 'restaurant');
 
@@ -603,7 +627,6 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
   void _navigateToTourDetail(Map<String, dynamic> item) async {
     final id = _parseId(item, ['tourId', 'id', 'tour_id']);
 
-    // 🔥 Track CLICK for AI recommendation
     final trackingService = await UserInteractionService.create();
     trackingService.recordClick(itemId: id, itemType: 'tour');
 
@@ -632,7 +655,6 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
   void _navigateToAttractionDetail(Map<String, dynamic> item) async {
     final id = _parseId(item, ['attractionId', 'id', 'attraction_id']);
 
-    // 🔥 Track CLICK for AI recommendation
     final trackingService = await UserInteractionService.create();
     trackingService.recordClick(itemId: id, itemType: 'attraction');
 
@@ -682,7 +704,6 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     );
   }
 
-  // Header với nút back
   Widget _buildHeader(BuildContext context) {
     return Positioned(
       top: 0,
@@ -734,7 +755,6 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     );
   }
 
-  // Bản đồ với GoogleMap và markers động
   Widget _buildMapView(BuildContext context) {
     if (_currentLocation == null || _loading) {
       return Container(
@@ -767,7 +787,9 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
         _mapController = controller;
         if (_markers.isNotEmpty) {
           await Future.delayed(const Duration(milliseconds: 500));
-          await _fitMapBounds();
+          if (mounted) {
+            await _fitMapBounds();
+          }
         }
       },
       initialCameraPosition: CameraPosition(
@@ -784,7 +806,7 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
       scrollGesturesEnabled: true,
       zoomGesturesEnabled: true,
       tiltGesturesEnabled: true,
-      liteModeEnabled: false, // Full mode để có thể fit bounds và tương tác
+      liteModeEnabled: false,
       minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
       onTap: (position) {
         setState(() {
@@ -794,7 +816,6 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     );
   }
 
-  // Bottom sheet có thể kéo
   Widget _buildDraggableBottomSheet(BuildContext context, double minChildSize) {
     return DraggableScrollableSheet(
       controller: _scrollController,
@@ -819,7 +840,6 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
           ),
           child: Column(
             children: [
-              // Drag handle
               GestureDetector(
                 onVerticalDragUpdate: (_) {},
                 child: Container(
@@ -954,7 +974,6 @@ class _NearbySearchScreenState extends State<NearbySearchScreen> {
     );
   }
 
-  // Card địa điểm trong bottom sheet
   Widget _buildLocationCard(
     BuildContext context,
     Map<String, dynamic> location,

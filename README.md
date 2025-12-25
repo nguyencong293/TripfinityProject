@@ -945,7 +945,6 @@ Weekly:
 | 24 | `trips` | Chuyến đi của người dùng |
 | 25 | `trip_itineraries` | Lịch trình theo ngày của chuyến đi |
 | 26 | `trip_itinerary_items` | Các hoạt động trong lịch trình |
-| 27 | `itineraries_downloads` | Lịch sử tải xuống lịch trình |
 | 28 | `user_favorites` | Danh sách yêu thích của người dùng |
 | 29 | `blogs` | Bài viết blog |
 | 30 | `conversations` | Cuộc hội thoại chat |
@@ -997,5 +996,6 @@ Weekly:
 - Chatbot AI
 
 ---
+
 
 *Cập nhật lần cuối: 23/12/2025*

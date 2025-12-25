@@ -715,7 +715,6 @@ class _HomeContentState extends State<_HomeContent> {
       _Category(LucideIcons.ticket, 'cat_attraction'),
       _Category(LucideIcons.partyPopper, 'cat_entertainment'),
       _Category(LucideIcons.map, 'cat_itinerary'),
-      _Category(LucideIcons.tag, 'cat_deals'),
     ];
 
     return SafeArea(
@@ -830,6 +829,12 @@ class _HomeContentState extends State<_HomeContent> {
                           ),
                         );
                         break;
+                      case 'cat_itinerary':
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const TripUserScreen(),
+                          ),
+                        );
                       default:
                         break;
                     }
