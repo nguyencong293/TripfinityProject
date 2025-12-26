@@ -227,7 +227,14 @@ class _DashboardUserScreenState extends State<DashboardUserScreen> {
                 _ActionTile(
                   icon: LucideIcons.history,
                   title: 'account_booking_history'.tr,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ConfirmedBookingsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _ActionTile(
                   icon: LucideIcons.lifeBuoy,

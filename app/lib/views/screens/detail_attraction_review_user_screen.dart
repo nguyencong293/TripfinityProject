@@ -6,7 +6,6 @@ import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/attraction_api_service.dart';
-import 'package:app/services/review_api_service.dart';
 
 class DetailAttractionReviewUserScreen extends StatefulWidget {
   final int attractionId;
@@ -43,8 +42,6 @@ class _DetailAttractionReviewUserScreenState
   bool _showAspectRatings = false;
 
   late AttractionApiService _attractionApi;
-  // ignore: unused_field
-  late ReviewApiService _reviewApi;
   int? _userId;
 
   @override
@@ -65,7 +62,6 @@ class _DetailAttractionReviewUserScreenState
     final dio = Dio();
 
     _attractionApi = AttractionApiService(dio: dio, prefs: prefs);
-    _reviewApi = ReviewApiService(dio: dio, prefs: prefs);
     _userId = prefs.getInt('user_id');
 
     if (_userId == null) {

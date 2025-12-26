@@ -253,9 +253,6 @@ class _PendingBookingsScreenState extends State<PendingBookingsScreen> {
         booking['thumbnailUrl'] as String? ??
         '';
     final rating = booking['rating'];
-    final paymentMethod = booking['paymentMethod'] as String? ?? 'counter';
-    // ignore: unused_local_variable
-    final isPaid = paymentMethod != 'counter';
 
     return Container(
       decoration: BoxDecoration(

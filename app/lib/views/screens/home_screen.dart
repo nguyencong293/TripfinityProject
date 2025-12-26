@@ -72,6 +72,11 @@ class _HomeScreenState extends State<HomeScreen> {
             _tabIndex = 1; // switch to Search tab
           });
         },
+        onSwitchTab: (index) {
+          setState(() {
+            _tabIndex = index;
+          });
+        },
       ),
       GeneralSearchScreen(
         key: ValueKey(
@@ -136,7 +141,12 @@ class _Category {
 class _HomeContent extends StatefulWidget {
   final dynamic user;
   final ValueChanged<String> onSubmitSearch;
-  const _HomeContent({required this.user, required this.onSubmitSearch});
+  final ValueChanged<int> onSwitchTab;
+  const _HomeContent({
+    required this.user,
+    required this.onSubmitSearch,
+    required this.onSwitchTab,
+  });
 
   @override
   State<_HomeContent> createState() => _HomeContentState();
@@ -711,9 +721,8 @@ class _HomeContentState extends State<_HomeContent> {
     final categories = const <_Category>[
       _Category(LucideIcons.hotel, 'cat_hotels'),
       _Category(LucideIcons.bus, 'cat_tour'),
-      _Category(LucideIcons.utensils, 'cat_food'),
+      _Category(LucideIcons.utensils, 'cat_restaurant'),
       _Category(LucideIcons.ticket, 'cat_attraction'),
-      _Category(LucideIcons.partyPopper, 'cat_entertainment'),
       _Category(LucideIcons.map, 'cat_itinerary'),
     ];
 
@@ -810,7 +819,7 @@ class _HomeContentState extends State<_HomeContent> {
                           ),
                         );
                         break;
-                      case 'cat_food':
+                      case 'cat_restaurant':
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) =>
@@ -830,11 +839,9 @@ class _HomeContentState extends State<_HomeContent> {
                         );
                         break;
                       case 'cat_itinerary':
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const TripUserScreen(),
-                          ),
-                        );
+                        // Switch to Trip tab (index 2) instead of navigating
+                        widget.onSwitchTab(2);
+                        break;
                       default:
                         break;
                     }

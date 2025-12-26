@@ -452,24 +452,50 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   }
 
   List<String> _imageList(Map<String, dynamic> data) {
-    final urls = data['imageUrls'];
-    if (urls == null) return [];
-    if (urls is String) {
-      try {
-        final decoded = jsonDecode(urls);
-        if (decoded is List) {
-          return decoded
-              .map((e) => e.toString())
-              .where((u) => u.isNotEmpty)
-              .toList();
+    final List<String> images = [];
+
+    // 1. Thêm thumbnail_url (ảnh chính)
+    final thumbnail = data['thumbnail_url'] ?? data['thumbnailUrl'];
+    if (thumbnail != null && thumbnail.toString().isNotEmpty) {
+      images.add(thumbnail.toString());
+    }
+
+    // 2. Thêm image_urls (mảng ảnh phụ)
+    final imageUrlsRaw = data['image_urls'] ?? data['imageUrls'];
+    if (imageUrlsRaw is List) {
+      for (final url in imageUrlsRaw) {
+        final urlStr = url.toString();
+        if (urlStr.isNotEmpty && !images.contains(urlStr)) {
+          images.add(urlStr);
         }
-      } catch (_) {}
-      return [];
+      }
+    } else if (imageUrlsRaw is String && imageUrlsRaw.isNotEmpty) {
+      // Nếu là string JSON array
+      try {
+        final decoded = jsonDecode(imageUrlsRaw);
+        if (decoded is List) {
+          for (final url in decoded) {
+            final urlStr = url.toString();
+            if (urlStr.isNotEmpty && !images.contains(urlStr)) {
+              images.add(urlStr);
+            }
+          }
+        }
+      } catch (_) {
+        // Nếu là string phân tách bằng dấu phẩy
+        final urls = imageUrlsRaw
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty);
+        for (final url in urls) {
+          if (!images.contains(url)) {
+            images.add(url);
+          }
+        }
+      }
     }
-    if (urls is List) {
-      return urls.map((e) => e.toString()).where((u) => u.isNotEmpty).toList();
-    }
-    return [];
+
+    return images;
   }
 
   List<String> _listOfStrings(dynamic json) {
@@ -560,62 +586,97 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
   // ===== UI Components =====
   Widget _imageGallery(List<String> images) {
-    if (images.isEmpty) {
-      return Container(
-        height: 280,
-        color: context.primaryColor.withValues(alpha: 0.1),
-        child: Icon(LucideIcons.image, color: context.primaryColor, size: 48),
-      );
-    }
-
+    final hasImages = images.isNotEmpty;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: 280,
-          child: PageView.builder(
-            controller: _imageController,
-            itemCount: images.length,
-            onPageChanged: (i) => setState(() => _imageIndex = i),
-            itemBuilder: (context, index) {
-              return Image.network(
-                images[index],
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: context.primaryColor.withValues(alpha: 0.1),
-                  child: Icon(
-                    LucideIcons.image,
-                    color: context.primaryColor,
-                    size: 48,
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (!hasImages)
+                _imageFallback(context)
+              else
+                PageView.builder(
+                  controller: _imageController,
+                  itemCount: images.length,
+                  onPageChanged: (i) => setState(() => _imageIndex = i),
+                  itemBuilder: (_, i) {
+                    final url = images[i];
+                    final isNetwork = url.startsWith('http');
+                    if (url.isEmpty) return _imageFallback(context);
+                    return isNetwork
+                        ? Image.network(
+                            url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _imageFallback(context),
+                          )
+                        : Image.asset(
+                            url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _imageFallback(context),
+                          );
+                  },
+                ),
+
+              if (hasImages && images.length > 1)
+                Positioned(
+                  bottom: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          LucideIcons.image,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_imageIndex + 1} / ${images.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              );
-            },
+            ],
           ),
         ),
-        if (images.length > 1)
-          Container(
-            height: 80,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: ListView.builder(
+        if (hasImages && images.length > 1)
+          SizedBox(
+            height: 64,
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: images.length,
-              itemBuilder: (context, index) {
-                final selected = index == _imageIndex;
-                return GestureDetector(
-                  onTap: () {
-                    _imageController.animateToPage(
-                      index,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
+              itemBuilder: (_, i) {
+                final url = images[i];
+                final selected = i == _imageIndex;
+                return InkWell(
+                  onTap: () => _imageController.animateToPage(
+                    i,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                  ),
                   child: Container(
-                    width: 80,
-                    height: 64,
-                    margin: const EdgeInsets.only(right: 8),
+                    width: 86,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: selected
                             ? context.primaryColor
@@ -623,22 +684,25 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                         width: selected ? 2 : 1,
                       ),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(7),
-                      child: Image.network(
-                        images[index],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: context.primaryColor.withValues(alpha: 0.1),
-                        ),
-                      ),
-                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: url.startsWith('http')
+                        ? Image.network(url, fit: BoxFit.cover)
+                        : Image.asset(url, fit: BoxFit.cover),
                   ),
                 );
               },
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemCount: images.length,
             ),
           ),
       ],
+    );
+  }
+
+  Widget _imageFallback(BuildContext context) {
+    return Container(
+      color: context.primaryColor.withValues(alpha: 0.1),
+      child: Icon(LucideIcons.image, color: context.primaryColor, size: 48),
     );
   }
 

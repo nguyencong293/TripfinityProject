@@ -123,8 +123,10 @@ class FavoriteApiService {
     required String serviceType,
     required int serviceId,
   }) async {
-    debugPrint('🔍 API isFavorite: userId=$userId, type=$serviceType, id=$serviceId');
-    
+    debugPrint(
+      '🔍 API isFavorite: userId=$userId, type=$serviceType, id=$serviceId',
+    );
+
     final res = await _dio.get(
       '/favorites/check',
       queryParameters: {

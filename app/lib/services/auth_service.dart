@@ -36,7 +36,6 @@ class AuthService {
         },
         onError: (error, handler) async {
           if (error.response?.statusCode == 401) {
-            // await _prefs.clear();
             await _prefs.remove('user_token');
             await _prefs.remove('user_id');
             await _prefs.remove('user_email');

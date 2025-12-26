@@ -5,6 +5,7 @@ import 'package:app/views/screens/badges_and_points_user_screen.dart';
 import 'package:app/views/screens/blogs_screen.dart';
 import 'package:app/views/screens/blog_detail_screen.dart';
 import 'package:app/views/screens/chat_help_bot_screen.dart';
+import 'package:app/views/screens/confirmed_bookings_screen.dart';
 import 'package:app/views/screens/contact_user_screen.dart';
 import 'package:app/views/screens/forget_account_screen.dart';
 import 'package:app/views/screens/introduction_trip_screen.dart';
@@ -46,6 +47,7 @@ class AppRouter {
   static const String chatHelpBot = '/chat-help-bot';
   static const String blogs = '/blogs';
   static const String blogDetail = '/blog-detail';
+  static const String bookingHistory = '/booking-history';
 
   // router configurations
   static late final GoRouter _router;
@@ -188,6 +190,11 @@ class AppRouter {
               int.tryParse(state.pathParameters['blogId'] ?? '0') ?? 0;
           return BlogDetailScreen(blogId: blogId);
         },
+      ),
+      GoRoute(
+        path: bookingHistory,
+        name: 'booking-history',
+        builder: (context, state) => const ConfirmedBookingsScreen(),
       ),
     ];
   }

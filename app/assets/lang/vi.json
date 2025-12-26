@@ -491,5 +491,6 @@
   "aspect_ambience": "Không gian",
   "restaurant_manager": "Quản lý nhà hàng",
   "manager_reply_thanks": "Cảm ơn bạn đã đánh giá. Chúng tôi rất vui khi bạn hài lòng với dịch vụ.",
-  "restaurant_intro_fallback": "Nhà hàng %s là điểm đến lý tưởng cho những ai yêu thích ẩm thực %s."
+  "restaurant_intro_fallback": "Nhà hàng %s là điểm đến lý tưởng cho những ai yêu thích ẩm thực %s.",
+  "cat_restaurant": "Nhà hàng"
 }
