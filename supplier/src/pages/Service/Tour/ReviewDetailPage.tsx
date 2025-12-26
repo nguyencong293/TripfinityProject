@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, ThumbsUp, Send, User, Edit2, Trash2, X, Check } from "lucide-react";
+import { useLanguage } from "../../../hooks/useLanguage";
 import { getProviderByUserId, getUserById } from "../../../services/providerService";
 import { getTourReviewById } from "../../../services/tourService";
 import {
@@ -18,6 +19,7 @@ import type { TourReviewDTO, UserDTO } from "../../../types";
 const ReviewDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { reviewId } = useParams<{ reviewId: string }>();
+  const { t } = useLanguage();
   const [review, setReview] = useState<TourReviewDTO | null>(null);
   const [reviewUser, setReviewUser] = useState<UserDTO | null>(null);
   const [replies, setReplies] = useState<ReviewReplyDTO[]>([]);
@@ -124,7 +126,7 @@ const ReviewDetailPage: React.FC = () => {
       setReplyContent("");
     } catch (error) {
       console.error("Error submitting reply:", error);
-      alert("Có lỗi khi gửi phản hồi. Vui lòng thử lại.");
+      alert(t("tour_review_error_send"));
     } finally {
       setSubmitting(false);
     }
@@ -152,42 +154,42 @@ const ReviewDetailPage: React.FC = () => {
       setEditContent("");
     } catch (error) {
       console.error("Error updating reply:", error);
-      alert("Có lỗi khi cập nhật phản hồi.");
+      alert(t("tour_review_error_update"));
     }
   };
 
   const handleDeleteReply = async (replyId: number) => {
-    if (!confirm("Bạn có chắc muốn xóa phản hồi này?")) return;
+    if (!confirm(t("tour_review_confirm_delete"))) return;
 
     try {
       await deleteReviewReply(replyId);
       setReplies((prev) => prev.filter((r) => r.replyId !== replyId));
     } catch (error) {
       console.error("Error deleting reply:", error);
-      alert("Có lỗi khi xóa phản hồi.");
+      alert(t("tour_review_error_delete"));
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+      <div className="min-h-screen theme-bg-primary flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
 
   if (!review) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen theme-bg-primary flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Không tìm thấy đánh giá
+          <h2 className="text-2xl font-bold theme-text-primary mb-2">
+            {t("tour_review_not_found")}
           </h2>
           <button
             onClick={() => navigate(-1)}
-            className="text-orange-600 hover:text-orange-700"
+            className="theme-text-brand hover:opacity-80"
           >
-            Quay lại
+            {t("back")}
           </button>
         </div>
       </div>
@@ -195,21 +197,21 @@ const ReviewDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen theme-bg-primary p-6">
       {/* Header */}
       <div className="mb-6">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center theme-text-secondary hover:theme-text-primary mb-4"
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
-          Quay lại
+          {t("back")}
         </button>
-        <h1 className="text-3xl font-bold text-gray-900">Chi tiết đánh giá</h1>
+        <h1 className="text-3xl font-bold theme-text-primary">{t("tour_review_detail_title")}</h1>
       </div>
 
       {/* Review Detail */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div className="theme-bg-card rounded-lg shadow-sm p-6 mb-6">
         {/* User info */}
         <div className="flex items-start gap-4 mb-6">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
@@ -218,10 +220,10 @@ const ReviewDetailPage: React.FC = () => {
           <div className="flex-1">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  {reviewUser?.fullName || "Khách hàng"}
+                <h2 className="text-xl font-bold theme-text-primary">
+                  {reviewUser?.fullName || t("tour_review_customer")}
                 </h2>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm theme-text-secondary">
                   {review.createdAt
                     ? new Date(review.createdAt).toLocaleDateString("vi-VN", {
                         year: "numeric",
@@ -251,11 +253,11 @@ const ReviewDetailPage: React.FC = () => {
 
         {/* Review content */}
         {review.title && (
-          <h3 className="text-xl font-semibold text-gray-900 mb-3">
+          <h3 className="text-xl font-semibold theme-text-primary mb-3">
             {review.title}
           </h3>
         )}
-        <p className="text-gray-700 mb-6 whitespace-pre-wrap leading-relaxed">
+        <p className="theme-text-primary mb-6 whitespace-pre-wrap leading-relaxed">
           {review.content}
         </p>
 
@@ -266,7 +268,7 @@ const ReviewDetailPage: React.FC = () => {
               <img
                 key={idx}
                 src={url}
-                alt={`Review ${idx + 1}`}
+                alt={`${t("tour_review_image")} ${idx + 1}`}
                 className="w-full h-40 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => window.open(url, "_blank")}
               />
@@ -276,18 +278,18 @@ const ReviewDetailPage: React.FC = () => {
 
         {/* Review aspects */}
         {review.aspects && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h4 className="font-semibold text-gray-900 mb-3">Đánh giá chi tiết</h4>
+          <div className="theme-bg-secondary rounded-lg p-4 mb-6">
+            <h4 className="font-semibold theme-text-primary mb-3">{t("tour_review_aspects_title")}</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
-                { label: "Chất lượng hướng dẫn viên", value: review.aspects.guideQuality },
-                { label: "Chất lượng lịch trình", value: review.aspects.itineraryQuality },
-                { label: "Giá trị so với chi phí", value: review.aspects.valueForMoney },
-                { label: "Tổ chức", value: review.aspects.organization },
-                { label: "An toàn", value: review.aspects.safety },
+                { label: t("tour_review_aspect_guide"), value: review.aspects.guideQuality },
+                { label: t("tour_review_aspect_itinerary"), value: review.aspects.itineraryQuality },
+                { label: t("tour_review_aspect_value"), value: review.aspects.valueForMoney },
+                { label: t("tour_review_aspect_organization"), value: review.aspects.organization },
+                { label: t("tour_review_aspect_safety"), value: review.aspects.safety },
               ].map((aspect) => (
                 <div key={aspect.label} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">{aspect.label}</span>
+                  <span className="text-sm theme-text-primary">{aspect.label}</span>
                   <div className="flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
@@ -307,47 +309,47 @@ const ReviewDetailPage: React.FC = () => {
         )}
 
         {/* Like button */}
-        <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
+        <div className="flex items-center gap-4 pt-4 border-t theme-border">
           <button
             onClick={handleLikeReview}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
               isReviewLiked
-                ? "bg-orange-100 text-orange-700"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "theme-bg-brand theme-text-brand-contrast"
+                : "theme-bg-secondary theme-text-secondary theme-hover"
             }`}
           >
             <ThumbsUp className={`w-5 h-5 ${isReviewLiked ? "fill-current" : ""}`} />
-            {reviewLikeCount} Thích
+            {reviewLikeCount} {t("tour_review_likes")}
           </button>
-          <span className="text-sm text-gray-600">
-            {replies.length} phản hồi
+          <span className="text-sm theme-text-secondary">
+            {replies.length} {t("tour_review_replies")}
           </span>
         </div>
       </div>
 
       {/* Reply form (only for supplier/provider) */}
       {providerId && (
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Phản hồi đánh giá
+        <div className="theme-bg-card rounded-lg shadow-sm p-6 mb-6">
+          <h3 className="text-lg font-semibold theme-text-primary mb-4">
+            {t("tour_review_reply_title")}
           </h3>
           <form onSubmit={handleSubmitReply}>
             <textarea
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
-              placeholder="Viết phản hồi của bạn..."
+              placeholder={t("tour_review_reply_placeholder")}
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border theme-border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none theme-bg-primary theme-text-primary"
               disabled={submitting}
             />
             <div className="flex justify-end mt-3">
               <button
                 type="submit"
                 disabled={submitting || !replyContent.trim()}
-                className="flex items-center gap-2 px-6 py-2 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-2 px-6 py-2 btn-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send className="w-4 h-4" />
-                {submitting ? "Đang gửi..." : "Gửi phản hồi"}
+                {submitting ? t("tour_review_sending") : t("tour_review_send")}
               </button>
             </div>
           </form>
@@ -356,9 +358,9 @@ const ReviewDetailPage: React.FC = () => {
 
       {/* Replies list */}
       {replies.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Phản hồi ({replies.length})
+        <div className="theme-bg-card rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-semibold theme-text-primary mb-4">
+            {t("tour_review_replies")} ({replies.length})
           </h3>
           <div className="space-y-4">
             {replies.map((reply) => {
@@ -370,8 +372,8 @@ const ReviewDetailPage: React.FC = () => {
                   key={reply.replyId}
                   className={`p-4 rounded-lg ${
                     reply.isProvider === 1
-                      ? "bg-orange-50 border border-orange-200"
-                      : "bg-gray-50"
+                      ? "theme-bg-brand/10 border theme-border-brand"
+                      : "theme-bg-secondary"
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -380,15 +382,15 @@ const ReviewDetailPage: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-gray-900">
-                          {reply.replierName || "Người dùng"}
+                        <span className="font-semibold theme-text-primary">
+                          {reply.replierName || t("tour_review_user")}
                         </span>
                         {reply.isProvider === 1 && (
-                          <span className="px-2 py-0.5 bg-orange-600 text-white text-xs font-medium rounded-full">
-                            Nhà cung cấp
+                          <span className="px-2 py-0.5 theme-bg-brand theme-text-brand-contrast text-xs font-medium rounded-full">
+                            {t("tour_review_provider")}
                           </span>
                         )}
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm theme-text-secondary">
                           {reply.createdAt
                             ? new Date(reply.createdAt).toLocaleDateString("vi-VN", {
                                 month: "short",
@@ -404,46 +406,46 @@ const ReviewDetailPage: React.FC = () => {
                           <textarea
                             value={editContent}
                             onChange={(e) => setEditContent(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                            className="w-full px-3 py-2 border theme-border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none theme-bg-primary theme-text-primary"
                             rows={3}
                           />
                           <div className="flex gap-2 mt-2">
                             <button
                               onClick={() => handleSaveEdit(reply.replyId!)}
-                              className="flex items-center gap-1 px-3 py-1 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-700"
+                              className="flex items-center gap-1 px-3 py-1 btn-primary text-sm"
                             >
                               <Check className="w-4 h-4" />
-                              Lưu
+                              {t("save")}
                             </button>
                             <button
                               onClick={handleCancelEdit}
-                              className="flex items-center gap-1 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+                              className="flex items-center gap-1 px-3 py-1 btn-outline text-sm"
                             >
                               <X className="w-4 h-4" />
-                              Hủy
+                              {t("cancel")}
                             </button>
                           </div>
                         </div>
                       ) : (
                         <>
-                          <p className="text-gray-700 whitespace-pre-wrap">
+                          <p className="theme-text-primary whitespace-pre-wrap">
                             {reply.content}
                           </p>
                           {isOwnReply && (
                             <div className="flex gap-2 mt-2">
                               <button
                                 onClick={() => handleStartEdit(reply.replyId!, reply.content)}
-                                className="flex items-center gap-1 text-sm text-gray-500 hover:text-orange-600"
+                                className="flex items-center gap-1 text-sm theme-text-secondary hover:theme-text-brand"
                               >
                                 <Edit2 className="w-4 h-4" />
-                                Sửa
+                                {t("edit")}
                               </button>
                               <button
                                 onClick={() => handleDeleteReply(reply.replyId!)}
-                                className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-600"
+                                className="flex items-center gap-1 text-sm theme-text-secondary hover:theme-text-error"
                               >
                                 <Trash2 className="w-4 h-4" />
-                                Xóa
+                                {t("delete")}
                               </button>
                             </div>
                           )}

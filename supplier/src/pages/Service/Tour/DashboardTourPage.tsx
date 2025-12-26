@@ -79,16 +79,26 @@ const TourBookingRow: React.FC<TourBookingRowProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useLanguage();
+  
   const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
+    if (!dateString) return t("tour_na");
     return new Date(dateString).toLocaleDateString("vi-VN");
   };
 
   const getPaymentLabel = (method?: string) => {
     if (!method || method === "counter") {
-      return { label: "Thanh toán tại quầy", color: "bg-yellow-100 text-yellow-800", icon: "💵" };
+      return { 
+        label: t("tour_payment_counter"), 
+        colorClass: "theme-bg-warning theme-text-warning",
+        icon: "💵" 
+      };
     }
-    return { label: method.toUpperCase() + " - Đã thanh toán", color: "bg-green-100 text-green-800", icon: "✅" };
+    return { 
+      label: method.toUpperCase() + " - " + t("tour_payment_paid"), 
+      colorClass: "theme-bg-success theme-text-success",
+      icon: "✅" 
+    };
   };
 
   const paymentInfo = getPaymentLabel(booking.paymentMethod);
@@ -99,26 +109,26 @@ const TourBookingRow: React.FC<TourBookingRowProps> = ({
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h4 className="font-semibold theme-text-primary mb-1">
-              {tourName || "Tour"}
+              {tourName || t("tour")}
             </h4>
             <p className="text-sm theme-text-secondary">
-              {userName || "Guest"} • {userPhone || "N/A"}
+              {userName || t("tour_guest")} • {userPhone || t("tour_na")}
             </p>
           </div>
           <div className="text-right">
             <p className="font-semibold theme-text-primary">
-              {booking.totalPrice?.toLocaleString("vi-VN")} {booking.currencyCode || "VND"}
+              {booking.totalPrice?.toLocaleString("vi-VN")} {booking.currencyCode || t("tour_unit_vnd")}
             </p>
             <p className="text-sm theme-text-secondary">
-              {booking.numAdults || 0} người
+              {booking.numAdults || 0} {t("tour_unit_people")}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-4 text-sm theme-text-secondary">
           <span>📅 {formatDate(booking.startDate)} - {formatDate(booking.endDate)}</span>
-          <span>👥 {booking.numAdults || 0} người</span>
+          <span>👥 {booking.numAdults || 0} {t("tour_unit_people")}</span>
         </div>
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${paymentInfo.color}`}>
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${paymentInfo.colorClass}`}>
           <span>{paymentInfo.icon}</span>
           <span>{paymentInfo.label}</span>
         </div>
@@ -130,21 +140,21 @@ const TourBookingRow: React.FC<TourBookingRowProps> = ({
         <div className="flex gap-2 pt-2 border-t theme-border">
           <button
             onClick={onView}
-            className="flex-1 px-3 py-2 text-sm theme-bg-secondary theme-text-primary rounded-lg hover:theme-bg-tertiary transition-colors"
+            className="flex-1 px-3 py-2 text-sm theme-bg-secondary theme-text-primary rounded-lg hover:opacity-80 transition-colors"
           >
-            Xem chi tiết
+            {t("tour_view_detail")}
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="flex-1 px-3 py-2 text-sm theme-bg-success theme-text-button rounded-lg hover:opacity-90 transition-colors"
           >
-            Xác nhận
+            {t("tour_confirm")}
           </button>
           <button
             onClick={onCancel}
-            className="flex-1 px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="flex-1 px-3 py-2 text-sm theme-bg-error theme-text-button rounded-lg hover:opacity-90 transition-colors"
           >
-            Từ chối
+            {t("tour_cancel")}
           </button>
         </div>
       </div>
@@ -162,17 +172,19 @@ const TourRatingSummaryCard: React.FC<TourRatingSummaryCardProps> = ({
   summary,
   tourName,
 }) => {
+  const { t } = useLanguage();
+  
   const getPercentage = (count: number) => {
     if (summary.totalReviews === 0) return 0;
     return ((count / summary.totalReviews) * 100).toFixed(1);
   };
 
-  const getBarColor = (rating: number) => {
-    if (rating === 5) return "bg-green-500";
-    if (rating === 4) return "bg-blue-500";
-    if (rating === 3) return "bg-yellow-500";
-    if (rating === 2) return "bg-orange-500";
-    return "bg-red-500";
+  const getBarColorClass = (rating: number) => {
+    if (rating === 5) return "theme-bg-success";
+    if (rating === 4) return "theme-bg-info";
+    if (rating === 3) return "theme-bg-warning";
+    if (rating === 2) return "bg-light-warning dark:bg-dark-warning";
+    return "theme-bg-error";
   };
 
   const ratingDistribution = [
@@ -184,11 +196,11 @@ const TourRatingSummaryCard: React.FC<TourRatingSummaryCardProps> = ({
   ];
 
   const aspects = [
-    { label: "HDV", value: summary.avgGuideQuality },
-    { label: "Lịch trình", value: summary.avgItineraryQuality },
-    { label: "Giá trị", value: summary.avgValueForMoney },
-    { label: "Tổ chức", value: summary.avgOrganization },
-    { label: "An toàn", value: summary.avgSafety },
+    { label: t("tour_aspect_guide"), value: summary.avgGuideQuality },
+    { label: t("tour_aspect_schedule"), value: summary.avgItineraryQuality },
+    { label: t("tour_aspect_value"), value: summary.avgValueForMoney },
+    { label: t("tour_aspect_organization"), value: summary.avgOrganization },
+    { label: t("tour_aspect_safety"), value: summary.avgSafety },
   ];
 
   return (
@@ -199,24 +211,24 @@ const TourRatingSummaryCard: React.FC<TourRatingSummaryCardProps> = ({
             {tourName}
           </h4>
           <p className="text-sm theme-text-secondary">
-            {summary.totalReviews || 0} đánh giá
+            {summary.totalReviews || 0} {t("tour_rating_reviews")}
           </p>
         </div>
 
-        <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-green-100">
+        <div className="flex flex-col items-center justify-center p-3 rounded-lg theme-bg-success">
           <div className="flex items-center gap-1 mb-1">
-            <span className="text-yellow-500">★</span>
-            <span className="text-2xl font-bold text-green-600">
+            <span className="text-light-warning dark:text-dark-warning">★</span>
+            <span className="text-2xl font-bold theme-text-success">
               {summary.avgRating?.toFixed(1) || "0.0"}
             </span>
           </div>
-          <p className="text-xs text-green-600">Trung bình</p>
+          <p className="text-xs theme-text-success">{t("tour_rating_average")}</p>
         </div>
       </div>
 
       <div className="mb-4">
         <h5 className="text-sm font-semibold mb-3 theme-text-primary">
-          Phân bố đánh giá
+          {t("tour_rating_distribution")}
         </h5>
         <div className="space-y-2">
           {ratingDistribution.map((item) => (
@@ -225,12 +237,12 @@ const TourRatingSummaryCard: React.FC<TourRatingSummaryCardProps> = ({
                 <span className="text-sm font-medium theme-text-primary">
                   {item.stars}
                 </span>
-                <span className="text-yellow-500 text-sm">★</span>
+                <span className="text-light-warning dark:text-dark-warning text-sm">★</span>
               </div>
 
-              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="flex-1 h-2 theme-bg-skeleton rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${getBarColor(item.stars)} transition-all`}
+                  className={`h-full ${getBarColorClass(item.stars)} transition-all`}
                   style={{ width: `${getPercentage(item.count)}%` }}
                 />
               </div>
@@ -252,7 +264,7 @@ const TourRatingSummaryCard: React.FC<TourRatingSummaryCardProps> = ({
         summary.avgSafety) && (
         <div>
           <h5 className="text-sm font-semibold mb-3 theme-text-primary">
-            Điểm chi tiết
+            {t("tour_rating_details")}
           </h5>
           <div className="grid grid-cols-5 gap-3">
             {aspects.map((aspect) => (
@@ -261,7 +273,7 @@ const TourRatingSummaryCard: React.FC<TourRatingSummaryCardProps> = ({
                   {aspect.label}
                 </p>
                 <p className="text-lg font-bold theme-text-primary">
-                  {aspect.value ? aspect.value.toFixed(1) : "N/A"}
+                  {aspect.value ? aspect.value.toFixed(1) : t("tour_na")}
                 </p>
               </div>
             ))}
@@ -283,13 +295,15 @@ const TourReviewCard: React.FC<TourReviewCardProps> = ({
   review,
   tourName,
 }) => {
+  const { t } = useLanguage();
+  
   return (
     <div className="rounded-xl border theme-border theme-bg-card p-4">
       <div className="flex items-start justify-between mb-3">
         <div>
           <h4 className="font-semibold theme-text-primary">{tourName}</h4>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-yellow-500">
+            <span className="text-light-warning dark:text-dark-warning">
               {"⭐".repeat(Math.round(review.rating || 0))}
             </span>
             <span className="text-sm theme-text-secondary">
@@ -300,7 +314,7 @@ const TourReviewCard: React.FC<TourReviewCardProps> = ({
         <span className="text-sm theme-text-secondary">
           {review.createdAt
             ? new Date(review.createdAt).toLocaleDateString("vi-VN")
-            : "N/A"}
+            : t("tour_na")}
         </span>
       </div>
       {review.title && (
@@ -312,28 +326,28 @@ const TourReviewCard: React.FC<TourReviewCardProps> = ({
       {review.aspects && (
         <div className="flex flex-wrap gap-2 text-xs">
           {review.aspects.guideQuality !== undefined && (
-            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-              HDV: {review.aspects.guideQuality}/5
+            <span className="px-2 py-1 theme-bg-info theme-text-info rounded">
+              {t("tour_aspect_guide")}: {review.aspects.guideQuality}/5
             </span>
           )}
           {review.aspects.itineraryQuality !== undefined && (
-            <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
-              Lịch trình: {review.aspects.itineraryQuality}/5
+            <span className="px-2 py-1 theme-bg-success theme-text-success rounded">
+              {t("tour_aspect_schedule")}: {review.aspects.itineraryQuality}/5
             </span>
           )}
           {review.aspects.valueForMoney !== undefined && (
-            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
-              Giá trị: {review.aspects.valueForMoney}/5
+            <span className="px-2 py-1 theme-bg-warning theme-text-warning rounded">
+              {t("tour_aspect_value")}: {review.aspects.valueForMoney}/5
             </span>
           )}
           {review.aspects.organization !== undefined && (
-            <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
-              Tổ chức: {review.aspects.organization}/5
+            <span className="px-2 py-1 bg-light-secondary dark:bg-dark-secondary theme-text-primary rounded">
+              {t("tour_aspect_organization")}: {review.aspects.organization}/5
             </span>
           )}
           {review.aspects.safety !== undefined && (
-            <span className="px-2 py-1 bg-red-100 text-red-700 rounded">
-              An toàn: {review.aspects.safety}/5
+            <span className="px-2 py-1 theme-bg-error theme-text-error rounded">
+              {t("tour_aspect_safety")}: {review.aspects.safety}/5
             </span>
           )}
         </div>
@@ -394,8 +408,8 @@ const DashboardTourPage: React.FC = () => {
       console.error(`❌ Error ${modalState.type}ing booking:`, error);
       alert(
         modalState.type === "confirm"
-          ? "Lỗi khi xác nhận đặt tour"
-          : "Lỗi khi hủy đặt tour"
+          ? t("tour_error_confirm")
+          : t("tour_error_cancel")
       );
     } finally {
       setActionLoading(null);
@@ -558,7 +572,6 @@ const DashboardTourPage: React.FC = () => {
           setBookings([]);
         }
 
-        // TODO: Uncomment when tour review API is ready
         // Fetch rating summaries for each tour
         const summaryPromises = toursData.map((t) =>
           t.tourId
@@ -646,7 +659,7 @@ const DashboardTourPage: React.FC = () => {
         const week = i + 1;
         return {
           day: week,
-          label: `Tuần ${week}`,
+          label: `${t("tour_chart_week")} ${week}`,
           revenue: map.get(week) || 0,
         };
       });
@@ -677,7 +690,7 @@ const DashboardTourPage: React.FC = () => {
         return { day: year, label: `${year}`, revenue: map.get(year) || 0 };
       });
     }
-  }, [bookings, revenueFilter]);
+  }, [bookings, revenueFilter, t]);
 
   // Fetch notifications from API
   useEffect(() => {
@@ -689,12 +702,10 @@ const DashboardTourPage: React.FC = () => {
       const diffHours = Math.floor(diffMins / 60);
       const diffDays = Math.floor(diffHours / 24);
 
-      if (diffMins < 1) return t("just_now") || "Vừa xong";
-      if (diffMins < 60)
-        return `${diffMins} ${t("minutes_ago_suffix") || "phút trước"}`;
-      if (diffHours < 24)
-        return `${diffHours} ${t("hours_ago_suffix") || "giờ trước"}`;
-      return `${diffDays} ${t("days_ago_suffix") || "ngày trước"}`;
+      if (diffMins < 1) return t("tour_just_now");
+      if (diffMins < 60) return `${diffMins} ${t("tour_minutes_ago")}`;
+      if (diffHours < 24) return `${diffHours} ${t("tour_hours_ago")}`;
+      return `${diffDays} ${t("tour_days_ago")}`;
     };
 
     const fetchNotifications = async () => {
@@ -746,28 +757,28 @@ const DashboardTourPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<BarChart3 className="w-5 h-5 icon-brand" />}
-          label="Tổng doanh thu"
+          label={t("tour_total_revenue_title")}
           value={`${formatCompactCurrency(
             bookings
               .filter((b) => b.providerConfirmed === 1)
               .reduce((sum, b) => sum + (b.totalPrice || 0), 0)
-          )} VND`}
+          )} ${t("tour_unit_vnd")}`}
           trend={calculateMonthGrowth}
         />
         <StatCard
           icon={<Calendar className="w-5 h-5 icon-brand" />}
-          label="Tổng đặt tour"
+          label={t("tour_total_bookings_title")}
           value={bookings.filter((b) => b.providerConfirmed === 1).length}
           trend={calculateBookingGrowth}
         />
         <StatCard
           icon={<MessageSquare className="w-5 h-5 icon-brand" />}
-          label="Tổng đánh giá"
+          label={t("tour_total_reviews_title")}
           value={totalReviews}
         />
         <StatCard
           icon={<MapPin className="w-5 h-5 icon-brand" />}
-          label="Tours"
+          label={t("tour_total_tours_title")}
           value={tours.length}
         />
       </div>
@@ -778,7 +789,7 @@ const DashboardTourPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 icon-brand" />
             <h2 className="text-lg font-semibold theme-text-primary">
-              Thông báo mới
+              {t("tour_notifications_new")}
             </h2>
             {newNotificationsCount > 0 && (
               <span className="px-2 py-0.5 text-xs font-medium theme-bg-primary theme-text-button rounded-full">
@@ -797,7 +808,7 @@ const DashboardTourPage: React.FC = () => {
           {notifications.length === 0 ? (
             <div className="col-span-full text-center py-8 theme-text-secondary">
               <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Không có thông báo mới</p>
+              <p>{t("tour_notifications_none")}</p>
             </div>
           ) : (
             notifications.map((n) => (
@@ -816,32 +827,32 @@ const DashboardTourPage: React.FC = () => {
         <div className="flex items-center gap-2 mb-6">
           <Zap className="w-5 h-5 icon-brand" />
           <h2 className="text-lg font-semibold theme-text-primary">
-            Hành động nhanh
+            {t("tour_quick_actions")}
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <QuickAction
             icon={<Plus className="w-6 h-6" />}
-            label="Thêm tour"
-            description="Tạo tour mới"
+            label={t("tour_action_add")}
+            description={t("tour_action_add_desc")}
             onClick={() => navigate("/supplier/service/tour/create")}
           />
           <QuickAction
             icon={<List className="w-6 h-6" />}
-            label="Quản lý đặt tour"
-            description="Xem & xác nhận đặt tour"
+            label={t("tour_action_manage_bookings")}
+            description={t("tour_action_manage_bookings_desc")}
             onClick={() => navigate("/supplier/service/tour/bookings")}
           />
           <QuickAction
             icon={<MessageSquare className="w-6 h-6" />}
-            label="Quản lý đánh giá"
-            description="Phản hồi khách hàng"
+            label={t("tour_action_manage_reviews")}
+            description={t("tour_action_manage_reviews_desc")}
             onClick={() => navigate("/supplier/services/tour/reviews/all")}
           />
           <QuickAction
             icon={<BarChart2 className="w-6 h-6" />}
-            label="Quản lý tours"
-            description="Xem tất cả tours"
+            label={t("tour_action_manage_all")}
+            description={t("tour_action_manage_all_desc")}
             onClick={() => navigate("/supplier/service/tour/list")}
           />
         </div>
@@ -853,7 +864,7 @@ const DashboardTourPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 icon-brand" />
             <h2 className="text-lg font-semibold theme-text-primary">
-              Biểu đồ doanh thu
+              {t("tour_revenue_chart")}
             </h2>
           </div>
           <div className="flex gap-2">
@@ -861,58 +872,63 @@ const DashboardTourPage: React.FC = () => {
               onClick={() => setRevenueFilter("day")}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 revenueFilter === "day"
-                  ? "bg-blue-600 text-white"
-                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+                  ? "theme-bg-primary theme-text-button"
+                  : "theme-bg-secondary theme-text-secondary hover:opacity-80"
               }`}
             >
-              Ngày
+              {t("tour_chart_day")}
             </button>
             <button
               onClick={() => setRevenueFilter("week")}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 revenueFilter === "week"
-                  ? "bg-blue-600 text-white"
-                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+                  ? "theme-bg-primary theme-text-button"
+                  : "theme-bg-secondary theme-text-secondary hover:opacity-80"
               }`}
             >
-              Tuần
+              {t("tour_chart_week")}
             </button>
             <button
               onClick={() => setRevenueFilter("month")}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 revenueFilter === "month"
-                  ? "bg-blue-600 text-white"
-                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+                  ? "theme-bg-primary theme-text-button"
+                  : "theme-bg-secondary theme-text-secondary hover:opacity-80"
               }`}
             >
-              Tháng
+              {t("tour_chart_month")}
             </button>
             <button
               onClick={() => setRevenueFilter("year")}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 revenueFilter === "year"
-                  ? "bg-blue-600 text-white"
-                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+                  ? "theme-bg-primary theme-text-button"
+                  : "theme-bg-secondary theme-text-secondary hover:opacity-80"
               }`}
             >
-              Năm
+              {t("tour_chart_year")}
             </button>
           </div>
         </div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={revenueChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              <YAxis tickFormatter={(value) => formatCompactCurrency(value)} />
+              <CartesianGrid strokeDasharray="3 3" className="theme-border" />
+              <XAxis dataKey="label" className="theme-text-secondary" />
+              <YAxis tickFormatter={(value) => formatCompactCurrency(value)} className="theme-text-secondary" />
               <Tooltip
                 formatter={(value: number) => [
-                  `${value.toLocaleString("vi-VN")} VND`,
+                  `${value.toLocaleString("vi-VN")} ${t("tour_unit_vnd")}`,
                   "",
                 ]}
                 labelStyle={{ fontWeight: "bold" }}
+                contentStyle={{ 
+                  backgroundColor: "var(--color-bg-card)", 
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "8px"
+                }}
               />
-              <Bar dataKey="revenue" fill="#3b82f6" />
+              <Bar dataKey="revenue" fill="var(--color-primary)" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -922,7 +938,7 @@ const DashboardTourPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Danh sách tours
+            {t("tour_list_title")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
@@ -953,7 +969,7 @@ const DashboardTourPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 icon-brand" />
             <h2 className="text-lg font-semibold theme-text-primary">
-              Đặt tour gần đây
+              {t("tour_recent_bookings")}
             </h2>
           </div>
           <button
@@ -967,7 +983,7 @@ const DashboardTourPage: React.FC = () => {
         {bookings.filter((b) => b.providerConfirmed === 0).length === 0 ? (
           <div className="text-center py-8 theme-text-secondary">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>Chưa có đặt tour nào</p>
+            <p>{t("tour_no_bookings")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -1022,7 +1038,7 @@ const DashboardTourPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Tổng quan đánh giá
+            {t("tour_rating_average")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
@@ -1034,7 +1050,7 @@ const DashboardTourPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recentTours.length === 0 ? (
             <div className="theme-text-secondary text-sm">
-              Chưa có dữ liệu đánh giá
+              {t("tour_no_bookings")}
             </div>
           ) : (
             recentTours.map((tour) => {
@@ -1045,7 +1061,7 @@ const DashboardTourPage: React.FC = () => {
                 <TourRatingSummaryCard
                   key={tour.tourId}
                   summary={summary}
-                  tourName={tour.title || "Tour"}
+                  tourName={tour.title || t("tour")}
                 />
               ) : null;
             })
@@ -1057,7 +1073,7 @@ const DashboardTourPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Nhận xét gần đây
+            {t("tour_reviews_recent_title")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
@@ -1069,7 +1085,7 @@ const DashboardTourPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recentReviews.length === 0 && (
             <div className="theme-text-secondary text-sm">
-              Chưa có đánh giá nào
+              {t("tour_reviews_no_reviews_msg")}
             </div>
           )}
           {recentReviews.map((r) => {
@@ -1078,7 +1094,7 @@ const DashboardTourPage: React.FC = () => {
               <TourReviewCard
                 key={r.reviewId}
                 review={r}
-                tourName={reviewTour?.title || "Tour"}
+                tourName={reviewTour?.title || t("tour")}
                 readOnly={true}
               />
             );
@@ -1095,20 +1111,20 @@ const DashboardTourPage: React.FC = () => {
         onConfirm={executeAction}
         title={
           modalState.type === "confirm"
-            ? "Xác nhận đặt tour"
-            : "Hủy đặt tour"
+            ? t("tour_booking_confirm_title")
+            : t("tour_booking_cancel_title")
         }
         message={
           modalState.type === "confirm"
-            ? "Bạn có chắc chắn muốn xác nhận đặt tour này không?"
-            : "Bạn có chắc chắn muốn hủy đặt tour này không?"
+            ? t("tour_booking_confirm_message")
+            : t("tour_booking_cancel_message")
         }
         confirmText={
           modalState.type === "confirm"
-            ? "Xác nhận"
-            : "Hủy đặt tour"
+            ? t("tour_confirm")
+            : t("tour_cancel")
         }
-        cancelText="Quay lại"
+        cancelText={t("tour_back")}
         type={modalState.type === "cancel" ? "danger" : "confirm"}
         loading={actionLoading === modalState.bookingId}
       />

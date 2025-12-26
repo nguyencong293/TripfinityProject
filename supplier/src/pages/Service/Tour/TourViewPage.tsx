@@ -92,16 +92,14 @@ const TourViewPage: React.FC = (): JSX.Element => {
   const getStatusBadge = (status?: string) => {
     if (!status) return null;
     const colors = {
-      published:
-        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
-      archived:
-        "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300",
-      draft: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+      published: "theme-bg-success theme-text-success",
+      archived: "theme-bg-secondary theme-text-secondary",
+      draft: "theme-bg-error theme-text-error",
     };
     const labels = {
-      published: "Đã xuất bản",
-      archived: "Lưu trữ",
-      draft: "Nháp",
+      published: t("tour_status_published"),
+      archived: t("tour_status_archived"),
+      draft: t("tour_status_draft"),
     };
     return (
       <span
@@ -116,20 +114,20 @@ const TourViewPage: React.FC = (): JSX.Element => {
 
   const getVisibilityBadge = (visibility: string) => {
     return visibility === "public" ? (
-      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium theme-bg-info theme-text-info">
         <Eye className="w-3 h-3" />
-        Công khai
+        {t("tour_visibility_public")}
       </span>
     ) : (
-      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300">
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium theme-bg-secondary theme-text-secondary">
         <EyeOff className="w-3 h-3" />
-        Riêng tư
+        {t("tour_visibility_private")}
       </span>
     );
   };
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
+    if (!dateString) return t("tour_na");
     return new Date(dateString).toLocaleDateString("vi-VN", {
       year: "numeric",
       month: "long",
@@ -157,7 +155,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin theme-text-primary" />
-          <p className="theme-text-secondary">Đang tải thông tin tour...</p>
+          <p className="theme-text-secondary">{t("tour_view_loading")}</p>
         </div>
       </div>
     );
@@ -167,12 +165,12 @@ const TourViewPage: React.FC = (): JSX.Element => {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="theme-bg-card border theme-border rounded-xl p-8 text-center">
-          <p className="text-red-500 mb-4">{error || "Không tìm thấy tour"}</p>
+          <p className="theme-text-error mb-4">{error || t("tour_view_not_found")}</p>
           <button
             onClick={() => navigate("/supplier/service/tour")}
             className="mt-4 btn-outline px-4 py-2"
           >
-            Quay lại
+            {t("back")}
           </button>
         </div>
       </div>
@@ -186,7 +184,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/supplier/service/tour")}
-            className="p-2 rounded-lg hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors"
+            className="p-2 rounded-lg theme-hover transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -196,9 +194,9 @@ const TourViewPage: React.FC = (): JSX.Element => {
               {getStatusBadge(tour.tourStatus)}
               {getVisibilityBadge(tour.visibility || "public")}
               {tour.isFeatured && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium theme-bg-warning theme-text-warning">
                   <Award className="w-3 h-3" />
-                  Nổi bật
+                  {t("tour_featured")}
                 </span>
               )}
             </div>
@@ -243,50 +241,50 @@ const TourViewPage: React.FC = (): JSX.Element => {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Basic Info */}
         <div className="theme-bg-card border theme-border rounded-xl p-6 flex flex-col gap-4">
-          <h2 className={sectionTitle}>Thông tin cơ bản</h2>
+          <h2 className={sectionTitle}>{t("tour_view_basic_info")}</h2>
 
           <div className="space-y-3">
             <div>
-              <div className={labelCls}>Loại tour</div>
+              <div className={labelCls}>{t("tour_col_type")}</div>
               <div className={valueCls + " flex items-center gap-2 mt-1"}>
                 <Compass className="w-4 h-4" />
                 {tour.tourType === "group"
-                  ? "Tour nhóm"
+                  ? t("tour_type_group")
                   : tour.tourType === "private"
-                  ? "Tour riêng"
-                  : "Tour tùy chỉnh"}
+                  ? t("tour_type_private")
+                  : t("tour_type_custom")}
               </div>
             </div>
 
             {tour.difficultyLevel && (
               <div>
-                <div className={labelCls}>Độ khó</div>
+                <div className={labelCls}>{t("tour_difficulty")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <TrendingUp className="w-4 h-4" />
                   {tour.difficultyLevel === "easy"
-                    ? "Dễ"
+                    ? t("tour_difficulty_easy")
                     : tour.difficultyLevel === "moderate"
-                    ? "Trung bình"
-                    : "Khó"}
+                    ? t("tour_difficulty_moderate")
+                    : t("tour_difficulty_hard")}
                 </div>
               </div>
             )}
 
             {tour.durationDays && (
               <div>
-                <div className={labelCls}>Thời gian</div>
+                <div className={labelCls}>{t("tour_duration")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Clock className="w-4 h-4" />
-                  {tour.durationDays} ngày
+                  {tour.durationDays} {t("tour_days")}
                 </div>
               </div>
             )}
 
             <div>
-              <div className={labelCls}>Giá tour</div>
+              <div className={labelCls}>{t("tour_col_price")}</div>
               <div className={valueCls + " flex items-center gap-2 mt-1"}>
                 <DollarSign className="w-4 h-4" />
-                <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="text-lg font-bold theme-text-success">
                   {tour.price?.toLocaleString("vi-VN")} {tour.currencyCode}
                 </span>
               </div>
@@ -294,7 +292,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
 
             {typeof tour.ratingAverage === 'number' && tour.ratingAverage > 0 && (
               <div>
-                <div className={labelCls}>Đánh giá trung bình</div>
+                <div className={labelCls}>{t("tour_col_rating")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   {tour.ratingAverage.toFixed(1)} / 5.0
@@ -306,12 +304,12 @@ const TourViewPage: React.FC = (): JSX.Element => {
 
         {/* Location & Schedule */}
         <div className="theme-bg-card border theme-border rounded-xl p-6 flex flex-col gap-4">
-          <h2 className={sectionTitle}>Địa điểm & Lịch trình</h2>
+          <h2 className={sectionTitle}>{t("tour_view_location_schedule")}</h2>
 
           <div className="space-y-3">
             {tour.location && (
               <div>
-                <div className={labelCls}>Địa điểm</div>
+                <div className={labelCls}>{t("tour_col_location")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <MapPin className="w-4 h-4" />
                   {tour.location}
@@ -321,28 +319,28 @@ const TourViewPage: React.FC = (): JSX.Element => {
 
             {tour.address && (
               <div>
-                <div className={labelCls}>Địa chỉ</div>
+                <div className={labelCls}>{t("tour_address")}</div>
                 <div className={valueCls + " mt-1"}>{tour.address}</div>
               </div>
             )}
 
             {tour.departureLocation && (
               <div>
-                <div className={labelCls}>Điểm khởi hành</div>
+                <div className={labelCls}>{t("tour_departure_location")}</div>
                 <div className={valueCls + " mt-1"}>{tour.departureLocation}</div>
               </div>
             )}
 
             {tour.meetingPoint && (
               <div>
-                <div className={labelCls}>Điểm tập trung</div>
+                <div className={labelCls}>{t("tour_meeting_point")}</div>
                 <div className={valueCls + " mt-1"}>{tour.meetingPoint}</div>
               </div>
             )}
 
             {tour.startDate && (
               <div>
-                <div className={labelCls}>Ngày bắt đầu</div>
+                <div className={labelCls}>{t("tour_col_start_date")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Calendar className="w-4 h-4" />
                   {formatDate(tour.startDate)}
@@ -352,7 +350,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
 
             {tour.endDate && (
               <div>
-                <div className={labelCls}>Ngày kết thúc</div>
+                <div className={labelCls}>{t("tour_col_end_date")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Calendar className="w-4 h-4" />
                   {formatDate(tour.endDate)}
@@ -364,33 +362,33 @@ const TourViewPage: React.FC = (): JSX.Element => {
 
         {/* Capacity Info */}
         <div className="theme-bg-card border theme-border rounded-xl p-6 flex flex-col gap-4">
-          <h2 className={sectionTitle}>Sức chứa</h2>
+          <h2 className={sectionTitle}>{t("tour_view_capacity")}</h2>
 
           <div className="space-y-3">
             {tour.capacity && (
               <div>
-                <div className={labelCls}>Sức chứa tối đa</div>
+                <div className={labelCls}>{t("tour_capacity")}</div>
                 <div className={valueCls + " flex items-center gap-2 mt-1"}>
                   <Users className="w-4 h-4" />
-                  {tour.capacity} người
+                  {tour.capacity} {t("tour_guest")}
                 </div>
               </div>
             )}
 
             {tour.minParticipants && (
               <div>
-                <div className={labelCls}>Tối thiểu</div>
+                <div className={labelCls}>{t("tour_min_participants")}</div>
                 <div className={valueCls + " mt-1"}>
-                  {tour.minParticipants} người
+                  {tour.minParticipants} {t("tour_guest")}
                 </div>
               </div>
             )}
 
             {tour.maxParticipants && (
               <div>
-                <div className={labelCls}>Tối đa</div>
+                <div className={labelCls}>{t("tour_max_participants")}</div>
                 <div className={valueCls + " mt-1"}>
-                  {tour.maxParticipants} người
+                  {tour.maxParticipants} {t("tour_guest")}
                 </div>
               </div>
             )}
@@ -400,12 +398,12 @@ const TourViewPage: React.FC = (): JSX.Element => {
         {/* Guide Languages */}
         {tour.guideLanguagesJson && parseJsonArray<string>(tour.guideLanguagesJson).length > 0 && (
           <div className="theme-bg-card border theme-border rounded-xl p-6 flex flex-col gap-4">
-            <h2 className={sectionTitle}>Ngôn ngữ hướng dẫn</h2>
+            <h2 className={sectionTitle}>{t("tour_guide_languages")}</h2>
             <div className="flex flex-wrap gap-2">
               {parseJsonArray<string>(tour.guideLanguagesJson).map((lang) => (
                 <span
                   key={lang}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-light-secondary dark:bg-dark-secondary border theme-border text-sm font-medium"
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full theme-bg-secondary border theme-border text-sm font-medium"
                 >
                   <Globe className="w-3 h-3" />
                   {LANGUAGES_DICT[lang] || lang}
@@ -419,7 +417,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
       {/* Description */}
       {tour.serviceDescription && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Mô tả tour</h2>
+          <h2 className={sectionTitle + " mb-4"}>{t("tour_description")}</h2>
           <p className={valueCls + " whitespace-pre-wrap"}>
             {tour.serviceDescription}
           </p>
@@ -429,7 +427,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
       {/* Itinerary Overview */}
       {tour.itineraryOverview && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Tổng quan lịch trình</h2>
+          <h2 className={sectionTitle + " mb-4"}>{t("tour_itinerary_overview")}</h2>
           <p className={valueCls + " whitespace-pre-wrap"}>
             {tour.itineraryOverview}
           </p>
@@ -441,17 +439,17 @@ const TourViewPage: React.FC = (): JSX.Element => {
         const details = parseJsonArray<{ day: number; title: string; activities: string[] }>(tour.itineraryDetailsJson);
         return details.length > 0 ? (
           <div className="theme-bg-card border theme-border rounded-xl p-6">
-            <h2 className={sectionTitle + " mb-4"}>Chi tiết lịch trình</h2>
+            <h2 className={sectionTitle + " mb-4"}>{t("tour_itinerary_details")}</h2>
             <div className="space-y-4">
               {details.map((item, idx) => (
-                <div key={idx} className="border-l-4 border-light-primary dark:border-dark-primary pl-4">
+                <div key={idx} className="border-l-4 theme-border-brand pl-4">
                   <h3 className="font-semibold theme-text-primary mb-2">
-                    Ngày {item.day}: {item.title}
+                    {t("tour_day")} {item.day}: {item.title}
                   </h3>
                   <ul className="space-y-1">
                     {item.activities.map((activity, aIdx) => (
                       <li key={aIdx} className="text-sm theme-text-secondary flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-light-primary dark:bg-dark-primary mt-1.5" />
+                        <span className="w-1.5 h-1.5 rounded-full theme-bg-brand mt-1.5" />
                         {activity}
                       </li>
                     ))}
@@ -467,7 +465,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
       <div className="grid md:grid-cols-2 gap-6">
         {tour.includedJson && parseJsonArray<string>(tour.includedJson).length > 0 && (
           <div className="theme-bg-card border theme-border rounded-xl p-6">
-            <h2 className={sectionTitle + " mb-4"}>Bao gồm</h2>
+            <h2 className={sectionTitle + " mb-4"}>{t("tour_included")}</h2>
             <div className="space-y-2">
               {parseJsonArray<string>(tour.includedJson).map((item) => (
                 <div key={item} className="flex items-start gap-2">
@@ -481,7 +479,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
 
         {tour.excludedJson && parseJsonArray<string>(tour.excludedJson).length > 0 && (
           <div className="theme-bg-card border theme-border rounded-xl p-6">
-            <h2 className={sectionTitle + " mb-4"}>Không bao gồm</h2>
+            <h2 className={sectionTitle + " mb-4"}>{t("tour_excluded")}</h2>
             <div className="space-y-2">
               {parseJsonArray<string>(tour.excludedJson).map((item) => (
                 <div key={item} className="flex items-start gap-2">
@@ -497,12 +495,12 @@ const TourViewPage: React.FC = (): JSX.Element => {
       {/* Categories */}
       {tour.categoriesJson && parseJsonArray<string>(tour.categoriesJson).length > 0 && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Danh mục</h2>
+          <h2 className={sectionTitle + " mb-4"}>{t("tour_categories")}</h2>
           <div className="flex flex-wrap gap-2">
             {parseJsonArray<string>(tour.categoriesJson).map((cat) => (
               <span
                 key={cat}
-                className="px-3 py-1 rounded-full bg-light-secondary dark:bg-dark-secondary border theme-border text-sm font-medium"
+                className="px-3 py-1 rounded-full theme-bg-secondary border theme-border text-sm font-medium"
               >
                 {CATEGORIES_DICT[cat] || cat}
               </span>
@@ -514,14 +512,14 @@ const TourViewPage: React.FC = (): JSX.Element => {
       {/* Services */}
       {tour.servicesJson && parseJsonArray<string>(tour.servicesJson).length > 0 && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Dịch vụ</h2>
+          <h2 className={sectionTitle + " mb-4"}>{t("tour_services")}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {parseJsonArray<string>(tour.servicesJson).map((service) => (
               <div
                 key={service}
                 className="flex items-center gap-2 p-3 rounded-lg theme-bg-secondary"
               >
-                <div className="w-2 h-2 rounded-full bg-light-primary dark:bg-dark-primary" />
+                <div className="w-2 h-2 rounded-full theme-bg-brand" />
                 <span className="text-sm">{SERVICES_DICT[service] || service}</span>
               </div>
             ))}
@@ -532,12 +530,12 @@ const TourViewPage: React.FC = (): JSX.Element => {
       {/* Badges */}
       {tour.badges && parseJsonArray<string>(tour.badges).length > 0 && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Huy hiệu</h2>
+          <h2 className={sectionTitle + " mb-4"}>{t("tour_badges")}</h2>
           <div className="flex flex-wrap gap-2">
             {parseJsonArray<string>(tour.badges).map((badge) => (
               <span
                 key={badge}
-                className="px-3 py-1 rounded-full bg-light-secondary dark:bg-dark-secondary border theme-border text-sm font-medium"
+                className="px-3 py-1 rounded-full theme-bg-secondary border theme-border text-sm font-medium"
               >
                 {badge}
               </span>
@@ -551,7 +549,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
         <div className="theme-bg-card border theme-border rounded-xl p-6">
           <h2 className={sectionTitle + " mb-4 flex items-center gap-2"}>
             <ImageIcon className="w-5 h-5" />
-            Thư viện ảnh ({parseJsonArray<string>(tour.imageUrls).length})
+            {t("tour_gallery")} ({parseJsonArray<string>(tour.imageUrls).length})
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {parseJsonArray<string>(tour.imageUrls).map((url, index) => (
@@ -573,7 +571,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
       {/* Cancellation Policy */}
       {tour.cancellationPolicy && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Chính sách hủy tour</h2>
+          <h2 className={sectionTitle + " mb-4"}>{t("tour_cancellation_policy")}</h2>
           <p className={valueCls + " whitespace-pre-wrap"}>
             {tour.cancellationPolicy}
           </p>
@@ -583,7 +581,7 @@ const TourViewPage: React.FC = (): JSX.Element => {
       {/* Policies */}
       {tour.policiesText && (
         <div className="theme-bg-card border theme-border rounded-xl p-6">
-          <h2 className={sectionTitle + " mb-4"}>Chính sách khác</h2>
+          <h2 className={sectionTitle + " mb-4"}>{t("tour_policies")}</h2>
           <p className={valueCls + " whitespace-pre-wrap"}>
             {tour.policiesText}
           </p>
@@ -592,11 +590,11 @@ const TourViewPage: React.FC = (): JSX.Element => {
 
       {/* SEO Info */}
       <div className="theme-bg-card border theme-border rounded-xl p-6">
-        <h2 className={sectionTitle + " mb-4"}>Thông tin SEO</h2>
+        <h2 className={sectionTitle + " mb-4"}>{t("tour_seo_info")}</h2>
         <div className="space-y-3">
           {tour.slug && (
             <div>
-              <div className={labelCls}>Slug</div>
+              <div className={labelCls}>{t("tour_slug")}</div>
               <div className={valueCls + " mt-1 font-mono text-sm"}>
                 /{tour.slug}
               </div>
@@ -604,13 +602,13 @@ const TourViewPage: React.FC = (): JSX.Element => {
           )}
           {tour.seoTitle && (
             <div>
-              <div className={labelCls}>SEO Title</div>
+              <div className={labelCls}>{t("tour_seo_title")}</div>
               <div className={valueCls + " mt-1"}>{tour.seoTitle}</div>
             </div>
           )}
           {tour.seoDescription && (
             <div>
-              <div className={labelCls}>SEO Description</div>
+              <div className={labelCls}>{t("tour_seo_description")}</div>
               <div className={valueCls + " mt-1"}>{tour.seoDescription}</div>
             </div>
           )}
@@ -619,35 +617,35 @@ const TourViewPage: React.FC = (): JSX.Element => {
 
       {/* Metadata */}
       <div className="theme-bg-card border theme-border rounded-xl p-6">
-        <h2 className={sectionTitle + " mb-4"}>Thông tin hệ thống</h2>
+        <h2 className={sectionTitle + " mb-4"}>{t("tour_system_info")}</h2>
         <div className="grid md:grid-cols-2 gap-4 text-sm">
           <div>
-            <span className={labelCls}>ID:</span>{" "}
+            <span className={labelCls}>{t("tour_col_id")}:</span>{" "}
             <span className={valueCls}>{tour.tourId}</span>
           </div>
           <div>
-            <span className={labelCls}>Provider ID:</span>{" "}
+            <span className={labelCls}>{t("tour_provider_id")}:</span>{" "}
             <span className={valueCls}>{tour.providerId}</span>
           </div>
           <div>
-            <span className={labelCls}>Area ID:</span>{" "}
+            <span className={labelCls}>{t("tour_area_id")}:</span>{" "}
             <span className={valueCls}>{tour.areaId}</span>
           </div>
           {tour.publishedAt && (
             <div>
-              <span className={labelCls}>Ngày xuất bản:</span>{" "}
+              <span className={labelCls}>{t("tour_published_at")}:</span>{" "}
               <span className={valueCls}>{formatDate(tour.publishedAt)}</span>
             </div>
           )}
           {tour.createdAt && (
             <div>
-              <span className={labelCls}>Ngày tạo:</span>{" "}
+              <span className={labelCls}>{t("tour_created_at")}:</span>{" "}
               <span className={valueCls}>{formatDate(tour.createdAt)}</span>
             </div>
           )}
           {tour.updatedAt && (
             <div>
-              <span className={labelCls}>Cập nhật lần cuối:</span>{" "}
+              <span className={labelCls}>{t("tour_updated_at")}:</span>{" "}
               <span className={valueCls}>{formatDate(tour.updatedAt)}</span>
             </div>
           )}
