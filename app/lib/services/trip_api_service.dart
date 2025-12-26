@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
@@ -296,14 +297,22 @@ class TripApiService {
     required int itineraryId,
     String? notes,
   }) async {
+    debugPrint(
+      '🔄 Updating itinerary notes: itineraryId=$itineraryId, notes=$notes',
+    );
+
     final res = await _dio.patch(
       '/trips/itineraries/$itineraryId',
       data: {'notes': notes},
     );
 
+    debugPrint('📡 Response status: ${res.statusCode}');
+    debugPrint('📡 Response data: ${res.data}');
+
     if (res.statusCode == 200 && res.data is Map<String, dynamic>) {
       final responseData = res.data as Map<String, dynamic>;
       if (responseData['success'] == true && responseData['data'] != null) {
+        debugPrint('✅ Notes updated successfully');
         return responseData['data'] as Map<String, dynamic>;
       }
     }
@@ -311,6 +320,7 @@ class TripApiService {
     final msg = (res.data is Map && (res.data as Map)['message'] != null)
         ? (res.data as Map)['message'].toString()
         : 'Không thể cập nhật ghi chú';
+    debugPrint('❌ Failed to update notes: $msg');
     throw Exception(msg);
   }
 }

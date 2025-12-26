@@ -1365,7 +1365,12 @@ class _DayCardState extends State<_DayCard>
 
   Future<void> _saveNotes() async {
     final itineraryId = widget.itinerary?['itineraryId'] as int?;
+    debugPrint('🔍 Attempting to save notes - itineraryId: $itineraryId');
+    debugPrint('🔍 Notes text: ${_notesController.text.trim()}');
+    debugPrint('🔍 Full itinerary data: ${widget.itinerary}');
+
     if (itineraryId == null) {
+      debugPrint('❌ itineraryId is null!');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Không tìm thấy hành trình')),
@@ -1383,11 +1388,13 @@ class _DayCardState extends State<_DayCard>
       final dio = Dio();
       final tripService = TripApiService(dio: dio, prefs: prefs);
 
+      debugPrint('📤 Calling updateItineraryNotes API...');
       await tripService.updateItineraryNotes(
         itineraryId: itineraryId,
         notes: _notesController.text.trim(),
       );
 
+      debugPrint('✅ Notes saved successfully');
       if (mounted) {
         // Unfocus để tắt bàn phím
         FocusScope.of(context).unfocus();
@@ -1396,6 +1403,7 @@ class _DayCardState extends State<_DayCard>
         ).showSnackBar(const SnackBar(content: Text('Đã lưu ghi chú')));
       }
     } catch (e) {
+      debugPrint('❌ Error saving notes: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
