@@ -158,6 +158,10 @@ class _HomeContentState extends State<_HomeContent> {
   Set<int> _favoriteAttractionIds = {};
   Set<int> _favoriteTourIds = {};
 
+  // Shared instances to avoid creating multiple times
+  late final Dio _dio;
+  late final Future<SharedPreferences> _prefsFuture;
+
   // Cache futures to avoid reloading on every rebuild
   late final Future<List<HomeServiceItem>> _hotelsFuture;
   late final Future<List<HomeServiceItem>> _toursFuture;
@@ -171,9 +175,20 @@ class _HomeContentState extends State<_HomeContent> {
   @override
   void initState() {
     super.initState();
+
+    // Initialize shared instances once
+    _dio = Dio();
+    _prefsFuture = SharedPreferences.getInstance();
+
+    // Load favorites asynchronously (don't await)
     _loadFavorites();
 
-    // Initialize all futures once
+    // ⚡ CRITICAL: Initialize ALL futures IMMEDIATELY and SIMULTANEOUSLY
+    // This triggers parallel HTTP requests right away - NO waiting!
+    // Each future starts executing independently at the same time
+    final startTime = DateTime.now();
+    debugPrint('🚀 Starting parallel load of all services...');
+
     _hotelsFuture = _loadHomeHotels();
     _toursFuture = _loadHomeTours();
     _attractionsFuture = _loadHomeAttractions();
@@ -182,13 +197,27 @@ class _HomeContentState extends State<_HomeContent> {
     _recommendationsFuture = _loadRecommendations();
     _recentViewedFuture = _loadRecentViewed();
     _latestBlogFuture = _loadLatestBlog();
+
+    // Optional: Monitor when all complete (for debugging only)
+    Future.wait([
+      _hotelsFuture.catchError((_) => <HomeServiceItem>[]),
+      _toursFuture.catchError((_) => <HomeServiceItem>[]),
+      _attractionsFuture.catchError((_) => <HomeServiceItem>[]),
+      _restaurantsFuture.catchError((_) => <HomeServiceItem>[]),
+      _areasFuture.catchError((_) => <AreaPreviewItem>[]),
+      _recommendationsFuture.catchError((_) => <HomeServiceItem>[]),
+      _recentViewedFuture.catchError((_) => <Map<String, dynamic>>[]),
+      _latestBlogFuture.catchError((_) => null),
+    ]).then((_) {
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      debugPrint('✅ All services loaded in ${elapsed}ms (parallel)');
+    });
   }
 
   Future<Map<String, dynamic>?> _loadLatestBlog() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final dio = Dio();
-      final blogService = BlogApiService(dio: dio, prefs: prefs);
+      final prefs = await _prefsFuture;
+      final blogService = BlogApiService(dio: _dio, prefs: prefs);
       return await blogService.getLatestBlog();
     } catch (e) {
       debugPrint('Error loading latest blog: $e');
@@ -198,15 +227,14 @@ class _HomeContentState extends State<_HomeContent> {
 
   Future<void> _loadFavorites() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await _prefsFuture;
       final userId = prefs.getInt('user_id');
 
       if (userId == null) {
         return;
       }
 
-      final dio = Dio();
-      final favoriteApi = FavoriteApiService(dio: dio, prefs: prefs);
+      final favoriteApi = FavoriteApiService(dio: _dio, prefs: prefs);
 
       // Load all favorite IDs in parallel
       final results = await Future.wait([
@@ -238,8 +266,8 @@ class _HomeContentState extends State<_HomeContent> {
   }
 
   Future<List<HomeServiceItem>> _loadHomeRestaurants() async {
-    final prefs = await SharedPreferences.getInstance();
-    final api = SearchApiService(dio: Dio(), prefs: prefs);
+    final prefs = await _prefsFuture;
+    final api = SearchApiService(dio: _dio, prefs: prefs);
     final data = await api.search(q: '', type: 'restaurant');
 
     final list = (data['restaurants'] is List)
@@ -286,8 +314,8 @@ class _HomeContentState extends State<_HomeContent> {
   }
 
   Future<List<HomeServiceItem>> _loadHomeHotels() async {
-    final prefs = await SharedPreferences.getInstance();
-    final api = SearchApiService(dio: Dio(), prefs: prefs);
+    final prefs = await _prefsFuture;
+    final api = SearchApiService(dio: _dio, prefs: prefs);
     final data = await api.search(q: '', type: 'hotel');
 
     final list = (data['hotels'] is List)
@@ -334,8 +362,8 @@ class _HomeContentState extends State<_HomeContent> {
   }
 
   Future<List<HomeServiceItem>> _loadHomeTours() async {
-    final prefs = await SharedPreferences.getInstance();
-    final api = SearchApiService(dio: Dio(), prefs: prefs);
+    final prefs = await _prefsFuture;
+    final api = SearchApiService(dio: _dio, prefs: prefs);
     final data = await api.search(q: '', type: 'tour');
 
     final list = (data['tours'] is List) ? List.from(data['tours']) : const [];
@@ -380,8 +408,8 @@ class _HomeContentState extends State<_HomeContent> {
   }
 
   Future<List<HomeServiceItem>> _loadHomeAttractions() async {
-    final prefs = await SharedPreferences.getInstance();
-    final api = SearchApiService(dio: Dio(), prefs: prefs);
+    final prefs = await _prefsFuture;
+    final api = SearchApiService(dio: _dio, prefs: prefs);
     final data = await api.search(q: '', type: 'attraction');
 
     final list = (data['attractions'] is List)
@@ -444,8 +472,8 @@ class _HomeContentState extends State<_HomeContent> {
   }
 
   Future<List<AreaPreviewItem>> _loadHomeAreas() async {
-    final prefs = await SharedPreferences.getInstance();
-    final api = AreaApiService(dio: Dio(), prefs: prefs);
+    final prefs = await _prefsFuture;
+    final api = AreaApiService(dio: _dio, prefs: prefs);
 
     final List<Map<String, dynamic>> list = await api.getAll();
     final items = <AreaPreviewItem>[];
@@ -486,8 +514,8 @@ class _HomeContentState extends State<_HomeContent> {
 
   Future<List<Map<String, dynamic>>> _loadRecentViewed() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final historyService = SearchHistoryService(dio: Dio(), prefs: prefs);
+      final prefs = await _prefsFuture;
+      final historyService = SearchHistoryService(dio: _dio, prefs: prefs);
       final viewedItems = await historyService.getRecentViewedItems(limit: 5);
 
       // Convert to format expected by UI
@@ -514,7 +542,7 @@ class _HomeContentState extends State<_HomeContent> {
 
   Future<List<HomeServiceItem>> _loadRecommendations() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await _prefsFuture;
       final userId = prefs.getInt('user_id');
 
       if (userId == null) {
@@ -522,58 +550,70 @@ class _HomeContentState extends State<_HomeContent> {
         return [];
       }
 
-      final dio = Dio();
-      final recommendationService = RecommendationService(dio: dio);
-      final response = await recommendationService.getRecommendations(userId);
+      final recommendationService = RecommendationService(dio: _dio);
 
-      if (!response.success || response.data == null) {
+      // ⚡ OPTIMIZATION: Load recommendations API and service data in parallel
+      // Don't wait for recommendations before starting service searches
+      final recommendationsFuture = recommendationService.getRecommendations(
+        userId,
+      );
+      final searchApi = SearchApiService(dio: _dio, prefs: prefs);
+
+      // Fire all search requests immediately in parallel
+      final hotelSearchFuture = searchApi.search(q: '', type: 'hotel');
+      final restaurantSearchFuture = searchApi.search(
+        q: '',
+        type: 'restaurant',
+      );
+      final attractionSearchFuture = searchApi.search(
+        q: '',
+        type: 'attraction',
+      );
+      final tourSearchFuture = searchApi.search(q: '', type: 'tour');
+
+      // Now wait for ALL of them together (parallel execution)
+      final results = await Future.wait([
+        recommendationsFuture,
+        hotelSearchFuture,
+        restaurantSearchFuture,
+        attractionSearchFuture,
+        tourSearchFuture,
+      ]);
+
+      final response = results[0] as dynamic; // recommendation response
+
+      if (response?.success != true || response?.data == null) {
         debugPrint('⚠️ No recommendations available');
         return [];
       }
 
       debugPrint('🔍 Processing ${response.data!.length} recommendations');
 
-      // Load all service data in parallel for better performance
-      final searchApi = SearchApiService(dio: dio, prefs: prefs);
-      final futures = <Future<Map<String, dynamic>>>[];
-      final serviceTypes = <String>{
-        'hotel',
-        'restaurant',
-        'attraction',
-        'tour',
+      // Build cache from parallel search results
+      final serviceDataCache = <String, List<Map<String, dynamic>>>{
+        'hotel':
+            ((results[1] as Map)['hotels'] as List?)
+                ?.map((e) => Map<String, dynamic>.from(e as Map))
+                .toList() ??
+            [],
+        'restaurant':
+            ((results[2] as Map)['restaurants'] as List?)
+                ?.map((e) => Map<String, dynamic>.from(e as Map))
+                .toList() ??
+            [],
+        'attraction':
+            ((results[3] as Map)['attractions'] as List?)
+                ?.map((e) => Map<String, dynamic>.from(e as Map))
+                .toList() ??
+            [],
+        'tour':
+            ((results[4] as Map)['tours'] as List?)
+                ?.map((e) => Map<String, dynamic>.from(e as Map))
+                .toList() ??
+            [],
       };
 
-      for (final type in serviceTypes) {
-        futures.add(searchApi.search(q: '', type: type));
-      }
-
-      final searchResults = await Future.wait(futures);
-      final serviceDataCache = <String, List<Map<String, dynamic>>>{};
-
-      // Build cache
-      int idx = 0;
-      for (final type in serviceTypes) {
-        final result = searchResults[idx];
-        List? serviceList;
-
-        if (type == 'hotel') {
-          serviceList = result['hotels'] as List?;
-        } else if (type == 'restaurant') {
-          serviceList = result['restaurants'] as List?;
-        } else if (type == 'attraction') {
-          serviceList = result['attractions'] as List?;
-        } else if (type == 'tour') {
-          serviceList = result['tours'] as List?;
-        }
-
-        if (serviceList != null) {
-          serviceDataCache[type] = serviceList
-              .map((e) => Map<String, dynamic>.from(e as Map))
-              .toList();
-          debugPrint('📦 Cached ${serviceList.length} $type items');
-        }
-        idx++;
-      }
+      debugPrint('📦 Cached services for recommendations');
 
       final items = <HomeServiceItem>[];
 
