@@ -214,7 +214,7 @@ const AttractionReviewCard: React.FC<AttractionReviewCardProps> = ({
         <span className="text-sm theme-text-secondary">
           {review.createdAt
             ? new Date(review.createdAt).toLocaleDateString("vi-VN")
-            : "N/A"}
+            : t("attraction_na")}
         </span>
       </div>
       {review.title && (
@@ -227,27 +227,27 @@ const AttractionReviewCard: React.FC<AttractionReviewCardProps> = ({
         <div className="flex flex-wrap gap-2 text-xs">
           {review.aspects.experience !== undefined && (
             <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-              Trải nghiệm: {review.aspects.experience}/5
+              {t("attraction_aspect_experience")}: {review.aspects.experience}/5
             </span>
           )}
           {review.aspects.valueForMoney !== undefined && (
             <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
-              Giá trị: {review.aspects.valueForMoney}/5
+              {t("attraction_aspect_value")}: {review.aspects.valueForMoney}/5
             </span>
           )}
           {review.aspects.accessibility !== undefined && (
             <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
-              Tiếp cận: {review.aspects.accessibility}/5
+              {t("attraction_aspect_accessibility")}: {review.aspects.accessibility}/5
             </span>
           )}
           {review.aspects.facilities !== undefined && (
             <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
-              Tiện nghi: {review.aspects.facilities}/5
+              {t("attraction_aspect_facilities")}: {review.aspects.facilities}/5
             </span>
           )}
           {review.aspects.staff !== undefined && (
             <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded">
-              Nhân viên: {review.aspects.staff}/5
+              {t("attraction_aspect_staff")}: {review.aspects.staff}/5
             </span>
           )}
         </div>
@@ -679,12 +679,12 @@ const DashboardAttractionPage: React.FC = () => {
         />
         <StatCard
           icon={<Calendar className="w-5 h-5 icon-brand" />}
-          label="Tổng đánh giá"
+          label={t("attraction_dashboard_total_reviews")}
           value={totalReviews}
         />
         <StatCard
           icon={<MapPin className="w-5 h-5 icon-brand" />}
-          label="Điểm tham quan"
+          label={t("attraction_dashboard_attractions")}
           value={attractions.length}
         />
       </div>
@@ -695,7 +695,7 @@ const DashboardAttractionPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 icon-brand" />
             <h2 className="text-lg font-semibold theme-text-primary">
-              Thông báo mới
+              {t("attraction_dashboard_new_notifications")}
             </h2>
             {newNotificationsCount > 0 && (
               <span className="px-2 py-0.5 text-xs font-medium theme-bg-primary theme-text-button rounded-full">
@@ -707,14 +707,14 @@ const DashboardAttractionPage: React.FC = () => {
             className="link-brand text-sm font-medium flex items-center gap-1"
             onClick={() => navigate("/supplier/notifications")}
           >
-            Xem tất cả <ChevronRight className="w-4 h-4" />
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {notifications.length === 0 ? (
             <div className="col-span-full text-center py-8 theme-text-secondary">
               <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Không có thông báo mới</p>
+              <p>{t("no_notifications")}</p>
             </div>
           ) : (
             notifications.map((n) => (
@@ -733,32 +733,32 @@ const DashboardAttractionPage: React.FC = () => {
         <div className="flex items-center gap-2 mb-6">
           <Zap className="w-5 h-5 icon-brand" />
           <h2 className="text-lg font-semibold theme-text-primary">
-            Hành động nhanh
+            {t("attraction_dashboard_quick_actions")}
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <QuickAction
             icon={<Plus className="w-6 h-6" />}
-            label="Thêm điểm tham quan"
-            description="Tạo mới một điểm tham quan"
+            label={t("attraction_dashboard_add_attraction")}
+            description={t("attraction_dashboard_add_attraction_desc")}
             onClick={() => navigate("/supplier/service/attraction/create")}
           />
           <QuickAction
             icon={<List className="w-6 h-6" />}
-            label="Quản lý đặt vé"
-            description="Xem và xử lý các đơn đặt vé"
+            label={t("attraction_dashboard_manage_bookings")}
+            description={t("attraction_dashboard_manage_bookings_desc")}
             onClick={() => navigate("/supplier/service/attraction/bookings")}
           />
           <QuickAction
             icon={<MessageSquare className="w-6 h-6" />}
-            label="Quản lý đánh giá"
-            description="Xem và trả lời đánh giá"
+            label={t("attraction_dashboard_manage_reviews")}
+            description={t("attraction_dashboard_manage_reviews_desc")}
             onClick={() => navigate("/supplier/services/attraction/reviews/all")}
           />
           <QuickAction
             icon={<BarChart2 className="w-6 h-6" />}
-            label="Quản lý điểm tham quan"
-            description="Chỉnh sửa thông tin điểm tham quan"
+            label={t("attraction_dashboard_manage_attraction")}
+            description={t("attraction_dashboard_manage_attraction_desc")}
             onClick={() => navigate("/supplier/service/attraction/list")}
           />
         </div>
@@ -770,7 +770,7 @@ const DashboardAttractionPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 icon-brand" />
             <h2 className="text-lg font-semibold theme-text-primary">
-              Biểu đồ doanh thu
+              {t("attraction_dashboard_revenue_chart")}
             </h2>
           </div>
           <div className="flex gap-2">
@@ -778,41 +778,41 @@ const DashboardAttractionPage: React.FC = () => {
               onClick={() => setRevenueFilter("day")}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 revenueFilter === "day"
-                  ? "bg-blue-600 text-white"
-                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+                  ? "theme-bg-primary theme-text-button"
+                  : "theme-bg-secondary theme-text-secondary hover:opacity-80"
               }`}
             >
-              Ngày
+              {t("attraction_chart_day")}
             </button>
             <button
               onClick={() => setRevenueFilter("week")}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 revenueFilter === "week"
-                  ? "bg-blue-600 text-white"
-                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+                  ? "theme-bg-primary theme-text-button"
+                  : "theme-bg-secondary theme-text-secondary hover:opacity-80"
               }`}
             >
-              Tuần
+              {t("attraction_chart_week")}
             </button>
             <button
               onClick={() => setRevenueFilter("month")}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 revenueFilter === "month"
-                  ? "bg-blue-600 text-white"
-                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+                  ? "theme-bg-primary theme-text-button"
+                  : "theme-bg-secondary theme-text-secondary hover:opacity-80"
               }`}
             >
-              Tháng
+              {t("attraction_chart_month")}
             </button>
             <button
               onClick={() => setRevenueFilter("year")}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 revenueFilter === "year"
-                  ? "bg-blue-600 text-white"
-                  : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
+                  ? "theme-bg-primary theme-text-button"
+                  : "theme-bg-secondary theme-text-secondary hover:opacity-80"
               }`}
             >
-              Năm
+              {t("attraction_chart_year")}
             </button>
           </div>
         </div>
@@ -839,25 +839,25 @@ const DashboardAttractionPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Điểm tham quan của bạn
+            {t("attraction_dashboard_attraction_list")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
             onClick={() => navigate("/supplier/service/attraction/list")}
           >
-            Xem tất cả <ChevronRight className="w-4 h-4" />
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {attractions.length === 0 ? (
             <div className="col-span-full text-center py-8 theme-text-secondary">
               <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Chưa có điểm tham quan nào</p>
+              <p>{t("attraction_dashboard_no_attractions")}</p>
               <button
                 onClick={() => navigate("/supplier/service/attraction/create")}
                 className="mt-4 px-4 py-2 theme-bg-primary theme-text-button rounded-lg hover:opacity-90 transition-opacity"
               >
-                Tạo điểm tham quan đầu tiên
+                {t("attraction_dashboard_create_first")}
               </button>
             </div>
           ) : (
@@ -894,16 +894,16 @@ const DashboardAttractionPage: React.FC = () => {
                       {a.title}
                     </h3>
                     <p className="text-sm theme-text-secondary mt-1">
-                      {a.location || "Chưa có địa điểm"}
+                      {a.location || t("attraction_dashboard_no_location")}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-sm font-medium theme-text-brand">
-                        {a.price.toLocaleString("vi-VN")} VND
+                        {a.price.toLocaleString("vi-VN")} {t("attraction_unit_vnd")}
                       </span>
                       {a.averageVisitMinutes && (
                         <span className="text-xs theme-text-secondary flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {a.averageVisitMinutes} phút
+                          {a.averageVisitMinutes} {t("attraction_unit_minutes")}
                         </span>
                       )}
                     </div>
@@ -914,7 +914,7 @@ const DashboardAttractionPage: React.FC = () => {
                         }
                         className="flex-1 px-3 py-1.5 text-sm border theme-border rounded-lg hover:theme-bg-secondary transition-colors theme-text-primary"
                       >
-                        Chỉnh sửa
+                        {t("attraction_dashboard_edit")}
                       </button>
                       <button
                         onClick={() =>
@@ -922,7 +922,7 @@ const DashboardAttractionPage: React.FC = () => {
                         }
                         className="flex-1 px-3 py-1.5 text-sm theme-bg-primary theme-text-button rounded-lg hover:opacity-90 transition-opacity"
                       >
-                        Xem chi tiết
+                        {t("attraction_dashboard_view_detail")}
                       </button>
                     </div>
                   </div>
@@ -939,21 +939,21 @@ const DashboardAttractionPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 icon-brand" />
             <h2 className="text-lg font-semibold theme-text-primary">
-              Đặt vé gần đây
+              {t("attraction_dashboard_recent_bookings_title")}
             </h2>
           </div>
           <button
             className="link-brand text-sm font-medium flex items-center gap-1"
             onClick={() => navigate("/supplier/service/attraction/bookings")}
           >
-            Xem tất cả
+            {t("view_all")}
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         {bookings.filter((b) => b.providerConfirmed === 0).length === 0 ? (
           <div className="text-center py-8 theme-text-secondary">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>Chưa có đặt vé nào</p>
+            <p>{t("attraction_dashboard_no_bookings")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -969,15 +969,15 @@ const DashboardAttractionPage: React.FC = () => {
                 const attraction = attractions.find((a) => a.attractionId === b.attractionId);
                 const user = userCache.get(b.userId);
                 
-                const formatDate = (s?: string) => s ? new Date(s).toLocaleDateString("vi-VN") : "N/A";
-                const formatDateTime = (s?: string) => s ? new Date(s).toLocaleString("vi-VN", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A";
+                const formatDate = (s?: string) => s ? new Date(s).toLocaleDateString("vi-VN") : t("attraction_na");
+                const formatDateTime = (s?: string) => s ? new Date(s).toLocaleString("vi-VN", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : t("attraction_na");
                 const formatCurrency = (v?: number) => new Intl.NumberFormat("vi-VN").format(v || 0);
                 
                 const getPaymentStatusLabel = (method?: string) => {
                   if (!method || method === "counter") {
-                    return { label: "Thanh toán tại quầy", sublabel: "Chưa thanh toán", color: "bg-yellow-100 text-yellow-800 border-yellow-300", icon: "💵" };
+                    return { label: t("payment_counter"), sublabel: t("payment_counter_desc"), color: "bg-yellow-100 text-yellow-800 border-yellow-300", icon: "💵" };
                   }
-                  return { label: "Thanh toán online", sublabel: method.toUpperCase() + " - Đã thanh toán", color: "bg-green-100 text-green-800 border-green-300", icon: "✅" };
+                  return { label: t("payment_online"), sublabel: method.toUpperCase() + " - " + t("payment_completed"), color: "bg-green-100 text-green-800 border-green-300", icon: "✅" };
                 };
                 
                 const paymentInfo = getPaymentStatusLabel(b.paymentMethod);
@@ -991,9 +991,9 @@ const DashboardAttractionPage: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2 flex-wrap">
                           <h3 className="text-xl font-bold theme-text-primary">#{b.bookingId}</h3>
-                          {!b.providerSeen && <span className="px-2.5 py-1 text-xs font-bold bg-red-500 text-white rounded-full animate-pulse shadow-sm">MỚI</span>}
+                          {!b.providerSeen && <span className="px-2.5 py-1 text-xs font-bold bg-red-500 text-white rounded-full animate-pulse shadow-sm">{t("attraction_booking_new_badge")}</span>}
                           <span className={`px-3 py-1 text-xs font-semibold rounded-full border-2 ${b.providerConfirmed === 0 ? "bg-orange-100 text-orange-700 border-orange-300" : b.providerConfirmed === 1 ? "bg-blue-100 text-blue-700 border-blue-300" : "bg-red-100 text-red-700 border-red-300"}`}>
-                            {b.providerConfirmed === 0 ? "Chờ xác nhận" : b.providerConfirmed === 1 ? "Đã xác nhận" : "Đã hủy"}
+                            {b.providerConfirmed === 0 ? t("attraction_status_pending") : b.providerConfirmed === 1 ? t("attraction_status_confirmed") : t("attraction_status_cancelled")}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-sm theme-text-secondary">
@@ -1008,7 +1008,7 @@ const DashboardAttractionPage: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <MapPin className="w-5 h-5 text-blue-600" />
                           <div>
-                            <p className="text-xs text-blue-600 font-medium mb-0.5">Điểm tham quan</p>
+                            <p className="text-xs text-blue-600 font-medium mb-0.5">{t("attraction")}</p>
                             <p className="text-base font-bold text-blue-900">{attraction.title}</p>
                           </div>
                         </div>
@@ -1016,7 +1016,7 @@ const DashboardAttractionPage: React.FC = () => {
                     )}
 
                     <div className="mb-4 p-3 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
-                      <p className="text-xs text-green-600 font-medium mb-2">Thông tin khách hàng</p>
+                      <p className="text-xs text-green-600 font-medium mb-2">{t("customer_information")}</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div className="flex items-center gap-2">
                           <User className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -1035,15 +1035,15 @@ const DashboardAttractionPage: React.FC = () => {
                       <div className="flex items-start gap-2 p-3 rounded-lg theme-bg-secondary">
                         <Calendar className="w-5 h-5 mt-0.5 text-green-600 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs theme-text-secondary font-medium mb-1">Ngày tham quan</p>
+                          <p className="text-xs theme-text-secondary font-medium mb-1">{t("checkin_date")}</p>
                           <p className="font-bold theme-text-primary text-base truncate">{formatDate(b.startDate || b.visitDate)}</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-2 p-3 rounded-lg theme-bg-secondary">
                         <Users className="w-5 h-5 mt-0.5 text-blue-600 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs theme-text-secondary font-medium mb-1">Số khách</p>
-                          <p className="font-bold theme-text-primary text-base">{b.numAdults} người lớn{b.numChildren ? `, ${b.numChildren} trẻ em` : ""}</p>
+                          <p className="text-xs theme-text-secondary font-medium mb-1">{t("guests")}</p>
+                          <p className="font-bold theme-text-primary text-base">{b.numAdults} {t("adults_suffix")}{b.numChildren ? `, ${b.numChildren} ${t("children_suffix")}` : ""}</p>
                         </div>
                       </div>
                     </div>
@@ -1052,7 +1052,7 @@ const DashboardAttractionPage: React.FC = () => {
                       <div className="flex items-start gap-2">
                         <span className="text-xl">{paymentInfo.icon}</span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold mb-1 opacity-80">Thông tin thanh toán</p>
+                          <p className="text-xs font-semibold mb-1 opacity-80">{t("payment_summary")}</p>
                           <p className="font-bold text-sm leading-tight">{paymentInfo.label}</p>
                           <p className="text-xs mt-0.5 opacity-75">{paymentInfo.sublabel}</p>
                         </div>
@@ -1061,17 +1061,17 @@ const DashboardAttractionPage: React.FC = () => {
 
                     <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 shadow-lg">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-white opacity-90">Tổng tiền</span>
+                        <span className="text-sm font-semibold text-white opacity-90">{t("total_amount")}</span>
                         <div className="text-right">
                           <span className="text-2xl font-black text-white block">{formatCurrency(b.totalPrice)}</span>
-                          <span className="text-sm font-medium text-white opacity-90">{b.currencyCode || "VND"}</span>
+                          <span className="text-sm font-medium text-white opacity-90">{b.currencyCode || t("attraction_unit_vnd")}</span>
                         </div>
                       </div>
                     </div>
 
                     {b.providerNotes && (
                       <div className="mb-4 p-3 rounded-lg bg-amber-50 border-2 border-amber-300">
-                        <p className="text-xs font-bold text-amber-800 mb-1.5 flex items-center gap-1">📝 Ghi chú / Yêu cầu đặc biệt</p>
+                        <p className="text-xs font-bold text-amber-800 mb-1.5 flex items-center gap-1">📝 {t("provider_notes")}</p>
                         <p className="text-sm text-amber-900 font-medium leading-relaxed">{b.providerNotes}</p>
                       </div>
                     )}
@@ -1081,14 +1081,14 @@ const DashboardAttractionPage: React.FC = () => {
                         onClick={() => navigate(`/supplier/service/attraction/bookings/${b.bookingId}`)} 
                         className="flex items-center gap-2 px-4 py-2 text-sm font-semibold theme-text-primary hover:theme-text-brand bg-white hover:bg-blue-50 border-2 theme-border hover:border-blue-300 rounded-lg transition-all shadow-sm hover:shadow"
                       >
-                        <Eye className="w-4 h-4" />Xem chi tiết
+                        <Eye className="w-4 h-4" />{t("view_detail")}
                       </button>
                       {b.providerConfirmed === 0 && (
                         <button 
                           onClick={() => setModalState({ isOpen: true, type: "confirm", bookingId: b.bookingId || null })} 
                           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all shadow-sm hover:shadow-md"
                         >
-                          <CheckCircle className="w-4 h-4" />Xác nhận đặt vé
+                          <CheckCircle className="w-4 h-4" />{t("confirm_booking")}
                         </button>
                       )}
                       {(b.providerConfirmed === 0 || b.providerConfirmed === 1) && (
@@ -1096,7 +1096,7 @@ const DashboardAttractionPage: React.FC = () => {
                           onClick={() => setModalState({ isOpen: true, type: "cancel", bookingId: b.bookingId || null })} 
                           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all shadow-sm hover:shadow-md"
                         >
-                          <XCircle className="w-4 h-4" />Hủy đặt vé
+                          <XCircle className="w-4 h-4" />{t("cancel_booking")}
                         </button>
                       )}
                     </div>
@@ -1111,19 +1111,19 @@ const DashboardAttractionPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Tổng quan đánh giá
+            {t("attraction_dashboard_rating_overview")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
             onClick={() => navigate("/supplier/services/attraction/reviews/all")}
           >
-            Xem tất cả <ChevronRight className="w-4 h-4" />
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recentAttractions.length === 0 ? (
             <div className="col-span-full text-center py-8 theme-text-secondary">
-              <p>Chưa có dữ liệu đánh giá</p>
+              <p>{t("attraction_dashboard_no_rating_data")}</p>
             </div>
           ) : (
             recentAttractions.map((attraction) => {
@@ -1134,7 +1134,7 @@ const DashboardAttractionPage: React.FC = () => {
                 <AttractionRatingSummaryCard
                   key={attraction.attractionId}
                   summary={summary}
-                  attractionName={attraction.title || "Điểm tham quan"}
+                  attractionName={attraction.title || t("attraction")}
                 />
               ) : null;
             })
@@ -1146,20 +1146,20 @@ const DashboardAttractionPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Nhận xét gần đây
+            {t("attraction_dashboard_recent_reviews")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
             onClick={() => navigate("/supplier/service/attraction/recent-reviews")}
           >
-            Xem tất cả <ChevronRight className="w-4 h-4" />
+            {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recentReviews.length === 0 ? (
             <div className="col-span-full text-center py-8 theme-text-secondary">
               <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Chưa có đánh giá nào</p>
+              <p>{t("attraction_dashboard_no_reviews")}</p>
             </div>
           ) : (
             recentReviews.map((r) => {
@@ -1170,7 +1170,7 @@ const DashboardAttractionPage: React.FC = () => {
                 <AttractionReviewCard
                   key={r.reviewId}
                   review={r}
-                  attractionName={reviewAttraction?.title || "Điểm tham quan"}
+                  attractionName={reviewAttraction?.title || t("attraction")}
                   readOnly={true}
                 />
               );
@@ -1188,18 +1188,18 @@ const DashboardAttractionPage: React.FC = () => {
         onConfirm={executeAction}
         title={
           modalState.type === "confirm"
-            ? "Xác nhận đặt vé"
-            : "Hủy đặt vé"
+            ? t("confirm_booking")
+            : t("cancel_booking")
         }
         message={
           modalState.type === "confirm"
-            ? "Bạn có chắc chắn muốn xác nhận đặt vé này không?"
-            : "Bạn có chắc chắn muốn hủy đặt vé này không?"
+            ? t("confirm_booking_message")
+            : t("confirm_cancel_booking")
         }
         confirmText={
-          modalState.type === "confirm" ? "Xác nhận" : "Hủy đặt vé"
+          modalState.type === "confirm" ? t("confirm_booking") : t("cancel_booking")
         }
-        cancelText="Quay lại"
+        cancelText={t("back")}
         type={modalState.type === "cancel" ? "danger" : "confirm"}
         loading={actionLoading === modalState.bookingId}
       />

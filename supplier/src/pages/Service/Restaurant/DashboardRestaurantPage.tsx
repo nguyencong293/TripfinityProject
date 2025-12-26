@@ -79,13 +79,15 @@ const RestaurantBookingRow: React.FC<RestaurantBookingRowProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useLanguage();
+  
   const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
+    if (!dateString) return t("restaurant_na");
     return new Date(dateString).toLocaleDateString("vi-VN");
   };
 
   const formatTime = (timeString?: string) => {
-    if (!timeString) return "N/A";
+    if (!timeString) return t("restaurant_na");
     return timeString.substring(0, 5); // HH:mm:ss -> HH:mm
   };
 
@@ -96,16 +98,16 @@ const RestaurantBookingRow: React.FC<RestaurantBookingRowProps> = ({
         <div className="md:col-span-5">
           <div className="mb-4">
             <h4 className="font-semibold theme-text-primary text-lg mb-2">
-              {restaurantName || "Nhà hàng"}
+              {restaurantName || t("restaurant")}
             </h4>
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-sm theme-text-secondary">
-                <span className="font-medium">Khách hàng:</span>
-                <span>{userName || "N/A"}</span>
+                <span className="font-medium">{t("restaurant_label_customer")}:</span>
+                <span>{userName || t("restaurant_na")}</span>
               </div>
               <div className="flex items-center gap-2 text-sm theme-text-secondary">
-                <span className="font-medium">Điện thoại:</span>
-                <span>{userPhone || "N/A"}</span>
+                <span className="font-medium">{t("restaurant_label_phone")}:</span>
+                <span>{userPhone || t("restaurant_na")}</span>
               </div>
             </div>
           </div>
@@ -116,30 +118,30 @@ const RestaurantBookingRow: React.FC<RestaurantBookingRowProps> = ({
           <div className="space-y-2.5">
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="w-4 h-4 theme-text-secondary" />
-              <span className="theme-text-secondary">Ngày đặt:</span>
+              <span className="theme-text-secondary">{t("restaurant_label_reservation_date")}:</span>
               <span className="font-medium theme-text-primary">
                 {formatDate(booking.reservationDate)}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Clock className="w-4 h-4 theme-text-secondary" />
-              <span className="theme-text-secondary">Giờ:</span>
+              <span className="theme-text-secondary">{t("restaurant_label_reservation_time")}:</span>
               <span className="font-medium theme-text-primary">
                 {formatTime(booking.reservationTime)}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Users className="w-4 h-4 theme-text-secondary" />
-              <span className="theme-text-secondary">Số khách:</span>
+              <span className="theme-text-secondary">{t("restaurant_label_num_guests")}:</span>
               <span className="font-medium theme-text-primary">
-                {booking.numAdults} người
+                {booking.numAdults} {t("restaurant_unit_people")}
               </span>
             </div>
             {booking.specialRequests && (
               <div className="flex items-start gap-2 text-sm pt-1">
                 <MessageSquare className="w-4 h-4 theme-text-secondary mt-0.5" />
                 <div>
-                  <span className="theme-text-secondary">Yêu cầu:</span>
+                  <span className="theme-text-secondary">{t("restaurant_label_special_requests")}:</span>
                   <p className="theme-text-primary italic mt-0.5">
                     {booking.specialRequests}
                   </p>
@@ -152,31 +154,31 @@ const RestaurantBookingRow: React.FC<RestaurantBookingRowProps> = ({
         {/* Right Section: Price & Actions */}
         <div className="md:col-span-3 flex flex-col justify-between">
           <div className="text-right mb-4">
-            <p className="text-sm theme-text-secondary mb-1">Tổng tiền</p>
+            <p className="text-sm theme-text-secondary mb-1">{t("restaurant_label_total_price")}</p>
             <p className="text-2xl font-bold theme-text-primary">
               {(booking.totalPrice || 0).toLocaleString("vi-VN")}
             </p>
-            <p className="text-sm theme-text-secondary">{booking.currencyCode || "VND"}</p>
+            <p className="text-sm theme-text-secondary">{booking.currencyCode || t("restaurant_unit_vnd")}</p>
           </div>
           <div className="flex flex-col gap-2">
             <button
               onClick={onView}
               className="w-full px-4 py-2 text-sm theme-bg-secondary theme-text-primary rounded-lg hover:theme-bg-tertiary transition-colors font-medium"
             >
-              Xem chi tiết
+              {t("restaurant_action_view_detail")}
             </button>
             <div className="flex gap-2">
               <button
                 onClick={onConfirm}
                 className="flex-1 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
               >
-                Xác nhận
+                {t("restaurant_action_confirm")}
               </button>
               <button
                 onClick={onCancel}
                 className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
               >
-                Từ chối
+                {t("restaurant_action_reject")}
               </button>
             </div>
           </div>
@@ -196,6 +198,8 @@ const RestaurantRatingSummaryCard: React.FC<RestaurantRatingSummaryCardProps> = 
   summary,
   restaurantName,
 }) => {
+  const { t } = useLanguage();
+  
   const getPercentage = (count: number) => {
     if (summary.totalReviews === 0) return 0;
     return ((count / summary.totalReviews) * 100).toFixed(1);
@@ -218,11 +222,11 @@ const RestaurantRatingSummaryCard: React.FC<RestaurantRatingSummaryCardProps> = 
   ];
 
   const aspects = [
-    { label: "Chất lượng", value: summary.avgQuality },
-    { label: "Dịch vụ", value: summary.avgService },
-    { label: "Giá cả", value: summary.avgPrice },
-    { label: "Vị trí", value: summary.avgLocation },
-    { label: "Không khí", value: summary.avgAmbience },
+    { label: t("restaurant_aspect_quality"), value: summary.avgQuality },
+    { label: t("restaurant_aspect_service"), value: summary.avgService },
+    { label: t("restaurant_aspect_price"), value: summary.avgPrice },
+    { label: t("restaurant_aspect_location"), value: summary.avgLocation },
+    { label: t("restaurant_aspect_ambience"), value: summary.avgAmbience },
   ];
 
   return (
@@ -233,7 +237,7 @@ const RestaurantRatingSummaryCard: React.FC<RestaurantRatingSummaryCardProps> = 
             {restaurantName}
           </h4>
           <p className="text-sm theme-text-secondary">
-            {summary.totalReviews || 0} đánh giá
+            {summary.totalReviews || 0} {t("restaurant_rating_reviews")}
           </p>
         </div>
 
@@ -244,13 +248,13 @@ const RestaurantRatingSummaryCard: React.FC<RestaurantRatingSummaryCardProps> = 
               {summary.avgRating?.toFixed(1) || "0.0"}
             </span>
           </div>
-          <p className="text-xs text-green-600">Trung bình</p>
+          <p className="text-xs text-green-600">{t("restaurant_rating_average")}</p>
         </div>
       </div>
 
       <div className="mb-4">
         <h5 className="text-sm font-semibold mb-3 theme-text-primary">
-          Phân bố đánh giá
+          {t("restaurant_rating_distribution")}
         </h5>
         <div className="space-y-2">
           {ratingDistribution.map((item) => (
@@ -286,7 +290,7 @@ const RestaurantRatingSummaryCard: React.FC<RestaurantRatingSummaryCardProps> = 
         summary.avgAmbience) && (
         <div>
           <h5 className="text-sm font-semibold mb-3 theme-text-primary">
-            Điểm chi tiết
+            {t("restaurant_rating_details")}
           </h5>
           <div className="grid grid-cols-5 gap-3">
             {aspects.map((aspect) => (
@@ -295,7 +299,7 @@ const RestaurantRatingSummaryCard: React.FC<RestaurantRatingSummaryCardProps> = 
                   {aspect.label}
                 </p>
                 <p className="text-lg font-bold theme-text-primary">
-                  {aspect.value ? aspect.value.toFixed(1) : "N/A"}
+                  {aspect.value ? aspect.value.toFixed(1) : t("restaurant_na")}
                 </p>
               </div>
             ))}
@@ -317,6 +321,8 @@ const RestaurantReviewCard: React.FC<RestaurantReviewCardProps> = ({
   review,
   restaurantName,
 }) => {
+  const { t } = useLanguage();
+  
   return (
     <div className="rounded-xl border theme-border theme-bg-card p-4">
       <div className="flex items-start justify-between mb-3">
@@ -334,7 +340,7 @@ const RestaurantReviewCard: React.FC<RestaurantReviewCardProps> = ({
         <span className="text-sm theme-text-secondary">
           {review.createdAt
             ? new Date(review.createdAt).toLocaleDateString("vi-VN")
-            : "N/A"}
+            : t("restaurant_na")}
         </span>
       </div>
       {review.title && (
@@ -347,27 +353,27 @@ const RestaurantReviewCard: React.FC<RestaurantReviewCardProps> = ({
         <div className="flex flex-wrap gap-2 text-xs">
           {review.aspects.quality !== undefined && (
             <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
-              Chất lượng: {review.aspects.quality}/5
+              {t("restaurant_aspect_quality")}: {review.aspects.quality}/5
             </span>
           )}
           {review.aspects.service !== undefined && (
             <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-              Dịch vụ: {review.aspects.service}/5
+              {t("restaurant_aspect_service")}: {review.aspects.service}/5
             </span>
           )}
           {review.aspects.price !== undefined && (
             <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
-              Giá cả: {review.aspects.price}/5
+              {t("restaurant_aspect_price")}: {review.aspects.price}/5
             </span>
           )}
           {review.aspects.location !== undefined && (
             <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
-              Vị trí: {review.aspects.location}/5
+              {t("restaurant_aspect_location")}: {review.aspects.location}/5
             </span>
           )}
           {review.aspects.ambience !== undefined && (
             <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded">
-              Không khí: {review.aspects.ambience}/5
+              {t("restaurant_aspect_ambience")}: {review.aspects.ambience}/5
             </span>
           )}
         </div>
@@ -784,28 +790,28 @@ const DashboardRestaurantPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<BarChart3 className="w-5 h-5 icon-brand" />}
-          label="Tổng doanh thu"
+          label={t("restaurant_dashboard_total_revenue")}
           value={`${formatCompactCurrency(
             bookings
               .filter((b) => b.providerConfirmed === 1)
               .reduce((sum, b) => sum + (b.totalPrice || 0), 0)
-          )} VND`}
+          )} ${t("restaurant_unit_vnd")}`}
           trend={calculateMonthGrowth}
         />
         <StatCard
           icon={<Utensils className="w-5 h-5 icon-brand" />}
-          label="Tổng đặt bàn"
+          label={t("restaurant_dashboard_total_bookings")}
           value={bookings.filter((b) => b.providerConfirmed === 1).length}
           trend={calculateBookingGrowth}
         />
         <StatCard
           icon={<Calendar className="w-5 h-5 icon-brand" />}
-          label="Tổng đánh giá"
+          label={t("restaurant_dashboard_total_reviews")}
           value={typeof totalReviews === 'number' ? totalReviews : 0}
         />
         <StatCard
           icon={<Utensils className="w-5 h-5 icon-brand" />}
-          label="Nhà hàng"
+          label={t("restaurant_dashboard_restaurants")}
           value={restaurants.length}
         />
       </div>
@@ -816,7 +822,7 @@ const DashboardRestaurantPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 icon-brand" />
             <h2 className="text-lg font-semibold theme-text-primary">
-              Thông báo mới
+              {t("restaurant_dashboard_new_notifications")}
             </h2>
             {newNotificationsCount > 0 && (
               <span className="px-2 py-0.5 text-xs font-medium theme-bg-primary theme-text-button rounded-full">
@@ -835,7 +841,7 @@ const DashboardRestaurantPage: React.FC = () => {
           {notifications.length === 0 ? (
             <div className="col-span-full text-center py-8 theme-text-secondary">
               <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Không có thông báo mới</p>
+              <p>{t("no_notifications")}</p>
             </div>
           ) : (
             notifications.map((n) => (
@@ -854,32 +860,32 @@ const DashboardRestaurantPage: React.FC = () => {
         <div className="flex items-center gap-2 mb-6">
           <Zap className="w-5 h-5 icon-brand" />
           <h2 className="text-lg font-semibold theme-text-primary">
-            Hành động nhanh
+            {t("restaurant_dashboard_quick_actions")}
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <QuickAction
             icon={<Plus className="w-6 h-6" />}
-            label="Thêm nhà hàng"
-            description="Tạo nhà hàng mới"
+            label={t("restaurant_dashboard_add_restaurant")}
+            description={t("restaurant_dashboard_add_restaurant_desc")}
             onClick={() => navigate("/supplier/service/restaurant/create")}
           />
           <QuickAction
             icon={<List className="w-6 h-6" />}
-            label="Quản lý đặt bàn"
-            description="Xem & xác nhận đặt bàn"
+            label={t("restaurant_dashboard_manage_bookings")}
+            description={t("restaurant_dashboard_manage_bookings_desc")}
             onClick={() => navigate("/supplier/service/restaurant/bookings")}
           />
           <QuickAction
             icon={<MessageSquare className="w-6 h-6" />}
-            label="Quản lý đánh giá"
-            description="Phản hồi khách hàng"
+            label={t("restaurant_dashboard_manage_reviews")}
+            description={t("restaurant_dashboard_manage_reviews_desc")}
             onClick={() => navigate("/supplier/service/restaurant/all-reviews")}
           />
           <QuickAction
             icon={<BarChart2 className="w-6 h-6" />}
-            label="Quản lý nhà hàng"
-            description="Xem tất cả nhà hàng"
+            label={t("restaurant_dashboard_manage_restaurant")}
+            description={t("restaurant_dashboard_manage_restaurant_desc")}
             onClick={() => navigate("/supplier/service/restaurant/list")}
           />
         </div>
@@ -891,7 +897,7 @@ const DashboardRestaurantPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 icon-brand" />
             <h2 className="text-lg font-semibold theme-text-primary">
-              Biểu đồ doanh thu
+              {t("restaurant_dashboard_revenue_chart")}
             </h2>
           </div>
           <div className="flex gap-2">
@@ -903,7 +909,7 @@ const DashboardRestaurantPage: React.FC = () => {
                   : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
               }`}
             >
-              Ngày
+              {t("restaurant_chart_filter_day")}
             </button>
             <button
               onClick={() => setRevenueFilter("week")}
@@ -913,7 +919,7 @@ const DashboardRestaurantPage: React.FC = () => {
                   : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
               }`}
             >
-              Tuần
+              {t("restaurant_chart_filter_week")}
             </button>
             <button
               onClick={() => setRevenueFilter("month")}
@@ -923,7 +929,7 @@ const DashboardRestaurantPage: React.FC = () => {
                   : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
               }`}
             >
-              Tháng
+              {t("restaurant_chart_filter_month")}
             </button>
             <button
               onClick={() => setRevenueFilter("year")}
@@ -933,7 +939,7 @@ const DashboardRestaurantPage: React.FC = () => {
                   : "theme-bg-secondary theme-text-secondary hover:theme-bg-tertiary"
               }`}
             >
-              Năm
+              {t("restaurant_chart_filter_year")}
             </button>
           </div>
         </div>
@@ -960,7 +966,7 @@ const DashboardRestaurantPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Danh sách nhà hàng
+            {t("restaurant_dashboard_restaurant_list")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
@@ -991,7 +997,7 @@ const DashboardRestaurantPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 icon-brand" />
             <h2 className="text-lg font-semibold theme-text-primary">
-              Đặt bàn gần đây
+              {t("restaurant_dashboard_recent_bookings")}
             </h2>
           </div>
           <button
@@ -1005,7 +1011,7 @@ const DashboardRestaurantPage: React.FC = () => {
         {bookings.filter((b) => b.providerConfirmed === 0).length === 0 ? (
           <div className="text-center py-8 theme-text-secondary">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>Chưa có đặt bàn nào</p>
+            <p>{t("restaurant_no_bookings")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -1060,7 +1066,7 @@ const DashboardRestaurantPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Tổng quan đánh giá
+            {t("restaurant_dashboard_rating_overview")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
@@ -1072,7 +1078,7 @@ const DashboardRestaurantPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recentRestaurants.length === 0 ? (
             <div className="theme-text-secondary text-sm">
-              Chưa có dữ liệu đánh giá
+              {t("restaurant_no_rating_data")}
             </div>
           ) : (
             recentRestaurants.map((restaurant) => {
@@ -1083,7 +1089,7 @@ const DashboardRestaurantPage: React.FC = () => {
                 <RestaurantRatingSummaryCard
                   key={restaurant.restaurantId}
                   summary={summary}
-                  restaurantName={restaurant.title || "Nhà hàng"}
+                  restaurantName={restaurant.title || t("restaurant")}
                 />
               ) : null;
             })
@@ -1095,7 +1101,7 @@ const DashboardRestaurantPage: React.FC = () => {
       <div className="rounded-xl border theme-border theme-bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold theme-text-primary">
-            Nhận xét gần đây
+            {t("restaurant_dashboard_recent_reviews")}
           </h2>
           <button
             className="link-brand flex items-center gap-1"
@@ -1107,7 +1113,7 @@ const DashboardRestaurantPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recentReviews.length === 0 && (
             <div className="theme-text-secondary text-sm">
-              Chưa có đánh giá nào
+              {t("restaurant_no_reviews")}
             </div>
           )}
           {recentReviews.map((r) => {
@@ -1116,7 +1122,7 @@ const DashboardRestaurantPage: React.FC = () => {
               <RestaurantReviewCard
                 key={r.reviewId}
                 review={r}
-                restaurantName={reviewRestaurant?.title || "Nhà hàng"}
+                restaurantName={reviewRestaurant?.title || t("restaurant")}
                 readOnly={true}
               />
             );
@@ -1133,20 +1139,20 @@ const DashboardRestaurantPage: React.FC = () => {
         onConfirm={executeAction}
         title={
           modalState.type === "confirm"
-            ? "Xác nhận đặt bàn"
-            : "Hủy đặt bàn"
+            ? t("restaurant_confirm_booking_title")
+            : t("restaurant_cancel_booking_title")
         }
         message={
           modalState.type === "confirm"
-            ? "Bạn có chắc chắn muốn xác nhận đặt bàn này không?"
-            : "Bạn có chắc chắn muốn hủy đặt bàn này không?"
+            ? t("restaurant_confirm_booking_message")
+            : t("restaurant_cancel_booking_message")
         }
         confirmText={
           modalState.type === "confirm"
-            ? "Xác nhận"
-            : "Hủy đặt bàn"
+            ? t("restaurant_confirm_button")
+            : t("restaurant_cancel_button")
         }
-        cancelText="Quay lại"
+        cancelText={t("back")}
         type={modalState.type === "cancel" ? "danger" : "confirm"}
         loading={actionLoading === modalState.bookingId}
       />
