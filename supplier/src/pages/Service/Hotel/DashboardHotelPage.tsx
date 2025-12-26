@@ -111,9 +111,9 @@ const HotelReviewCard: React.FC<HotelReviewCardProps> = ({
               Dịch vụ: {review.aspects.service}/5
             </span>
           )}
-          {review.aspects.comfort !== undefined && (
+          {review.aspects.valueForMoney !== undefined && (
             <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
-              Thoải mái: {review.aspects.comfort}/5
+              Giá trị: {review.aspects.valueForMoney}/5
             </span>
           )}
           {review.aspects.location !== undefined && (

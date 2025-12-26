@@ -17,8 +17,10 @@ import {
   FileText,
 } from "lucide-react";
 import { useProfileProvider } from "../hooks/useProfileProvider";
+import { useLanguage } from "../hooks/useLanguage";
 
 const ProfileProviderPage: React.FC = () => {
+  const { t } = useLanguage();
   const {
     provider,
     user,
@@ -53,11 +55,11 @@ const ProfileProviderPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        alert("Kích thước file không được vượt quá 10MB");
+        alert(t("file_size_limit"));
         return;
       }
       if (!file.type.startsWith("image/")) {
-        alert("Vui lòng chọn file ảnh");
+        alert(t("select_image_file"));
         return;
       }
       handleUploadLogo(file);
@@ -68,11 +70,11 @@ const ProfileProviderPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        alert("Kích thước file không được vượt quá 10MB");
+        alert(t("file_size_limit"));
         return;
       }
       if (!file.type.startsWith("image/")) {
-        alert("Vui lòng chọn file ảnh");
+        alert(t("select_image_file"));
         return;
       }
       handleUploadAvatar(file);
@@ -90,14 +92,14 @@ const ProfileProviderPage: React.FC = () => {
       approved: "theme-bg-success theme-text-success",
       rejected: "theme-bg-error theme-text-error",
     };
-    const statusText = {
-      pending: "Đang chờ duyệt",
-      approved: "Đã duyệt",
-      rejected: "Bị từ chối",
+    const statusText: Record<string, string> = {
+      pending: t("status_pending"),
+      approved: t("status_approved"),
+      rejected: t("status_rejected"),
     };
     return (
       <span
-        className={`px-3 py-1 rounded-full caption-mobile sm:caption-tablet lg:caption-desktop ${
+        className={`px-3 py-1 rounded-full text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop ${
           badges[status as keyof typeof badges] || ""
         }`}
       >
@@ -120,11 +122,11 @@ const ProfileProviderPage: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="h3-mobile sm:h2-tablet lg:h1-desktop theme-text-primary">
-              Hồ Sơ Nhà Cung Cấp
+            <h1 className="text-h3-mobile sm:text-h2-tablet lg:text-h1-desktop theme-text-primary">
+              {t("provider_profile")}
             </h1>
-            <p className="body2-mobile sm:body1-tablet lg:body1-desktop theme-text-secondary mt-1">
-              Quản lý thông tin công ty và tài khoản
+            <p className="text-body2-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-secondary mt-1">
+              {t("manage_company_account")}
             </p>
           </div>
           <button
@@ -132,15 +134,15 @@ const ProfileProviderPage: React.FC = () => {
             className="btn-primary flex items-center gap-2 px-6 py-3"
           >
             <User className="h-5 w-5" />
-            <span className="button-mobile sm:button-tablet lg:button-desktop">
-              Thông Tin Người Dùng
+            <span className="text-button-mobile sm:text-button-tablet lg:text-button-desktop">
+              {t("user_info")}
             </span>
           </button>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="theme-bg-error border border-error theme-text-error px-4 py-3 rounded-lg body2-mobile sm:body1-tablet lg:body1-desktop">
+          <div className="theme-bg-error border border-light-error dark:border-dark-error theme-text-error px-4 py-3 rounded-lg text-body2-mobile sm:text-body1-tablet lg:text-body1-desktop">
             {error}
           </div>
         )}
@@ -166,7 +168,7 @@ const ProfileProviderPage: React.FC = () => {
                   <button
                     onClick={() => logoInputRef.current?.click()}
                     className="p-2 theme-bg-primary theme-text-button rounded-full hover:theme-bg-primary-hover shadow-lg transition-colors"
-                    title="Upload logo"
+                    title={t("upload_logo")}
                   >
                     <Upload className="h-4 w-4" />
                   </button>
@@ -174,7 +176,7 @@ const ProfileProviderPage: React.FC = () => {
                     <button
                       onClick={handleDeleteLogo}
                       className="p-2 bg-light-error dark:bg-dark-error theme-text-button rounded-full hover:opacity-80 shadow-lg transition-opacity"
-                      title="Xóa logo"
+                      title={t("delete_logo")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -198,11 +200,11 @@ const ProfileProviderPage: React.FC = () => {
           <div className="pt-20 px-8 pb-8">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h2 className="h4-mobile sm:h3-tablet lg:h2-desktop theme-text-primary">
-                  {provider?.companyName || "Chưa có tên công ty"}
+                <h2 className="text-h4-mobile sm:text-h3-tablet lg:text-h2-desktop theme-text-primary">
+                  {provider?.companyName || t("no_company_name")}
                 </h2>
-                <p className="body2-mobile sm:body1-tablet lg:body1-desktop theme-text-secondary mt-1">
-                  Mã số thuế: {provider?.taxCode || "—"}
+                <p className="text-body2-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-secondary mt-1">
+                  {t("tax_code")}: {provider?.taxCode || "—"}
                 </p>
               </div>
               {!isEditingProvider ? (
@@ -211,8 +213,8 @@ const ProfileProviderPage: React.FC = () => {
                   className="btn-outline flex items-center gap-2"
                 >
                   <Edit2 className="h-4 w-4" />
-                  <span className="button-mobile sm:button-tablet lg:button-desktop">
-                    Chỉnh sửa
+                  <span className="text-button-mobile sm:text-button-tablet lg:text-button-desktop">
+                    {t("edit")}
                   </span>
                 </button>
               ) : (
@@ -227,8 +229,8 @@ const ProfileProviderPage: React.FC = () => {
                     ) : (
                       <Save className="h-4 w-4" />
                     )}
-                    <span className="button-mobile sm:button-tablet lg:button-desktop">
-                      Lưu
+                    <span className="text-button-mobile sm:text-button-tablet lg:text-button-desktop">
+                      {t("save")}
                     </span>
                   </button>
                   <button
@@ -237,8 +239,8 @@ const ProfileProviderPage: React.FC = () => {
                     className="btn-outline flex items-center gap-2"
                   >
                     <X className="h-4 w-4" />
-                    <span className="button-mobile sm:button-tablet lg:button-desktop">
-                      Hủy
+                    <span className="text-button-mobile sm:text-button-tablet lg:text-button-desktop">
+                      {t("cancel")}
                     </span>
                   </button>
                 </div>
@@ -249,9 +251,9 @@ const ProfileProviderPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Company Name */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
+                <label className="flex items-center gap-2 text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
                   <Building2 className="h-4 w-4" />
-                  Tên công ty
+                  {t("company_name")}
                 </label>
                 {isEditingProvider ? (
                   <input
@@ -259,10 +261,10 @@ const ProfileProviderPage: React.FC = () => {
                     name="companyName"
                     value={providerForm.companyName || ""}
                     onChange={handleProviderChange}
-                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                   />
                 ) : (
-                  <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                  <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                     {provider?.companyName || "—"}
                   </p>
                 )}
@@ -270,9 +272,9 @@ const ProfileProviderPage: React.FC = () => {
 
               {/* Tax Code */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
+                <label className="flex items-center gap-2 text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
                   <FileText className="h-4 w-4" />
-                  Mã số thuế
+                  {t("tax_code")}
                 </label>
                 {isEditingProvider ? (
                   <input
@@ -280,10 +282,10 @@ const ProfileProviderPage: React.FC = () => {
                     name="taxCode"
                     value={providerForm.taxCode || ""}
                     onChange={handleProviderChange}
-                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                   />
                 ) : (
-                  <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                  <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                     {provider?.taxCode || "—"}
                   </p>
                 )}
@@ -291,9 +293,9 @@ const ProfileProviderPage: React.FC = () => {
 
               {/* Address */}
               <div className="space-y-2 md:col-span-2">
-                <label className="flex items-center gap-2 subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
+                <label className="flex items-center gap-2 text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
                   <MapPin className="h-4 w-4" />
-                  Địa chỉ
+                  {t("address")}
                 </label>
                 {isEditingProvider ? (
                   <input
@@ -301,10 +303,10 @@ const ProfileProviderPage: React.FC = () => {
                     name="address"
                     value={providerForm.address || ""}
                     onChange={handleProviderChange}
-                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                   />
                 ) : (
-                  <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                  <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                     {provider?.address || "—"}
                   </p>
                 )}
@@ -312,9 +314,9 @@ const ProfileProviderPage: React.FC = () => {
 
               {/* Contact Email */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
+                <label className="flex items-center gap-2 text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
                   <Mail className="h-4 w-4" />
-                  Email liên hệ
+                  {t("contact_email")}
                 </label>
                 {isEditingProvider ? (
                   <input
@@ -322,10 +324,10 @@ const ProfileProviderPage: React.FC = () => {
                     name="contactEmail"
                     value={providerForm.contactEmail || ""}
                     onChange={handleProviderChange}
-                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                   />
                 ) : (
-                  <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                  <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                     {provider?.contactEmail || "—"}
                   </p>
                 )}
@@ -333,9 +335,9 @@ const ProfileProviderPage: React.FC = () => {
 
               {/* Contact Phone */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
+                <label className="flex items-center gap-2 text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
                   <Phone className="h-4 w-4" />
-                  Số điện thoại
+                  {t("phone_number")}
                 </label>
                 {isEditingProvider ? (
                   <input
@@ -343,10 +345,10 @@ const ProfileProviderPage: React.FC = () => {
                     name="contactPhone"
                     value={providerForm.contactPhone || ""}
                     onChange={handleProviderChange}
-                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                   />
                 ) : (
-                  <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                  <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                     {provider?.contactPhone || "—"}
                   </p>
                 )}
@@ -354,9 +356,9 @@ const ProfileProviderPage: React.FC = () => {
 
               {/* Bank Account Number */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
+                <label className="flex items-center gap-2 text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
                   <CreditCard className="h-4 w-4" />
-                  Số tài khoản ngân hàng
+                  {t("bank_account_number")}
                 </label>
                 {isEditingProvider ? (
                   <input
@@ -364,10 +366,10 @@ const ProfileProviderPage: React.FC = () => {
                     name="bankAccountNumber"
                     value={providerForm.bankAccountNumber || ""}
                     onChange={handleProviderChange}
-                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                   />
                 ) : (
-                  <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                  <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                     {provider?.bankAccountNumber || "—"}
                   </p>
                 )}
@@ -375,9 +377,9 @@ const ProfileProviderPage: React.FC = () => {
 
               {/* Bank Name */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
+                <label className="flex items-center gap-2 text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
                   <Briefcase className="h-4 w-4" />
-                  Tên ngân hàng
+                  {t("bank_name")}
                 </label>
                 {isEditingProvider ? (
                   <input
@@ -385,10 +387,10 @@ const ProfileProviderPage: React.FC = () => {
                     name="bankName"
                     value={providerForm.bankName || ""}
                     onChange={handleProviderChange}
-                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                   />
                 ) : (
-                  <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                  <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                     {provider?.bankName || "—"}
                   </p>
                 )}
@@ -396,9 +398,9 @@ const ProfileProviderPage: React.FC = () => {
 
               {/* Description */}
               <div className="space-y-2 md:col-span-2">
-                <label className="flex items-center gap-2 subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
+                <label className="flex items-center gap-2 text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
                   <FileText className="h-4 w-4" />
-                  Mô tả công ty
+                  {t("company_description")}
                 </label>
                 {isEditingProvider ? (
                   <textarea
@@ -406,10 +408,10 @@ const ProfileProviderPage: React.FC = () => {
                     value={providerForm.providerDescription || ""}
                     onChange={handleProviderChange}
                     rows={4}
-                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background resize-none"
+                    className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background resize-none"
                   />
                 ) : (
-                  <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                  <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                     {provider?.providerDescription || "—"}
                   </p>
                 )}
@@ -417,22 +419,22 @@ const ProfileProviderPage: React.FC = () => {
 
               {/* Rating & Dates */}
               <div className="space-y-2">
-                <label className="subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
-                  Đánh giá trung bình
+                <label className="text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
+                  {t("average_rating")}
                 </label>
-                <p className="h5-mobile sm:h5-tablet lg:h4-desktop theme-text-primary">
+                <p className="text-h5-mobile sm:text-h5-tablet lg:text-h4-desktop theme-text-primary">
                   {provider?.ratingOverall
                     ? `${provider.ratingOverall.toFixed(2)} ⭐`
-                    : "Chưa có đánh giá"}
+                    : t("no_rating")}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <label className="flex items-center gap-2 subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
+                <label className="flex items-center gap-2 text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
                   <Calendar className="h-4 w-4" />
-                  Ngày tạo
+                  {t("created_date")}
                 </label>
-                <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                   {formatDate(provider?.createdAt)}
                 </p>
               </div>
@@ -446,8 +448,8 @@ const ProfileProviderPage: React.FC = () => {
         <div className="fixed inset-0 theme-bg-overlay flex items-center justify-center z-50 p-4">
           <div className="theme-bg-card rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-lg">
             <div className="sticky top-0 theme-bg-card border-b theme-border px-6 py-4 flex justify-between items-center">
-              <h2 className="h4-mobile sm:h4-tablet lg:h3-desktop theme-text-primary">
-                Thông Tin Người Dùng
+              <h2 className="text-h4-mobile sm:text-h4-tablet lg:text-h3-desktop theme-text-primary">
+                {t("user_info")}
               </h2>
               <button
                 onClick={() => {
@@ -480,8 +482,8 @@ const ProfileProviderPage: React.FC = () => {
                     className="btn-primary px-4 py-2 flex items-center gap-2"
                   >
                     <Upload className="h-4 w-4" />
-                    <span className="button-mobile sm:button-tablet lg:button-desktop">
-                      Upload Avatar
+                    <span className="text-button-mobile sm:text-button-tablet lg:text-button-desktop">
+                      {t("upload_avatar")}
                     </span>
                   </button>
                   {user?.avatarUrl && (
@@ -490,8 +492,8 @@ const ProfileProviderPage: React.FC = () => {
                       className="px-4 py-2 bg-light-error dark:bg-dark-error theme-text-button rounded-full hover:opacity-80 transition-opacity flex items-center gap-2"
                     >
                       <Trash2 className="h-4 w-4" />
-                      <span className="button-mobile sm:button-tablet lg:button-desktop">
-                        Xóa
+                      <span className="text-button-mobile sm:text-button-tablet lg:text-button-desktop">
+                        {t("delete")}
                       </span>
                     </button>
                   )}
@@ -512,8 +514,8 @@ const ProfileProviderPage: React.FC = () => {
                   className="btn-outline w-full flex items-center justify-center gap-2"
                 >
                   <Edit2 className="h-4 w-4" />
-                  <span className="button-mobile sm:button-tablet lg:button-desktop">
-                    Chỉnh sửa thông tin
+                  <span className="text-button-mobile sm:text-button-tablet lg:text-button-desktop">
+                    {t("edit_info")}
                   </span>
                 </button>
               )}
@@ -522,8 +524,8 @@ const ProfileProviderPage: React.FC = () => {
               <div className="space-y-4">
                 {/* Full Name */}
                 <div className="space-y-2">
-                  <label className="subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
-                    Họ và tên
+                  <label className="text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
+                    {t("full_name")}
                   </label>
                   {isEditingUser ? (
                     <input
@@ -531,10 +533,10 @@ const ProfileProviderPage: React.FC = () => {
                       name="fullName"
                       value={userForm.fullName || ""}
                       onChange={handleUserChange}
-                      className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                      className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                     />
                   ) : (
-                    <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                    <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                       {user?.fullName || "—"}
                     </p>
                   )}
@@ -542,21 +544,21 @@ const ProfileProviderPage: React.FC = () => {
 
                 {/* Email */}
                 <div className="space-y-2">
-                  <label className="subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
+                  <label className="text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
                     Email
                   </label>
-                  <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                  <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                     {user?.email || "—"}
                   </p>
-                  <p className="caption-mobile sm:caption-tablet lg:caption-desktop theme-text-secondary">
-                    (Email không thể thay đổi)
+                  <p className="text-caption-mobile sm:text-caption-tablet lg:text-caption-desktop theme-text-secondary">
+                    ({t("email_cannot_change")})
                   </p>
                 </div>
 
                 {/* Phone Number */}
                 <div className="space-y-2">
-                  <label className="subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
-                    Số điện thoại
+                  <label className="text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
+                    {t("phone_number")}
                   </label>
                   {isEditingUser ? (
                     <input
@@ -564,10 +566,10 @@ const ProfileProviderPage: React.FC = () => {
                       name="phoneNumber"
                       value={userForm.phoneNumber || ""}
                       onChange={handleUserChange}
-                      className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                      className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                     />
                   ) : (
-                    <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                    <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                       {user?.phoneNumber || "—"}
                     </p>
                   )}
@@ -575,8 +577,8 @@ const ProfileProviderPage: React.FC = () => {
 
                 {/* Date of Birth */}
                 <div className="space-y-2">
-                  <label className="subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
-                    Ngày sinh
+                  <label className="text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
+                    {t("date_of_birth")}
                   </label>
                   {isEditingUser ? (
                     <input
@@ -589,10 +591,10 @@ const ProfileProviderPage: React.FC = () => {
                         today.setFullYear(today.getFullYear() - 18);
                         return today.toISOString().split("T")[0];
                       })()}
-                      className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                      className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                     />
                   ) : (
-                    <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                    <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                       {formatDate(user?.dateOfBirth)}
                     </p>
                   )}
@@ -600,29 +602,29 @@ const ProfileProviderPage: React.FC = () => {
 
                 {/* Gender */}
                 <div className="space-y-2">
-                  <label className="subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
-                    Giới tính
+                  <label className="text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
+                    {t("gender")}
                   </label>
                   {isEditingUser ? (
                     <select
                       name="gender"
                       value={userForm.gender || ""}
                       onChange={handleUserChange}
-                      className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary theme-bg-background"
+                      className="w-full px-4 py-2 border theme-border rounded-lg focus-ring-primary text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary theme-bg-background"
                     >
-                      <option value="">Chọn giới tính</option>
-                      <option value="male">Nam</option>
-                      <option value="female">Nữ</option>
-                      <option value="other">Khác</option>
+                      <option value="">{t("select_gender")}</option>
+                      <option value="male">{t("male")}</option>
+                      <option value="female">{t("female")}</option>
+                      <option value="other">{t("other")}</option>
                     </select>
                   ) : (
-                    <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary">
+                    <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary">
                       {user?.gender === "male"
-                        ? "Nam"
+                        ? t("male")
                         : user?.gender === "female"
-                        ? "Nữ"
+                        ? t("female")
                         : user?.gender === "other"
-                        ? "Khác"
+                        ? t("other")
                         : "—"}
                     </p>
                   )}
@@ -631,18 +633,18 @@ const ProfileProviderPage: React.FC = () => {
                 {/* Account Info */}
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t theme-border">
                   <div className="space-y-1">
-                    <label className="subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
-                      Vai trò
+                    <label className="text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
+                      {t("role")}
                     </label>
-                    <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary capitalize">
+                    <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary capitalize">
                       {user?.accountRole || "—"}
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <label className="subtitle2-mobile sm:subtitle2-tablet lg:subtitle2-desktop theme-text-secondary">
-                      Trạng thái
+                    <label className="text-subtitle2-mobile sm:text-subtitle2-tablet lg:text-subtitle2-desktop theme-text-secondary">
+                      {t("status")}
                     </label>
-                    <p className="body1-mobile sm:body1-tablet lg:body1-desktop theme-text-primary capitalize">
+                    <p className="text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop theme-text-primary capitalize">
                       {user?.accountStatus || "—"}
                     </p>
                   </div>
@@ -662,8 +664,8 @@ const ProfileProviderPage: React.FC = () => {
                     ) : (
                       <Save className="h-5 w-5" />
                     )}
-                    <span className="button-mobile sm:button-tablet lg:button-desktop">
-                      Lưu thay đổi
+                    <span className="text-button-mobile sm:text-button-tablet lg:text-button-desktop">
+                      {t("save_changes")}
                     </span>
                   </button>
                   <button
@@ -671,8 +673,8 @@ const ProfileProviderPage: React.FC = () => {
                     disabled={loading}
                     className="btn-outline px-6 py-3"
                   >
-                    <span className="button-mobile sm:button-tablet lg:button-desktop">
-                      Hủy
+                    <span className="text-button-mobile sm:text-button-tablet lg:text-button-desktop">
+                      {t("cancel")}
                     </span>
                   </button>
                 </div>
@@ -686,8 +688,8 @@ const ProfileProviderPage: React.FC = () => {
       {showSuccessToast && (
         <div className="fixed inset-x-0 top-4 flex justify-center z-50 pointer-events-none">
           <div className="pointer-events-auto max-w-md w-full mx-4 transform transition-all duration-300 ease-out">
-            <div className="border-2 border-success theme-bg-success theme-text-primary rounded-lg shadow-lg px-4 py-3">
-              <p className="text-center body1-mobile sm:body1-tablet lg:body1-desktop">
+            <div className="border-2 border-light-success dark:border-dark-success theme-bg-success theme-text-primary rounded-lg shadow-lg px-4 py-3">
+              <p className="text-center text-body1-mobile sm:text-body1-tablet lg:text-body1-desktop">
                 {successMessage}
               </p>
             </div>

@@ -281,11 +281,11 @@ const ReviewDetailPage: React.FC = () => {
             <h4 className="font-semibold text-gray-900 mb-3">Đánh giá chi tiết</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
-                { label: "Vệ sinh", value: review.aspects.cleanliness },
+                { label: "Chất lượng", value: review.aspects.quality },
                 { label: "Dịch vụ", value: review.aspects.service },
-                { label: "Giá trị", value: review.aspects.valueForMoney },
+                { label: "Giá cả", value: review.aspects.price },
                 { label: "Vị trí", value: review.aspects.location },
-                { label: "Tiện nghi", value: review.aspects.facilities },
+                { label: "Không gian", value: review.aspects.ambience },
               ].map((aspect) => (
                 <div key={aspect.label} className="flex items-center justify-between">
                   <span className="text-sm text-gray-700">{aspect.label}</span>

@@ -219,18 +219,13 @@ const MultiSelectCheckbox: React.FC<{
   options: { id: number; label: string }[];
   selectedIds: number[];
   onChange: (selectedIds: number[]) => void;
-  fieldName: string;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-}> = React.memo(({ options, selectedIds, onChange, fieldName }) => {
+  fieldName?: string;
+}> = React.memo(({ options, selectedIds, onChange }) => {
   const handleToggle = (id: number) => {
     const newSelectedIds = selectedIds.includes(id)
       ? selectedIds.filter((i) => i !== id)
       : [...selectedIds, id];
 
-    // DEBUG: console.log(
-    //   `🔄 MultiSelect [${fieldName}] toggled ID ${id}, new array:`,
-    //   newSelectedIds
-    // );
     onChange(newSelectedIds);
   };
 
@@ -263,18 +258,13 @@ const MultiSelectCheckboxString: React.FC<{
   options: { value: string; label: string }[];
   selectedValues: string[];
   onChange: (selectedValues: string[]) => void;
-  fieldName: string;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-}> = React.memo(({ options, selectedValues, onChange, fieldName }) => {
+  fieldName?: string;
+}> = React.memo(({ options, selectedValues, onChange }) => {
   const handleToggle = (value: string) => {
     const newSelectedValues = selectedValues.includes(value)
       ? selectedValues.filter((v) => v !== value)
       : [...selectedValues, value];
 
-    // DEBUG: console.log(
-    //   `🔄 MultiSelectString [${fieldName}] toggled "${value}", new array:`,
-    //   newSelectedValues
-    // );
     onChange(newSelectedValues);
   };
 
@@ -738,7 +728,6 @@ const HotelCreatePage: React.FC = () => {
         </div>
       </div>
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [formData, errors, updateField]
   );
 
@@ -950,7 +939,6 @@ const HotelCreatePage: React.FC = () => {
         </div>
       </div>
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [formData, errors, updateField]
   );
 
@@ -1215,7 +1203,6 @@ const HotelCreatePage: React.FC = () => {
         </div>
       </div>
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [formData, errors, updateField]
   );
 

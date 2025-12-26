@@ -169,9 +169,9 @@ const SupplierHomePage: React.FC = () => {
         for (const userId of userIds.slice(0, 20)) {
           try {
             const userRes = await api.get(`/users/${userId}`);
-            newUserCache.set(userId, userRes.data.fullName || `Khách #${userId}`);
+            newUserCache.set(userId, userRes.data.fullName || `${t("customer_id_prefix")}${userId}`);
           } catch {
-            newUserCache.set(userId, `Khách #${userId}`);
+            newUserCache.set(userId, `${t("customer_id_prefix")}${userId}`);
           }
         }
         setUserCache(newUserCache);
@@ -183,7 +183,7 @@ const SupplierHomePage: React.FC = () => {
     };
 
     fetchData();
-  }, []);
+  }, [t]); // Added 't' dependency
 
   // Refresh data
   const handleRefresh = async () => {
@@ -358,15 +358,15 @@ const SupplierHomePage: React.FC = () => {
     const getServiceName = (type: string, serviceId: number): string => {
       switch (type) {
         case "tour":
-          return tours.find((t) => t.tourId === serviceId)?.title || `Tour #${serviceId}`;
+          return tours.find((t) => t.tourId === serviceId)?.title || `${t("tour_id_prefix")}${serviceId}`;
         case "hotel":
-          return hotels.find((h) => h.hotelId === serviceId)?.title || `Hotel #${serviceId}`;
+          return hotels.find((h) => h.hotelId === serviceId)?.title || `${t("hotel_id_prefix")}${serviceId}`;
         case "restaurant":
-          return restaurants.find((r) => r.restaurantId === serviceId)?.title || `Restaurant #${serviceId}`;
+          return restaurants.find((r) => r.restaurantId === serviceId)?.title || `${t("restaurant_id_prefix")}${serviceId}`;
         case "attraction":
-          return attractions.find((a) => a.attractionId === serviceId)?.title || `Attraction #${serviceId}`;
+          return attractions.find((a) => a.attractionId === serviceId)?.title || `${t("attraction_id_prefix")}${serviceId}`;
         default:
-          return `#${serviceId}`;
+          return `${t("service_id_prefix")}${serviceId}`;
       }
     };
 
@@ -375,7 +375,7 @@ const SupplierHomePage: React.FC = () => {
         id: b.bookingId!,
         type: "tour" as const,
         serviceName: getServiceName("tour", b.tourId),
-        customerName: userCache.get(b.userId) || `Khách #${b.userId}`,
+        customerName: userCache.get(b.userId) || `${t("customer_id_prefix")}${b.userId}`,
         date: b.createdAt || "",
         amount: b.totalPrice || 0,
         status: b.bookingStatus || "pending",
@@ -385,7 +385,7 @@ const SupplierHomePage: React.FC = () => {
         id: b.bookingId!,
         type: "hotel" as const,
         serviceName: getServiceName("hotel", b.hotelId),
-        customerName: userCache.get(b.userId) || `Khách #${b.userId}`,
+        customerName: userCache.get(b.userId) || `${t("customer_id_prefix")}${b.userId}`,
         date: b.createdAt || "",
         amount: b.totalPrice || 0,
         status: b.bookingStatus || "pending",
@@ -395,7 +395,7 @@ const SupplierHomePage: React.FC = () => {
         id: b.bookingId!,
         type: "restaurant" as const,
         serviceName: getServiceName("restaurant", b.restaurantId),
-        customerName: userCache.get(b.userId) || `Khách #${b.userId}`,
+        customerName: userCache.get(b.userId) || `${t("customer_id_prefix")}${b.userId}`,
         date: b.createdAt || "",
         amount: b.totalPrice || 0,
         status: b.bookingStatus || "pending",
@@ -405,7 +405,7 @@ const SupplierHomePage: React.FC = () => {
         id: b.bookingId!,
         type: "attraction" as const,
         serviceName: getServiceName("attraction", b.attractionId),
-        customerName: userCache.get(b.userId) || `Khách #${b.userId}`,
+        customerName: userCache.get(b.userId) || `${t("customer_id_prefix")}${b.userId}`,
         date: b.createdAt || "",
         amount: b.totalPrice || 0,
         status: b.bookingStatus || "pending",
@@ -416,7 +416,7 @@ const SupplierHomePage: React.FC = () => {
     return allBookings
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 10);
-  }, [tours, hotels, restaurants, attractions, tourBookings, hotelBookings, restaurantBookings, attractionBookings, userCache]);
+  }, [tours, hotels, restaurants, attractions, tourBookings, hotelBookings, restaurantBookings, attractionBookings, userCache, t]); // Added 't' dependency
 
   // Revenue chart data (last 7 days)
   const revenueChartData: RevenueDataPoint[] = useMemo(() => {
@@ -460,12 +460,12 @@ const SupplierHomePage: React.FC = () => {
   // Booking distribution for pie chart
   const bookingDistribution = useMemo(() => {
     return [
-      { name: "Tour", value: tourBookings.length, color: "#10B981" },
-      { name: "Hotel", value: hotelBookings.length, color: "#3B82F6" },
-      { name: "Restaurant", value: restaurantBookings.length, color: "#F59E0B" },
-      { name: "Attraction", value: attractionBookings.length, color: "#EF4444" },
+      { name: t("tour"), value: tourBookings.length, color: "#10B981" },
+      { name: t("hotel"), value: hotelBookings.length, color: "#3B82F6" },
+      { name: t("restaurant"), value: restaurantBookings.length, color: "#F59E0B" },
+      { name: t("attraction"), value: attractionBookings.length, color: "#EF4444" },
     ].filter((item) => item.value > 0);
-  }, [tourBookings, hotelBookings, restaurantBookings, attractionBookings]);
+  }, [tourBookings, hotelBookings, restaurantBookings, attractionBookings, t]);
 
   // Format currency
   const formatCurrency = (amount: number): string => {
@@ -510,21 +510,21 @@ const SupplierHomePage: React.FC = () => {
         return (
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
             <CheckCircle2 className="w-3 h-3" />
-            {t("confirmed") || "Đã xác nhận"}
+            {t("confirmed")}
           </span>
         );
       case 2:
         return (
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
             <XCircle className="w-3 h-3" />
-            {t("cancelled") || "Đã hủy"}
+            {t("cancelled")}
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
             <Clock className="w-3 h-3" />
-            {t("pending") || "Chờ xác nhận"}
+            {t("pending")}
           </span>
         );
     }
@@ -586,7 +586,7 @@ const SupplierHomePage: React.FC = () => {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-t-transparent theme-border rounded-full animate-spin mx-auto mb-4 border-t-emerald-500"></div>
-          <p className="theme-text-secondary">{t("loading") || "Đang tải dữ liệu..."}</p>
+          <p className="theme-text-secondary">{t("loading")}</p>
         </div>
       </div>
     );
@@ -598,10 +598,10 @@ const SupplierHomePage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold theme-text-primary">
-            {t("dashboard") || "Tổng quan"}
+            {t("dashboard")}
           </h1>
           <p className="theme-text-secondary mt-1">
-            {t("welcome_back") || "Xin chào"}, {provider?.companyName || "Nhà cung cấp"}
+            {t("welcome_back")}, {provider?.companyName || t("provider_profile")}
           </p>
         </div>
         <button
@@ -610,7 +610,7 @@ const SupplierHomePage: React.FC = () => {
           className="flex items-center gap-2 px-4 py-2 rounded-lg theme-bg-secondary hover:theme-bg-tertiary transition-colors"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-          <span className="hidden sm:inline">{t("refresh") || "Làm mới"}</span>
+          <span className="hidden sm:inline">{t("refresh")}</span>
         </button>
       </div>
 
@@ -623,7 +623,7 @@ const SupplierHomePage: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold theme-text-primary">{totalStats.publishedServices}</p>
-              <p className="text-sm theme-text-secondary">{t("published_services") || "Dịch vụ đang hoạt động"}</p>
+              <p className="text-sm theme-text-secondary">{t("published_services")}</p>
             </div>
           </div>
         </div>
@@ -635,7 +635,7 @@ const SupplierHomePage: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold theme-text-primary">{totalStats.pendingBookings}</p>
-              <p className="text-sm theme-text-secondary">{t("pending_bookings") || "Đơn chờ xác nhận"}</p>
+              <p className="text-sm theme-text-secondary">{t("pending_bookings_all")}</p>
             </div>
           </div>
         </div>
@@ -647,14 +647,14 @@ const SupplierHomePage: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold theme-text-primary">{formatCurrency(totalStats.currentMonthRevenue)}</p>
-              <p className="text-sm theme-text-secondary">{t("monthly_revenue") || "Doanh thu tháng"}</p>
+              <p className="text-sm theme-text-secondary">{t("current_month_revenue")}</p>
             </div>
           </div>
           {totalStats.revenueGrowth !== 0 && (
             <div className={`flex items-center gap-1 mt-2 text-sm ${totalStats.revenueGrowth > 0 ? "text-emerald-600" : "text-red-600"}`}>
               {totalStats.revenueGrowth > 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               <span>{totalStats.revenueGrowth > 0 ? "+" : ""}{totalStats.revenueGrowth.toFixed(1)}%</span>
-              <span className="theme-text-secondary">{t("vs_last_month") || "so với tháng trước"}</span>
+              <span className="theme-text-secondary">{t("vs_last_month")}</span>
             </div>
           )}
         </div>
@@ -666,7 +666,7 @@ const SupplierHomePage: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold theme-text-primary">{totalStats.todayBookings}</p>
-              <p className="text-sm theme-text-secondary">{t("today_bookings") || "Đơn hôm nay"}</p>
+              <p className="text-sm theme-text-secondary">{t("today_bookings")}</p>
             </div>
           </div>
         </div>
@@ -688,35 +688,35 @@ const SupplierHomePage: React.FC = () => {
             </div>
 
             <h3 className="text-lg font-semibold theme-text-primary mb-3 capitalize">
-              {t(service.type) || service.type}
+              {t(service.type)}
             </h3>
 
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="theme-text-secondary">{t("total_items") || "Tổng số"}:</span>
+                <span className="theme-text-secondary">{t("total_items")}:</span>
                 <span className="font-medium theme-text-primary">{service.totalItems}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="theme-text-secondary">{t("published") || "Đang hoạt động"}:</span>
+                <span className="theme-text-secondary">{t("published")}:</span>
                 <span className="font-medium text-emerald-600">{service.publishedItems}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="theme-text-secondary">{t("bookings") || "Đặt chỗ"}:</span>
+                <span className="theme-text-secondary">{t("bookings")}:</span>
                 <span className="font-medium theme-text-primary">{service.totalBookings}</span>
               </div>
               {service.pendingBookings > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="theme-text-secondary">{t("pending") || "Chờ xử lý"}:</span>
+                  <span className="theme-text-secondary">{t("pending")}:</span>
                   <span className="font-medium text-amber-600">{service.pendingBookings}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm pt-2 border-t theme-border">
-                <span className="theme-text-secondary">{t("revenue") || "Doanh thu"}:</span>
+                <span className="theme-text-secondary">{t("revenue")}:</span>
                 <span className="font-semibold text-emerald-600">{formatCurrency(service.totalRevenue)}</span>
               </div>
               {service.avgRating > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="theme-text-secondary">{t("rating") || "Đánh giá"}:</span>
+                  <span className="theme-text-secondary">{t("rating")}:</span>
                   <span className="flex items-center gap-1 font-medium theme-text-primary">
                     <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                     {service.avgRating.toFixed(1)}
@@ -735,7 +735,7 @@ const SupplierHomePage: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold theme-text-primary flex items-center gap-2">
               <BarChart3 className="w-5 h-5" />
-              {t("revenue_chart") || "Biểu đồ doanh thu 7 ngày qua"}
+              {t("revenue_chart")}
             </h2>
           </div>
           <ResponsiveContainer width="100%" height={300}>
@@ -748,10 +748,10 @@ const SupplierHomePage: React.FC = () => {
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Bar dataKey="tour" name="Tour" fill="#10B981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="hotel" name="Hotel" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="restaurant" name="Restaurant" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="attraction" name="Attraction" fill="#EF4444" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="tour" name={t("tour")} fill="#10B981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="hotel" name={t("hotel")} fill="#3B82F6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="restaurant" name={t("restaurant")} fill="#F59E0B" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="attraction" name={t("attraction")} fill="#EF4444" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -759,7 +759,7 @@ const SupplierHomePage: React.FC = () => {
         {/* Booking Distribution */}
         <div className="theme-bg-card p-6 rounded-xl border theme-border">
           <h2 className="text-lg font-semibold theme-text-primary mb-6">
-            {t("booking_distribution") || "Phân bố đặt chỗ"}
+            {t("booking_distribution")}
           </h2>
           {bookingDistribution.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
@@ -778,12 +778,12 @@ const SupplierHomePage: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => [`${value} đơn`, ""]} />
+                <Tooltip formatter={(value: number) => [`${value} ${t("bookings")}`, ""]} />
               </PieChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-[250px] theme-text-secondary">
-              {t("no_bookings") || "Chưa có đơn đặt chỗ nào"}
+              {t("no_bookings")}
             </div>
           )}
           <div className="grid grid-cols-2 gap-2 mt-4">
@@ -803,10 +803,10 @@ const SupplierHomePage: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold theme-text-primary flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            {t("recent_bookings") || "Đơn đặt chỗ gần đây"}
+            {t("recent_bookings")}
           </h2>
           <span className="text-sm theme-text-secondary">
-            {t("total") || "Tổng"}: {totalStats.totalBookings} {t("bookings") || "đơn"}
+            {t("total")}: {totalStats.totalBookings} {t("bookings")}
           </span>
         </div>
 
@@ -815,13 +815,13 @@ const SupplierHomePage: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b theme-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("type") || "Loại"}</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("service") || "Dịch vụ"}</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("customer") || "Khách hàng"}</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("date") || "Ngày đặt"}</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium theme-text-secondary">{t("amount") || "Số tiền"}</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium theme-text-secondary">{t("status") || "Trạng thái"}</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium theme-text-secondary">{t("action") || "Thao tác"}</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("type")}</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("service")}</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("customer")}</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium theme-text-secondary">{t("date")}</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium theme-text-secondary">{t("amount")}</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium theme-text-secondary">{t("status")}</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium theme-text-secondary">{t("action")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -854,7 +854,7 @@ const SupplierHomePage: React.FC = () => {
                         className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-lg theme-bg-secondary hover:theme-bg-tertiary transition-colors"
                       >
                         <Eye className="w-4 h-4" />
-                        {t("view") || "Xem"}
+                        {t("view")}
                       </button>
                     </td>
                   </tr>
@@ -865,7 +865,7 @@ const SupplierHomePage: React.FC = () => {
         ) : (
           <div className="text-center py-12 theme-text-secondary">
             <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>{t("no_bookings_yet") || "Chưa có đơn đặt chỗ nào"}</p>
+            <p>{t("no_bookings_yet")}</p>
           </div>
         )}
       </div>

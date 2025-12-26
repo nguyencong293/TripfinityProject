@@ -69,6 +69,7 @@ const EditBlogPage = () => {
       }
     };
     fetchBlog();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blogId]);
 
   // Validate

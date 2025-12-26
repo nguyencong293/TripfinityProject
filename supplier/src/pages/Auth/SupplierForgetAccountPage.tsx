@@ -213,8 +213,8 @@ const SupplierForgetAccountPage: React.FC = () => {
         <div className="w-full rounded-2xl theme-bg-card/95 backdrop-blur theme-border theme-text-primary p-6 sm:p-8 shadow-xl ring-1 ring-black/5">
           <Link
             to="/supplier"
-            className="theme-dibutton absolute top-4 right-4"
-            aria-label={t("close") || "Close"}
+            className="absolute top-4 right-4 p-2 rounded-lg hover:theme-bg-secondary transition-colors theme-text-secondary"
+            aria-label={t("close")}
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </Link>
@@ -265,7 +265,7 @@ const SupplierForgetAccountPage: React.FC = () => {
                   className="btn-primary w-full h-12 rounded-full font-semibold mt-2 disabled:opacity-60"
                   disabled={!email || isLoading}
                 >
-                  {isLoading ? t("loading") || "..." : t("send_link")}
+                  {isLoading ? t("loading") : t("send_link")}
                 </button>
 
                 <p className="text-center text-caption-mobile mt-2 theme-text-secondary">
@@ -329,7 +329,7 @@ const SupplierForgetAccountPage: React.FC = () => {
                       otpValues.join("").length !== OTP_LENGTH || isLoading
                     }
                   >
-                    {isLoading ? t("loading") || "..." : t("authed")}
+                    {isLoading ? t("loading") : t("authed")}
                   </button>
 
                   <button
@@ -376,7 +376,8 @@ const SupplierForgetAccountPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword((s) => !s)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 theme-text-secondary"
+                      aria-label={showPassword ? t("hide_password") : t("show_password")}
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -437,16 +438,18 @@ const SupplierForgetAccountPage: React.FC = () => {
                     className="btn-primary w-full h-12 rounded-full font-semibold disabled:opacity-60"
                     disabled={isLoading}
                   >
-                    {isLoading ? t("loading") || "..." : t("update")}
+                    {isLoading ? t("loading") : t("update")}
                   </button>
                 </div>
               </form>
             )}
             {(formError || error || message) && (
               <div
-                className={`mt-2 text-sm text-center ${
-                  formError || error ? "text-red-500" : "text-green-500"
+                className={`mt-2 text-body2-mobile text-center ${
+                  formError || error ? "theme-text-error" : "theme-text-success"
                 }`}
+                role={formError || error ? "alert" : "status"}
+                aria-live="assertive"
               >
                 {formError || error || message}
               </div>

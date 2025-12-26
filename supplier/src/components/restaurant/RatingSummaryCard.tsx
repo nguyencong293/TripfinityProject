@@ -45,10 +45,10 @@ const RatingSummaryCard: React.FC<RatingSummaryCardProps> = ({
   ];
 
   const aspects = [
-    { label: t("restaurant_aspect_food_quality"), value: summary.avgFoodQuality },
+    { label: t("restaurant_aspect_food_quality"), value: summary.avgQuality },
     { label: t("restaurant_aspect_service"), value: summary.avgService },
-    { label: t("restaurant_aspect_ambiance"), value: summary.avgAmbiance },
-    { label: t("restaurant_aspect_value"), value: summary.avgValueForMoney },
+    { label: t("restaurant_aspect_ambiance"), value: summary.avgAmbience },
+    { label: t("restaurant_aspect_value"), value: summary.avgPrice },
   ];
 
   return (
@@ -61,14 +61,14 @@ const RatingSummaryCard: React.FC<RatingSummaryCardProps> = ({
       <div className="flex items-center gap-6 mb-6 pb-6 border-b theme-border">
         <div className="text-center">
           <div className="text-5xl font-bold theme-text-primary mb-2">
-            {summary.avgOverall?.toFixed(1) || "0.0"}
+            {summary.avgRating?.toFixed(1) || "0.0"}
           </div>
           <div className="flex items-center justify-center gap-1 mb-1">
             {[...Array(5)].map((_, i) => (
               <Star
                 key={i}
                 className={`w-5 h-5 ${
-                  i < Math.round(summary.avgOverall || 0)
+                  i < Math.round(summary.avgRating || 0)
                     ? "fill-yellow-400 theme-text-warning"
                     : "icon-disabled"
                 }`}

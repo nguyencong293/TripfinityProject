@@ -5,12 +5,11 @@ export interface MultiSelectCheckboxProps {
   options: { id: number; label: string }[];
   selectedIds: number[];
   onChange: (selectedIds: number[]) => void;
-  fieldName: string;
+  fieldName?: string;
 }
 
 const MultiSelectCheckbox: React.FC<MultiSelectCheckboxProps> = React.memo(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ({ options, selectedIds, onChange, fieldName }) => {
+  ({ options, selectedIds, onChange }) => {
     const handleToggle = (id: number) => {
       const newSelectedIds = selectedIds.includes(id)
         ? selectedIds.filter((i) => i !== id)

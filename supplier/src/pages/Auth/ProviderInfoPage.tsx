@@ -7,8 +7,10 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { useProviderInfo } from "../../hooks/useProviderInfo";
+import { useLanguage } from "../../hooks/useLanguage";
 
 const ProviderInfoPage: React.FC = () => {
+  const { t } = useLanguage();
   const {
     formData,
     loading,
@@ -41,8 +43,9 @@ const ProviderInfoPage: React.FC = () => {
       <div className="w-full max-w-2xl relative">
         <div className="w-full rounded-2xl theme-bg-card/95 backdrop-blur theme-border theme-text-primary p-6 sm:p-8 shadow-xl ring-1 ring-black/5">
           <button
-            className="theme-dibutton absolute top-4 right-4"
+            className="absolute top-4 right-4 p-2 rounded-lg hover:theme-bg-secondary transition-colors theme-text-secondary"
             onClick={handleCancel}
+            aria-label={t("close")}
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -54,14 +57,14 @@ const ProviderInfoPage: React.FC = () => {
           </div>
 
           <h1 className="text-h4-mobile sm:text-h3-tablet lg:text-h2-desktop text-center font-semibold">
-            Tạo Hồ Sơ Nhà Cung Cấp
+            {t("create_provider_profile")}
           </h1>
           <p className="mt-2 text-center text-subtitle2-mobile theme-text-secondary">
-            Vui lòng hoàn thành thông tin để tiếp tục sử dụng dịch vụ
+            {t("create_provider_profile_desc")}
           </p>
 
           {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="mt-4 theme-bg-error border border-light-error dark:border-dark-error theme-text-error px-4 py-3 rounded-lg text-body2-mobile">
               {error}
             </div>
           )}
@@ -71,112 +74,112 @@ const ProviderInfoPage: React.FC = () => {
             {/* Company Name */}
             <div>
               <label className="block text-body1-mobile font-medium theme-text-secondary mb-1">
-                Tên công ty <span className="text-red-500">*</span>
+                {t("company_name_label")} <span className="theme-text-error">*</span>
               </label>
               <input
                 type="text"
                 name="companyName"
                 value={formData.companyName}
                 onChange={handleChange}
-                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Nhập tên công ty"
+                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus theme-text-primary"
+                placeholder={t("company_name_placeholder")}
               />
             </div>
 
             {/* Tax Code */}
             <div>
               <label className="block text-body1-mobile font-medium theme-text-secondary mb-1">
-                Mã số thuế <span className="text-red-500">*</span>
+                {t("tax_code_label")} <span className="theme-text-error">*</span>
               </label>
               <input
                 type="text"
                 name="taxCode"
                 value={formData.taxCode}
                 onChange={handleChange}
-                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Nhập mã số thuế"
+                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus theme-text-primary"
+                placeholder={t("tax_code_placeholder")}
               />
             </div>
 
             {/* Address */}
             <div>
               <label className="block text-body1-mobile font-medium theme-text-secondary mb-1">
-                Địa chỉ <span className="text-red-500">*</span>
+                {t("address_label")} <span className="theme-text-error">*</span>
               </label>
               <input
                 type="text"
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Nhập địa chỉ công ty"
+                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus theme-text-primary"
+                placeholder={t("address_placeholder")}
               />
             </div>
 
             {/* Contact Email */}
             <div>
               <label className="block text-body1-mobile font-medium theme-text-secondary mb-1">
-                Email liên hệ <span className="text-red-500">*</span>
+                {t("contact_email_label")} <span className="theme-text-error">*</span>
               </label>
               <input
                 type="email"
                 name="contactEmail"
                 value={formData.contactEmail}
                 onChange={handleChange}
-                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Nhập email liên hệ"
+                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus theme-text-primary"
+                placeholder={t("contact_email_placeholder")}
               />
             </div>
 
             {/* Contact Phone */}
             <div>
               <label className="block text-body1-mobile font-medium theme-text-secondary mb-1">
-                Số điện thoại <span className="text-red-500">*</span>
+                {t("contact_phone_label")} <span className="theme-text-error">*</span>
               </label>
               <input
                 type="tel"
                 name="contactPhone"
                 value={formData.contactPhone}
                 onChange={handleChange}
-                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Nhập số điện thoại"
+                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus theme-text-primary"
+                placeholder={t("contact_phone_placeholder")}
               />
             </div>
 
             {/* Bank Account Number */}
             <div>
               <label className="block text-body1-mobile font-medium theme-text-secondary mb-1">
-                Số tài khoản ngân hàng
+                {t("bank_account_label")}
               </label>
               <input
                 type="text"
                 name="bankAccountNumber"
                 value={formData.bankAccountNumber}
                 onChange={handleChange}
-                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Nhập số tài khoản (tùy chọn)"
+                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus theme-text-primary"
+                placeholder={t("bank_account_placeholder")}
               />
             </div>
 
             {/* Bank Name */}
             <div>
               <label className="block text-body1-mobile font-medium theme-text-secondary mb-1">
-                Tên ngân hàng
+                {t("bank_name_label")}
               </label>
               <input
                 type="text"
                 name="bankName"
                 value={formData.bankName}
                 onChange={handleChange}
-                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Nhập tên ngân hàng (tùy chọn)"
+                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus theme-text-primary"
+                placeholder={t("bank_name_placeholder")}
               />
             </div>
 
             {/* Logo Upload */}
             <div>
               <label className="block text-body1-mobile font-medium theme-text-secondary mb-1">
-                Logo công ty
+                {t("company_logo")}
               </label>
               <div className="mt-2">
                 <div className="flex items-center gap-4">
@@ -189,8 +192,8 @@ const ProviderInfoPage: React.FC = () => {
                         className="h-20 w-20 rounded-lg object-cover border theme-border"
                       />
                     ) : (
-                      <div className="h-20 w-20 rounded-lg border-2 border-dashed theme-border flex items-center justify-center bg-gray-50 dark:bg-gray-800">
-                        <ImageIcon className="h-8 w-8 text-gray-400" />
+                      <div className="h-20 w-20 rounded-lg border-2 border-dashed theme-border flex items-center justify-center theme-bg-card">
+                        <ImageIcon className="h-8 w-8 icon-disabled" />
                       </div>
                     )}
                   </div>
@@ -199,10 +202,10 @@ const ProviderInfoPage: React.FC = () => {
                   <div className="flex-1">
                     <label
                       htmlFor="logo-upload"
-                      className="cursor-pointer inline-flex items-center px-4 py-2 border theme-border rounded-lg text-sm font-medium theme-text-primary hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className="cursor-pointer inline-flex items-center px-4 py-2 border theme-border rounded-lg text-body2-mobile font-medium theme-text-primary hover:theme-bg-secondary transition-colors"
                     >
                       <Upload className="h-4 w-4 mr-2" />
-                      {logoFile ? "Thay đổi logo" : "Chọn logo"}
+                      {logoFile ? t("change_logo") : t("select_logo")}
                     </label>
                     <input
                       id="logo-upload"
@@ -212,12 +215,12 @@ const ProviderInfoPage: React.FC = () => {
                       className="hidden"
                     />
                     {logoFile && (
-                      <p className="mt-1 text-xs theme-text-secondary">
+                      <p className="mt-1 text-caption-mobile theme-text-secondary">
                         {logoFile.name}
                       </p>
                     )}
-                    <p className="mt-1 text-xs theme-text-secondary">
-                      PNG, JPG, GIF tối đa 10MB
+                    <p className="mt-1 text-caption-mobile theme-text-secondary">
+                      {t("file_size_limit")}
                     </p>
                   </div>
                 </div>
@@ -227,15 +230,15 @@ const ProviderInfoPage: React.FC = () => {
             {/* Description */}
             <div>
               <label className="block text-body1-mobile font-medium theme-text-secondary mb-1">
-                Mô tả công ty
+                {t("company_description_label")}
               </label>
               <textarea
                 name="providerDescription"
                 value={formData.providerDescription}
                 onChange={handleChange}
                 rows={4}
-                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-                placeholder="Nhập mô tả về công ty của bạn (tùy chọn)"
+                className="w-full rounded-lg border theme-border bg-transparent px-3 py-3 focus:outline-none focus:ring-2 focus:ring-light-focus dark:focus:ring-dark-focus theme-text-primary resize-none"
+                placeholder={t("company_description_placeholder")}
               />
             </div>
 
@@ -251,19 +254,19 @@ const ProviderInfoPage: React.FC = () => {
                 {loading ? (
                   <>
                     <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                    Đang xử lý...
+                    {t("processing")}
                   </>
                 ) : (
-                  "Tạo Hồ Sơ"
+                  t("create_profile")
                 )}
               </button>
               <button
                 type="button"
                 onClick={handleCancel}
                 disabled={loading}
-                className="h-12 px-6 rounded-full border theme-border theme-text-primary hover:bg-gray-50 dark:hover:bg-gray-800 font-semibold transition-colors disabled:opacity-50"
+                className="btn-outline h-12 px-6 rounded-full font-semibold transition-colors disabled:opacity-50"
               >
-                Hủy
+                {t("cancel")}
               </button>
             </div>
           </form>

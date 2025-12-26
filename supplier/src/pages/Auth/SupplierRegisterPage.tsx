@@ -122,7 +122,7 @@ const SupplierRegisterPage: React.FC = () => {
         <div className="w-full rounded-2xl theme-bg-card/95 backdrop-blur theme-border theme-text-primary p-6 sm:p-8 shadow-xl ring-1 ring-black/5">
           <Link
             to="/supplier"
-            className="theme-dibutton absolute top-4 right-4"
+            className="absolute top-4 right-4 p-2 rounded-lg hover:theme-bg-secondary transition-colors theme-text-secondary"
             aria-label={t("close") || "Close"}
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -205,7 +205,8 @@ const SupplierRegisterPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword((s) => !s)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 theme-text-secondary"
+                    aria-label={showPassword ? t("hide_password") : t("show_password")}
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -236,7 +237,8 @@ const SupplierRegisterPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowRePassword((s) => !s)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 theme-text-secondary"
+                    aria-label={showRePassword ? t("hide_password") : t("show_password")}
                   >
                     {showRePassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -249,7 +251,7 @@ const SupplierRegisterPage: React.FC = () => {
 
               {formError && (
                 <div
-                  className="text-red-500 text-center text-sm py-2"
+                  className="theme-text-error text-center text-body2-mobile py-2"
                   role="alert"
                   aria-live="assertive"
                 >
@@ -259,7 +261,7 @@ const SupplierRegisterPage: React.FC = () => {
 
               {error && (
                 <div
-                  className="text-red-500 text-center text-sm py-2"
+                  className="theme-text-error text-center text-body2-mobile py-2"
                   role="alert"
                   aria-live="assertive"
                 >

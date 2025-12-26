@@ -4,6 +4,9 @@ export interface Language {
   flag: string;
 }
 
+// Flexible translation type to support both flat and nested structures
+export type TranslationValue = string | { [key: string]: TranslationValue };
+
 export interface Translation {
   app_name: string;
   light: string;
@@ -56,5 +59,5 @@ export interface Translation {
   please_fill_all_fields: string;
   registration_success_redirect: string;
 
-  [key: string]: string;
+  [key: string]: TranslationValue;
 }

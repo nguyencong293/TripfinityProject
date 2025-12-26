@@ -27,11 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
-
-/* ============ i18n stub ============ */
-const useLanguage = () => ({
-  t: (k: string) => k,
-});
+import { useLanguage } from "../../hooks/useLanguage";
 
 /* ============ Types ============ */
 export type ListingType = "tour" | "hotel" | "restaurant" | "attraction";

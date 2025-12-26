@@ -13,13 +13,17 @@ export const languages: Language[] = [
 
 // Load translations from JSON files
 const translations: Record<string, Translation> = {
-  en: enTranslations,
-  vi: viTranslations,
-  ko: koTranslations,
+  en: enTranslations as Translation,
+  vi: viTranslations as Translation,
+  ko: koTranslations as Translation,
 };
 
 export const getTranslation = (langCode: string, key: string): string => {
-  return translations[langCode]?.[key] || translations["vi"][key] || key;
+  const value = translations[langCode]?.[key] || translations["vi"][key];
+  if (typeof value === "string") {
+    return value;
+  }
+  return key;
 };
 
 export const getCurrentLanguage = (langCode: string): Language => {

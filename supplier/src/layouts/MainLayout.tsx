@@ -18,7 +18,6 @@ import {
   BarChart3,
   Plus,
   MessageSquare,
-  LifeBuoy,
   MapPin,
   Utensils,
   Building2,
@@ -32,8 +31,18 @@ import { useLanguage } from "../hooks/useLanguage";
 import { getUnreadConversationsCount } from "../services/chatService";
 import { getProviderByUserId } from "../services/providerService";
 
+// Navigation menu item type
+interface SidebarMenuItemType {
+  icon: React.ElementType;
+  label: string;
+  to: string;
+  badge: string | null;
+  isDropdown?: boolean;
+  dropdownItems?: { labelKey: string; icon: React.ElementType; to: string }[];
+}
+
 // Navigation menu items with badges
-const sidebarMenuItems = [
+const sidebarMenuItems: SidebarMenuItemType[] = [
   {
     icon: BarChart3,
     label: "dashboard",
@@ -81,12 +90,6 @@ const sidebarMenuItems = [
     label: "settings",
     to: "/supplier/settings",
     badge: null,
-  },
-  {
-    icon: LifeBuoy,
-    label: "support_tickets",
-    to: "/supplier/support",
-    badge: "openTickets",
   },
 ];
 
@@ -430,10 +433,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return t("just_now") || "Vừa xong";
-    if (diffMins < 60) return `${diffMins} ${t("minutes_ago_suffix") || "phút trước"}`;
-    if (diffHours < 24) return `${diffHours} ${t("hours_ago_suffix") || "giờ trước"}`;
-    return `${diffDays} ${t("days_ago_suffix") || "ngày trước"}`;
+    if (diffMins < 1) return t("just_now");
+    if (diffMins < 60) return `${diffMins} ${t("minutes_ago_suffix")}`;
+    if (diffHours < 24) return `${diffHours} ${t("hours_ago_suffix")}`;
+    return `${diffDays} ${t("days_ago_suffix")}`;
   };
 
   // Handle quick create
@@ -550,7 +553,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               {quickCreateOpen && !sidebarCollapsed && (
                 <div className="absolute top-full left-0 right-0 mt-2 theme-bg-card border theme-border rounded-xl shadow-lg py-2 z-50">
                   <a
-                    href="/provider/:id/create/tour"
+                    href="/supplier/service/tour/create"
                     className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary"
                   >
                     <Route className="w-4 h-4 flex-shrink-0" />
@@ -559,7 +562,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     </span>
                   </a>
                   <a
-                    href="/provider/:id/create/hotel"
+                    href="/supplier/service/hotel/create"
                     className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary"
                   >
                     <Building2 className="w-4 h-4 flex-shrink-0" />
@@ -568,7 +571,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     </span>
                   </a>
                   <a
-                    href="/provider/:id/create/restaurant"
+                    href="/supplier/service/restaurant/create"
                     className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary"
                   >
                     <Utensils className="w-4 h-4 flex-shrink-0" />
@@ -577,21 +580,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     </span>
                   </a>
                   <a
-                    href="/provider/:id/create/attraction"
+                    href="/supplier/service/attraction/create"
                     className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary"
                   >
                     <MapPin className="w-4 h-4 flex-shrink-0" />
                     <span>
                       {t("create")} {t("attraction")}
                     </span>
-                  </a>
-                  <hr className="my-2 theme-border" />
-                  <a
-                    href="/provider/:id/create/bulk-import"
-                    className="flex items-center gap-3 px-4 py-2 text-body2-mobile md:text-body2-tablet lg:text-body2-desktop theme-text-secondary hover:theme-text-primary hover:theme-bg-secondary"
-                  >
-                    <Plus className="w-4 h-4 flex-shrink-0" />
-                    <span>{t("bulk_import")}</span>
                   </a>
                 </div>
               )}

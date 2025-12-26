@@ -59,40 +59,40 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onReply }) => {
       </div>
 
       {/* Aspect Ratings */}
-      {(review.foodQuality || review.service || review.ambiance || review.valueForMoney) && (
+      {review.aspects && (review.aspects.quality || review.aspects.service || review.aspects.ambience || review.aspects.price) && (
         <div className="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg theme-bg-secondary">
-          {review.foodQuality && (
+          {review.aspects.quality && (
             <div className="flex items-center justify-between text-sm">
               <span className="theme-text-secondary">{t("restaurant_aspect_food_quality")}:</span>
               <div className="flex items-center gap-1">
-                <span className="font-medium theme-text-primary">{review.foodQuality}</span>
+                <span className="font-medium theme-text-primary">{review.aspects.quality}</span>
                 <Star className="w-4 h-4 theme-text-warning" />
               </div>
             </div>
           )}
-          {review.service && (
+          {review.aspects.service && (
             <div className="flex items-center justify-between text-sm">
               <span className="theme-text-secondary">{t("restaurant_aspect_service")}:</span>
               <div className="flex items-center gap-1">
-                <span className="font-medium theme-text-primary">{review.service}</span>
+                <span className="font-medium theme-text-primary">{review.aspects.service}</span>
                 <Star className="w-4 h-4 theme-text-warning" />
               </div>
             </div>
           )}
-          {review.ambiance && (
+          {review.aspects.ambience && (
             <div className="flex items-center justify-between text-sm">
               <span className="theme-text-secondary">{t("restaurant_aspect_ambiance")}:</span>
               <div className="flex items-center gap-1">
-                <span className="font-medium theme-text-primary">{review.ambiance}</span>
+                <span className="font-medium theme-text-primary">{review.aspects.ambience}</span>
                 <Star className="w-4 h-4 theme-text-warning" />
               </div>
             </div>
           )}
-          {review.valueForMoney && (
+          {review.aspects.price && (
             <div className="flex items-center justify-between text-sm">
               <span className="theme-text-secondary">{t("restaurant_aspect_value")}:</span>
               <div className="flex items-center gap-1">
-                <span className="font-medium theme-text-primary">{review.valueForMoney}</span>
+                <span className="font-medium theme-text-primary">{review.aspects.price}</span>
                 <Star className="w-4 h-4 theme-text-warning" />
               </div>
             </div>

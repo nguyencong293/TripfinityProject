@@ -127,8 +127,8 @@ const SupplierLoginPage: React.FC = () => {
           {/* Close button */}
           <Link
             to="/supplier"
-            className="theme-dibutton absolute top-4 right-4"
-            aria-label={t("close") || "Close"}
+            className="absolute top-4 right-4 p-2 rounded-lg hover:theme-bg-secondary transition-colors theme-text-secondary"
+            aria-label={t("close")}
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </Link>
@@ -242,9 +242,9 @@ const SupplierLoginPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowPassword((s) => !s)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 theme-text-secondary"
                         aria-label={
-                          showPassword ? "Hide password" : "Show password"
+                          showPassword ? t("hide_password") : t("show_password")
                         }
                       >
                         {showPassword ? (
@@ -269,7 +269,7 @@ const SupplierLoginPage: React.FC = () => {
                   {/* Error Messages */}
                   {(error || googleError) && (
                     <div
-                      className="text-red-500 text-center text-sm py-2"
+                      className="theme-text-error text-center text-body2-mobile py-2"
                       role="alert"
                       aria-live="assertive"
                     >
