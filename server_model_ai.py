@@ -338,16 +338,31 @@ class TripfinityTwoTowerModel:
     # --------------------------------------------------
     # TOWER B: ITEM TOWER (Xử lý đặc trưng sản phẩm)
     # Load đầy đủ attributes để tính Multi-Factor Score
+    # ENHANCED: Thêm thumbnail_url và rating_avg từ các bảng service
     # --------------------------------------------------
     def item_tower_layer(self):
         query = """
-            SELECT tower_item_id, item_type, item_id, title, location,
-                   latitude, longitude, price, normalized_features, star_rating,
-                   property_type, difficulty_level, tour_type, attraction_type,
-                   amenities_json, categories_json, cuisines_json, 
-                   diets_json, suitable_for_json
-            FROM ai_item_tower
-            WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+            SELECT 
+                ait.tower_item_id, ait.item_type, ait.item_id, ait.title, ait.location,
+                ait.latitude, ait.longitude, ait.price, ait.normalized_features, ait.star_rating,
+                ait.property_type, ait.difficulty_level, ait.tour_type, ait.attraction_type,
+                ait.amenities_json, ait.categories_json, ait.cuisines_json, 
+                ait.diets_json, ait.suitable_for_json,
+                -- JOIN để lấy thumbnail_url từ các bảng service
+                COALESCE(h.thumbnail_url, t.thumbnail_url, r.thumbnail_url, a.thumbnail_url) AS thumbnail_url,
+                -- JOIN để lấy rating trung bình từ reviews (column name is 'rating', not 'overall_rating')
+                COALESCE(
+                    (SELECT AVG(hr.rating) FROM hotel_reviews hr WHERE hr.hotel_id = h.hotel_id),
+                    (SELECT AVG(tr.rating) FROM tour_reviews tr WHERE tr.tour_id = t.tour_id),
+                    (SELECT AVG(rr.rating) FROM restaurant_reviews rr WHERE rr.restaurant_id = r.restaurant_id),
+                    (SELECT AVG(ar.rating) FROM attraction_reviews ar WHERE ar.attraction_id = a.attraction_id)
+                ) AS rating_avg
+            FROM ai_item_tower ait
+            LEFT JOIN hotels h ON ait.item_type = 'hotel' AND ait.item_id = h.hotel_id
+            LEFT JOIN tours t ON ait.item_type = 'tour' AND ait.item_id = t.tour_id
+            LEFT JOIN restaurants r ON ait.item_type = 'restaurant' AND ait.item_id = r.restaurant_id
+            LEFT JOIN attractions a ON ait.item_type = 'attraction' AND ait.item_id = a.attraction_id
+            WHERE ait.latitude IS NOT NULL AND ait.longitude IS NOT NULL
         """
         df = pd.read_sql(query, self.engine)
         # Ép kiểu dữ liệu an toàn
@@ -355,6 +370,8 @@ class TripfinityTwoTowerModel:
         df['longitude'] = df['longitude'].astype(float)
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
         df['star_rating'] = pd.to_numeric(df['star_rating'], errors='coerce').fillna(0)
+        df['rating_avg'] = pd.to_numeric(df['rating_avg'], errors='coerce').fillna(0)
+        df['thumbnail_url'] = df['thumbnail_url'].fillna('')
         return df
 
     # --------------------------------------------------
@@ -999,13 +1016,16 @@ def get_recommendations(user_id):
                     'item_id': int(row['item_id']),
                     'title': str(row['title']),
                     'item_type': str(row['item_type']),
-                    'price': str(row['price_fmt']),
+                    'price_fmt': str(row['price_fmt']),  # Renamed for clarity
                     'location': str(row.get('location', '')),
                     'dist_km': round(float(row['dist_km']), 2) if 'dist_km' in row else 0.0,
                     'reason': str(row['reason']),
                     'final_score': round(float(row.get('final_score', 0)), 3),
                     'score_breakdown': score_detail,
-                    'feature_match_detail': feature_detail
+                    'feature_match_detail': feature_detail,
+                    # ⚡ ENHANCED: Thêm thumbnail_url và rating_avg để không cần gọi thêm search API
+                    'thumbnail_url': str(row.get('thumbnail_url', '')),
+                    'rating_avg': round(float(row.get('rating_avg', 0)), 1)
                 }
                 
                 # Chỉ thêm star_rating cho hotel (cấp sao khách sạn)

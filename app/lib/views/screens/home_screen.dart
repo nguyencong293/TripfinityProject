@@ -540,7 +540,10 @@ class _HomeContentState extends State<_HomeContent> {
     }
   }
 
+  /// ⚡ OPTIMIZED: Load recommendations INSTANTLY from AI model
+  /// NO additional search API calls - all data comes from the enhanced AI response
   Future<List<HomeServiceItem>> _loadRecommendations() async {
+    final startTime = DateTime.now();
     try {
       final prefs = await _prefsFuture;
       final userId = prefs.getInt('user_id');
@@ -552,76 +555,24 @@ class _HomeContentState extends State<_HomeContent> {
 
       final recommendationService = RecommendationService(dio: _dio);
 
-      // ⚡ OPTIMIZATION: Load recommendations API and service data in parallel
-      // Don't wait for recommendations before starting service searches
-      final recommendationsFuture = recommendationService.getRecommendations(
-        userId,
-      );
-      final searchApi = SearchApiService(dio: _dio, prefs: prefs);
+      // ⚡ SINGLE API CALL - AI model now returns ALL needed data!
+      // No more waiting for 4 search APIs
+      final response = await recommendationService.getRecommendations(userId);
 
-      // Fire all search requests immediately in parallel
-      final hotelSearchFuture = searchApi.search(q: '', type: 'hotel');
-      final restaurantSearchFuture = searchApi.search(
-        q: '',
-        type: 'restaurant',
-      );
-      final attractionSearchFuture = searchApi.search(
-        q: '',
-        type: 'attraction',
-      );
-      final tourSearchFuture = searchApi.search(q: '', type: 'tour');
-
-      // Now wait for ALL of them together (parallel execution)
-      final results = await Future.wait([
-        recommendationsFuture,
-        hotelSearchFuture,
-        restaurantSearchFuture,
-        attractionSearchFuture,
-        tourSearchFuture,
-      ]);
-
-      final response = results[0] as dynamic; // recommendation response
-
-      if (response?.success != true || response?.data == null) {
+      if (response.success != true || response.data == null) {
         debugPrint('⚠️ No recommendations available');
         return [];
       }
 
-      debugPrint('🔍 Processing ${response.data!.length} recommendations');
-
-      // Build cache from parallel search results
-      final serviceDataCache = <String, List<Map<String, dynamic>>>{
-        'hotel':
-            ((results[1] as Map)['hotels'] as List?)
-                ?.map((e) => Map<String, dynamic>.from(e as Map))
-                .toList() ??
-            [],
-        'restaurant':
-            ((results[2] as Map)['restaurants'] as List?)
-                ?.map((e) => Map<String, dynamic>.from(e as Map))
-                .toList() ??
-            [],
-        'attraction':
-            ((results[3] as Map)['attractions'] as List?)
-                ?.map((e) => Map<String, dynamic>.from(e as Map))
-                .toList() ??
-            [],
-        'tour':
-            ((results[4] as Map)['tours'] as List?)
-                ?.map((e) => Map<String, dynamic>.from(e as Map))
-                .toList() ??
-            [],
-      };
-
-      debugPrint('📦 Cached services for recommendations');
+      debugPrint(
+        '🔍 Processing ${response.data!.length} recommendations (INSTANT)',
+      );
 
       final items = <HomeServiceItem>[];
 
       for (final item in response.data!) {
         final serviceType = item.itemType.toLowerCase();
         final serviceId = item.itemId;
-
-        debugPrint('🔎 Looking for $serviceType #$serviceId: ${item.title}');
 
         // Determine if this item is favorited
         bool isFavorite = false;
@@ -635,82 +586,24 @@ class _HomeContentState extends State<_HomeContent> {
           isFavorite = _favoriteTourIds.contains(serviceId);
         }
 
-        // Find item in cache
-        final serviceList = serviceDataCache[serviceType];
-        if (serviceList == null) {
-          debugPrint('⚠️ No cache for service type: $serviceType');
-          continue;
-        }
-
-        String idKey = '';
-        if (serviceType == 'hotel') {
-          idKey = 'hotelId';
-        } else if (serviceType == 'restaurant') {
-          idKey = 'restaurantId';
-        } else if (serviceType == 'attraction') {
-          idKey = 'attractionId';
-        } else if (serviceType == 'tour') {
-          idKey = 'tourId';
-        }
-
-        debugPrint(
-          '   Searching with key: $idKey in ${serviceList.length} items',
+        // ⚡ USE DATA DIRECTLY FROM AI RESPONSE - No search API needed!
+        items.add(
+          HomeServiceItem(
+            title: item.title,
+            rating: item.ratingAvg, // Now from AI response
+            imageUrl: item.thumbnailUrl, // Now from AI response
+            price: item.priceFmt,
+            serviceType: serviceType,
+            serviceId: serviceId,
+            isFavorite: isFavorite,
+          ),
         );
-
-        final matchedItem = serviceList.firstWhere((m) {
-          final foundId = m[idKey] ?? m['id'] ?? 0;
-          return foundId == serviceId;
-        }, orElse: () => <String, dynamic>{});
-
-        if (matchedItem.isEmpty) {
-          debugPrint('   ❌ Not found in search results');
-          // Fallback: use basic info from recommendation
-          items.add(
-            HomeServiceItem(
-              title: item.title,
-              rating: 0.0,
-              imageUrl: '',
-              price: item.priceFmt,
-              serviceType: serviceType,
-              serviceId: serviceId,
-              isFavorite: isFavorite,
-            ),
-          );
-          debugPrint('   ✅ Added with fallback data');
-        } else {
-          debugPrint('   ✅ Found match!');
-          final ratingAny =
-              matchedItem['ratingAverage'] ??
-              matchedItem['rating'] ??
-              matchedItem['ratingAvg'] ??
-              matchedItem['avg_rating'];
-          final rating = (ratingAny is num)
-              ? ratingAny.toDouble()
-              : (double.tryParse(ratingAny?.toString() ?? '') ?? 0.0);
-
-          final imageUrl =
-              (matchedItem['thumbnailUrl'] ??
-                      matchedItem['imageUrl'] ??
-                      matchedItem['image'])
-                  ?.toString() ??
-              '';
-
-          items.add(
-            HomeServiceItem(
-              title: item.title,
-              rating: rating,
-              imageUrl: imageUrl,
-              price: item.priceFmt,
-              serviceType: serviceType,
-              serviceId: serviceId,
-              isFavorite: isFavorite,
-            ),
-          );
-          debugPrint('   ✅ Added with full data');
-        }
       }
 
-      debugPrint('✅ Loaded ${items.length} recommendation items');
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      debugPrint(
+        '✅ Loaded ${items.length} recommendation items in ${elapsed}ms (INSTANT!)',
+      );
       return items;
     } catch (e) {
       debugPrint('❌ Error loading recommendations: $e');

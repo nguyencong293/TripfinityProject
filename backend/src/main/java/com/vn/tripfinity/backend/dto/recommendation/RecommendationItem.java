@@ -24,5 +24,21 @@ public class RecommendationItem {
     @JsonProperty("dist_km")
     private Double distKm;
     
+    @JsonProperty("final_score")
     private Double score;
+    
+    // ⚡ ENHANCED: Thêm fields để Flutter không cần gọi thêm search API
+    @JsonProperty("thumbnail_url")
+    private String thumbnailUrl;
+    
+    @JsonProperty("rating_avg")
+    private Double ratingAvg;
+    
+    private String location;
+    
+    private String reason;
+    
+    // Hotel-specific field (cấp sao khách sạn)
+    @JsonProperty("hotel_star_class")
+    private Integer hotelStarClass;
 }
