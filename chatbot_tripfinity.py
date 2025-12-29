@@ -13,8 +13,7 @@ from unidecode import unidecode
 import re
 
 nest_asyncio.apply()
-
-os.environ["GROQ_API_KEY"] = "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"
+os.environ["GROQ_API_KEY"] = "API"
 ngrok.set_auth_token("32rp1jIGT8KGFs8QQcEN1bghzeX_2keD2P4KXZnxVUzK3RtdC")
 
 # --- IMPORT ---
