@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "173444476399-5l4828tlfd9jq2v3j1gjirl9f3gks5ej.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vn.tripfinity.app",
+            "certificate_hash": "53abfbd055878bb2a2c734bcd66171f878aa5ead"
+          }
+        },
+        {
           "client_id": "173444476399-srrjbrmg2c0rsatfd4498t0499gmn104.apps.googleusercontent.com",
           "client_type": 3
         }

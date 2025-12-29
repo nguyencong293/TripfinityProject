@@ -2271,15 +2271,22 @@ class _HotelDetailOverviewScreenState extends State<HotelDetailOverviewScreen> {
           border: Border.all(color: context.dividerColor),
           borderRadius: BorderRadius.circular(26),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 16, color: context.textPrimaryColor),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: context.captionStyle.copyWith(fontWeight: FontWeight.w600),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: context.captionStyle.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             ),
           ],
         ),
