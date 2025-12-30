@@ -76,6 +76,7 @@ const AttractionRatingSummaryCard: React.FC<AttractionRatingSummaryCardProps> = 
   summary,
   attractionName,
 }) => {
+  
   const getPercentage = (count: number) => {
     if (summary.totalReviews === 0) return 0;
     return ((count / summary.totalReviews) * 100).toFixed(1);
@@ -197,6 +198,8 @@ const AttractionReviewCard: React.FC<AttractionReviewCardProps> = ({
   review,
   attractionName,
 }) => {
+  const { t } = useLanguage();
+  
   return (
     <div className="rounded-xl border theme-border theme-bg-card p-4">
       <div className="flex items-start justify-between mb-3">
@@ -753,7 +756,7 @@ const DashboardAttractionPage: React.FC = () => {
             icon={<MessageSquare className="w-6 h-6" />}
             label={t("attraction_dashboard_manage_reviews")}
             description={t("attraction_dashboard_manage_reviews_desc")}
-            onClick={() => navigate("/supplier/services/attraction/reviews/all")}
+            onClick={() => navigate("/supplier/service/attraction/all-reviews")}
           />
           <QuickAction
             icon={<BarChart2 className="w-6 h-6" />}
@@ -1115,7 +1118,7 @@ const DashboardAttractionPage: React.FC = () => {
           </h2>
           <button
             className="link-brand flex items-center gap-1"
-            onClick={() => navigate("/supplier/services/attraction/reviews/all")}
+            onClick={() => navigate("/supplier/service/attraction/all-reviews")}
           >
             {t("view_all")} <ChevronRight className="w-4 h-4" />
           </button>

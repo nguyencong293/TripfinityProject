@@ -63,6 +63,7 @@ export interface Translation {
   messages_inbox: string;
   blogs: string;
   settings: string;
+  support: string;
   support_tickets: string;
   provider_console: string;
   quick_create: string;
@@ -1227,6 +1228,53 @@ export interface Translation {
   tour_review_error_send: string;
   tour_review_error_update: string;
   tour_review_error_delete: string;
+
+  // Settings Page
+  settings_title: string;
+  settings_description: string;
+  settings_theme_title: string;
+  settings_theme_description: string;
+  settings_theme_light: string;
+  settings_theme_dark: string;
+  settings_language_title: string;
+  settings_language_description: string;
+  settings_footer_info: string;
+
+  // Support Page
+  support_title: string;
+  support_subtitle: string;
+  support_contact_title: string;
+  support_email_title: string;
+  support_email_description: string;
+  support_phone_title: string;
+  support_phone_description: string;
+  support_chat_title: string;
+  support_chat_description: string;
+  support_chat_available: string;
+  support_hours_title: string;
+  support_hours_weekday: string;
+  support_hours_weekend: string;
+  support_office_title: string;
+  support_office_address: string;
+  support_faq_title: string;
+  support_faq_1_question: string;
+  support_faq_1_answer: string;
+  support_faq_2_question: string;
+  support_faq_2_answer: string;
+  support_faq_3_question: string;
+  support_faq_3_answer: string;
+  support_faq_4_question: string;
+  support_faq_4_answer: string;
+  support_resources_title: string;
+  support_resource_guide: string;
+  support_resource_guide_desc: string;
+  support_resource_docs: string;
+  support_resource_docs_desc: string;
+  support_resource_tips: string;
+  support_resource_tips_desc: string;
+  support_emergency_title: string;
+  support_emergency_description: string;
+  support_emergency_call: string;
 
   [key: string]: TranslationValue;
 }

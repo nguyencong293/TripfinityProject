@@ -91,6 +91,12 @@ const sidebarMenuItems: SidebarMenuItemType[] = [
     to: "/supplier/settings",
     badge: null,
   },
+  {
+    icon: HelpCircle,
+    label: "support",
+    to: "/supplier/support",
+    badge: null,
+  },
 ];
 
 // Badge data type
@@ -920,18 +926,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                           {t("account_info")}
                         </span>
                       </Link>
-                      <button className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary transition-colors text-left">
+                      <Link
+                        className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary transition-colors text-left"
+                        to={"/supplier/settings"}
+                      >
                         <Settings className="w-4 h-4 flex-shrink-0" />
                         <span className="truncate text-body1-mobile md:text-body1-tablet lg:text-body1-desktop">
                           {t("settings")}
                         </span>
-                      </button>
-                      <button className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary transition-colors text-left">
+                      </Link>
+                      <Link
+                        className="w-full flex items-center gap-3 px-4 py-2 hover:theme-bg-secondary theme-text-primary transition-colors text-left"
+                        to={"/supplier/support"}
+                      >
                         <HelpCircle className="w-4 h-4 flex-shrink-0" />
                         <span className="truncate text-body1-mobile md:text-body1-tablet lg:text-body1-desktop">
                           {t("support")}
                         </span>
-                      </button>
+                      </Link>
                       <hr className="my-2 theme-border" />
                       <button
                         onClick={handleLogout}

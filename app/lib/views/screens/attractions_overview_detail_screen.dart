@@ -16,6 +16,7 @@ import 'package:app/services/favorite_api_service.dart';
 import 'package:app/services/user_interaction_service.dart';
 import 'package:app/views/screens/attraction_booking_checkout_screen.dart';
 import 'package:app/views/screens/detail_attraction_review_user_screen.dart';
+import 'package:app/views/screens/attraction_reviews_list_screen.dart';
 import 'package:app/views/widgets/favorite_button.dart';
 
 // ===== ATTRACTION CONSTANTS (từ Supplier Portal) =====
@@ -463,6 +464,19 @@ class _AttractionsOverviewDetailScreenState
                       ? TextButton(
                           onPressed: () {
                             //  Navigate to all reviews screen
+                            if (_resolvedId != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AttractionReviewsListScreen(
+                                    attractionId: _resolvedId!,
+                                    attractionName:
+                                        _data['title']?.toString() ??
+                                        'Điểm tham quan',
+                                  ),
+                                ),
+                              );
+                            }
                           },
                           child: Text(
                             'Xem tất cả',

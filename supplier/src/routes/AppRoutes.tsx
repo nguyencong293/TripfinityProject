@@ -56,6 +56,8 @@ import MessagesPage from "../pages/Messages/MessagesPage";
 import BlogsPage from "../pages/Blog/BlogsPage";
 import CreateBlogPage from "../pages/Blog/CreateBlogPage";
 import EditBlogPage from "../pages/Blog/EditBlogPage";
+import SettingsPage from "../pages/SettingsPage";
+import SupportPage from "../pages/SupportPage";
 import ScrollToTop from "../components/ScrollToTop";
 
 const AppRoutes: React.FC = () => {
@@ -188,6 +190,9 @@ const AppRoutes: React.FC = () => {
             <Route path="blogs" element={<BlogsPage />} />
             <Route path="blogs/create" element={<CreateBlogPage />} />
             <Route path="blogs/edit/:blogId" element={<EditBlogPage />} />
+            {/* Settings & Support Routes */}
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="support" element={<SupportPage />} />
           </Route>
         </Route>
 

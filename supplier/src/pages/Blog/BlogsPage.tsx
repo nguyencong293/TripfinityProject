@@ -219,7 +219,7 @@ const BlogsPage = () => {
             onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
             className="px-4 py-2 rounded-lg theme-bg-secondary theme-text-primary border theme-border focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="all">{t("all_status") || "Tất cả"}</option>
+            <option value="all">{t("all_statuses") || "Tất cả"}</option>
             <option value="published">{t("published") || "Đã đăng"}</option>
             <option value="archived">{t("archived") || "Lưu trữ"}</option>
           </select>
