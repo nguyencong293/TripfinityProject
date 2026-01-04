@@ -1,1 +1,4 @@
 #include "Generated.xcconfig"
+
+// Disable Impeller for VMware/Software rendering compatibility
+FLUTTER_ENABLE_IMPELLER=false
