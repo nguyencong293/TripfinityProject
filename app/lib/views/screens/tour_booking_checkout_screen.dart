@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import 'package:app/config/app_config.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/controllers/auth_controller.dart';
@@ -134,7 +135,7 @@ class _TourBookingCheckoutScreenState extends State<TourBookingCheckoutScreen> {
 
         // Update backend
         final dio = Dio();
-        dio.options.baseUrl = 'http://10.0.2.2:8080/api';
+        dio.options.baseUrl = AppConfig.baseUrl;
         final token = prefs.getString('user_token');
         if (token != null) {
           dio.options.headers['Authorization'] = 'Bearer $token';
@@ -770,7 +771,7 @@ class _TourBookingCheckoutScreenState extends State<TourBookingCheckoutScreen> {
           try {
             // Call test endpoint to create tour booking from pending payment
             final testDio = Dio();
-            testDio.options.baseUrl = 'http://10.0.2.2:8080/api';
+            testDio.options.baseUrl = AppConfig.baseUrl;
             final token = prefs.getString('user_token');
             if (token != null) {
               testDio.options.headers['Authorization'] = 'Bearer $token';

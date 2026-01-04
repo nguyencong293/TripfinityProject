@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:app/config/app_config.dart';
 import 'package:app/config/theme/app_colors.dart';
 import 'package:app/config/theme/app_text_styles.dart';
 import 'package:app/services/tour_api_service.dart';
@@ -1942,7 +1943,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
       final prefs = await SharedPreferences.getInstance();
       final dio = Dio();
       final response = await dio.get(
-        'http://localhost:8080/api/providers/${providerId.toString()}',
+        '${AppConfig.baseUrl}/providers/${providerId.toString()}',
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -1966,7 +1967,7 @@ class _TourServiceDetailScreenState extends State<TourServiceDetailScreen> {
       final prefs = await SharedPreferences.getInstance();
       final dio = Dio();
       final response = await dio.get(
-        'http://localhost:8080/api/providers/${providerId.toString()}',
+        '${AppConfig.baseUrl}/providers/${providerId.toString()}',
         options: Options(
           headers: {
             'Content-Type': 'application/json',
