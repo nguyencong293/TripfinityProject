@@ -1,13 +1,15 @@
 {
-    "name": "app",
-    "short_name": "app",
+    "name": "TripFinity - Du lịch thông minh",
+    "short_name": "TripFinity",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#1E88E5",
+    "description": "TripFinity - Ứng dụng du lịch thông minh với AI, khám phá và lên kế hoạch du lịch dễ dàng",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "categories": ["travel", "lifestyle"],
+    "lang": "vi",
     "icons": [
         {
             "src": "icons/Icon-192.png",

@@ -29,10 +29,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.windows:
         return windows;
       case TargetPlatform.linux:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return linux;
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',
@@ -92,5 +89,16 @@ class DefaultFirebaseOptions {
     authDomain: 'tripfinity-466014.firebaseapp.com',
     storageBucket: 'tripfinity-466014.firebasestorage.app',
     measurementId: 'G-K1W1SFVC04',
+  );
+
+  // Linux uses web configuration as Firebase doesn't have native Linux SDK
+  static const FirebaseOptions linux = FirebaseOptions(
+    apiKey: 'AIzaSyCHadl9GxaHroedD9zG2BFeCl6cHlYM8HU',
+    appId: '1:173444476399:web:31d5d452298b6048989a1a',
+    messagingSenderId: '173444476399',
+    projectId: 'tripfinity-466014',
+    authDomain: 'tripfinity-466014.firebaseapp.com',
+    storageBucket: 'tripfinity-466014.firebasestorage.app',
+    measurementId: 'G-NR1Z2RRD5L',
   );
 }

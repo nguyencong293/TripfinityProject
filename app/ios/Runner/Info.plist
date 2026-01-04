@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>App</string>
+	<string>TripFinity</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -46,6 +46,38 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	
+	<!-- Background Modes for Firebase Messaging -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	
+	<!-- Google Sign-In URL Schemes -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.173444476399-jbcv4644evd91i21eou9db5l92a139ei</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.vn.tripfinity.app</string>
+			</array>
+		</dict>
+	</array>
+	
+	<!-- Google Maps API Key -->
+	<key>GMSApiKey</key>
+	<string>AIzaSyBEHT1sEuXBrx5zV5KG2nUOAXV1EtqbLB0</string>
+	
 	<!-- Camera Permission -->
 	<key>NSCameraUsageDescription</key>
 	<string>TripFinity cần truy cập camera để chụp và tải ảnh lên</string>
@@ -63,5 +95,16 @@
 	<string>TripFinity cần truy cập vị trí của bạn để tìm kiếm các địa điểm xung quanh</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>TripFinity cần truy cập vị trí của bạn để tìm kiếm các địa điểm xung quanh</string>
+	
+	<!-- Allow cleartext traffic for development -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	
+	<!-- Face ID Permission (if needed) -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>TripFinity sử dụng Face ID để bảo mật tài khoản của bạn</string>
 </dict>
 </plist>

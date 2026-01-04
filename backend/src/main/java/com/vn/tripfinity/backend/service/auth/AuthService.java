@@ -1,13 +1,9 @@
 package com.vn.tripfinity.backend.service.auth;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.vn.tripfinity.backend.dto.auth.LoginRequest;
-import com.vn.tripfinity.backend.dto.auth.LoginResponse;
-import com.vn.tripfinity.backend.model.User;
-import com.vn.tripfinity.backend.repository.UserRepository;
-import com.vn.tripfinity.backend.service.UserService;
-import com.vn.tripfinity.backend.service.auth.token.JwtTokenProvider;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,10 +17,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.vn.tripfinity.backend.dto.auth.LoginRequest;
+import com.vn.tripfinity.backend.dto.auth.LoginResponse;
+import com.vn.tripfinity.backend.model.User;
+import com.vn.tripfinity.backend.repository.UserRepository;
+import com.vn.tripfinity.backend.service.UserService;
+import com.vn.tripfinity.backend.service.auth.token.JwtTokenProvider;
 
 @Service
 @Transactional
@@ -185,6 +185,37 @@ public class AuthService {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Lỗi đăng nhập Google: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Handle Google Login with Access Token (for Web platform)
+     * Web platform cannot get idToken reliably, so we use accessToken instead
+     */
+    public ResponseEntity<?> handleGoogleLoginWithAccessToken(String accessToken) {
+        try {
+            // Gọi Google API để lấy thông tin user từ access token
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            String userInfoUrl = "https://www.googleapis.com/oauth2/v3/userinfo?access_token=" + accessToken;
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> userInfo = restTemplate.getForObject(userInfoUrl, Map.class);
+            
+            if (userInfo == null || !userInfo.containsKey("email")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access Token Google không hợp lệ");
+            }
+
+            String email = (String) userInfo.get("email");
+            String name = (String) userInfo.get("name");
+            String avatar = (String) userInfo.get("picture");
+
+            User user = findOrCreateUser(email, name, avatar);
+            Map<String, Object> tokens = generateTokens(user);
+
+            return ResponseEntity.ok(tokens);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Lỗi đăng nhập Google (Web): " + e.getMessage());
         }
     }
 

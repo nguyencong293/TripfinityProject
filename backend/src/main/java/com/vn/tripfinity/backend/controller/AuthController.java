@@ -1,21 +1,27 @@
 package com.vn.tripfinity.backend.controller;
 
-import com.vn.tripfinity.backend.dto.auth.LoginRequest;
-import com.vn.tripfinity.backend.service.auth.AuthService;
+import java.io.IOException;
+import java.util.Map;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
-import java.util.Map;
+import com.vn.tripfinity.backend.dto.auth.LoginRequest;
+import com.vn.tripfinity.backend.service.auth.AuthService;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -80,6 +86,16 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Missing Google ID token");
         }
         return authService.handleGoogleLogin(idToken);
+    }
+
+    // Google Login with Access Token (for Web platform)
+    @PostMapping("/oauth-login-web")
+    public ResponseEntity<?> oauthLoginWeb(@RequestBody Map<String, String> body) {
+        String accessToken = body.get("access_token");
+        if (accessToken == null || accessToken.isEmpty()) {
+            return ResponseEntity.badRequest().body("Missing Google Access Token");
+        }
+        return authService.handleGoogleLoginWithAccessToken(accessToken);
     }
 
     @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)

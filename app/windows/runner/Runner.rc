@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.vn.tripfinity" "\0"
-            VALUE "FileDescription", "app" "\0"
+            VALUE "CompanyName", "TripFinity" "\0"
+            VALUE "FileDescription", "TripFinity - Du lịch thông minh" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.vn.tripfinity. All rights reserved." "\0"
-            VALUE "OriginalFilename", "app.exe" "\0"
-            VALUE "ProductName", "app" "\0"
+            VALUE "InternalName", "TripFinity" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 TripFinity. All rights reserved." "\0"
+            VALUE "OriginalFilename", "TripFinity.exe" "\0"
+            VALUE "ProductName", "TripFinity" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

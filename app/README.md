@@ -1,16 +1,19 @@
-# app
+# Android (đã hoạt động)
+flutter build apk --release
 
-A new Flutter project.
+# iOS (cần macOS + Xcode)
+cd ios && pod install && cd ..
+flutter build ios --release
 
-## Getting Started
+# Web
+flutter run -d chrome --web-port=50077
 
-This project is a starting point for a Flutter application.
+# macOS (cần macOS)
+cd macos && pod install && cd ..
+flutter build macos --release
 
-A few resources to get you started if this is your first Flutter project:
+# Linux
+flutter build linux --release
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# Windows (cần Visual Studio với C++ workload)
+flutter build windows --release

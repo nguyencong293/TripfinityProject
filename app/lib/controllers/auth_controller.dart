@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -192,27 +193,44 @@ class AuthController with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Khởi tạo Google Sign-In
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        serverClientId:
-            '173444476399-srrjbrmg2c0rsatfd4498t0499gmn104.apps.googleusercontent.com',
-        scopes: ['email', 'profile'],
-      );
+      // Khởi tạo Google Sign-In - Web không hỗ trợ serverClientId
+      final GoogleSignIn googleSignIn = kIsWeb
+          ? GoogleSignIn(
+              clientId:
+                  '173444476399-srrjbrmg2c0rsatfd4498t0499gmn104.apps.googleusercontent.com',
+              scopes: ['email', 'profile', 'openid'],
+            )
+          : GoogleSignIn(
+              serverClientId:
+                  '173444476399-srrjbrmg2c0rsatfd4498t0499gmn104.apps.googleusercontent.com',
+              scopes: ['email', 'profile'],
+            );
 
       // Thực hiện đăng nhập
       final GoogleSignInAccount? account = await googleSignIn.signIn();
       if (account == null) return false;
 
-      // Lấy ID token
+      // Lấy authentication
       final GoogleSignInAuthentication auth = await account.authentication;
-      final String? idToken = auth.idToken;
 
-      if (idToken == null) {
-        throw ApiException('Không nhận ID Google');
+      // Web: sử dụng accessToken để gọi backend endpoint khác
+      // Mobile: sử dụng idToken
+      if (kIsWeb) {
+        final String? accessToken = auth.accessToken;
+        if (accessToken == null) {
+          throw ApiException('Không nhận Access Token từ Google');
+        }
+        // Gọi endpoint dùng access token cho Web
+        final resp = await _authService.googleLoginWithAccessToken(accessToken);
+        await _saveUserData(resp);
+      } else {
+        final String? idToken = auth.idToken;
+        if (idToken == null) {
+          throw ApiException('Không nhận ID Google');
+        }
+        final resp = await _authService.googleLogin(idToken);
+        await _saveUserData(resp);
       }
-
-      final resp = await _authService.googleLogin(idToken);
-      await _saveUserData(resp);
 
       // Gửi FCM token lên backend sau khi Google login thành công
       if (_fcmService != null) {
@@ -222,8 +240,12 @@ class AuthController with ChangeNotifier {
         }
       }
 
-      // Gọi API gợi ý sau khi Google login thành công
-      _fetchRecommendations(resp.userId);
+      // Gọi API gợi ý sau khi đăng nhập thành công
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('userId');
+      if (userId != null) {
+        _fetchRecommendations(userId);
+      }
 
       return true;
     } on PlatformException catch (e) {

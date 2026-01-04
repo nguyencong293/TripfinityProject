@@ -18,19 +18,56 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="TripFinity - Ứng dụng du lịch thông minh với AI">
+  <meta name="keywords" content="travel, tourism, tripfinity, du lịch, việt nam">
+  <meta name="author" content="TripFinity Team">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <!-- Google Sign-In Client ID for Web -->
+  <meta name="google-signin-client_id" content="173444476399-srrjbrmg2c0rsatfd4498t0499gmn104.apps.googleusercontent.com">
+  
+  <!-- Open Graph / Social Media -->
+  <meta property="og:title" content="TripFinity - Du lịch thông minh">
+  <meta property="og:description" content="Khám phá và lên kế hoạch du lịch dễ dàng với AI">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="icons/Icon-512.png">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="app">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TripFinity">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>app</title>
+  <title>TripFinity</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Firebase SDKs for Web -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-analytics-compat.js"></script>
+  
+  <!-- Google Maps JavaScript API for Web -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBEHT1sEuXBrx5zV5KG2nUOAXV1EtqbLB0"></script>
+  
+  <script>
+    // Firebase configuration for web
+    const firebaseConfig = {
+      apiKey: "AIzaSyCHadl9GxaHroedD9zG2BFeCl6cHlYM8HU",
+      authDomain: "tripfinity-466014.firebaseapp.com",
+      projectId: "tripfinity-466014",
+      storageBucket: "tripfinity-466014.firebasestorage.app",
+      messagingSenderId: "173444476399",
+      appId: "1:173444476399:web:31d5d452298b6048989a1a",
+      measurementId: "G-NR1Z2RRD5L"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

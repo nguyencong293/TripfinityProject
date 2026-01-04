@@ -1049,7 +1049,7 @@ class _SearchOverviewScreenState extends State<SearchOverviewScreen>
   Future<void> _geocodeLocation(String locationName) async {
     try {
       final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(locationName)}&format=json&limit=1&accept-language=vi',
+        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(locationName)}&format=json&limit=1&accept-language=vi&countrycodes=vn',
       );
 
       final response = await http

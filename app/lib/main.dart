@@ -5,6 +5,7 @@ import 'package:app/services/user_service.dart';
 import 'package:app/services/fcm_service.dart';
 import 'package:app/services/recommendation_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -53,11 +54,27 @@ Future<void> _showNotification({
     priority: Priority.high,
   );
 
+  const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+  );
+
+  const DarwinNotificationDetails macOSDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+  );
+
   await flutterLocalNotificationsPlugin.show(
     DateTime.now().millisecond,
     title,
     body,
-    const NotificationDetails(android: androidDetails),
+    const NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+      macOS: macOSDetails,
+    ),
   );
 }
 
@@ -67,16 +84,40 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize Local Notifications
+  // Initialize Local Notifications for all platforms
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/launcher_icon');
+
+  const DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+
+  const DarwinInitializationSettings initializationSettingsMacOS =
+      DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+
+  const LinuxInitializationSettings initializationSettingsLinux =
+      LinuxInitializationSettings(defaultActionName: 'Open notification');
+
   const InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+    macOS: initializationSettingsMacOS,
+    linux: initializationSettingsLinux,
   );
+
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
-  // Register background message handler
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  // Register background message handler (only for mobile)
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  }
 
   PackageInfo packageInfo = await PackageInfo.fromPlatform();
   debugPrint('Package name: ${packageInfo.packageName}');

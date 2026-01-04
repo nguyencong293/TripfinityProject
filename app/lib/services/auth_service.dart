@@ -104,4 +104,28 @@ class AuthService {
       );
     }
   }
+
+  /// Google Login với Access Token (dành cho Web)
+  Future<LoginResponse> googleLoginWithAccessToken(String accessToken) async {
+    try {
+      final response = await _dio.post(
+        '${AppConfig.auth}/oauth-login-web',
+        data: {'access_token': accessToken},
+      );
+
+      if (response.statusCode == 200) {
+        return LoginResponse.fromJson(response.data);
+      } else {
+        throw ApiException(
+          response.data['message'] ?? 'Đăng nhập Google thất bại',
+          response.statusCode,
+        );
+      }
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.data?['message'] ?? 'Lỗi đăng nhập Google',
+        e.response?.statusCode,
+      );
+    }
+  }
 }
