@@ -33,13 +33,22 @@ jobs:
     - name: Build iOS Simulator App
       working-directory: ./app
       run: |
-        flutter build ios --debug --simulator --no-codesign
+        # Build release for iOS Simulator (Appetize requires release build)
+        flutter build ios --release --simulator --no-codesign
+        
+        # Verify the .app was created
+        echo "=== Build Output ==="
+        ls -la build/ios/iphonesimulator/
     
     - name: Create ZIP for Appetize
-      working-directory: ./app
+      working-directory: ./app/build/ios/iphonesimulator
       run: |
-        cd build/ios/iphonesimulator
-        zip -r TripFinity-iOS.zip Runner.app
+        # Appetize requires zip containing .app directly (not nested in folders)
+        zip -r -y TripFinity-iOS.zip Runner.app
+        
+        # Verify the zip structure
+        echo "=== ZIP Contents ==="
+        unzip -l TripFinity-iOS.zip | head -20
     
     - name: Upload iOS Simulator App
       uses: actions/upload-artifact@v4
