@@ -26,30 +26,66 @@ jobs:
       working-directory: ./app
       run: flutter pub get
     
-    - name: Build iOS Simulator App (Force x86_64)
+    - name: Build iOS Simulator App (x86_64 for Appetize)
       working-directory: ./app
       run: |
-        # SỬA LỖI Ở ĐÂY:
-        # Thay vì dùng --arch (sai), ta dùng --xcargs để cấu hình Xcode.
-        # "ONLY_ACTIVE_ARCH=NO": Yêu cầu build đầy đủ, không chỉ cho máy đang chạy.
-        # "ARCHS=x86_64": Chỉ định rõ ràng là build cho chip Intel.
+        # Appetize.io yêu cầu:
+        # 1. Build cho iOS Simulator (KHÔNG phải device thật)
+        # 2. Architecture: x86_64 (Intel) - BẮT BUỘC cho Appetize
+        # 3. File .zip chứa trực tiếp thư mục .app
         
-        flutter build ios --debug --simulator --no-codesign --xcargs "ONLY_ACTIVE_ARCH=NO ARCHS=x86_64"
+        # Bước 1: Build iOS simulator app bằng Flutter
+        flutter build ios --debug --simulator --no-codesign
+        
+        # Bước 2: Dùng xcodebuild để rebuild với architecture x86_64
+        # Vì macos-latest là Apple Silicon, cần force build x86_64
+        cd ios
+        xcodebuild \
+          -workspace Runner.xcworkspace \
+          -scheme Runner \
+          -sdk iphonesimulator \
+          -configuration Debug \
+          -derivedDataPath ../build/ios_sim \
+          ONLY_ACTIVE_ARCH=NO \
+          ARCHS=x86_64 \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY="" \
+          EXPANDED_CODE_SIGN_IDENTITY=""
+        
+        # Bước 3: Copy .app đến thư mục chuẩn
+        mkdir -p ../build/ios/iphonesimulator
+        cp -R ../build/ios_sim/Build/Products/Debug-iphonesimulator/Runner.app ../build/ios/iphonesimulator/
+        
+        # Bước 4: Verify architecture (phải là x86_64)
+        echo "=== Verifying Architecture ==="
+        lipo -info ../build/ios/iphonesimulator/Runner.app/Runner
     
     - name: Create ZIP for Appetize
       working-directory: ./app/build/ios/iphonesimulator
       run: |
+        # Appetize yêu cầu file .zip với cấu trúc:
+        # Runner.zip
+        # └── Runner.app/
+        #     ├── Info.plist
+        #     ├── Runner (executable)
+        #     └── ...
+        
         # Xóa zip cũ nếu có
         rm -f Runner.zip
         
-        # Dùng lệnh zip chuẩn để Appetize nhận diện đúng cấu trúc
-        # -r: Nén thư mục
-        # -y: Giữ nguyên liên kết hệ thống (quan trọng cho Mac App)
+        # Tạo zip với cấu trúc chuẩn cho Appetize
+        # -r: Recursive
+        # -y: Preserve symlinks (quan trọng cho iOS app bundle)
         zip -r -y Runner.zip Runner.app
         
-        # Kiểm tra cấu trúc file zip (Dòng đầu tiên phải là Runner.app/)
-        echo "=== Checking ZIP Structure ==="
-        unzip -l Runner.zip | head -n 5
+        # Kiểm tra cấu trúc file zip
+        echo "=== ZIP Structure (Appetize requires Runner.app/ at root) ==="
+        unzip -l Runner.zip | head -n 10
+        
+        # Kiểm tra kích thước file
+        echo "=== ZIP File Size ==="
+        ls -lh Runner.zip
     
     - name: Upload iOS Simulator App
       uses: actions/upload-artifact@v4
