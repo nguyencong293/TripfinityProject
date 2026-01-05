@@ -131,8 +131,6 @@ jobs:
     - name: Create ZIP for Appetize
       working-directory: ./app/build/ios/iphonesimulator
       run: |
-        rm -f Runner.zip
-        
         # TẠO ZIP ĐÚNG CHUẨN APPETIZE
         # Cấu trúc: Runner.zip chứa Runner.app/ ở root
         zip -r -y Runner.zip Runner.app
@@ -142,11 +140,18 @@ jobs:
         
         echo "=== ZIP Size ==="
         ls -lh Runner.zip
+        
+        # QUAN TRỌNG: Di chuyển ra thư mục riêng để tránh zip lồng zip
+        mkdir -p ../../appetize-output
+        mv Runner.zip ../../appetize-output/
     
-    - name: Upload Artifact
+    - name: Upload Artifact for Appetize
       uses: actions/upload-artifact@v4
       with:
-        name: Runner
-        path: app/build/ios/iphonesimulator/Runner.zip
+        name: TripFinity-iOS-Simulator
+        # Upload file zip trực tiếp, không qua thư mục
+        path: app/build/appetize-output/Runner.zip
+        compression-level: 0
+        retention-days: 5
         compression-level: 0
         retention-days: 5
