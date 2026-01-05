@@ -153,5 +153,3 @@ jobs:
         path: app/build/appetize-output/Runner.zip
         compression-level: 0
         retention-days: 5
-        compression-level: 0
-        retention-days: 5
