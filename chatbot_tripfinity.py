@@ -14,7 +14,7 @@ import re
 
 nest_asyncio.apply()
 os.environ["GROQ_API_KEY"] = "gsk_xxxxxxxxxxxxx"
-ngrok.set_auth_token("32rp1jIGT8KGFs8QQcEN1bghzeX_2keD2P4KXZnxVUzK3RtdC")
+ngrok.set_auth_token("37pPZiofnv7WOiMWBHsvxfwVSwF_5VfdFmA6ixEJ9wJrqXQcM")
 
 # --- IMPORT ---
 try:

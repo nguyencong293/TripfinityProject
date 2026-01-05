@@ -43,7 +43,8 @@ class ChatServiceItem {
 }
 
 class TripBotService {
-  static const String _baseUrl = 'https://9b3faf4484ea.ngrok-free.app';
+  static const String _baseUrl =
+      'https://unprotrusively-nonreportable-kingston.ngrok-free.dev';
   static const String _chatEndpoint = '/api/chat';
   static const Duration _timeout = Duration(seconds: 30);
 

@@ -15,7 +15,7 @@ class AppConfig {
   // 🌐 NGROK URL - Cập nhật URL này mỗi khi chạy ngrok
   // Chạy trên Windows: ngrok http 8080
   // Copy URL từ terminal ngrok paste vào đây
-  static const String ngrokUrl = 'https://YOUR_NGROK_URL.ngrok-free.app';
+  static const String ngrokUrl = 'https://3da856b2701b.ngrok-free.app';
 
   // ============================================================
   // API CONFIGURATION
