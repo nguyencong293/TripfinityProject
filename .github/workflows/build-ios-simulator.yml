@@ -9,28 +9,19 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-15
+    runs-on: macos-14
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Xcode 16
+    - name: Setup Xcode 16.2
       run: |
-        sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || \
-        sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer || \
-        sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || \
-        sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+        # macos-14 có Xcode 16.2 với iOS Simulator 18.2 pre-installed
+        sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
         xcodebuild -version
         swift --version
-    
-    - name: Install iOS Simulator Runtime
-      run: |
-        # Install iOS 18 Simulator runtime
-        xcodebuild -downloadPlatform iOS
-        
-        # List available simulators
-        xcrun simctl list devices available | grep -i iphone | head -5
+        xcrun simctl list devices available | grep -i "iphone" | head -3
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
