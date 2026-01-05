@@ -9,8 +9,9 @@ on:
 
 jobs:
   build-ios:
-    # Dùng macos-15 Intel cho VMware compatibility
-    runs-on: macos-15-large
+    # macos-latest miễn phí (Apple Silicon)
+    # App sẽ chạy qua Rosetta trên Intel Mac
+    runs-on: macos-latest
     
     steps:
     - name: Checkout code
