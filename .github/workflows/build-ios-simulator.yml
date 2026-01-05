@@ -1,7 +1,7 @@
 name: Build iOS Simulator App
 
 on:
-  workflow_dispatch:  # Chạy thủ công
+  workflow_dispatch:
   push:
     branches: [ main ]
     paths:
@@ -9,27 +9,19 @@ on:
 
 jobs:
   build-ios:
-    # Sử dụng macos-15 với Xcode 16 để hỗ trợ Firebase SDK mới (Swift 6)
-    runs-on: macos-15
+    runs-on: macos-14
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Select Xcode version
+    - name: Setup Xcode
       run: |
-        # Liệt kê các phiên bản Xcode có sẵn
-        ls /Applications/ | grep Xcode
-        
-        # Chọn Xcode 16 (hỗ trợ Swift 6 cho Firebase SDK mới)
-        sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || \
-        sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer || \
-        sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer || \
+        # Select Xcode 15.4
+        sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer || \
+        sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer || \
         sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-        
-        # Verify Xcode version
         xcodebuild -version
-        swift --version
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
@@ -37,134 +29,42 @@ jobs:
         channel: 'stable'
         cache: true
     
-    - name: Clean and Get dependencies
+    - name: Get dependencies
       working-directory: ./app
       run: |
-        # Clean Flutter build cache
         flutter clean
-        
-        # Get dependencies
         flutter pub get
     
-    - name: Clean iOS Pods and Reinstall
+    - name: Prepare iOS build
       working-directory: ./app/ios
       run: |
-        # Xóa Pods cache để tránh lỗi phiên bản cũ
-        rm -rf Pods
-        rm -rf Podfile.lock
-        rm -rf ~/.cocoapods/repos/trunk
+        # Clean pods completely
+        rm -rf Pods Podfile.lock
         
-        # Update CocoaPods repo
-        pod repo update
+        # Remove explicit Firebase pods from Podfile (FlutterFire will manage)
+        sed -i '' "/pod 'Firebase\/Core'/d" Podfile
+        sed -i '' "/pod 'Firebase\/Messaging'/d" Podfile
         
-        # Install pods fresh
+        # Install pods with repo update
         pod install --repo-update
     
-    - name: Build iOS Simulator App for Appetize
+    - name: Build iOS Simulator
       working-directory: ./app
       run: |
-        # =====================================================
-        # APPETIZE.IO YÊU CẦU:
-        # 1. File .zip hoặc .tar.gz chứa .app bundle
-        # 2. iOS Simulator build (KHÔNG phải .ipa device build)
-        # 3. ARM builds được khuyến nghị cho hiệu năng tốt
-        # 4. Thư mục .app phải nằm TRỰC TIẾP trong ZIP (không nested)
-        # =====================================================
-        
-        # Build iOS simulator app bằng Flutter
-        echo "=== Building Flutter iOS Simulator App ==="
         flutter build ios --debug --simulator --no-codesign
         
-        # Tìm và verify .app bundle
-        echo "=== Locating .app bundle ==="
-        APP_PATH="build/ios/iphonesimulator/Runner.app"
-        
-        if [ ! -d "$APP_PATH" ]; then
-          echo "ERROR: Runner.app not found at expected path!"
-          echo "Searching for .app files..."
-          find build -name "*.app" -type d
-          exit 1
-        fi
-        
-        echo "Found: $APP_PATH"
-        
-        # Verify .app bundle structure
-        echo "=== Verifying .app bundle structure ==="
-        ls -la "$APP_PATH"
-        
-        # Kiểm tra Info.plist tồn tại (bắt buộc cho iOS app)
-        if [ ! -f "$APP_PATH/Info.plist" ]; then
-          echo "ERROR: Info.plist not found in .app bundle!"
-          exit 1
-        fi
-        echo "✓ Info.plist found"
-        
-        # Kiểm tra executable
-        if [ ! -f "$APP_PATH/Runner" ]; then
-          echo "ERROR: Runner executable not found in .app bundle!"
-          exit 1
-        fi
-        echo "✓ Runner executable found"
-        
-        # Verify architecture
-        echo "=== Checking Architecture ==="
-        lipo -info "$APP_PATH/Runner" || file "$APP_PATH/Runner"
+        # Verify
+        ls -la build/ios/iphonesimulator/Runner.app || exit 1
     
     - name: Create ZIP for Appetize
       working-directory: ./app/build/ios/iphonesimulator
       run: |
-        # =====================================================
-        # TẠO ZIP ĐÚNG CHUẨN APPETIZE
-        # Cấu trúc bắt buộc:
-        # Runner.zip
-        # └── Runner.app/        <-- .app phải ở ROOT level
-        #     ├── Info.plist
-        #     ├── Runner
-        #     ├── Frameworks/
-        #     └── ...
-        # =====================================================
-        
-        # Xóa zip cũ nếu có
         rm -f Runner.zip
-        
-        # Verify Runner.app exists
-        if [ ! -d "Runner.app" ]; then
-          echo "ERROR: Runner.app not found!"
-          exit 1
-        fi
-        
-        # Dùng ditto (công cụ chuẩn Apple, giữ nguyên metadata)
-        echo "=== Creating ZIP using ditto (Apple's standard tool) ==="
         ditto -c -k --sequesterRsrc --keepParent Runner.app Runner.zip
-        
-        # Verify ZIP được tạo thành công
-        if [ ! -f "Runner.zip" ]; then
-          echo "ERROR: Failed to create Runner.zip!"
-          exit 1
-        fi
-        
-        # Kiểm tra cấu trúc ZIP (Runner.app phải ở root)
-        echo "=== ZIP Structure Verification ==="
-        echo "First 15 entries in ZIP:"
-        unzip -l Runner.zip | head -n 15
-        
-        # Verify .app folder ở root level
-        echo ""
-        echo "=== Verifying .app at root level ==="
-        FIRST_ENTRY=$(unzip -l Runner.zip | grep "Runner.app/" | head -n 1)
-        echo "First .app entry: $FIRST_ENTRY"
-        
-        # Kiểm tra kích thước file
-        echo ""
-        echo "=== ZIP File Info ==="
+        unzip -l Runner.zip | head -10
         ls -lh Runner.zip
-        
-        # Test giải nén để đảm bảo ZIP valid
-        echo ""
-        echo "=== Testing ZIP integrity ==="
-        unzip -t Runner.zip | tail -n 3
     
-    - name: Upload iOS Simulator App
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ios-simulator-app
