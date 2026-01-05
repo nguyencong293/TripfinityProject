@@ -33,8 +33,8 @@ jobs:
     - name: Build iOS Simulator App
       working-directory: ./app
       run: |
-        # Build release for iOS Simulator (Appetize requires release build)
-        flutter build ios --release --simulator --no-codesign
+        # Build debug for iOS Simulator
+        flutter build ios --debug --simulator --no-codesign
         
         # Verify the .app was created
         echo "=== Build Output ==="
