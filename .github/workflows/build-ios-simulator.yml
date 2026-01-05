@@ -54,8 +54,26 @@ jobs:
       working-directory: ./app/build/ios/iphonesimulator
       run: |
         rm -f Runner.zip
-        ditto -c -k --sequesterRsrc --keepParent Runner.app Runner.zip
-        unzip -l Runner.zip | head -10
+        
+        # Dùng zip chuẩn (không dùng ditto vì có thể tạo cấu trúc sai)
+        # -r: recursive
+        # -y: preserve symlinks
+        zip -r -y Runner.zip Runner.app
+        
+        # Kiểm tra cấu trúc ZIP - Runner.app/ phải ở root level
+        echo "=== ZIP Structure ==="
+        unzip -l Runner.zip | head -20
+        
+        # Verify entry đầu tiên phải là Runner.app/
+        FIRST_DIR=$(unzip -l Runner.zip | grep -E "^\s+\d" | head -1 | awk '{print $4}')
+        echo "First entry: $FIRST_DIR"
+        
+        if [[ "$FIRST_DIR" != Runner.app/* ]]; then
+          echo "ERROR: ZIP structure is wrong! First entry should be Runner.app/"
+          exit 1
+        fi
+        
+        echo "✓ ZIP structure correct"
         ls -lh Runner.zip
     
     - name: Upload Artifact
