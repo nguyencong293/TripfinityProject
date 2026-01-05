@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 
 /// Model cho service item từ chatbot
 class ChatServiceItem {
@@ -43,7 +44,8 @@ class ChatServiceItem {
 }
 
 class TripBotService {
-  static const String _baseUrl = 'https://db9373f3d797.ngrok-free.app ';
+  // Sử dụng URL từ AppConfig thay vì hardcode
+  static String get _baseUrl => AppConfig.chatbotUrl;
   static const String _chatEndpoint = '/api/chat';
   static const Duration _timeout = Duration(seconds: 30);
 

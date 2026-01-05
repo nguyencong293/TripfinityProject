@@ -1,0 +1,12 @@
+# ============================================================
+# 🌐 NGROK CONFIG - Supplier React (Port 5173)
+# ============================================================
+version: "2"
+authtoken: 2uGe4Ro3FC4pLtNRncZRbOPrgsJ_7aSUTNgP7edX7xDCb1JDk
+
+web_addr: 127.0.0.1:4043
+
+tunnels:
+  supplier:
+    addr: 5173
+    proto: http
