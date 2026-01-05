@@ -9,19 +9,28 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-14
+    runs-on: macos-15
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Xcode
+    - name: Setup Xcode 16
       run: |
-        # Select Xcode 15.4
-        sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer || \
-        sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer || \
+        sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || \
+        sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer || \
+        sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || \
         sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
         xcodebuild -version
+        swift --version
+    
+    - name: Install iOS Simulator Runtime
+      run: |
+        # Install iOS 18 Simulator runtime
+        xcodebuild -downloadPlatform iOS
+        
+        # List available simulators
+        xcrun simctl list devices available | grep -i iphone | head -5
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
@@ -29,31 +38,25 @@ jobs:
         channel: 'stable'
         cache: true
     
+    - name: Flutter version
+      run: flutter --version
+    
     - name: Get dependencies
       working-directory: ./app
       run: |
         flutter clean
         flutter pub get
     
-    - name: Prepare iOS build
+    - name: Install CocoaPods
       working-directory: ./app/ios
       run: |
-        # Clean pods completely
         rm -rf Pods Podfile.lock
-        
-        # Remove explicit Firebase pods from Podfile (FlutterFire will manage)
-        sed -i '' "/pod 'Firebase\/Core'/d" Podfile
-        sed -i '' "/pod 'Firebase\/Messaging'/d" Podfile
-        
-        # Install pods with repo update
         pod install --repo-update
     
     - name: Build iOS Simulator
       working-directory: ./app
       run: |
         flutter build ios --debug --simulator --no-codesign
-        
-        # Verify
         ls -la build/ios/iphonesimulator/Runner.app || exit 1
     
     - name: Create ZIP for Appetize
