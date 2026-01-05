@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app/config/app_config.dart';
 
 /// Service để tracking các hành động người dùng cho AI Recommendation
 class UserInteractionService {
@@ -24,8 +25,12 @@ class UserInteractionService {
     return UserInteractionService._(dio: dio, prefs: prefs);
   }
 
-  /// Base URL - lấy từ config
-  String get _baseUrl => prefs.getString('base_url') ?? 'http://10.0.2.2:8080';
+  /// Base URL - lấy từ AppConfig (không có /api vì sẽ thêm sau)
+  String get _baseUrl {
+    final url = AppConfig.baseUrl;
+    // Remove /api suffix vì các endpoint sẽ thêm /api/...
+    return url.replaceAll('/api', '');
+  }
 
   /// Get user ID
   int? get _userId => prefs.getInt('user_id');
