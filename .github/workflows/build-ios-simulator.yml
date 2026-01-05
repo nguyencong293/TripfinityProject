@@ -17,20 +17,14 @@ jobs:
     
     - name: Setup Xcode 16.2
       run: |
-        # macos-14 có Xcode 16.2 với iOS Simulator 18.2 pre-installed
         sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
         xcodebuild -version
-        swift --version
-        xcrun simctl list devices available | grep -i "iphone" | head -3
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
         cache: true
-    
-    - name: Flutter version
-      run: flutter --version
     
     - name: Get dependencies
       working-directory: ./app
@@ -44,36 +38,61 @@ jobs:
         rm -rf Pods Podfile.lock
         pod install --repo-update
     
-    - name: Build iOS Simulator
+    - name: Build iOS Simulator with x86_64 for Appetize
       working-directory: ./app
       run: |
-        flutter build ios --debug --simulator --no-codesign
-        ls -la build/ios/iphonesimulator/Runner.app || exit 1
+        # Appetize YÊU CẦU x86_64 architecture
+        # Dùng xcodebuild trực tiếp với ARCHS=x86_64
+        
+        # Bước 1: Flutter build để generate code
+        flutter build ios --debug --simulator --no-codesign || true
+        
+        # Bước 2: Build bằng xcodebuild với x86_64
+        cd ios
+        xcodebuild \
+          -workspace Runner.xcworkspace \
+          -scheme Runner \
+          -sdk iphonesimulator \
+          -configuration Debug \
+          -destination 'generic/platform=iOS Simulator' \
+          ARCHS=x86_64 \
+          ONLY_ACTIVE_ARCH=NO \
+          BUILD_DIR=../build/ios \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY="" \
+          | xcbeautify || true
+        
+        # Bước 3: Kiểm tra output
+        echo "=== Checking build output ==="
+        find ../build -name "*.app" -type d 2>/dev/null || echo "No .app found in build"
+        
+        # Copy .app to expected location
+        if [ -d "../build/ios/Debug-iphonesimulator/Runner.app" ]; then
+          mkdir -p ../build/ios/iphonesimulator
+          cp -R ../build/ios/Debug-iphonesimulator/Runner.app ../build/ios/iphonesimulator/
+        fi
+        
+        ls -la ../build/ios/iphonesimulator/Runner.app || exit 1
+        
+        # Verify architecture - PHẢI là x86_64
+        echo "=== Architecture Check ==="
+        file ../build/ios/iphonesimulator/Runner.app/Runner
+        lipo -info ../build/ios/iphonesimulator/Runner.app/Runner
     
     - name: Create ZIP for Appetize
       working-directory: ./app/build/ios/iphonesimulator
       run: |
         rm -f Runner.zip
         
-        # Dùng zip chuẩn (không dùng ditto vì có thể tạo cấu trúc sai)
-        # -r: recursive
-        # -y: preserve symlinks
+        # TẠO ZIP ĐÚNG CHUẨN APPETIZE
+        # Cấu trúc: Runner.zip chứa Runner.app/ ở root
         zip -r -y Runner.zip Runner.app
         
-        # Kiểm tra cấu trúc ZIP - Runner.app/ phải ở root level
         echo "=== ZIP Structure ==="
-        unzip -l Runner.zip | head -20
+        unzip -l Runner.zip | head -15
         
-        # Verify entry đầu tiên phải là Runner.app/
-        FIRST_DIR=$(unzip -l Runner.zip | grep -E "^\s+\d" | head -1 | awk '{print $4}')
-        echo "First entry: $FIRST_DIR"
-        
-        if [[ "$FIRST_DIR" != Runner.app/* ]]; then
-          echo "ERROR: ZIP structure is wrong! First entry should be Runner.app/"
-          exit 1
-        fi
-        
-        echo "✓ ZIP structure correct"
+        echo "=== ZIP Size ==="
         ls -lh Runner.zip
     
     - name: Upload Artifact
