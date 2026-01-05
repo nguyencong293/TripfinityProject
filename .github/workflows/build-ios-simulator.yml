@@ -9,7 +9,8 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-latest
+    # Dùng macos-13 (Intel x86_64) thay vì macos-latest (Apple Silicon)
+    runs-on: macos-13
     
     steps:
     - name: Checkout code
