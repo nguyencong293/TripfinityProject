@@ -36,7 +36,55 @@ jobs:
       working-directory: ./app/ios
       run: |
         rm -rf Pods Podfile.lock
+        
+        # Install xcodeproj gem để thêm file vào project
+        gem install xcodeproj
+        
         pod install --repo-update
+    
+    - name: Add GoogleService-Info.plist to Xcode project
+      working-directory: ./app/ios
+      run: |
+        # Kiểm tra file tồn tại
+        if [ ! -f "Runner/GoogleService-Info.plist" ]; then
+          echo "ERROR: GoogleService-Info.plist not found!"
+          exit 1
+        fi
+        
+        # Thêm file vào Copy Bundle Resources trong project.pbxproj
+        # Dùng PlistBuddy hoặc sed để add file reference
+        ruby <<'RUBY'
+        require 'xcodeproj'
+        
+        project_path = 'Runner.xcodeproj'
+        project = Xcodeproj::Project.open(project_path)
+        
+        # Find main target
+        target = project.targets.find { |t| t.name == 'Runner' }
+        
+        # Check if GoogleService-Info.plist already exists
+        existing = target.resources_build_phase.files.find { |f| 
+          f.file_ref&.path&.include?('GoogleService-Info.plist') 
+        }
+        
+        unless existing
+          # Find or create file reference
+          group = project.main_group.find_subpath('Runner', true)
+          file_ref = group.files.find { |f| f.path == 'GoogleService-Info.plist' }
+          
+          unless file_ref
+            file_ref = group.new_file('GoogleService-Info.plist')
+          end
+          
+          # Add to Copy Bundle Resources
+          target.resources_build_phase.add_file_reference(file_ref)
+          
+          project.save
+          puts "✅ Added GoogleService-Info.plist to Xcode project"
+        else
+          puts "✓ GoogleService-Info.plist already in project"
+        end
+        RUBY
     
     - name: Build iOS Simulator with x86_64 for Appetize
       working-directory: ./app
@@ -98,6 +146,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ios-simulator-app
+        name: Runner
         path: app/build/ios/iphonesimulator/Runner.zip
+        compression-level: 0
         retention-days: 5
