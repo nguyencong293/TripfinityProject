@@ -1,0 +1,12 @@
+# ============================================================
+# 🌐 NGROK CONFIG - Chatbot API (Port 8000)
+# ============================================================
+version: "2"
+authtoken: 32rp1jIGT8KGFs8QQcEN1bghzeX_2keD2P4KXZnxVUzK3RtdC
+
+web_addr: 127.0.0.1:4041
+
+tunnels:
+  chatbot:
+    addr: 8000
+    proto: http

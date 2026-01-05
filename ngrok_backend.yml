@@ -1,0 +1,10 @@
+# ============================================================
+# 🌐 NGROK CONFIG - Backend API (Port 8080)
+# ============================================================
+version: "2"
+authtoken: 37pPZiofnv7WOiMWBHsvxfwVSwF_5VfdFmA6ixEJ9wJrqXQcM
+
+tunnels:
+  backend:
+    addr: 8080
+    proto: http

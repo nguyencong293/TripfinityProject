@@ -3,7 +3,6 @@
 import os
 import threading
 import pandas as pd
-from pyngrok import ngrok
 import nest_asyncio
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -14,7 +13,13 @@ import re
 
 nest_asyncio.apply()
 os.environ["GROQ_API_KEY"] = "gsk_xxxxxxxxxxxxx"
-ngrok.set_auth_token("37pPZiofnv7WOiMWBHsvxfwVSwF_5VfdFmA6ixEJ9wJrqXQcM")
+
+# Kiểm tra có chạy ngrok không (mặc định: không chạy nếu dùng script start_all.bat)
+USE_INTERNAL_NGROK = os.environ.get("USE_INTERNAL_NGROK", "false").lower() == "true"
+
+if USE_INTERNAL_NGROK:
+    from pyngrok import ngrok
+    ngrok.set_auth_token("32rp1jIGT8KGFs8QQcEN1bghzeX_2keD2P4KXZnxVUzK3RtdC")
 
 # --- IMPORT ---
 try:
@@ -28,12 +33,13 @@ except ImportError as e:
     sys.exit(1)
 
 # --- TUNNEL ---
-try:
-    for tunnel in ngrok.get_tunnels():
-        ngrok.disconnect(tunnel.public_url)
-    ngrok.kill()
-except:
-    pass
+if USE_INTERNAL_NGROK:
+    try:
+        for tunnel in ngrok.get_tunnels():
+            ngrok.disconnect(tunnel.public_url)
+        ngrok.kill()
+    except:
+        pass
 
 # --- LOAD DATA ---
 def load_data(csv_path):
@@ -968,8 +974,13 @@ QUY TẮC TRẢ LỜI BẮT BUỘC:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-public_url = ngrok.connect(8000)
-print(f"\n🚀 Server: {public_url}\n")
+# Chạy ngrok nếu được bật
+if USE_INTERNAL_NGROK:
+    public_url = ngrok.connect(8000)
+    print(f"\n🚀 Server (ngrok): {public_url}\n")
+else:
+    print(f"\n🚀 Server running at: http://localhost:8000")
+    print(f"   (Ngrok managed externally via ngrok_chatbot.yml)\n")
 
 def run_uvicorn():
     uvicorn.run(app, host="0.0.0.0", port=8000)
