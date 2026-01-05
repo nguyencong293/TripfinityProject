@@ -1,7 +1,7 @@
 name: Build iOS Simulator App
 
 on:
-  workflow_dispatch:  # Chạy thủ công từ GitHub
+  workflow_dispatch:  # Chạy thủ công
   push:
     branches: [ main ]
     paths:
@@ -9,8 +9,7 @@ on:
 
 jobs:
   build-ios:
-    # macos-latest miễn phí (Apple Silicon)
-    # App sẽ chạy qua Rosetta trên Intel Mac
+    # Vẫn dùng macos-latest (Apple Silicon) để build cho nhanh
     runs-on: macos-latest
     
     steps:
@@ -20,53 +19,40 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        channel: 'master'
-        cache: false
-    
-    - name: Check Flutter version
-      run: |
-        flutter --version
-        dart --version
+        channel: 'stable' # Nên dùng stable cho ổn định
+        cache: true
     
     - name: Get dependencies
       working-directory: ./app
       run: flutter pub get
     
-    - name: Build iOS Simulator App
+    - name: Build iOS Simulator App (x86_64 compatible)
       working-directory: ./app
       run: |
-        # Build debug for iOS Simulator
-        flutter build ios --debug --simulator --no-codesign
-        
-        # Verify the .app was created
-        echo "=== Build Output ==="
-        ls -la build/ios/iphonesimulator/
-        
-        # Show .app contents
-        echo "=== Runner.app Contents ==="
-        ls -la build/ios/iphonesimulator/Runner.app/
+        # QUAN TRỌNG: Thêm --arch=x86_64
+        # Điều này ép Flutter build bản simulator chuẩn Intel.
+        # Appetize.io tương thích tốt nhất với chuẩn này (tránh lỗi màn hình đen hoặc không chạy).
+        flutter build ios --debug --simulator --no-codesign --arch=x86_64
     
     - name: Create ZIP for Appetize
       working-directory: ./app/build/ios/iphonesimulator
       run: |
-        # Remove old zip if exists
+        # Xóa zip cũ nếu có
         rm -f Runner.zip
         
-        # Create zip with correct structure for Appetize
-        # Appetize needs the .app bundle directly in the zip root
-        ditto -c -k --sequesterRsrc --keepParent Runner.app Runner.zip
+        # Dùng lệnh zip chuẩn thay vì ditto
+        # -r: Nén đệ quy thư mục Runner.app
+        # -y: Giữ nguyên các symbolic links (quan trọng cho macOS app)
+        zip -r -y Runner.zip Runner.app
         
-        # Verify zip contents
-        echo "=== ZIP Contents ==="
-        unzip -l Runner.zip
-        
-        # Show zip size
-        echo "=== ZIP Size ==="
-        ls -lh Runner.zip
+        # Kiểm tra nhanh cấu trúc file zip sau khi nén
+        # Nếu đúng chuẩn, bạn sẽ thấy dòng đầu tiên là "Runner.app/"
+        echo "=== Checking ZIP Structure ==="
+        unzip -l Runner.zip | head -n 10
     
     - name: Upload iOS Simulator App
       uses: actions/upload-artifact@v4
       with:
         name: ios-simulator-app
         path: app/build/ios/iphonesimulator/Runner.zip
-        retention-days: 7
+        retention-days: 5
