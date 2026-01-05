@@ -9,12 +9,27 @@ on:
 
 jobs:
   build-ios:
-    # Sử dụng macos-14 (Apple Silicon M1) - Appetize khuyến nghị ARM builds
-    runs-on: macos-14
+    # Sử dụng macos-15 với Xcode 16 để hỗ trợ Firebase SDK mới (Swift 6)
+    runs-on: macos-15
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+    
+    - name: Select Xcode version
+      run: |
+        # Liệt kê các phiên bản Xcode có sẵn
+        ls /Applications/ | grep Xcode
+        
+        # Chọn Xcode 16 (hỗ trợ Swift 6 cho Firebase SDK mới)
+        sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || \
+        sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer || \
+        sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer || \
+        sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+        
+        # Verify Xcode version
+        xcodebuild -version
+        swift --version
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
@@ -22,9 +37,28 @@ jobs:
         channel: 'stable'
         cache: true
     
-    - name: Get dependencies
+    - name: Clean and Get dependencies
       working-directory: ./app
-      run: flutter pub get
+      run: |
+        # Clean Flutter build cache
+        flutter clean
+        
+        # Get dependencies
+        flutter pub get
+    
+    - name: Clean iOS Pods and Reinstall
+      working-directory: ./app/ios
+      run: |
+        # Xóa Pods cache để tránh lỗi phiên bản cũ
+        rm -rf Pods
+        rm -rf Podfile.lock
+        rm -rf ~/.cocoapods/repos/trunk
+        
+        # Update CocoaPods repo
+        pod repo update
+        
+        # Install pods fresh
+        pod install --repo-update
     
     - name: Build iOS Simulator App for Appetize
       working-directory: ./app
@@ -37,11 +71,11 @@ jobs:
         # 4. Thư mục .app phải nằm TRỰC TIẾP trong ZIP (không nested)
         # =====================================================
         
-        # Bước 1: Build iOS simulator app bằng Flutter
+        # Build iOS simulator app bằng Flutter
         echo "=== Building Flutter iOS Simulator App ==="
         flutter build ios --debug --simulator --no-codesign
         
-        # Bước 2: Tìm và verify .app bundle
+        # Tìm và verify .app bundle
         echo "=== Locating .app bundle ==="
         APP_PATH="build/ios/iphonesimulator/Runner.app"
         
@@ -54,7 +88,7 @@ jobs:
         
         echo "Found: $APP_PATH"
         
-        # Bước 3: Verify .app bundle structure
+        # Verify .app bundle structure
         echo "=== Verifying .app bundle structure ==="
         ls -la "$APP_PATH"
         
@@ -72,7 +106,7 @@ jobs:
         fi
         echo "✓ Runner executable found"
         
-        # Bước 4: Verify architecture
+        # Verify architecture
         echo "=== Checking Architecture ==="
         lipo -info "$APP_PATH/Runner" || file "$APP_PATH/Runner"
     
@@ -99,7 +133,7 @@ jobs:
           exit 1
         fi
         
-        # Phương pháp 1: Dùng ditto (công cụ chuẩn Apple, giữ nguyên metadata)
+        # Dùng ditto (công cụ chuẩn Apple, giữ nguyên metadata)
         echo "=== Creating ZIP using ditto (Apple's standard tool) ==="
         ditto -c -k --sequesterRsrc --keepParent Runner.app Runner.zip
         
