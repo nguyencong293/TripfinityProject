@@ -6,16 +6,18 @@ color 0A
 echo.
 echo ╔══════════════════════════════════════════════════════════════════════╗
 echo ║           🚀 TRIPFINITY - ALL IN ONE STARTER                         ║
-echo ║       Backend + Model AI + Chatbot + Supplier + Ngrok                ║
+echo ║     Backend + Model AI + Chatbot + Supplier (LOCAL - Tiết kiệm)      ║
 echo ╚══════════════════════════════════════════════════════════════════════╝
 echo.
-echo    📋 CẤU TRÚC LIÊN KẾT:
+echo    📋 CẤU TRÚC KẾT NỐI (TẤT CẢ LOCAL, CHỈ iOS DÙNG NGROK):
 echo    ┌─────────────────────────────────────────────────────────────┐
-echo    │  Flutter App ──► Backend (ngrok) ──► Model AI (localhost)   │
+echo    │  Android/Web ──► Backend (localhost:8080)                   │
 echo    │       │                                                     │
-echo    │       └──────► Chatbot (ngrok)                              │
+echo    │       └──────► Chatbot (localhost:8000)                     │
 echo    │                                                             │
-echo    │  Supplier (ngrok) ← Web riêng, không liên quan Flutter      │
+echo    │  iOS ──────────► Backend (ngrok) ← Chỉ iOS cần ngrok        │
+echo    │                                                             │
+echo    │  Supplier ────► Backend (localhost:8080)                    │
 echo    └─────────────────────────────────────────────────────────────┘
 echo.
 
@@ -30,23 +32,15 @@ echo       ✅ Đã dừng ngrok và node processes
 echo.
 
 REM ============================================================
-REM BƯỚC 2: CHẠY NGROK TUNNELS (CHỈ 2 CÁI CHO FLUTTER)
+REM BƯỚC 2: CHẠY NGROK (CHỈ BACKEND CHO iOS)
 REM ============================================================
-echo [2/6] 🌐 Đang khởi động Ngrok Tunnels...
+echo [2/6] 🌐 Đang khởi động Ngrok Backend (chỉ dành cho iOS)...
 
-REM Ngrok cho Backend (port 8080) - Flutter cần
-start "Ngrok Backend" cmd /k "title 🌐 Ngrok Backend [8080] && ngrok start --all --config="%~dp0ngrok_backend.yml""
-timeout /t 1 /nobreak >nul
-
-REM Ngrok cho Chatbot (port 8000) - Flutter cần
-start "Ngrok Chatbot" cmd /k "title 🌐 Ngrok Chatbot [8000] && ngrok start --all --config="%~dp0ngrok_chatbot.yml""
-timeout /t 1 /nobreak >nul
-
-REM Ngrok cho Supplier (port 5173) - Web riêng, không liên quan Flutter
-start "Ngrok Supplier" cmd /k "title 🌐 Ngrok Supplier [5173] && ngrok start --all --config="%~dp0ngrok_supplier.yml""
+REM Ngrok cho Backend (port 8080) - Chỉ iOS cần
+start "Ngrok Backend" cmd /k "title 🌐 Ngrok Backend [8080 - iOS only] && ngrok start --all --config="%~dp0ngrok_backend.yml""
 timeout /t 2 /nobreak >nul
 
-echo       ✅ 3 Ngrok tunnels đang khởi động...
+echo       ✅ Ngrok Backend đang khởi động (dành cho iOS)...
 echo.
 
 REM ============================================================
@@ -93,41 +87,48 @@ REM ============================================================
 REM HOÀN TẤT
 REM ============================================================
 echo.
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║  ✅ TẤT CẢ SERVICES ĐÃ ĐƯỢC KHỞI ĐỘNG!                               ║
-echo ╠══════════════════════════════════════════════════════════════════════╣
-echo ║                                                                      ║
-echo ║  📱 FLUTTER APP CẦN 2 URLs (cập nhật vào app_config.dart):           ║
-echo ║     • Backend:   http://127.0.0.1:4040 ← Copy URL từ đây             ║
-echo ║     • Chatbot:   http://127.0.0.1:4041 ← Copy URL từ đây             ║
-echo ║                                                                      ║
-echo ║  🔗 LIÊN KẾT NỘI BỘ (tự động, không cần config):                     ║
-echo ║     • Backend → Model AI: localhost:5000 (cùng máy)                  ║
-echo ║                                                                      ║
-echo ║  🏪 SUPPLIER (web riêng, không liên quan Flutter):                   ║
-echo ║     • Supplier: http://127.0.0.1:4043 ← Dành cho nhà cung cấp        ║
-echo ║                                                                      ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ╔══════════════════════════════════════════════════════════════════════════════╗
+echo ║  ✅ TẤT CẢ SERVICES ĐÃ ĐƯỢC KHỞI ĐỘNG!                                       ║
+echo ╠══════════════════════════════════════════════════════════════════════════════╣
+echo ║                                                                              ║
+echo ║  🎯 TẤT CẢ KẾT NỐI LOCAL - KHÔNG CẦN CẬP NHẬT GÌ!                            ║
+echo ║                                                                              ║
+echo ║  🤖 Android Emulator:                                                        ║
+echo ║     • Backend:  http://10.0.2.2:8080 (tự động)                               ║
+echo ║     • Chatbot:  http://10.0.2.2:8000 (tự động)                               ║
+echo ║                                                                              ║
+echo ║  🌐 Web (Chrome):                                                            ║
+echo ║     • Backend:  http://localhost:8080 (tự động)                              ║
+echo ║     • Chatbot:  http://localhost:8000 (tự động)                              ║
+echo ║                                                                              ║
+echo ║  🍎 iOS (Appetize.io/thiết bị thật):                                         ║
+echo ║     • Backend:  https://unprotrusively-nonreportable-kingston.ngrok-free.dev ║
+echo ║                                                                              ║
+echo ║  🏪 Supplier Portal:                                                         ║
+echo ║     • URL: http://localhost:5173                                             ║
+echo ║                                                                              ║
+echo ║  🔗 Liên kết nội bộ:                                                         ║
+echo ║     • Backend → Model AI: localhost:5000                                     ║
+echo ║                                                                              ║
+echo ╚══════════════════════════════════════════════════════════════════════════════╝
 echo.
 
 REM Đợi services khởi động
-echo ⏳ Đợi 15 giây để services khởi động...
-timeout /t 15 /nobreak >nul
+echo ⏳ Đợi 10 giây để services khởi động...
+timeout /t 10 /nobreak >nul
 
-REM Mở ngrok dashboards cho Flutter (Backend + Chatbot)
-echo 🌐 Đang mở Ngrok dashboards cho Flutter...
-start http://127.0.0.1:4040
-timeout /t 1 /nobreak >nul
-start http://127.0.0.1:4041
+REM Mở Supplier trong trình duyệt
+echo 🌐 Đang mở Supplier Portal...
+start http://localhost:5173/supplier
 
 echo.
-echo ════════════════════════════════════════════════════════════════════════
-echo 📋 CHỈ CẦN CẬP NHẬT 2 URLs VÀO: app\lib\config\app_config.dart
-echo    • ngrokBackendUrl  (từ dashboard 4040)
-echo    • ngrokChatbotUrl  (từ dashboard 4041)
-echo ════════════════════════════════════════════════════════════════════════
+echo ════════════════════════════════════════════════════════════════════════════════
+echo 🎉 KHÔNG CẦN CẬP NHẬT GÌ! Đổi mạng WiFi cũng không ảnh hưởng!
+echo ════════════════════════════════════════════════════════════════════════════════
 echo.
-echo 🎯 SAU ĐÓ CHẠY FLUTTER APP TRÊN NỀN TẢNG BẠN MUỐN!
+echo 🎯 CHẠY FLUTTER APP:
+echo    • Android: flutter run -d android
+echo    • Web:     flutter run -d chrome --web-port=50077
 echo.
 echo Nhấn phím bất kỳ để đóng cửa sổ này (các services vẫn chạy)...
 pause >nul

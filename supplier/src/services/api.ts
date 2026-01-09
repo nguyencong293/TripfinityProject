@@ -1,22 +1,18 @@
 import axios from "axios";
 
 // ============================================================
-// 🔧 API CONFIGURATION
+// 🔧 API CONFIGURATION - KẾT NỐI TRỰC TIẾP LOCALHOST
 // ============================================================
-// Cập nhật URL ngrok Backend tại đây (lấy từ dashboard http://127.0.0.1:4040)
-// Supplier gọi Backend API qua ngrok để hoạt động khi chạy qua internet
+// Supplier chạy trên trình duyệt cùng máy với Backend
+// → Kết nối trực tiếp localhost, KHÔNG cần ngrok
+// → Đổi mạng WiFi không ảnh hưởng (localhost = nội bộ máy)
 // ============================================================
-const NGROK_BACKEND_URL = "https://unprotrusively-nonreportable-kingston.ngrok-free.dev";
-
-// Sử dụng ngrok URL
-const API_BASE_URL = `${NGROK_BACKEND_URL}/api`;
+const API_BASE_URL = "http://localhost:8080/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
-    // Header này để bypass trang cảnh báo của ngrok free
-    "ngrok-skip-browser-warning": "true",
   },
   timeout: 60000, // 60 seconds (1 minute) - cho upload nhiều ảnh
 });

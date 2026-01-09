@@ -1,35 +1,51 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class AppConfig {
   static const String appName = 'Tripfinity Flutter Application';
   static const String appVersion = '1.0.0';
 
   // ============================================================
-  // 🔧 NGROK CONFIGURATION - CHỈ CẦN CẬP NHẬT 2 URL NÀY
+  // 🔧 CẤU HÌNH KẾT NỐI - TẤT CẢ DÙNG LOCAL, CHỈ iOS DÙNG NGROK
   // ============================================================
-  // Chạy lệnh: start_all.bat để khởi động tất cả services
-  // Xem URLs tại dashboard:
-  //   - Backend:  http://127.0.0.1:4040
-  //   - Chatbot:  http://127.0.0.1:4041
-  //
-  // Ngrok là cầu nối → dùng ngrok URL cho TẤT CẢ nền tảng:
-  //   Android, iOS, Web, Emulator, Simulator, Appetize.io, thiết bị thật
+  // - Android/Web/Supplier: Kết nối trực tiếp localhost
+  // - iOS: Dùng ngrok (vì chạy từ xa qua Appetize.io/thiết bị thật)
+  // - Đổi mạng WiFi không ảnh hưởng gì (localhost = nội bộ máy)
   // ============================================================
 
-  // Backend API (Spring Boot - Port 8080)
+  // === NGROK URL (CHỈ DÀNH CHO iOS) ===
   static const String ngrokBackendUrl =
       'https://unprotrusively-nonreportable-kingston.ngrok-free.dev';
 
-  // Chatbot API (Python FastAPI - Port 8000)
-  static const String ngrokChatbotUrl = 'https://ceef2ffd62e1.ngrok-free.app';
+  // === LOCAL URLs ===
+  // Android Emulator: 10.0.2.2 trỏ về localhost của máy host
+  // Web/Desktop: localhost trực tiếp
+  static String get _localBackendUrl {
+    if (kIsWeb) return 'http://localhost:8080';
+    if (Platform.isAndroid) return 'http://10.0.2.2:8080';
+    return 'http://localhost:8080';
+  }
+
+  static String get _localChatbotUrl {
+    if (kIsWeb) return 'http://localhost:8000';
+    if (Platform.isAndroid) return 'http://10.0.2.2:8000';
+    return 'http://localhost:8000';
+  }
 
   // ============================================================
-  // API URLs - LUÔN DÙNG NGROK (đơn giản, hoạt động mọi nơi)
+  // 🎯 API URLs - TỰ ĐỘNG CHỌN THEO NỀN TẢNG
   // ============================================================
 
-  /// Backend API URL
-  static String get baseUrl => '$ngrokBackendUrl/api';
+  /// Backend API URL (iOS → Ngrok, còn lại → Local)
+  static String get baseUrl {
+    if (!kIsWeb && Platform.isIOS) {
+      return '$ngrokBackendUrl/api';
+    }
+    return '$_localBackendUrl/api';
+  }
 
-  /// Chatbot API URL
-  static String get chatbotUrl => ngrokChatbotUrl;
+  /// Chatbot API URL (Luôn dùng Local - demo trên Android)
+  static String get chatbotUrl => _localChatbotUrl;
 
   static const Duration apiTimeout = Duration(seconds: 30);
 
