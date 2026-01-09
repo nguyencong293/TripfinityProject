@@ -1,1001 +1,999 @@
-# TRIPFINITY - Ứng Dụng Du Lịch Thông Minh
+# TRIPFINITY - PRESENTATION SLIDES
+## Đề tài: Xây dựng hệ thống du lịch thông minh đa nền tảng ứng dụng AI
+## Topic: Building a Cross-Platform Intelligent Tourism System using AI
 
-## MỤC LỤC
-- [PHẦN 1: DANH SÁCH CÁC TRANG GIAO DIỆN](#phần-1-danh-sách-các-trang-giao-diện)
-  - [A. Flutter Mobile App](#a-flutter-mobile-app)
-  - [B. Supplier Web (React)](#b-supplier-web-react)
-- [PHẦN 2: CHI TIẾT CHỨC NĂNG](#phần-2-chi-tiết-chức-năng)
-- [PHẦN 3: CẤU TRÚC BẢNG CƠ SỞ DỮ LIỆU](#phần-3-cấu-trúc-bảng-cơ-sở-dữ-liệu)
+**Sinh viên:** Nguyễn Thành Công - Lớp 21KIT  
+**GVHD:** ThS. Nguyễn Ngọc Huyền Trân & KS. Từ Tấn Hoàng Sơn  
+**Trường:** Đại học Công nghệ Thông tin và Truyền thông Việt-Hàn
 
----
-
-# PHẦN 1: DANH SÁCH CÁC TRANG GIAO DIỆN
-
-## A. Flutter Mobile App
-
-### 1. Xác thực & Giới thiệu
-| Trang | Chức năng |
-|-------|-----------|
-| `onboarding_screen` | Giới thiệu ứng dụng cho người dùng mới |
-| `login_screen` | Đăng nhập tài khoản |
-| `register_screen` | Đăng ký tài khoản mới |
-| `forget_account_screen` | Khôi phục mật khẩu |
-
-### 2. Trang chính & Tổng quan
-| Trang | Chức năng |
-|-------|-----------|
-| `home_screen` | Trang chủ hiển thị các dịch vụ nổi bật, gợi ý AI |
-| `dashboard_user_screen` | Tổng quan thông tin người dùng |
-| `profile_view_user_screen` | Xem và chỉnh sửa thông tin cá nhân |
-| `option_setting_screen` | Cài đặt ứng dụng |
-| `terms_policie_screen` | Điều khoản và chính sách |
-| `contact_user_screen` | Liên hệ hỗ trợ |
-
-### 3. Tìm kiếm
-| Trang | Chức năng |
-|-------|-----------|
-| `general_search_screen` | Tìm kiếm tổng hợp tất cả dịch vụ |
-| `search_overview_screen` | Xem kết quả tìm kiếm tổng quan |
-| `search_map_screen` | Tìm kiếm trên bản đồ |
-| `nearby_search_screen` | Tìm kiếm dịch vụ gần vị trí hiện tại |
-| `search_history_screen` | Lịch sử tìm kiếm |
-
-### 4. Tour
-| Trang | Chức năng |
-|-------|-----------|
-| `tour_service_overview_search_screen` | Tìm kiếm và danh sách tour |
-| `tour_service_detail_overview_screen` | Chi tiết tour |
-| `tour_booking_checkout_screen` | Đặt tour và thanh toán |
-| `tour_reviews_list_screen` | Danh sách đánh giá tour |
-| `detail_tour_review_user_screen` | Chi tiết đánh giá tour của người dùng |
-
-### 5. Khách sạn (Hotel)
-| Trang | Chức năng |
-|-------|-----------|
-| `hotel_overview_search_screen` | Tìm kiếm và danh sách khách sạn |
-| `hotel_detail_overview_screen` | Chi tiết khách sạn |
-| `hotel_booking_checkout_screen` | Đặt phòng và thanh toán |
-| `hotel_reviews_list_screen` | Danh sách đánh giá khách sạn |
-| `detail_hotel_review_user_screen` | Chi tiết đánh giá khách sạn của người dùng |
-
-### 6. Điểm tham quan (Attraction)
-| Trang | Chức năng |
-|-------|-----------|
-| `attractions_overview_search_screen` | Tìm kiếm và danh sách điểm tham quan |
-| `attractions_overview_detail_screen` | Chi tiết điểm tham quan |
-| `attraction_booking_checkout_screen` | Đặt vé và thanh toán |
-| `attraction_reviews_list_screen` | Danh sách đánh giá điểm tham quan |
-| `detail_attraction_review_user_screen` | Chi tiết đánh giá điểm tham quan của người dùng |
-
-### 7. Nhà hàng (Restaurant)
-| Trang | Chức năng |
-|-------|-----------|
-| `restaurant_overview_search_screen` | Tìm kiếm và danh sách nhà hàng |
-| `restaurant_overview_detail_screen` | Chi tiết nhà hàng |
-| `restaurant_booking_checkout_screen` | Đặt bàn và thanh toán |
-| `restaurant_reviews_list_screen` | Danh sách đánh giá nhà hàng |
-| `detail_restaurant_review_user_screen` | Chi tiết đánh giá nhà hàng của người dùng |
-
-### 8. Quản lý đặt chỗ
-| Trang | Chức năng |
-|-------|-----------|
-| `pending_bookings_screen` | Danh sách đặt chỗ đang chờ xử lý |
-| `confirmed_bookings_screen` | Danh sách đặt chỗ đã xác nhận |
-| `payment_webview_screen` | Webview thanh toán ZaloPay |
-
-### 9. Chuyến đi (Trip)
-| Trang | Chức năng |
-|-------|-----------|
-| `trip_user_screen` | Danh sách chuyến đi của người dùng |
-| `detail_trip_user_screen` | Chi tiết chuyến đi |
-| `introduction_trip_screen` | Giới thiệu tính năng chuyến đi |
-| `detail_trip_review_user_screen` | Đánh giá chuyến đi |
-
-### 10. Blog
-| Trang | Chức năng |
-|-------|-----------|
-| `blogs_screen` | Danh sách bài viết blog |
-| `blog_detail_screen` | Chi tiết bài viết |
-| `post_user_screen` | Bài viết của người dùng |
-| `post_detail_screen` | Chi tiết bài đăng |
-
-### 11. Chat & Hỗ trợ
-| Trang | Chức năng |
-|-------|-----------|
-| `chat_help_bot_screen` | Chat với AI Bot hỗ trợ |
-| `chat_with_provider_screen` | Chat với nhà cung cấp dịch vụ |
-| `select_provider_chat_screen` | Chọn nhà cung cấp để chat |
-
-### 12. Thông báo & Điểm thưởng
-| Trang | Chức năng |
-|-------|-----------|
-| `notification_screen` | Danh sách thông báo |
-| `badges_and_points_user_screen` | Huy hiệu và điểm thưởng |
+**Thời lượng:** 10 phút (thuyết trình + demo)
 
 ---
 
-## B. Supplier Web (React)
+# 📋 CẤU TRÚC BÀI THUYẾT TRÌNH
 
-### 1. Xác thực
-| Trang | Chức năng |
-|-------|-----------|
-| `SupplierLoginPage` | Đăng nhập nhà cung cấp |
-| `SupplierRegisterPage` | Đăng ký tài khoản nhà cung cấp |
-| `SupplierForgetAccountPage` | Khôi phục mật khẩu |
-| `ProviderInfoPage` | Cập nhật thông tin nhà cung cấp |
+| Phần | Nội dung | Số slides |
+|------|----------|-----------|
+| 1 | Bối cảnh & Đặt vấn đề | 3 slides |
+| 2 | Công nghệ sử dụng | 1 slide |
+| 3 | Kiến trúc hệ thống | 2 slides |
+| 4 | Công nghệ AI ⭐ | 3 slides |
+| 5 | Kết luận & Demo | 3 slides |
 
-### 2. Trang chính
-| Trang | Chức năng |
-|-------|-----------|
-| `SupplierHomePage` | Dashboard tổng quan nhà cung cấp |
-| `ProfileProviderPage` | Thông tin hồ sơ nhà cung cấp |
-| `NotificationListPage` | Danh sách thông báo |
-| `ListingsPage` | Quản lý tất cả dịch vụ |
-
-### 3. Quản lý Tour
-| Trang | Chức năng |
-|-------|-----------|
-| `DashboardTourPage` | Dashboard thống kê tour |
-| `TourListPage` | Danh sách tour |
-| `TourCreatePage` | Tạo tour mới |
-| `TourEditPage` | Chỉnh sửa tour |
-| `TourViewPage` | Xem chi tiết tour |
-| `ListTourBookingPage` | Danh sách đặt tour |
-| `TourBookingViewPage` | Chi tiết đơn đặt tour |
-| `AllReviewsPage` | Tất cả đánh giá tour |
-| `RecentReviewsPage` | Đánh giá tour gần đây |
-| `ReviewDetailPage` | Chi tiết đánh giá tour |
-
-### 4. Quản lý Khách sạn
-| Trang | Chức năng |
-|-------|-----------|
-| `DashboardHotelPage` | Dashboard thống kê khách sạn |
-| `ListHotelPage` | Danh sách khách sạn |
-| `HotelCreatePage` | Tạo khách sạn mới |
-| `HotelEditPage` | Chỉnh sửa khách sạn |
-| `HotelViewPage` | Xem chi tiết khách sạn |
-| `ListBookingPage` | Danh sách đặt phòng |
-| `HotelBookingViewPage` | Chi tiết đơn đặt phòng |
-| `AllReviewsPage` | Tất cả đánh giá khách sạn |
-| `RecentReviewsPage` | Đánh giá khách sạn gần đây |
-| `ReviewDetailPage` | Chi tiết đánh giá khách sạn |
-
-### 5. Quản lý Điểm tham quan
-| Trang | Chức năng |
-|-------|-----------|
-| `DashboardAttractionPage` | Dashboard thống kê điểm tham quan |
-| `ListAttractionPage` | Danh sách điểm tham quan |
-| `AttractionCreatePage` | Tạo điểm tham quan mới |
-| `AttractionEditPage` | Chỉnh sửa điểm tham quan |
-| `AttractionViewPage` | Xem chi tiết điểm tham quan |
-| `ListAttractionBookingPage` | Danh sách đặt vé |
-| `AttractionBookingViewPage` | Chi tiết đơn đặt vé |
-| `AllReviewsPage` | Tất cả đánh giá điểm tham quan |
-| `RecentReviewsPage` | Đánh giá điểm tham quan gần đây |
-| `ReviewDetailPage` | Chi tiết đánh giá điểm tham quan |
-
-### 6. Quản lý Nhà hàng
-| Trang | Chức năng |
-|-------|-----------|
-| `DashboardRestaurantPage` | Dashboard thống kê nhà hàng |
-| `ListRestaurantPage` | Danh sách nhà hàng |
-| `RestaurantCreatePage` | Tạo nhà hàng mới |
-| `RestaurantEditPage` | Chỉnh sửa nhà hàng |
-| `RestaurantViewPage` | Xem chi tiết nhà hàng |
-| `ListRestaurantBookingPage` | Danh sách đặt bàn |
-| `RestaurantBookingViewPage` | Chi tiết đơn đặt bàn |
-| `AllReviewsPage` | Tất cả đánh giá nhà hàng |
-| `RecentReviewsPage` | Đánh giá nhà hàng gần đây |
-| `ReviewDetailPage` | Chi tiết đánh giá nhà hàng |
-
-### 7. Blog
-| Trang | Chức năng |
-|-------|-----------|
-| `BlogsPage` | Danh sách bài viết blog |
-| `CreateBlogPage` | Tạo bài viết mới |
-| `EditBlogPage` | Chỉnh sửa bài viết |
-
-### 8. Tin nhắn
-| Trang | Chức năng |
-|-------|-----------|
-| `MessagesPage` | Quản lý tin nhắn với khách hàng |
+**Tổng: 12 slides + 2 slides (Bìa + Mục lục) = 14 slides**
 
 ---
 
-# PHẦN 2: CHI TIẾT CHỨC NĂNG
+# SLIDE 1: TRANG BÌA (30 giây)
 
-## 1. Xác thực & Quản lý tài khoản
+### 🇻🇳 Nội dung slide:
+```
+XÂY DỰNG HỆ THỐNG DU LỊCH THÔNG MINH 
+ĐA NỀN TẢNG ỨNG DỤNG AI
 
-### 1.1 Đăng ký người dùng
-- **Mô tả**: Cho phép người dùng tạo tài khoản mới với email, mật khẩu và thông tin cá nhân. Hỗ trợ đăng ký qua Google OAuth.
-- **Bảng CSDL liên quan**: `users`
+GVHD: ThS. Nguyễn Ngọc Huyền Trân
+      KS. Từ Tấn Hoàng Sơn
 
-### 1.2 Đăng nhập
-- **Mô tả**: Xác thực người dùng bằng email/mật khẩu hoặc Google OAuth. Hệ thống sử dụng JWT token để quản lý phiên đăng nhập.
-- **Bảng CSDL liên quan**: `users`
+SVTH: Nguyễn Thành Công
+Lớp: 21KIT - Ngành: Kỹ thuật phần mềm
 
-### 1.3 Đăng ký nhà cung cấp (Provider)
-- **Mô tả**: Cho phép nhà cung cấp dịch vụ đăng ký tài khoản để quản lý dịch vụ du lịch của họ.
-- **Bảng CSDL liên quan**: `providers`
+[Logo VKU]
+```
 
-### 1.4 Khôi phục mật khẩu
-- **Mô tả**: Gửi email chứa liên kết đặt lại mật khẩu khi người dùng quên mật khẩu.
-- **Bảng CSDL liên quan**: `users`, `providers`
+### 🇬🇧 Slide Content:
+```
+BUILDING A CROSS-PLATFORM INTELLIGENT 
+TOURISM SYSTEM USING AI
 
-### 1.5 Quản lý hồ sơ người dùng
-- **Mô tả**: Cho phép người dùng xem và cập nhật thông tin cá nhân như tên, avatar, số điện thoại.
-- **Bảng CSDL liên quan**: `users`
+Supervisor: MSc. Nguyen Ngoc Huyen Tran
+            Eng. Tu Tan Hoang Son
+
+Student: Nguyen Thanh Cong
+Class: 21KIT - Software Engineering
+
+[VKU Logo]
+```
+
+### 💬 Phần nói:
+"Kính chào quý Thầy Cô trong Hội đồng. Em là Nguyễn Thành Công, sinh viên lớp 21KIT ngành Kỹ thuật phần mềm. Hôm nay em xin trình bày đồ án tốt nghiệp với đề tài: Xây dựng hệ thống du lịch thông minh đa nền tảng ứng dụng AI - TRIPFINITY."
 
 ---
 
-## 2. Quản lý Tour
+# SLIDE 2: NỘI DUNG TRÌNH BÀY (20 giây)
 
-### 2.1 Xem danh sách Tour
-- **Mô tả**: Hiển thị danh sách các tour du lịch với bộ lọc theo khu vực, giá, độ khó, loại tour. Hỗ trợ tìm kiếm và phân trang.
-- **Bảng CSDL liên quan**: `tours`, `areas`
+### 🇻🇳 Nội dung slide:
+```
+📋 NỘI DUNG TRÌNH BÀY
 
-### 2.2 Xem chi tiết Tour
-- **Mô tả**: Hiển thị thông tin chi tiết tour bao gồm: mô tả, lịch trình, giá, hình ảnh, địa điểm trên bản đồ, đánh giá.
-- **Bảng CSDL liên quan**: `tours`, `tour_reviews`, `tour_review_aspects`, `areas`
+1. Bối cảnh & Đặt vấn đề
+2. Công nghệ sử dụng
+3. Kiến trúc hệ thống
+4. Công nghệ AI ⭐
+5. Kết luận & Demo
+```
 
-### 2.3 Đặt Tour
-- **Mô tả**: Cho phép người dùng đặt tour với số lượng người, ngày khởi hành. Tính toán tổng chi phí và tạo đơn đặt hàng.
-- **Bảng CSDL liên quan**: `tour_bookings`, `tour_payments`, `tours`
+### 🇬🇧 Slide Content:
+```
+📋 PRESENTATION OUTLINE
 
-### 2.4 Thanh toán Tour
-- **Mô tả**: Xử lý thanh toán đơn đặt tour qua các phương thức: ZaloPay, thanh toán tại quầy. Cập nhật trạng thái đơn hàng sau khi thanh toán thành công.
-- **Bảng CSDL liên quan**: `tour_payments`, `tour_bookings`
+1. Context & Problem Statement
+2. Technologies Used
+3. System Architecture
+4. AI Technologies ⭐
+5. Conclusion & Demo
+```
 
-### 2.5 Đánh giá Tour
-- **Mô tả**: Cho phép người dùng đánh giá tour sau khi hoàn thành với điểm số theo các tiêu chí: hướng dẫn viên, giá trị, an toàn, thú vị, lịch trình. Hỗ trợ đính kèm hình ảnh.
-- **Bảng CSDL liên quan**: `tour_reviews`, `tour_review_aspects`
-
-### 2.6 Quản lý Tour (Provider)
-- **Mô tả**: Nhà cung cấp có thể tạo, chỉnh sửa, xóa, ẩn/hiện tour. Quản lý danh sách đặt tour và xác nhận đơn hàng.
-- **Bảng CSDL liên quan**: `tours`, `tour_bookings`, `providers`
+### 💬 Phần nói:
+"Bài thuyết trình gồm 5 phần. Phần 1 em trình bày bối cảnh ngành du lịch và bài toán cần giải quyết. Phần 2-3 là công nghệ và kiến trúc. Phần 4 - Công nghệ AI . Cuối cùng là kết luận và demo."
 
 ---
 
-## 3. Quản lý Khách sạn (Hotel)
-
-### 3.1 Xem danh sách Khách sạn
-- **Mô tả**: Hiển thị danh sách khách sạn với bộ lọc theo khu vực, giá, số sao, loại hình lưu trú, tiện nghi.
-- **Bảng CSDL liên quan**: `hotels`, `areas`
-
-### 3.2 Xem chi tiết Khách sạn
-- **Mô tả**: Hiển thị thông tin chi tiết khách sạn: mô tả, tiện nghi, phòng, giá, vị trí trên bản đồ, chính sách, đánh giá.
-- **Bảng CSDL liên quan**: `hotels`, `hotel_reviews`, `hotel_review_aspects`, `areas`
-
-### 3.3 Đặt phòng Khách sạn
-- **Mô tả**: Cho phép người dùng đặt phòng với ngày check-in/check-out, số phòng, số giường. Tính toán tổng chi phí theo số đêm.
-- **Bảng CSDL liên quan**: `hotel_bookings`, `hotel_payments`, `hotels`
-
-### 3.4 Thanh toán Khách sạn
-- **Mô tả**: Xử lý thanh toán đặt phòng qua ZaloPay hoặc thanh toán tại quầy. Cập nhật trạng thái booking.
-- **Bảng CSDL liên quan**: `hotel_payments`, `hotel_bookings`
-
-### 3.5 Đánh giá Khách sạn
-- **Mô tả**: Cho phép đánh giá khách sạn với các tiêu chí: sạch sẽ, dịch vụ, giá trị, vị trí, tiện nghi. Hỗ trợ đính kèm hình ảnh.
-- **Bảng CSDL liên quan**: `hotel_reviews`, `hotel_review_aspects`
-
-### 3.6 Quản lý Khách sạn (Provider)
-- **Mô tả**: Nhà cung cấp quản lý khách sạn: tạo/sửa/xóa khách sạn, quản lý phòng, xác nhận đặt phòng.
-- **Bảng CSDL liên quan**: `hotels`, `hotel_bookings`, `providers`
+# ═══════════════════════════════════════════════════════════
+# PHẦN 1: BỐI CẢNH & ĐẶT VẤN ĐỀ (3 SLIDES)
+# ═══════════════════════════════════════════════════════════
 
 ---
 
-## 4. Quản lý Điểm tham quan (Attraction)
+# SLIDE 3: BỐI CẢNH - DU LỊCH VIỆT NAM
 
-### 4.1 Xem danh sách Điểm tham quan
-- **Mô tả**: Hiển thị danh sách điểm tham quan với bộ lọc theo khu vực, loại hình (văn hóa, giải trí, lịch sử, tự nhiên...), giá.
-- **Bảng CSDL liên quan**: `attractions`, `areas`
+### 🇻🇳 Nội dung slide:
+```
+📊 BỐI CẢNH DU LỊCH VIỆT NAM
 
-### 4.2 Xem chi tiết Điểm tham quan
-- **Mô tả**: Hiển thị thông tin chi tiết: mô tả, giờ mở cửa, giá vé, vị trí, phù hợp cho đối tượng nào, đánh giá.
-- **Bảng CSDL liên quan**: `attractions`, `attraction_reviews`, `attraction_review_aspects`, `areas`
+📈 TỔNG THU DU LỊCH QUA CÁC NĂM:
+┌──────────────────────────────────────┐
+│  Năm  │ Tổng thu (nghìn tỷ) │ Tăng % │
+├───────┼─────────────────────┼────────┤
+│ 2021  │      180.00         │ -42.3% │
+│ 2022  │      495.00         │ +175%  │
+│ 2023  │      678.30         │ +37%   │
+│ 2024  │      840.00         │ +23.9% │
+│ 2025  │    1,000.00         │ +19%   │
+└──────────────────────────────────────┘
 
-### 4.3 Đặt vé Điểm tham quan
-- **Mô tả**: Cho phép đặt vé tham quan với số lượng người, ngày tham quan.
-- **Bảng CSDL liên quan**: `attraction_bookings`, `attraction_payments`, `attractions`
+→ Ngành du lịch phục hồi mạnh sau COVID
+→ Nhu cầu ứng dụng hỗ trợ du lịch tăng cao
 
-### 4.4 Thanh toán Điểm tham quan
-- **Mô tả**: Xử lý thanh toán vé tham quan qua ZaloPay hoặc thanh toán tại quầy.
-- **Bảng CSDL liên quan**: `attraction_payments`, `attraction_bookings`
+Nguồn: Cục Du lịch Quốc gia Việt Nam
+```
 
-### 4.5 Đánh giá Điểm tham quan
-- **Mô tả**: Cho phép đánh giá với các tiêu chí: vị trí, giá trị, trải nghiệm, dịch vụ. Hỗ trợ đính kèm hình ảnh.
-- **Bảng CSDL liên quan**: `attraction_reviews`, `attraction_review_aspects`
+### 🇬🇧 Slide Content:
+```
+📊 VIETNAM TOURISM CONTEXT
 
-### 4.6 Quản lý Điểm tham quan (Provider)
-- **Mô tả**: Nhà cung cấp quản lý điểm tham quan: tạo/sửa/xóa, quản lý đặt vé, xác nhận đơn.
-- **Bảng CSDL liên quan**: `attractions`, `attraction_bookings`, `providers`
+📈 TOURISM REVENUE OVER THE YEARS:
+┌──────────────────────────────────────┐
+│ Year  │ Revenue (trillion VND)│ Growth│
+├───────┼───────────────────────┼───────┤
+│ 2021  │      180.00           │ -42.3%│
+│ 2022  │      495.00           │ +175% │
+│ 2023  │      678.30           │ +37%  │
+│ 2024  │      840.00           │ +23.9%│
+│ 2025  │    1,000.00           │ +19%  │
+└──────────────────────────────────────┘
+
+→ Tourism strongly recovered after COVID
+→ Increasing demand for travel support apps
+
+Source: Vietnam National Administration of Tourism
+```
+
+### 💬 Phần nói:
+"Du lịch Việt Nam đang phục hồi mạnh sau COVID. Năm 2021 chỉ đạt 180 nghìn tỷ do đại dịch, nhưng đến năm 2025 đã đạt 1 triệu tỷ đồng.
+
+Sự tăng trưởng này cho thấy nhu cầu du lịch ngày càng cao, đồng nghĩa với việc cần có các ứng dụng hỗ trợ du khách tốt hơn. Đây là bối cảnh để em thực hiện đồ án này."
 
 ---
 
-## 5. Quản lý Nhà hàng (Restaurant)
+# SLIDE 4: VẤN ĐỀ ĐẶT RA
 
-### 5.1 Xem danh sách Nhà hàng
-- **Mô tả**: Hiển thị danh sách nhà hàng với bộ lọc theo khu vực, loại ẩm thực, chế độ ăn kiêng, mức giá.
-- **Bảng CSDL liên quan**: `restaurants`, `areas`
+### 🇻🇳 Nội dung slide:
+```
+🔴 MỘT SỐ BẤT TIỆN KHI LÊN KẾ HOẠCH DU LỊCH:
 
-### 5.2 Xem chi tiết Nhà hàng
-- **Mô tả**: Hiển thị thông tin chi tiết: menu, giờ mở cửa, loại ẩm thực, chế độ ăn hỗ trợ, vị trí, đánh giá.
-- **Bảng CSDL liên quan**: `restaurants`, `restaurant_reviews`, `restaurant_review_aspects`, `areas`
+❌ PHÂN TÁN THÔNG TIN
+   • Khách sạn: Booking.com, Agoda
+   • Tour: Klook, GetYourGuide
+   • Nhà hàng: Google Maps
+   → Phải dùng nhiều app riêng lẻ
 
-### 5.3 Đặt bàn Nhà hàng
-- **Mô tả**: Cho phép đặt bàn với ngày, giờ, số người.
-- **Bảng CSDL liên quan**: `restaurant_bookings`, `restaurant_payments`, `restaurants`
+❌ GỢI Ý CHƯA PHÙ HỢP
+   • Các app thường gợi ý giống nhau cho mọi người
+   • Chưa dựa trên sở thích cá nhân
 
-### 5.4 Thanh toán Nhà hàng
-- **Mô tả**: Xử lý thanh toán đặt bàn qua ZaloPay hoặc thanh toán tại quầy.
-- **Bảng CSDL liên quan**: `restaurant_payments`, `restaurant_bookings`
+❌ TÌM KIẾM CHƯA THÔNG MINH
+   • Phải filter thủ công nhiều tiêu chí
+   • Chưa hỗ trợ tìm kiếm bằng ngôn ngữ tự nhiên
+```
 
-### 5.5 Đánh giá Nhà hàng
-- **Mô tả**: Cho phép đánh giá với các tiêu chí: đồ ăn, dịch vụ, không gian, giá trị. Hỗ trợ đính kèm hình ảnh.
-- **Bảng CSDL liên quan**: `restaurant_reviews`, `restaurant_review_aspects`
+### 🇬🇧 Slide Content:
+```
+🔴 INCONVENIENCES WHEN PLANNING TRIPS:
 
-### 5.6 Quản lý Nhà hàng (Provider)
-- **Mô tả**: Nhà cung cấp quản lý nhà hàng: tạo/sửa/xóa, quản lý đặt bàn, xác nhận đơn.
-- **Bảng CSDL liên quan**: `restaurants`, `restaurant_bookings`, `providers`
+❌ SCATTERED INFORMATION
+   • Hotels: Booking.com, Agoda
+   • Tours: Klook, GetYourGuide
+   • Restaurants: Google Maps
+   → Need to use multiple separate apps
+
+❌ GENERIC RECOMMENDATIONS
+   • Apps often suggest the same for everyone
+   • Not based on personal preferences
+
+❌ SEARCH NOT SMART ENOUGH
+   • Manual filtering with many criteria
+   • No natural language search support
+```
+
+### 💬 Phần nói:
+"Qua tìm hiểu, em nhận thấy một số bất tiện khi lên kế hoạch du lịch:
+
+Thứ nhất, thông tin bị phân tán - muốn đặt khách sạn dùng Booking, đặt tour dùng Klook, tìm nhà hàng lại dùng Google Maps.
+
+Thứ hai, các gợi ý thường chung chung, giống nhau cho mọi người, chưa dựa vào sở thích cá nhân.
+
+Thứ ba, tìm kiếm còn thủ công, chưa hỗ trợ tìm bằng ngôn ngữ tự nhiên như 'tìm khách sạn gần biển giá rẻ'."
 
 ---
 
-## 6. Tìm kiếm
+# SLIDE 5: MỤC TIÊU ĐỒ ÁN
 
-### 6.1 Tìm kiếm tổng hợp
-- **Mô tả**: Tìm kiếm tất cả loại dịch vụ (tour, khách sạn, điểm tham quan, nhà hàng) theo từ khóa và bộ lọc.
-- **Bảng CSDL liên quan**: `tours`, `hotels`, `attractions`, `restaurants`, `areas`
+### 🇻🇳 Nội dung slide:
+```
+🎯 MỤC TIÊU ĐỒ ÁN - TRIPFINITY:
 
-### 6.2 Tìm kiếm trên bản đồ
-- **Mô tả**: Hiển thị các dịch vụ trên bản đồ Google Maps, cho phép lọc theo loại và khu vực.
-- **Bảng CSDL liên quan**: `tours`, `hotels`, `attractions`, `restaurants`
+✅ XÂY DỰNG ỨNG DỤNG TÍCH HỢP
+   Gộp 4 loại dịch vụ vào 1 app:
+   🏨 Hotel | 🍜 Restaurant | 🏛️ Attraction | 🚌 Tour
 
-### 6.3 Tìm kiếm gần vị trí
-- **Mô tả**: Tìm các dịch vụ gần vị trí hiện tại của người dùng dựa trên tọa độ GPS.
-- **Bảng CSDL liên quan**: `tours`, `hotels`, `attractions`, `restaurants`
+✅ ÁP DỤNG AI GỢI Ý
+   • Gợi ý dịch vụ dựa trên hành vi người dùng
+   • Ưu tiên theo vị trí, giá cả, đặc trưng dịch vụ
 
-### 6.4 Lịch sử tìm kiếm
-- **Mô tả**: Lưu và hiển thị lịch sử tìm kiếm của người dùng để dễ dàng tìm kiếm lại.
-- **Bảng CSDL liên quan**: `search_history`
+✅ XÂY DỰNG CHATBOT HỖ TRỢ
+   • Tìm kiếm dịch vụ bằng ngôn ngữ tự nhiên
+   • Trả lời dựa trên dữ liệu trong hệ thống
+
+📌 PHẠM VI: Đồ án tập trung vào việc nghiên cứu và
+   áp dụng AI vào bài toán gợi ý du lịch
+```
+
+### 🇬🇧 Slide Content:
+```
+🎯 PROJECT OBJECTIVES - TRIPFINITY:
+
+✅ BUILD AN INTEGRATED APPLICATION
+   Combine 4 service types in 1 app:
+   🏨 Hotel | 🍜 Restaurant | 🏛️ Attraction | 🚌 Tour
+
+✅ APPLY AI RECOMMENDATION
+   • Recommend services based on user behavior
+   • Prioritize by location, price, service features
+
+✅ BUILD SUPPORT CHATBOT
+   • Search services using natural language
+   • Respond based on system data
+
+📌 SCOPE: The project focuses on researching and
+   applying AI to tourism recommendation problem
+```
+
+### 💬 Phần nói:
+"Với những vấn đề trên, em đặt ra mục tiêu cho đồ án:
+
+Một là, xây dựng ứng dụng tích hợp 4 loại dịch vụ: Hotel, Restaurant, Attraction và Tour trong 1 app.
+
+Hai là, áp dụng AI để gợi ý dịch vụ dựa trên hành vi người dùng - ưu tiên theo vị trí gần, giá phù hợp, và đặc trưng dịch vụ.
+
+Ba là, xây dựng chatbot hỗ trợ tìm kiếm bằng ngôn ngữ tự nhiên.
+
+Cần lưu ý đây là đồ án tốt nghiệp, em tập trung vào việc nghiên cứu và áp dụng AI vào bài toán gợi ý - chưa phải sản phẩm thương mại hoàn chỉnh."
 
 ---
 
-## 7. Quản lý chuyến đi (Trip)
-
-### 7.1 Tạo chuyến đi
-- **Mô tả**: Cho phép người dùng tạo kế hoạch chuyến đi với tên, ngày bắt đầu/kết thúc, ảnh bìa.
-- **Bảng CSDL liên quan**: `trips`
-
-### 7.2 Quản lý lịch trình
-- **Mô tả**: Thêm các dịch vụ (tour, khách sạn, điểm tham quan, nhà hàng) vào lịch trình theo từng ngày. Sắp xếp thứ tự các hoạt động.
-- **Bảng CSDL liên quan**: `trips`, `trip_itineraries`, `trip_itinerary_items`
-
-### 7.3 Xem danh sách chuyến đi
-- **Mô tả**: Hiển thị danh sách các chuyến đi của người dùng theo trạng thái: đang diễn ra, đã hoàn thành, đã hủy.
-- **Bảng CSDL liên quan**: `trips`
-
-### 7.4 Tải xuống lịch trình
-- **Mô tả**: Xuất lịch trình chuyến đi ra file để lưu trữ hoặc chia sẻ.
-- **Bảng CSDL liên quan**: `trips`, `trip_itineraries`, `itineraries_downloads`
+# ═══════════════════════════════════════════════════════════
+# PHẦN 2: CÔNG NGHỆ SỬ DỤNG (1 SLIDE)
+# ═══════════════════════════════════════════════════════════
 
 ---
 
-## 8. Yêu thích (Favorites)
+# SLIDE 6: CÔNG NGHỆ SỬ DỤNG
 
-### 8.1 Thêm vào yêu thích
-- **Mô tả**: Cho phép người dùng đánh dấu yêu thích các dịch vụ (tour, khách sạn, điểm tham quan, nhà hàng) để xem lại sau.
-- **Bảng CSDL liên quan**: `user_favorites`
+### 🇻🇳 Nội dung slide:
+```
+🛠️ CÔNG NGHỆ XÂY DỰNG HỆ THỐNG:
 
-### 8.2 Xem danh sách yêu thích
-- **Mô tả**: Hiển thị danh sách các dịch vụ đã yêu thích, phân loại theo loại dịch vụ.
-- **Bảng CSDL liên quan**: `user_favorites`, `tours`, `hotels`, `attractions`, `restaurants`
+┌─────────────────────────────────────────────────────┐
+│ 📱 FRONTEND                                         │
+│    • Flutter 3.x - Mobile App (Tourist)             │
+│    • React + TypeScript - Web Portal (Supplier)     │
+├─────────────────────────────────────────────────────┤
+│ 🖥️ BACKEND                                          │
+│    • Spring Boot 3.5 + Java 17 - RESTful API        │
+│    • Python + Flask - AI Server                     │
+├─────────────────────────────────────────────────────┤
+│ 🗄️ DATABASE                                         │
+│    • MySQL 8.0 - 39 tables, chuẩn 3NF               │
+├─────────────────────────────────────────────────────┤
+│ 🤖 AI/ML                                            │
+│    • Two-Tower Model (Recommendation) - TỰ XÂY DỰNG │
+│    • LangChain + Llama 3 70B via Groq (Chatbot RAG) │
+├─────────────────────────────────────────────────────┤
+│ ☁️ THIRD-PARTY INTEGRATIONS                         │
+│    Firebase | ZaloPay | Google Maps | Cloudinary    │
+└─────────────────────────────────────────────────────┘
+```
+
+### 🇬🇧 Slide Content:
+```
+🛠️ TECHNOLOGIES USED:
+
+┌─────────────────────────────────────────────────────┐
+│ 📱 FRONTEND                                         │
+│    • Flutter 3.x - Mobile App (Tourist)             │
+│    • React + TypeScript - Web Portal (Supplier)     │
+├─────────────────────────────────────────────────────┤
+│ 🖥️ BACKEND                                          │
+│    • Spring Boot 3.5 + Java 17 - RESTful API        │
+│    • Python + Flask - AI Server                     │
+├─────────────────────────────────────────────────────┤
+│ 🗄️ DATABASE                                         │
+│    • MySQL 8.0 - 39 tables, 3NF normalized          │
+├─────────────────────────────────────────────────────┤
+│ 🤖 AI/ML                                            │
+│    • Two-Tower Model (Recommendation) - SELF-BUILT  │
+│    • LangChain + Llama 3 70B via Groq (Chatbot RAG) │
+├─────────────────────────────────────────────────────┤
+│ ☁️ THIRD-PARTY INTEGRATIONS                         │
+│    Firebase | ZaloPay | Google Maps | Cloudinary    │
+└─────────────────────────────────────────────────────┘
+```
+
+### 💬 Phần nói:
+"Về công nghệ, Frontend em dùng Flutter cho mobile app vì khả năng cross-platform - 1 codebase chạy Android, iOS, Web. React với TypeScript cho web nhà cung cấp.
+
+Backend là Spring Boot xử lý nghiệp vụ, Python Flask chạy AI Server riêng. Database MySQL với 39 bảng chuẩn 3NF.
+
+Đặc biệt về AI, em TỰ XÂY DỰNG Two-Tower Model cho recommendation - không dùng thư viện có sẵn. Chatbot dùng Llama 3 với 70 tỷ parameters qua Groq API.
+
+Tích hợp Firebase cho Auth và Push Notification, ZaloPay cho thanh toán, Google Maps cho bản đồ, Cloudinary cho media."
 
 ---
 
-## 9. Đánh giá & Phản hồi
-
-### 9.1 Like đánh giá
-- **Mô tả**: Cho phép người dùng like các đánh giá hữu ích.
-- **Bảng CSDL liên quan**: `review_likes`
-
-### 9.2 Trả lời đánh giá
-- **Mô tả**: Cho phép nhà cung cấp trả lời đánh giá của khách hàng.
-- **Bảng CSDL liên quan**: `review_replies`
-
-### 9.3 Báo cáo đánh giá
-- **Mô tả**: Cho phép người dùng báo cáo đánh giá vi phạm.
-- **Bảng CSDL liên quan**: `review_reports`
+# ═══════════════════════════════════════════════════════════
+# PHẦN 3: KIẾN TRÚC HỆ THỐNG (2 SLIDES)
+# ═══════════════════════════════════════════════════════════
 
 ---
 
-## 10. Blog
+# SLIDE 7: KIẾN TRÚC TỔNG QUAN
 
-### 10.1 Xem danh sách bài viết
-- **Mô tả**: Hiển thị danh sách bài viết blog về du lịch từ nhà cung cấp.
-- **Bảng CSDL liên quan**: `blogs`
+### 🇻🇳 Nội dung slide:
+```
+🏗️ KIẾN TRÚC 3 TẦNG (THREE-TIER ARCHITECTURE):
 
-### 10.2 Xem chi tiết bài viết
-- **Mô tả**: Hiển thị nội dung chi tiết bài viết blog.
-- **Bảng CSDL liên quan**: `blogs`
+┌─────────────────────────────────────────────────────────┐
+│                    CLIENT LAYER                          │
+│   ┌─────────────────┐       ┌─────────────────────┐     │
+│   │   Flutter App   │       │    React Web        │     │
+│   │   (Tourist)     │       │    (Supplier)       │     │
+│   │   51 screens    │       │    25+ components   │     │
+│   └────────┬────────┘       └──────────┬──────────┘     │
+└────────────┼───────────────────────────┼────────────────┘
+             │          REST API          │
+             ▼                            ▼
+┌─────────────────────────────────────────────────────────┐
+│                   BACKEND LAYER                          │
+│   ┌─────────────────────────────────────────────────┐   │
+│   │           Spring Boot API Gateway               │   │
+│   │   • JWT Authentication + Spring Security        │   │
+│   │   • 36+ REST API Endpoints                      │   │
+│   │   • Business Logic & Validation                 │   │
+│   └──────────────────────┬──────────────────────────┘   │
+└──────────────────────────┼──────────────────────────────┘
+                           │
+┌──────────────────────────┼──────────────────────────────┐
+│                    DATA LAYER                            │
+│   ┌──────────┐   ┌───────┴───────┐   ┌──────────────┐   │
+│   │  MySQL   │   │  AI Server    │   │ Third-party  │   │
+│   │39 tables │   │  (Python)     │   │  Services    │   │
+│   └──────────┘   └───────────────┘   └──────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
 
-### 10.3 Quản lý Blog (Provider)
-- **Mô tả**: Nhà cung cấp có thể tạo, chỉnh sửa, xóa bài viết blog.
-- **Bảng CSDL liên quan**: `blogs`, `providers`
+### 🇬🇧 Slide Content:
+```
+🏗️ THREE-TIER ARCHITECTURE:
+
+┌─────────────────────────────────────────────────────────┐
+│                    CLIENT LAYER                          │
+│   ┌─────────────────┐       ┌─────────────────────┐     │
+│   │   Flutter App   │       │    React Web        │     │
+│   │   (Tourist)     │       │    (Supplier)       │     │
+│   │   51 screens    │       │    25+ components   │     │
+│   └────────┬────────┘       └──────────┬──────────┘     │
+└────────────┼───────────────────────────┼────────────────┘
+             │          REST API          │
+             ▼                            ▼
+┌─────────────────────────────────────────────────────────┐
+│                   BACKEND LAYER                          │
+│   ┌─────────────────────────────────────────────────┐   │
+│   │           Spring Boot API Gateway               │   │
+│   │   • JWT Authentication + Spring Security        │   │
+│   │   • 36+ REST API Endpoints                      │   │
+│   │   • Business Logic & Validation                 │   │
+│   └──────────────────────┬──────────────────────────┘   │
+└──────────────────────────┼──────────────────────────────┘
+                           │
+┌──────────────────────────┼──────────────────────────────┐
+│                    DATA LAYER                            │
+│   ┌──────────┐   ┌───────┴───────┐   ┌──────────────┐   │
+│   │  MySQL   │   │  AI Server    │   │ Third-party  │   │
+│   │39 tables │   │  (Python)     │   │  Services    │   │
+│   └──────────┘   └───────────────┘   └──────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 💬 Phần nói:
+"Hệ thống theo kiến trúc 3 tầng:
+
+Tầng Client gồm Flutter App với 51 screens cho du khách, và React Web với 25+ components cho nhà cung cấp. Cả hai giao tiếp với backend qua REST API.
+
+Tầng Backend là Spring Boot đóng vai trò API Gateway - xử lý authentication với JWT, có 36+ endpoints, và business logic.
+
+Tầng Data gồm MySQL 39 bảng, AI Server Python chạy độc lập để xử lý recommendation và chatbot, cùng các third-party services."
 
 ---
 
-## 11. Chat & Tin nhắn
+# SLIDE 8: DATABASE SCHEMA
 
-### 11.1 Chat với AI Bot
-- **Mô tả**: Chat với AI chatbot để được hỗ trợ lập kế hoạch du lịch, gợi ý địa điểm, trả lời câu hỏi về dịch vụ.
-- **Bảng CSDL liên quan**: Không (xử lý qua AI model riêng)
+### 🇻🇳 Nội dung slide:
+```
+🗄️ CƠ SỞ DỮ LIỆU: 39 BẢNG - 13 NHÓM THỰC THỂ
 
-### 11.2 Chat với nhà cung cấp
-- **Mô tả**: Cho phép người dùng chat trực tiếp với nhà cung cấp dịch vụ để hỏi thông tin, hỗ trợ đặt chỗ.
-- **Bảng CSDL liên quan**: `conversations`, `conversation_messages`
+┌────────────────────────────────────────────────────────┐
+│ 👤 USER (4 bảng)                                       │
+│    users, user_badges, user_favorites, user_points    │
+├────────────────────────────────────────────────────────┤
+│ 🏨 SERVICES (8 bảng)                                   │
+│    hotels, tours, restaurants, attractions            │
+│    + rooms, tour_schedules, opening_hours...          │
+├────────────────────────────────────────────────────────┤
+│ 📅 BOOKINGS (8 bảng)                                   │
+│    hotel_bookings, tour_bookings, restaurant_bookings │
+│    attraction_bookings + *_payments                   │
+├────────────────────────────────────────────────────────┤
+│ ⭐ REVIEWS (8 bảng)                                    │
+│    *_reviews + *_review_aspects (đánh giá đa khía cạnh)│
+├────────────────────────────────────────────────────────┤
+│ 🤖 AI DATA (2 bảng) ← QUAN TRỌNG                       │
+│    • ai_item_tower: Features chuẩn hóa cho AI         │
+│    • user_item_interactions: Tracking hành vi user    │
+│      (view, click, favorite, book)                    │
+└────────────────────────────────────────────────────────┘
+
+✅ Chuẩn hóa 3NF | Denormalized có chủ đích cho AI
+```
+
+### 🇬🇧 Slide Content:
+```
+🗄️ DATABASE: 39 TABLES - 13 ENTITY GROUPS
+
+┌────────────────────────────────────────────────────────┐
+│ 👤 USER (4 tables)                                     │
+│    users, user_badges, user_favorites, user_points    │
+├────────────────────────────────────────────────────────┤
+│ 🏨 SERVICES (8 tables)                                 │
+│    hotels, tours, restaurants, attractions            │
+│    + rooms, tour_schedules, opening_hours...          │
+├────────────────────────────────────────────────────────┤
+│ 📅 BOOKINGS (8 tables)                                 │
+│    hotel_bookings, tour_bookings, restaurant_bookings │
+│    attraction_bookings + *_payments                   │
+├────────────────────────────────────────────────────────┤
+│ ⭐ REVIEWS (8 tables)                                  │
+│    *_reviews + *_review_aspects (multi-aspect ratings)│
+├────────────────────────────────────────────────────────┤
+│ 🤖 AI DATA (2 tables) ← IMPORTANT                      │
+│    • ai_item_tower: Normalized features for AI        │
+│    • user_item_interactions: User behavior tracking   │
+│      (view, click, favorite, book)                    │
+└────────────────────────────────────────────────────────┘
+
+✅ 3NF Normalized | Intentional denormalization for AI
+```
+
+### 💬 Phần nói:
+"Database có 39 bảng, tổ chức thành 13 nhóm thực thể, chuẩn hóa 3NF.
+
+Điểm đặc biệt là em thiết kế riêng 2 bảng cho AI:
+
+Bảng ai_item_tower lưu features đã chuẩn hóa của tất cả dịch vụ - gộp thông tin từ nhiều bảng vào 1 chỗ để AI query nhanh. Đây là denormalized có chủ đích.
+
+Bảng user_item_interactions tracking 4 loại hành vi: view, click, favorite, book - làm dữ liệu đầu vào real-time cho recommendation system."
 
 ---
 
-## 12. Thông báo
-
-### 12.1 Thông báo đẩy (Push Notification)
-- **Mô tả**: Gửi thông báo đẩy đến thiết bị người dùng về trạng thái đặt chỗ, khuyến mãi, cập nhật từ nhà cung cấp.
-- **Bảng CSDL liên quan**: `notifications`
-
-### 12.2 Xem danh sách thông báo
-- **Mô tả**: Hiển thị danh sách thông báo trong ứng dụng, đánh dấu đã đọc.
-- **Bảng CSDL liên quan**: `notifications`
+# ═══════════════════════════════════════════════════════════
+# PHẦN 4: CÔNG NGHỆ AI (3 SLIDES) ⭐
+# ═══════════════════════════════════════════════════════════
 
 ---
 
-## 13. Điểm thưởng & Huy hiệu
+# SLIDE 9: AI - TWO-TOWER RECOMMENDATION MODEL ⭐
 
-### 13.1 Tích điểm
-- **Mô tả**: Người dùng được tích điểm khi đặt dịch vụ, viết đánh giá, hoàn thành chuyến đi.
-- **Bảng CSDL liên quan**: `points`
+### 🇻🇳 Nội dung slide:
+```
+🏗️ TWO-TOWER MODEL (Real-time Inference - Tự xây dựng)
 
-### 13.2 Huy hiệu thành tích
-- **Mô tả**: Mở khóa huy hiệu khi đạt các mốc thành tích như số lần đặt, số đánh giá, số chuyến đi.
-- **Bảng CSDL liên quan**: `badges`, `user_badges`
+┌─────────────────────┐       ┌─────────────────────┐
+│     USER TOWER      │       │     ITEM TOWER      │
+│  (Query từ DB)      │       │  (Query từ DB)      │
+│                     │       │                     │
+│ Input:              │       │ Input:              │
+│ • User ID           │       │ • 4 loại dịch vụ    │
+│ • 10 interactions   │       │ • Lat/Long, Price   │
+│   gần nhất (LIFO)   │       │ • Service-specific  │
+│                     │       │   features          │
+│ Xử lý:              │       │                     │
+│ • Time-decay weight │       │ Output:             │
+│ • Extract prefs     │       │ Item Candidates     │
+│                     │       │ Matrix              │
+│ Output:             │       │                     │
+│ User Profile        │       │                     │
+└──────────┬──────────┘       └──────────┬──────────┘
+           │                             │
+           └─────────────┬───────────────┘
+                         ▼
+             ┌───────────────────────┐
+             │  MULTI-FACTOR SCORING │
+             │  • Geo: 40%           │
+             │  • Price: 25%         │
+             │  • Features: 35%      │
+             └───────────┬───────────┘
+                         ▼
+                  TOP 10 GỢI Ý
+              (5 Latest + 5 History)
+```
+
+### 🇬🇧 Slide Content:
+```
+🏗️ TWO-TOWER MODEL (Real-time Inference - Self-built)
+
+┌─────────────────────┐       ┌─────────────────────┐
+│     USER TOWER      │       │     ITEM TOWER      │
+│  (Query from DB)    │       │  (Query from DB)    │
+│                     │       │                     │
+│ Input:              │       │ Input:              │
+│ • User ID           │       │ • 4 service types   │
+│ • 10 recent         │       │ • Lat/Long, Price   │
+│   interactions      │       │ • Service-specific  │
+│                     │       │   features          │
+│ Process:            │       │                     │
+│ • Time-decay weight │       │ Output:             │
+│ • Extract prefs     │       │ Item Candidates     │
+│                     │       │ Matrix              │
+│ Output:             │       │                     │
+│ User Profile        │       │                     │
+└──────────┬──────────┘       └──────────┬──────────┘
+           │                             │
+           └─────────────┬───────────────┘
+                         ▼
+             ┌───────────────────────┐
+             │  MULTI-FACTOR SCORING │
+             │  • Geo: 40%           │
+             │  • Price: 25%         │
+             │  • Features: 35%      │
+             └───────────┬───────────┘
+                         ▼
+               TOP 10 RECOMMENDATIONS
+              (5 Latest + 5 History)
+```
+
+### 💬 Phần nói:
+"Đây là phần AI quan trọng nhất. Em tự xây dựng Two-Tower Model từ đầu bằng Python, hoạt động với dữ liệu ĐỘNG real-time - không cần training offline.
+
+USER TOWER query database lấy 10 tương tác gần nhất của user, apply time-decay weight - interaction mới quan trọng hơn, phân tích ra preference về giá, loại dịch vụ yêu thích.
+
+ITEM TOWER load toàn bộ 4 loại dịch vụ từ bảng ai_item_tower.
+
+Hai tower gặp nhau ở Multi-Factor Scoring với 3 tiêu chí: Geo 40% ưu tiên gần nhất, Price 25% khớp ngân sách, Features 35% khớp đặc trưng dịch vụ.
+
+Logic 5+5: 5 items gần vị trí Latest, 5 items gần vị trí trung bình History. Ưu điểm lớn là giải quyết Cold Start - user mới chỉ cần 1 interaction là có gợi ý ngay."
 
 ---
 
-## 14. Công nghệ AI & Machine Learning
+# SLIDE 10: AI - SERVICE-SPECIFIC FEATURES ⭐
 
-### 14.1 Hệ thống Gợi ý AI - Two-Tower Neural Network
-
-#### A. Lý thuyết & Công nghệ
-
-**Two-Tower Architecture** là kiến trúc mạng nơ-ron hiện đại được thiết kế đặc biệt cho hệ thống gợi ý (Recommendation System). Kiến trúc này sử dụng hai mạng nơ-ron độc lập (hai "tháp"):
-
-- **User Tower (Tháp Người dùng)**: Học biểu diễn đặc trưng của người dùng dựa trên hành vi, sở thích, vị trí địa lý và ngân sách.
-- **Item Tower (Tháp Sản phẩm)**: Học biểu diễn đặc trưng của các dịch vụ du lịch (tour, khách sạn, điểm tham quan, nhà hàng).
-
-**Công nghệ sử dụng**:
-- **TensorFlow/Keras**: Framework deep learning để xây dựng và huấn luyện mô hình
-- **Text Vectorization**: Xử lý ngôn ngữ tự nhiên (NLP) để mã hóa mô tả dịch vụ và sở thích người dùng
-- **MinMaxScaler & LabelEncoder**: Chuẩn hóa dữ liệu đầu vào
-- **Embedding Layers**: Chuyển đổi features thành vector đặc trưng
-- **Batch Normalization & Dropout**: Tránh overfitting và cải thiện khả năng tổng quát hóa
-
-#### B. Cách hoạt động
-
-**1. Thu thập dữ liệu hành vi người dùng**:
+### 🇻🇳 Nội dung slide:
 ```
-user_item_interactions bảng lưu trữ:
-- user_id: ID người dùng
-- item_id & item_type: Dịch vụ được tương tác
-- action_type: Loại hành vi (VIEW, CLICK, FAVORITE, BOOK)
-- action_weight: Trọng số (VIEW=1, CLICK=2, FAVORITE=3, BOOK=5)
-- interaction_timestamp: Thời gian tương tác
-```
+🎯 ĐẶC TRƯNG RIÊNG 4 LOẠI DỊCH VỤ (Content-Based Filtering):
 
-**2. Xây dựng User Profile**:
-- Tính trung bình vị trí địa lý (latitude, longitude) của các dịch vụ người dùng đã tương tác
-- Tính trung bình giá (có trọng số theo action_weight) → Phản ánh ngân sách
-- Tổng hợp văn bản đặc trưng từ các dịch vụ → Phản ánh sở thích về loại hình, tiện nghi
+┌─────────────────────────────────────────────────────────┐
+│ 🏨 HOTEL                                                │
+│    • amenities_json: WiFi, Pool, Spa, Gym, Parking...  │
+│    • property_type: Hotel, Resort, Villa, Homestay     │
+│    • star_rating: 1-5 sao (cấp sao khách sạn)          │
+├─────────────────────────────────────────────────────────┤
+│ 🍜 RESTAURANT                                           │
+│    • cuisines_json: Vietnamese, Japanese, Italian...   │
+│    • diets_json: Vegetarian, Vegan, Halal, Gluten-free │
+│    • categories_json: Fine Dining, Street Food, Cafe   │
+├─────────────────────────────────────────────────────────┤
+│ 🏛️ ATTRACTION                                          │
+│    • attraction_type: Museum, Temple, Park, Beach...   │
+│    • suitable_for_json: Family, Couples, Solo, Kids    │
+│    • categories_json: Cultural, Nature, Entertainment  │
+├─────────────────────────────────────────────────────────┤
+│ 🚌 TOUR                                                 │
+│    • tour_type: Group, Private, Custom                 │
+│    • difficulty_level: Easy, Moderate, Hard            │
+│    • categories_json: Adventure, Cultural, Nature      │
+└─────────────────────────────────────────────────────────┘
 
-**3. Feature Engineering**:
-
-**User Features**:
-- `u_lat`, `u_lon`: Vị trí trung tâm sở thích (chuẩn hóa MinMax)
-- `u_price`: Mức giá trung bình yêu thích (log-transform + chuẩn hóa)
-- `u_text`: Vector hóa văn bản sở thích (TextVectorization → Embedding)
-
-**Item Features**:
-- `item_lat`, `item_lon`: Vị trí địa lý dịch vụ
-- `item_price`: Giá dịch vụ (log-transform + chuẩn hóa)
-- `item_type`: Loại dịch vụ (LabelEncoder → Embedding)
-- `item_text`: Mô tả dịch vụ (normalized_features → Embedding)
-
-**4. Kiến trúc mạng nơ-ron**:
-
-```
-USER TOWER:
-Input → [lat, lon, price, text_embedding]
-  ↓
-Dense(128) + ReLU + BatchNorm + Dropout(0.3)
-  ↓
-Dense(64) + ReLU
-  ↓
-Dense(32) → User Embedding Vector
-
-ITEM TOWER:
-Input → [lat, lon, price, type_embedding, text_embedding]
-  ↓
-Dense(128) + ReLU + BatchNorm + Dropout(0.3)
-  ↓
-Dense(64) + ReLU
-  ↓
-Dense(32) → Item Embedding Vector
-
-MATCHING:
-Dot Product(User Vector, Item Vector) + Normalize
-  ↓
-Sigmoid → Probability Score (0-1)
+→ Jaccard Similarity để match features giữa user prefs & items
 ```
 
-**5. Training Process**:
-- **Dataset**: Tạo cặp Positive (đã tương tác) và Negative Samples (tỉ lệ 1:3)
-- **Loss Function**: Binary Crossentropy
-- **Class Weighting**: Cân bằng positive/negative samples
-- **Optimizer**: Adam (learning rate = 0.001)
-- **Evaluation Metrics**: Accuracy, AUC-ROC, Log Loss
-
-**6. Inference (Dự đoán)**:
-
-Khi người dùng vào app:
+### 🇬🇧 Slide Content:
 ```
-1. Load User Profile (từ database hoặc file artifacts)
-2. Tính Score cho TẤT CẢ items trong hệ thống
-   Score = Model.predict([user_features, item_features])
-3. Tính khoảng cách địa lý (Haversine formula)
-4. Ưu tiên items trong bán kính 15km
-5. Sắp xếp theo Score giảm dần
-6. Trả về Top 10-15 gợi ý
-```
+🎯 SERVICE-SPECIFIC FEATURES (Content-Based Filtering):
 
-#### C. Ứng dụng trong Project
+┌─────────────────────────────────────────────────────────┐
+│ 🏨 HOTEL                                                │
+│    • amenities_json: WiFi, Pool, Spa, Gym, Parking...  │
+│    • property_type: Hotel, Resort, Villa, Homestay     │
+│    • star_rating: 1-5 stars (hotel class)              │
+├─────────────────────────────────────────────────────────┤
+│ 🍜 RESTAURANT                                           │
+│    • cuisines_json: Vietnamese, Japanese, Italian...   │
+│    • diets_json: Vegetarian, Vegan, Halal, Gluten-free │
+│    • categories_json: Fine Dining, Street Food, Cafe   │
+├─────────────────────────────────────────────────────────┤
+│ 🏛️ ATTRACTION                                          │
+│    • attraction_type: Museum, Temple, Park, Beach...   │
+│    • suitable_for_json: Family, Couples, Solo, Kids    │
+│    • categories_json: Cultural, Nature, Entertainment  │
+├─────────────────────────────────────────────────────────┤
+│ 🚌 TOUR                                                 │
+│    • tour_type: Group, Private, Custom                 │
+│    • difficulty_level: Easy, Moderate, Hard            │
+│    • categories_json: Adventure, Cultural, Nature      │
+└─────────────────────────────────────────────────────────┘
 
-**1. Gợi ý cá nhân hóa trên Home Screen**:
-- Hiển thị 10 dịch vụ phù hợp nhất với sở thích người dùng
-- Cập nhật real-time khi người dùng có hành vi mới
-
-**2. Cold Start Problem (Người dùng mới)**:
-- **Offline Model**: User mới không có trong file artifacts → Gợi ý mặc định theo vị trí (Đà Nẵng)
-- **Real-time Model**: Sau khi có 1-2 tương tác → Ngay lập tức tính toán profile từ database → Gợi ý dựa trên hành vi thực tế
-
-**3. API Server** (`server_model_ai.py`):
-```
-GET /api/recommendations/<user_id>
-
-Response:
-{
-  "success": true,
-  "status": "⚡ REAL-TIME (5 hành động)",
-  "description": "User chưa train, gợi ý dựa trên DB mới nhất",
-  "data": [
-    {
-      "item_id": 123,
-      "title": "Vinpearl Nha Trang",
-      "item_type": "hotel",
-      "price_fmt": "1,500,000 đ",
-      "dist_km": 2.5,
-      "score": 0.92
-    },
-    ...
-  ]
-}
+→ Jaccard Similarity to match features between user prefs & items
 ```
 
-**4. Kết quả đạt được**:
-- **Accuracy**: ~85-90% (trên tập test)
-- **AUC Score**: ~0.88-0.92
-- **Overfitting Control**: Val Loss ≈ Train Loss (model tổng quát tốt)
-- **Latency**: < 200ms cho 1 request (dự đoán 5000+ items)
+### 💬 Phần nói:
+"Điểm độc đáo của model là xử lý đặc trưng riêng cho từng loại dịch vụ - không phải one-size-fits-all.
 
-#### D. File & Model Artifacts
+Hotel match theo amenities như WiFi, hồ bơi, spa; property type và số sao.
 
-**File huấn luyện**: `Train_Model_AI.ipynb`
-- Cell 1-2: Import libraries & Load data
-- Cell 3-4: Feature Engineering & User Profile generation
-- Cell 5: Data Preprocessing (Scaler, Encoder, Vectorizer)
-- Cell 6: Build Two-Tower Model Architecture
-- Cell 7: Train & Evaluate (Split 80/20)
-- Cell 8: Retrain on 100% data
-- Cell 9: Export Model & Artifacts
+Restaurant match theo cuisine - ẩm thực Việt, Nhật, Ý; và diet - chay, vegan, halal.
 
-**Output files**:
-- `tripfinity_recsys_model.keras`: Trained model (cấu trúc + trọng số)
-- `recsys_artifacts.pkl`: Scalers, Encoders, Vocabulary, User Profiles dictionary
+Attraction match theo loại điểm đến và phù hợp với đối tượng nào - gia đình, cặp đôi, solo.
+
+Tour match theo loại tour và độ khó.
+
+Em dùng Jaccard Similarity để so sánh độ khớp giữa preference của user và features của item. Nếu user hay xem khách sạn 5 sao có hồ bơi và spa, model sẽ gợi ý các khách sạn tương tự."
 
 ---
 
-### 14.2 AI Chatbot - RAG System (Retrieval-Augmented Generation)
+# SLIDE 11: AI - RAG CHATBOT (TripBOT) ⭐
 
-#### A. Lý thuyết & Công nghệ
-
-**RAG (Retrieval-Augmented Generation)** là kỹ thuật kết hợp:
-1. **Retrieval**: Tìm kiếm thông tin liên quan từ cơ sở dữ liệu
-2. **Generation**: Sử dụng LLM (Large Language Model) để sinh câu trả lời tự nhiên
-
-**Công nghệ sử dụng**:
-- **Groq AI + Llama 3**: LLM API mạnh mẽ, tốc độ inference nhanh (8000+ tokens/s)
-- **LangChain**: Framework orchestration cho LLM workflows
-- **Pandas**: Xử lý và tìm kiếm dữ liệu
-- **Unidecode**: Xử lý tiếng Việt không dấu
-- **FastAPI**: REST API server
-- **Ngrok**: Tunnel để expose local server
-
-#### B. Cách hoạt động
-
-**1. Data Indexing**:
+### 🇻🇳 Nội dung slide:
 ```
-Load CSV: ai_item_tower_export_20251217_181044.csv
-  ↓
-Preprocessing:
-- Chuẩn hóa địa danh (lower case, remove accents)
-- Parse amenities & highlights IDs
-- Parse normalized_features (JSON → text)
-  ↓
-Create searchable index với:
-- location_lower: Tên tỉnh thành (chữ thường có dấu)
-- location_no_accent: Tên tỉnh thành không dấu
-- amenities_text: Mô tả tiện nghi
-- highlights_text: Mô tả điểm nổi bật
-- feature_text: Đặc điểm dịch vụ
+🤖 TRIPBOT - RAG + LLAMA 3 (70B Parameters)
+
+User: "Tìm khách sạn 5 sao ở Đà Nẵng có hồ bơi"
+                    │
+                    ▼
+┌───────────────────────────────────────────────────┐
+│ 1. QUERY CLASSIFICATION (Phân loại câu hỏi)       │
+│    → greeting | service | general_travel | off_topic│
+└────────────────────────┬──────────────────────────┘
+                         ▼
+┌───────────────────────────────────────────────────┐
+│ 2. RETRIEVAL (Tìm kiếm trong DB Tripfinity)       │
+│    → Parse: location="Đà Nẵng", star=5, pool=true │
+│    → SQL Query → Return top relevant items        │
+└────────────────────────┬──────────────────────────┘
+                         ▼
+┌───────────────────────────────────────────────────┐
+│ 3. AUGMENTED GENERATION (Sinh câu trả lời)        │
+│    → Context: Retrieved items + Conversation history│
+│    → Llama 3 via Groq API → Natural response      │
+└────────────────────────┬──────────────────────────┘
+                         ▼
+"Tôi tìm thấy 5 khách sạn 5 sao có hồ bơi tại Đà Nẵng:
+ 1. InterContinental... 2. Furama Resort..."
+ + [Clickable Service Cards in App]
+
+🌐 8 ngôn ngữ | 🇻🇳 Hiểu tiếng Việt không dấu | 🧠 Context Memory
 ```
 
-**2. Query Understanding & Retrieval**:
+### 🇬🇧 Slide Content:
+```
+🤖 TRIPBOT - RAG + LLAMA 3 (70B Parameters)
 
-**Bước 1 - Phân tích câu hỏi người dùng**:
-```python
-User: "Tìm khách sạn có hồ bơi vô cực ở Nha Trang giá dưới 2 triệu"
+User: "Find 5-star hotel in Da Nang with pool"
+                    │
+                    ▼
+┌───────────────────────────────────────────────────┐
+│ 1. QUERY CLASSIFICATION                           │
+│    → greeting | service | general_travel | off_topic│
+└────────────────────────┬──────────────────────────┘
+                         ▼
+┌───────────────────────────────────────────────────┐
+│ 2. RETRIEVAL (Search Tripfinity Database)         │
+│    → Parse: location="Da Nang", star=5, pool=true │
+│    → SQL Query → Return top relevant items        │
+└────────────────────────┬──────────────────────────┘
+                         ▼
+┌───────────────────────────────────────────────────┐
+│ 3. AUGMENTED GENERATION                           │
+│    → Context: Retrieved items + Conversation history│
+│    → Llama 3 via Groq API → Natural response      │
+└────────────────────────┬──────────────────────────┘
+                         ▼
+"I found 5 five-star hotels with pool in Da Nang:
+ 1. InterContinental... 2. Furama Resort..."
+ + [Clickable Service Cards in App]
 
-Parsing:
-- Location: "Nha Trang" (so khớp location_no_accent)
-- Item Type: "hotel" (từ "khách sạn")
-- Amenities: [12] (hồ bơi vô cực)
-- Price: max_price = 2,000,000
+🌐 8 languages | 🇻🇳 Understands Vietnamese without diacritics | 🧠 Context Memory
 ```
 
-**Bước 2 - Multi-level Filtering**:
+### 💬 Phần nói:
+"Module AI thứ hai là TripBOT sử dụng RAG - Retrieval-Augmented Generation - với Llama 3 model 70 tỷ parameters qua Groq API.
+
+Flow: User hỏi 'Tìm khách sạn 5 sao ở Đà Nẵng có hồ bơi'.
+
+Bước 1: Phân loại câu hỏi - đây là service query cần tìm dịch vụ.
+
+Bước 2: Retrieval - parse ra location Đà Nẵng, star 5, amenity pool - rồi query database Tripfinity.
+
+Bước 3: Generation - đưa kết quả tìm được vào context cùng với lịch sử hội thoại cho Llama 3 sinh câu trả lời tự nhiên.
+
+Điểm mạnh là chatbot không bịa đặt - đưa ra dịch vụ thực trong database, user click xem và đặt luôn. Hỗ trợ 8 ngôn ngữ và hiểu cả tiếng Việt không dấu như 'khach san da nang'."
+
+---
+
+# ═══════════════════════════════════════════════════════════
+# PHẦN 5: KẾT LUẬN & DEMO (3 SLIDES)
+# ═══════════════════════════════════════════════════════════
+
+---
+
+# SLIDE 12: DEMO ỨNG DỤNG
+
+### 🇻🇳 Nội dung slide:
 ```
-Filter 1: Location matching (exact or contains)
-  ↓
-Filter 2: Item type (hotel/tour/restaurant/attraction)
-  ↓
-Filter 3: Amenities/Highlights (AMENITIES_MAP + HIGHLIGHTS_MAP)
-  ↓
-Filter 4: Features (FEATURE_KEYWORDS mapping)
-  ↓
-Filter 5: Price range
-  ↓
-Filter 6: Special queries (mùa, đối tượng, ngân sách)
-```
+🎬 KỊCH BẢN DEMO (3 phút):
 
-**3. Context Injection**:
-```
-Tạo Context từ kết quả tìm kiếm:
-------------------------------------
-Có {n} kết quả phù hợp tại {location}:
+1️⃣ HOME SCREEN - AI Recommendations (45s)
+   • Xem widget "Gợi ý cho bạn"
+   • Có reason giải thích: "Gần bạn 2km", "Tiện ích phù hợp"
 
-1. {title} - {item_type}
-   Giá: {price} | Vị trí: {location}
-   Tiện nghi: {amenities}
-   Đặc điểm: {features}
+2️⃣ TÌM KIẾM + XEM CHI TIẾT (45s)
+   • Search Hotel với filter
+   • Map view, Reviews, Amenities
 
-2. ...
-------------------------------------
-```
+3️⃣ CHAT VỚI TRIPBOT (1 phút) ⭐
+   • "Tìm tour Đà Nẵng cho gia đình"
+   • "Khách sạn 5 sao có hồ bơi"
+   • Click vào kết quả → xem chi tiết
 
-**4. LLM Prompting**:
-```
-System Prompt:
-"Bạn là Tripfinity AI - trợ lý du lịch Việt Nam chuyên nghiệp.
-Nhiệm vụ: Tư vấn dựa trên dữ liệu CONTEXT được cung cấp.
-Phong cách: Thân thiện, nhiệt tình, ngắn gọn, có emoji.
-Quy tắc:
-- Chỉ gợi ý dịch vụ CÓ TRONG CONTEXT
-- Format: Tên | Giá | Điểm nổi bật
-- Không bịa đặt thông tin
-- Nếu không có kết quả → Gợi ý mở rộng tìm kiếm"
+4️⃣ BOOKING + PAYMENT (30s)
+   • Chọn phòng, ngày
+   • Thanh toán ZaloPay
 
-User Prompt:
-"CONTEXT: {retrieved_data}
-USER QUESTION: {user_query}
-→ Hãy trả lời câu hỏi dựa trên CONTEXT."
-```
-
-**5. Response Generation**:
-```
-LLM Output:
-"🏨 Mình tìm thấy 3 khách sạn tuyệt vời ở Nha Trang cho bạn:
-
-✨ Vinpearl Resort & Spa
-💰 Giá: 1,800,000đ/đêm
-🌟 Hồ bơi vô cực view biển, Spa cao cấp, Bãi biển riêng
-
-✨ Sunrise Nha Trang Beach Hotel
-💰 Giá: 1,200,000đ/đêm
-🌟 Hồ bơi rooftop, Gần trung tâm, Ăn sáng buffet
-
-Bạn thích khách sạn nào nhỉ? 😊"
+📹 ĐÃ CÓ VIDEO BACKUP NẾU DEMO LỖI
 ```
 
-#### C. Các tính năng đặc biệt
+### 🇬🇧 Slide Content:
+```
+🎬 DEMO SCENARIO (3 minutes):
 
-**1. Xử lý tiếng Việt thông minh**:
-- Hỗ trợ tìm kiếm CÓ DẤU và KHÔNG DẤU
-- Ví dụ: "nha trang" = "Nha Trang" = "nha tràng" (typo tolerance)
+1️⃣ HOME SCREEN - AI Recommendations (45s)
+   • View "Recommended for you" widget
+   • Reason explanation: "Near you 2km", "Matching amenities"
 
-**2. Semantic Mapping**:
-- `AMENITIES_MAP`: 35 tiện nghi khách sạn
-- `HIGHLIGHTS_MAP`: 30 điểm nổi bật
-- `FEATURE_KEYWORDS`: 50+ từ khóa features
-- `AMENITY_KEYWORDS`: 200+ từ đồng nghĩa
+2️⃣ SEARCH + VIEW DETAILS (45s)
+   • Search Hotel with filters
+   • Map view, Reviews, Amenities
 
-**3. Multi-turn Conversation**:
-```python
-ConversationBufferMemory: Lưu lịch sử 5 câu gần nhất
-→ Chatbot nhớ context câu hỏi trước
-→ User: "Còn khách sạn nào khác không?"
-   Bot: (Nhớ đang nói về Nha Trang + Hotel)
+3️⃣ CHAT WITH TRIPBOT (1 min) ⭐
+   • "Find tour in Da Nang for family"
+   • "5-star hotel with pool"
+   • Click result → view details
+
+4️⃣ BOOKING + PAYMENT (30s)
+   • Select room, dates
+   • Pay with ZaloPay
+
+📹 VIDEO BACKUP AVAILABLE IF DEMO FAILS
 ```
 
-**4. Price Intelligence**:
-```
-Tự động parse giá từ câu hỏi:
-"dưới 2 triệu" → max_price = 2,000,000
-"từ 500k đến 1 triệu" → min=500,000, max=1,000,000
-"khoảng 1tr5" → around 1,500,000
-```
+### 💬 Phần nói:
+*(Demo thực tế, nói ngắn gọn theo từng bước)*
 
-**5. Fallback Strategies**:
+**Khi demo lỗi:** "Do kết nối mạng, em xin phép chiếu video backup đã chuẩn bị."
+
+---
+
+# SLIDE 13: KẾT QUẢ ĐẠT ĐƯỢC
+
+### 🇻🇳 Nội dung slide:
 ```
-Không tìm thấy kết quả?
-→ Gợi ý mở rộng:
-  - Tăng bán kính tìm kiếm
-  - Bỏ bớt điều kiện lọc
-  - Gợi ý địa điểm tương tự
-```
+✅ KẾT QUẢ ĐẠT ĐƯỢC:
 
-#### D. Ứng dụng trong Project
+📱 MOBILE APP (Flutter):
+   • 51 screens hoàn chỉnh
+   • Cross-platform: Android, iOS, Web
 
-**1. Chat Help Bot Screen** (`chat_help_bot_screen`):
-- User nhập câu hỏi tự do bằng tiếng Việt
-- Chatbot phân tích → Tìm kiếm → Trả lời tự nhiên
-- Hỗ trợ lập kế hoạch, tư vấn địa điểm, so sánh giá
+🖥️ WEB SUPPLIER (React + TypeScript):
+   • Full CRUD cho 4 loại dịch vụ
+   • Dashboard thống kê
 
-**2. API Endpoint** (`chatbot_tripfinity.py`):
-```
-POST /chat
-Body: {
-  "user_id": "123",
-  "message": "Gợi ý tour phiêu lưu ở Đà Lạt"
-}
+🤖 AI MODULES:
+   • Two-Tower: Real-time inference < 500ms
+   • Chatbot: 8 ngôn ngữ, hiểu tiếng Việt không dấu
+   • Giải quyết Cold Start Problem
 
-Response: {
-  "success": true,
-  "reply": "🏔️ Đà Lạt có những tour phiêu lưu siêu cool này...",
-  "suggestions": ["Tour Canyoning", "Trekking Langbiang"]
-}
+🖥️ BACKEND:
+   • 36+ REST API endpoints
+   • 39 tables database (3NF)
+
+💳 TÍCH HỢP:
+   • ZaloPay Payment ✓
+   • Firebase Auth + FCM ✓
+   • Google Maps ✓
+   • Cloudinary ✓
 ```
 
-**3. Use Cases thực tế**:
-- "Tìm nhà hàng hải sản gần bãi biển Mỹ Khê"
-- "Khách sạn 5 sao có spa ở Phú Quốc cho tuần trăng mật"
-- "Tour 1 ngày ở Hội An giá rẻ có đưa đón"
-- "Điểm tham quan phù hợp cho gia đình có trẻ nhỏ"
-
-**4. Độ chính xác**:
-- Location Matching: ~95% (nhờ unidecode + fuzzy matching)
-- Amenities/Features Extraction: ~90%
-- Contextual Understanding: ~85% (nhờ LLM reasoning)
-- Response Quality: 4.2/5 (dựa trên user feedback)
-
-#### E. File Implementation
-
-**File chính**: `chatbot_tripfinity.py` (1018 lines)
-- **Lines 1-100**: Import, config, load data
-- **Lines 100-250**: Keyword dictionaries (AMENITIES, FEATURES, SPECIAL_QUERIES)
-- **Lines 250-600**: Retrieval functions (location matching, filtering)
-- **Lines 600-800**: LLM integration (Groq + LangChain)
-- **Lines 800-1000**: FastAPI endpoints + conversation memory
-- **Lines 1000+**: Server startup + Ngrok tunnel
-
-**Dependencies**:
+### 🇬🇧 Slide Content:
 ```
-langchain-groq: LLM provider
-langchain: Framework
-pandas: Data processing
-unidecode: Vietnamese processing
-fastapi: API server
-pyngrok: Tunneling
+✅ ACHIEVEMENTS:
+
+📱 MOBILE APP (Flutter):
+   • 51 complete screens
+   • Cross-platform: Android, iOS, Web
+
+🖥️ WEB SUPPLIER (React + TypeScript):
+   • Full CRUD for 4 service types
+   • Statistics dashboard
+
+🤖 AI MODULES:
+   • Two-Tower: Real-time inference < 500ms
+   • Chatbot: 8 languages, understands Vietnamese without diacritics
+   • Cold Start Problem solved
+
+🖥️ BACKEND:
+   • 36+ REST API endpoints
+   • 39 database tables (3NF)
+
+💳 INTEGRATIONS:
+   • ZaloPay Payment ✓
+   • Firebase Auth + FCM ✓
+   • Google Maps ✓
+   • Cloudinary ✓
+```
+
+### 💬 Phần nói:
+"Tổng kết kết quả: 
+
+Mobile app 51 screens chạy đa nền tảng. Web supplier với full CRUD cho 4 loại dịch vụ.
+
+AI Recommendation real-time với response dưới 500ms, giải quyết Cold Start Problem. Chatbot hỗ trợ 8 ngôn ngữ.
+
+Backend 36+ APIs với 39 bảng chuẩn 3NF.
+
+Tích hợp thành công ZaloPay, Firebase, Google Maps, Cloudinary."
+
+---
+
+# SLIDE 14: HẠN CHẾ & CẢM ƠN
+
+### 🇻🇳 Nội dung slide:
+```
+⚠️ HẠN CHẾ:
+• Chưa deploy production (đang chạy localhost + ngrok)
+• Chưa có benchmark AI chính thức
+• Chưa tích hợp nguồn dữ liệu booking thực
+
+🚀 HƯỚNG PHÁT TRIỂN:
+• Deploy cloud (AWS/GCP) với CI/CD
+• A/B Testing để optimize trọng số AI
+• Tích hợp thêm VNPay, Momo
+• Multi-modal search (voice, image)
+
+═══════════════════════════════════════════════════
+
+🙏 XIN CHÂN THÀNH CẢM ƠN
+
+GVHD: ThS. Nguyễn Ngọc Huyền Trân
+      KS. Từ Tấn Hoàng Sơn
+
+Hội đồng chấm thi | Gia đình và bạn bè
+
+💬 KÍNH MỜI HỘI ĐỒNG ĐẶT CÂU HỎI
+```
+
+### 🇬🇧 Slide Content:
+```
+⚠️ LIMITATIONS:
+• Not yet deployed to production (localhost + ngrok)
+• No formal AI benchmark
+• Not integrated with real booking data sources
+
+🚀 FUTURE DEVELOPMENT:
+• Deploy to cloud (AWS/GCP) with CI/CD
+• A/B Testing to optimize AI weights
+• Integrate VNPay, Momo payment
+• Multi-modal search (voice, image)
+
+═══════════════════════════════════════════════════
+
+🙏 THANK YOU
+
+Supervisors: MSc. Nguyen Ngoc Huyen Tran
+             Eng. Tu Tan Hoang Son
+
+Examination Committee | Family and Friends
+
+💬 Q&A SESSION
+```
+
+### 💬 Phần nói:
+"Em xin thẳng thắn nêu hạn chế: Hệ thống chưa deploy production, đang chạy localhost với ngrok. Chưa có benchmark AI chính thức vì model là real-time inference.
+
+Hướng phát triển: Deploy lên cloud, A/B Testing để optimize trọng số, tích hợp thêm cổng thanh toán.
+
+Em xin chân thành cảm ơn Thầy Cô hướng dẫn và Hội đồng. Kính mời Hội đồng đặt câu hỏi."
+
+---
+
+# 📝 CÂU HỎI HỘI ĐỒNG CÓ THỂ HỎI
+
+## Q1: "Tại sao chọn Two-Tower mà không dùng Collaborative Filtering?"
+
+**Trả lời:**
+"Dạ Collaborative Filtering truyền thống gặp Cold Start Problem - user mới không có lịch sử thì không thể gợi ý. Two-Tower của em kết hợp Content-Based với Location-Based, chỉ cần user xem 1 dịch vụ là gợi ý được ngay. Model hoạt động với dữ liệu động real-time từ database, không cần training offline."
+
+## Q2: "RAG khác gì chatbot thông thường?"
+
+**Trả lời:**
+"Dạ chatbot thường chỉ dựa vào knowledge của LLM đã train sẵn - có thể trả lời sai hoặc bịa đặt. RAG trước tiên tìm thông tin từ database Tripfinity, sau đó đưa vào context cho LLM sinh câu trả lời. Nhờ vậy chatbot đưa ra dịch vụ thực với giá cả, địa chỉ chính xác - user click và đặt luôn được."
+
+## Q3: "Model AI đánh giá performance bằng gì?"
+
+**Trả lời:**
+"Dạ model Two-Tower là real-time inference, hoạt động với dữ liệu động nên không có metrics offline như Accuracy, Precision. Em đánh giá theo: Response time dưới 500ms, Relevance thực tế qua test manual, Cold Start handling với user mới. Hướng phát triển sẽ setup A/B Testing để đo Click-Through Rate."
+
+## Q4: "Database có chuẩn hóa không?"
+
+**Trả lời:**
+"Dạ database chuẩn 3NF. Ví dụ tách review_aspects riêng để đánh giá từng khía cạnh, tách payments khỏi bookings. Đặc biệt bảng ai_item_tower là denormalized có chủ đích - aggregate features để AI query nhanh hơn."
+
+## Q5: "Bảo mật hệ thống như thế nào?"
+
+**Trả lời:**
+"Dạ em dùng JWT token với expiration, Spring Security role-based access control, BCrypt hash password, Firebase Auth hỗ trợ Google OAuth, ZaloPay có HMAC signature verify mỗi transaction."
+
+## Q6: "Groq API là gì? Tại sao không tự host Llama?"
+
+**Trả lời:**
+"Dạ Groq là inference platform tối ưu cho LLM với latency cực thấp nhờ custom LPU hardware. Llama 70B cần GPU VRAM 140GB+, chi phí cao. Groq có free tier đủ cho prototype và latency nhanh đạt real-time chat. Production có thể chuyển sang self-host hoặc provider khác."
+
+## Q7: "User interaction tracking hoạt động như thế nào?"
+
+**Trả lời:**
+"Dạ em tracking 4 loại: VIEW (xem detail), CLICK (từ recommendation), FAVORITE (save wishlist), BOOK (đặt dịch vụ) - với weight khác nhau. Mỗi interaction ghi vào database với timestamp, AI model lấy 10 interactions gần nhất với time-decay weight để build user preference."
+
+---
+
+# ⏱️ PHÂN BỔ THỜI GIAN (10 phút)
+
+| Phần | Slides | Nội dung | Thời gian |
+|------|--------|----------|-----------|
+| - | 1-2 | Mở đầu + Mục lục | 45s |
+| 1 | 3-5 | Bối cảnh & Đặt vấn đề | 2.5 phút |
+| 2 | 6 | Công nghệ sử dụng | 45s |
+| 3 | 7-8 | Kiến trúc hệ thống | 1.5 phút |
+| 4 | 9-11 | **Công nghệ AI** ⭐ | **2.5 phút** |
+| 5 | 12-14 | **Kết luận & Demo** | **3 phút** |
+
+**Tổng: ~10-11 phút**
+
+---
+
+# 💡 MẸO THUYẾT TRÌNH
+
+1. **Nhìn vào mắt giám khảo** khi nói, KHÔNG đọc slide
+2. **Slide AI (9-11) là điểm nhấn** - nói chậm, rõ ràng
+3. **Khi demo lỗi** → Bình tĩnh chuyển video backup
+4. **Thừa nhận hạn chế** = Điểm cộng
+5. **Gặp câu hỏi không biết** → "Em chưa nghiên cứu sâu phần này, xin phép tìm hiểu thêm"
+
+---
+
+# 📊 THỐNG KÊ DỰ ÁN
+
+```
+FLUTTER MOBILE APP: 51 screens, ~100+ Dart files
+REACT WEB SUPPLIER: 25+ components, ~80+ TS files
+SPRING BOOT BACKEND: 36 controllers, 38 entities, ~150+ Java files
+PYTHON AI SERVER: ~2,500+ lines (Two-Tower + Chatbot)
+DATABASE: 39 tables, 13 entity groups, 3NF
+
+4 LOẠI DỊCH VỤ:
+🏨 Hotel    🍜 Restaurant    🏛️ Attraction    🚌 Tour
+
+THIRD-PARTY:
+Firebase | Google Maps | ZaloPay | Cloudinary | Groq API
 ```
 
 ---
 
-### 14.3 Tích hợp AI vào Flutter App
-
-**1. Recommendation Widget** (`home_screen`):
-```dart
-FutureBuilder(
-  future: AIService.getRecommendations(userId),
-  builder: (context, snapshot) {
-    return ListView.builder(
-      itemBuilder: (context, index) {
-        return ServiceCard(
-          item: snapshot.data[index],
-          score: snapshot.data[index]['score'],
-        );
-      },
-    );
-  },
-)
-```
-
-**2. Chat Interface** (`chat_help_bot_screen`):
-```dart
-onSendMessage(String message) async {
-  final response = await ChatbotService.sendMessage(
-    userId: currentUser.id,
-    message: message,
-  );
-  
-  setState(() {
-    messages.add(ChatMessage(
-      text: response.reply,
-      isUser: false,
-    ));
-  });
-}
-```
-
-**3. Tracking User Interactions**:
-```dart
-onServiceView(String itemId, String itemType) {
-  AIService.trackInteraction(
-    userId: currentUser.id,
-    itemId: itemId,
-    itemType: itemType,
-    actionType: 'VIEW',
-  );
-}
-```
-
----
-
-### 14.4 Theo dõi & Cải thiện Model
-
-**1. Theo dõi hành vi người dùng**:
-- **Mô tả**: Ghi nhận các hành vi của người dùng (xem, click, yêu thích, đặt) vào bảng `user_item_interactions`
-- **Mục đích**: Thu thập training data liên tục để retrain model
-- **Bảng CSDL liên quan**: `user_item_interactions`
-
-**2. A/B Testing**:
-- So sánh hiệu quả giữa AI recommendations vs Random/Popular items
-- Metrics: CTR (Click-through Rate), Conversion Rate, User Satisfaction
-
-**3. Model Retraining Pipeline**:
-```
-Weekly:
-1. Export new interactions từ database
-2. Merge với dataset cũ
-3. Retrain Two-Tower model
-4. Evaluate metrics (Accuracy, AUC)
-5. Deploy nếu cải thiện > 2%
-```
-
-**4. Monitoring Dashboard**:
-- Số lượng interactions/ngày
-- API latency (p50, p95, p99)
-- Model accuracy trên production data
-- User feedback score
-
----
-
-## 15. Thanh toán
-
-### 15.1 Thanh toán ZaloPay
-- **Mô tả**: Tích hợp cổng thanh toán ZaloPay cho tất cả loại dịch vụ. Xử lý callback xác nhận thanh toán.
-- **Bảng CSDL liên quan**: `tour_payments`, `hotel_payments`, `attraction_payments`, `restaurant_payments`
-
-### 15.2 Thanh toán tại quầy
-- **Mô tả**: Cho phép đặt trước và thanh toán trực tiếp tại nhà cung cấp.
-- **Bảng CSDL liên quan**: `tour_payments`, `hotel_payments`, `attraction_payments`, `restaurant_payments`
-
----
-
-## 16. Quản lý khu vực
-
-### 16.1 Xem danh sách khu vực
-- **Mô tả**: Hiển thị các khu vực/tỉnh thành phố có dịch vụ du lịch.
-- **Bảng CSDL liên quan**: `areas`
-
----
-
-# PHẦN 3: CẤU TRÚC BẢNG CƠ SỞ DỮ LIỆU
-
-| STT | Tên bảng | Mô tả |
-|-----|----------|-------|
-| 1 | `users` | Thông tin người dùng (khách hàng) |
-| 2 | `providers` | Thông tin nhà cung cấp dịch vụ |
-| 3 | `areas` | Danh sách khu vực/tỉnh thành |
-| 4 | `tours` | Thông tin tour du lịch |
-| 5 | `tour_bookings` | Đơn đặt tour |
-| 6 | `tour_payments` | Thanh toán tour |
-| 7 | `tour_reviews` | Đánh giá tour |
-| 8 | `tour_review_aspects` | Chi tiết điểm đánh giá tour |
-| 9 | `hotels` | Thông tin khách sạn |
-| 10 | `hotel_bookings` | Đơn đặt phòng khách sạn |
-| 11 | `hotel_payments` | Thanh toán khách sạn |
-| 12 | `hotel_reviews` | Đánh giá khách sạn |
-| 13 | `hotel_review_aspects` | Chi tiết điểm đánh giá khách sạn |
-| 14 | `attractions` | Thông tin điểm tham quan |
-| 15 | `attraction_bookings` | Đơn đặt vé tham quan |
-| 16 | `attraction_payments` | Thanh toán điểm tham quan |
-| 17 | `attraction_reviews` | Đánh giá điểm tham quan |
-| 18 | `attraction_review_aspects` | Chi tiết điểm đánh giá điểm tham quan |
-| 19 | `restaurants` | Thông tin nhà hàng |
-| 20 | `restaurant_bookings` | Đơn đặt bàn nhà hàng |
-| 21 | `restaurant_payments` | Thanh toán nhà hàng |
-| 22 | `restaurant_reviews` | Đánh giá nhà hàng |
-| 23 | `restaurant_review_aspects` | Chi tiết điểm đánh giá nhà hàng |
-| 24 | `trips` | Chuyến đi của người dùng |
-| 25 | `trip_itineraries` | Lịch trình theo ngày của chuyến đi |
-| 26 | `trip_itinerary_items` | Các hoạt động trong lịch trình |
-| 28 | `user_favorites` | Danh sách yêu thích của người dùng |
-| 29 | `blogs` | Bài viết blog |
-| 30 | `conversations` | Cuộc hội thoại chat |
-| 31 | `conversation_messages` | Tin nhắn trong cuộc hội thoại |
-| 32 | `notifications` | Thông báo |
-| 33 | `points` | Điểm thưởng người dùng |
-| 34 | `badges` | Danh sách huy hiệu |
-| 35 | `user_badges` | Huy hiệu đã mở khóa của người dùng |
-| 36 | `search_history` | Lịch sử tìm kiếm |
-| 37 | `review_likes` | Lượt like đánh giá |
-| 38 | `review_replies` | Phản hồi đánh giá |
-| 39 | `review_reports` | Báo cáo đánh giá vi phạm |
-| 40 | `provider_reviews` | Đánh giá nhà cung cấp |
-| 41 | `ai_item_tower` | Dữ liệu AI - Features dịch vụ cho hệ thống gợi ý |
-| 42 | `user_item_interactions` | Dữ liệu AI - Hành vi tương tác của người dùng |
-
----
-
-## CÔNG NGHỆ SỬ DỤNG
-
-### Mobile App (Flutter)
-- Flutter SDK
-- GetX (State Management)
-- Firebase (Auth, Messaging, Analytics)
-- Google Maps Flutter
-- ZaloPay SDK
-- Cloudinary (Image Upload)
-
-### Supplier Web (React)
-- React + TypeScript
-- Vite
-- TailwindCSS
-- Axios
-- React Router
-
-### Backend (Spring Boot)
-- Java Spring Boot
-- Spring Security + JWT
-- Spring Data JPA
-- MySQL Database
-- Cloudinary Integration
-- ZaloPay Integration
-- Firebase Cloud Messaging
-
-### AI/ML
-- Python
-- TensorFlow/Keras
-- Two-Tower Recommendation Model
-- Chatbot AI
-
----
-
-
-*Cập nhật lần cuối: 23/12/2025*
+*File được tạo cho mục đích thuyết trình đồ án tốt nghiệp*
+*Sinh viên: Nguyễn Thành Công - 21KIT - VKU*
+*Tháng 1/2026*
