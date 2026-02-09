@@ -1,7 +1,7 @@
 # 🌟 TRIPFINITY - Ứng dụng Du lịch Thông minh với AI
 
-> **Đồ án tốt nghiệp:** XÂY DỰNG ỨNG DỤNG DU LỊCH TRIPFINITY TÍCH HỢP AI VÀ HỆ THỐNG GỢI Ý THÔNG MINH  
-> **Sinh viên thực hiện:** Nguyễn Thành Công
+> **Đồ án :** XÂY DỰNG ỨNG DỤNG DU LỊCH TRIPFINITY TÍCH HỢP AI VÀ HỆ THỐNG GỢI Ý THÔNG MINH  
+> **Thực hiện:** Nguyễn Thành Công
 
 ---
 
@@ -917,4 +917,4 @@ Copyright © 2025 Nguyễn Thành Công - Tripfinity Project
 
 ---
 
-> **Lưu ý:** Đây là project đồ án tốt nghiệp. Các API keys và credentials trong code là demo, vui lòng thay thế bằng credentials của bạn khi sử dụng.
+> **Lưu ý:** Các API keys và credentials trong code là demo, vui lòng thay thế bằng credentials của bạn khi sử dụng.
