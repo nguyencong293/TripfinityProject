@@ -140,19 +140,19 @@ const TourBookingRow: React.FC<TourBookingRowProps> = ({
         <div className="flex gap-2 pt-2 border-t theme-border">
           <button
             onClick={onView}
-            className="flex-1 px-3 py-2 text-sm theme-bg-secondary theme-text-primary rounded-lg hover:opacity-80 transition-colors"
+            className="flex-1 px-3 py-2 text-sm font-semibold theme-text-primary hover:theme-text-brand bg-white hover:bg-blue-50 border-2 theme-border hover:border-blue-300 rounded-lg transition-all shadow-sm hover:shadow"
           >
             {t("tour_view_detail")}
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 px-3 py-2 text-sm theme-bg-success theme-text-button rounded-lg hover:opacity-90 transition-colors"
+            className="flex-1 px-3 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all shadow-sm hover:shadow-md"
           >
             {t("tour_confirm")}
           </button>
           <button
             onClick={onCancel}
-            className="flex-1 px-3 py-2 text-sm theme-bg-error theme-text-button rounded-lg hover:opacity-90 transition-colors"
+            className="flex-1 px-3 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all shadow-sm hover:shadow-md"
           >
             {t("tour_cancel")}
           </button>

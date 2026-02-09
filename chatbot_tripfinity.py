@@ -6,13 +6,14 @@ import pandas as pd
 import nest_asyncio
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sys
 from unidecode import unidecode
 import re
 
 nest_asyncio.apply()
-os.environ["GROQ_API_KEY"] = "gsk_xxxxxxxxxxxxx"
+os.environ["GROQ_API_KEY"] = "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"
 
 # Kiểm tra có chạy ngrok không (mặc định: không chạy nếu dùng script start_all.bat)
 USE_INTERNAL_NGROK = os.environ.get("USE_INTERNAL_NGROK", "false").lower() == "true"
@@ -326,6 +327,7 @@ def analyze_query(query, df):
         'star_rating': None,           # NEW: Số sao
         'target_audience': None,       # NEW: Đối tượng (gia đình, cặp đôi, etc.)
         'special_requirements': [],    # NEW: Yêu cầu đặc biệt
+        'limit': None,                 # NEW: Số lượng kết quả yêu cầu
     }
 
     # 1. TÌM LOCATION (ƯU TIÊN CAO NHẤT)
@@ -430,6 +432,32 @@ def analyze_query(query, df):
     for kw in general_keywords:
         if kw in query_lower or kw in query_no_accent:
             analysis['keywords'].append(kw)
+
+    # 10. PHÁT HIỆN SỐ LƯỢNG YÊU CẦU (VD: "2 dịch vụ", "3 khách sạn", "top 5")
+    import re
+    # Pattern: số + từ khóa dịch vụ
+    limit_patterns = [
+        r'(\d+)\s*(?:dịch vụ|dich vu|service)',
+        r'(\d+)\s*(?:khách sạn|khach san|hotel)',
+        r'(\d+)\s*(?:nhà hàng|nha hang|restaurant)',
+        r'(\d+)\s*(?:tour)',
+        r'(\d+)\s*(?:địa điểm|dia diem|điểm|diem|attraction)',
+        r'(\d+)\s*(?:cái|cai|item)',
+        r'top\s*(\d+)',
+        r'(\d+)\s*(?:gợi ý|goi y|đề xuất|de xuat)',
+        r'chỉ\s*(\d+)',
+        r'chi\s*(\d+)',
+        r'(\d+)\s*thôi',
+        r'(\d+)\s*thoi',
+    ]
+    for pattern in limit_patterns:
+        match = re.search(pattern, query_lower) or re.search(pattern, query_no_accent)
+        if match:
+            limit = int(match.group(1))
+            if 1 <= limit <= 20:  # Giới hạn hợp lý
+                analysis['limit'] = limit
+                print(f"✅ Limit detected: {limit} items")
+                break
 
     return analysis
 
@@ -649,6 +677,16 @@ def smart_search(query, df):
 
 # --- BOT ---
 app = FastAPI()
+
+# Thêm CORS middleware để cho phép Flutter Web kết nối
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Cho phép tất cả origins (development)
+    allow_credentials=True,
+    allow_methods=["*"],  # Cho phép tất cả HTTP methods
+    allow_headers=["*"],  # Cho phép tất cả headers
+)
+
 llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.3)
 
 template = """Bạn là TripBOT - trợ lý ảo thông minh của nền tảng Tripfinity, chuyên gia tư vấn du lịch toàn diện.
@@ -735,6 +773,125 @@ prompt = ChatPromptTemplate.from_template(template)
 memory = ConversationBufferMemory(memory_key="history", input_key="input")
 conversation = LLMChain(llm=llm, prompt=prompt, memory=memory, verbose=True)
 
+# ==========================================
+# CONVERSATION CONTEXT TRACKER (GIỮ NGỮ CẢNH)
+# ==========================================
+# Lưu context của cuộc hội thoại để câu hỏi tiếp theo có thể dùng lại
+conversation_context = {
+    'location': None,           # Địa điểm đang hỏi (VD: "Đà Nẵng")
+    'item_types': [],           # Loại dịch vụ đang hỏi (VD: ["tour", "hotel"])
+    'last_results_count': 0,    # Số kết quả trả về lần trước
+    'last_query': None,         # Câu hỏi trước đó
+}
+
+def reset_conversation_context():
+    """Reset context khi người dùng đổi chủ đề"""
+    global conversation_context
+    conversation_context = {
+        'location': None,
+        'item_types': [],
+        'last_results_count': 0,
+        'last_query': None,
+    }
+    print("🔄 Conversation context reset")
+
+def update_conversation_context(analysis, results_count):
+    """Cập nhật context sau mỗi lần search thành công"""
+    global conversation_context
+    if analysis.get('location'):
+        conversation_context['location'] = analysis['location']
+    if analysis.get('item_types'):
+        conversation_context['item_types'] = analysis['item_types']
+    conversation_context['last_results_count'] = results_count
+    print(f"📝 Context updated: location={conversation_context['location']}, types={conversation_context['item_types']}")
+
+def is_follow_up_query(query):
+    """
+    Kiểm tra xem đây có phải là câu hỏi tiếp nối không.
+    VD: "còn gì nữa không?", "có tour nào khác?", "giới thiệu thêm đi", "cho tôi 2 cái tốt nhất"
+    """
+    query_lower = query.lower()
+    query_no_accent = unidecode(query_lower)
+    
+    follow_up_patterns = [
+        # Hỏi thêm
+        'còn gì', 'con gi', 'còn có', 'con co', 'còn không', 'con khong',
+        'còn nữa', 'con nua', 'còn dịch vụ', 'con dich vu',
+        'có gì khác', 'co gi khac', 'có cái khác', 'co cai khac',
+        'có thêm', 'co them', 'thêm gì', 'them gi',
+        'nữa không', 'nua khong', 'more', 'else',
+        'khác không', 'khac khong', 'other',
+        # Giới thiệu thêm
+        'giới thiệu thêm', 'gioi thieu them', 'show more',
+        'xem thêm', 'xem them', 'see more',
+        'liệt kê thêm', 'liet ke them',
+        # Câu ngắn yêu cầu số lượng (NEW!)
+        'tốt nhất', 'tot nhat', 'best',
+        'hay nhất', 'hay nhat',
+        'đẹp nhất', 'dep nhat',
+        'rẻ nhất', 're nhat', 'cheapest',
+        'nổi bật', 'noi bat',
+        'phổ biến', 'pho bien', 'popular',
+        'cần', 'can', 'cho tôi', 'cho toi', 'give me',
+        'đề xuất', 'de xuat', 'gợi ý', 'goi y',
+        # Câu ngắn
+        'còn', 'con', 'nữa', 'nua', 'thêm', 'them', 'khác', 'khac',
+        # Câu hỏi về cùng địa điểm
+        'ở đó', 'o do', 'ở đấy', 'o day', 'tại đó', 'tai do', 'chỗ đó', 'cho do',
+        'bên đó', 'ben do', 'nơi đó', 'noi do',
+    ]
+    
+    for pattern in follow_up_patterns:
+        if pattern in query_lower or pattern in query_no_accent:
+            print(f"🔗 Follow-up detected by pattern: '{pattern}'")
+            return True
+    
+    # Câu hỏi ngắn (dưới 8 từ) không có địa điểm mới → có thể là follow-up
+    if len(query.split()) <= 8:
+        # Kiểm tra xem có nhắc đến địa điểm mới không
+        has_new_location = False
+        if df_data is not None:
+            all_locations = df_data['location'].unique()
+            for loc in all_locations:
+                loc_lower = str(loc).lower()
+                loc_no_accent = unidecode(loc_lower)
+                if loc_lower in query_lower or loc_no_accent in query_no_accent:
+                    has_new_location = True
+                    break
+        
+        if not has_new_location:
+            print(f"🔗 Follow-up detected: short query ({len(query.split())} words) without new location")
+            return True
+    
+    return False
+
+def is_topic_change(query, current_context):
+    """
+    Kiểm tra xem người dùng có đổi chủ đề không.
+    VD: Đang hỏi về Đà Nẵng, chuyển sang hỏi về Hà Nội
+    """
+    query_lower = query.lower()
+    query_no_accent = unidecode(query_lower)
+    
+    # Nếu có địa điểm mới khác với context hiện tại → đổi chủ đề
+    if df_data is not None and current_context.get('location'):
+        current_loc = current_context['location'].lower()
+        current_loc_no_accent = unidecode(current_loc)
+        
+        all_locations = df_data['location'].unique()
+        for loc in all_locations:
+            loc_lower = loc.lower()
+            loc_no_accent = unidecode(loc_lower)
+            
+            # Tìm thấy địa điểm mới trong câu hỏi
+            if (loc_lower in query_lower or loc_no_accent in query_no_accent):
+                # Và khác với địa điểm đang hỏi
+                if loc_lower != current_loc and loc_no_accent != current_loc_no_accent:
+                    print(f"🔀 Topic change detected: {current_context['location']} → {loc}")
+                    return True
+    
+    return False
+
 class Message(BaseModel):
     message: str
 
@@ -767,12 +924,43 @@ def classify_query(query):
     if len(query_lower.split()) <= 10:
         for pattern in greeting_patterns:
             if pattern in query_lower or pattern in query_no_accent:
-                # Make sure it's not asking for services
+                # Make sure it's not asking for services or follow-up questions
                 service_indicators = ['tour', 'khách sạn', 'khach san', 'hotel', 'nhà hàng', 'nha hang', 
                                      'địa điểm', 'dia diem', 'dịch vụ', 'dich vu', 'tìm', 'tim', 
                                      'gợi ý', 'goi y', 'đặt', 'dat', 'book']
-                if not any(si in query_lower or si in query_no_accent for si in service_indicators):
+                follow_up_indicators = ['còn', 'con', 'nữa', 'nua', 'thêm', 'them', 'khác', 'khac', 
+                                       'other', 'more', 'else', 'ở đó', 'o do', 'ở đấy', 'o day']
+                if not any(si in query_lower or si in query_no_accent for si in service_indicators + follow_up_indicators):
                     return 'greeting'
+    
+    # 1.5. FOLLOW-UP patterns (câu hỏi tiếp nối về dịch vụ) - ƯU TIÊN TRƯỚC OFF-TOPIC
+    if conversation_context.get('location'):
+        follow_up_patterns = [
+            'còn gì', 'con gi', 'còn có', 'con co', 'còn không', 'con khong',
+            'còn nữa', 'con nua', 'còn dịch vụ', 'con dich vu',
+            'có gì khác', 'co gi khac', 'có cái khác', 'co cai khac',
+            'có thêm', 'co them', 'thêm gì', 'them gi',
+            'nữa không', 'nua khong', 'more', 'else',
+            'khác không', 'khac khong', 'other',
+            'giới thiệu thêm', 'gioi thieu them',
+            'xem thêm', 'xem them',
+            'ở đó', 'o do', 'ở đấy', 'o day', 'tại đó', 'tai do',
+            # NEW: Patterns yêu cầu số lượng/chất lượng (thường là follow-up)
+            'tốt nhất', 'tot nhat', 'best',
+            'hay nhất', 'hay nhat',
+            'rẻ nhất', 're nhat',
+            'đẹp nhất', 'dep nhat',
+            'nổi bật', 'noi bat',
+            'cần', 'can',
+            'cho tôi', 'cho toi',
+            'đề xuất', 'de xuat',
+            'gợi ý', 'goi y',
+            'dịch vụ', 'dich vu',  # Nếu đã có context, "dịch vụ" là follow-up
+        ]
+        for pattern in follow_up_patterns:
+            if pattern in query_lower or pattern in query_no_accent:
+                print(f"🔗 classify_query: Follow-up detected with context (pattern: '{pattern}')")
+                return 'service'  # Treat as service query with context
     
     # 2. OFF-TOPIC patterns (từ chối)
     off_topic_patterns = [
@@ -908,11 +1096,39 @@ async def chat(message: Message):
         
         else:  # query_type == 'service'
             # Hỏi về dịch vụ - SEARCH và trả về items
+            global conversation_context
+            
+            # Kiểm tra xem có đổi chủ đề không
+            if is_topic_change(user_message, conversation_context):
+                reset_conversation_context()
+            
+            # Phân tích câu hỏi
             analysis = analyze_query(user_message, df_data)
+            
+            # === CONTEXT TRACKING: Nếu là câu hỏi tiếp nối, dùng lại context cũ ===
+            if is_follow_up_query(user_message) and conversation_context.get('location'):
+                # Câu hỏi tiếp nối + có context cũ → dùng lại location/item_types
+                if not analysis.get('location'):
+                    analysis['location'] = conversation_context['location']
+                    print(f"🔗 Using previous location: {analysis['location']}")
+                if not analysis.get('item_types') and conversation_context.get('item_types'):
+                    analysis['item_types'] = conversation_context['item_types']
+                    print(f"🔗 Using previous item_types: {analysis['item_types']}")
+            
             results = search_in_data(analysis, df_data)
             
             # Trích xuất items (chỉ những item có ID hợp lệ)
             items = extract_items_for_flutter(results)
+            
+            # === GIỚI HẠN SỐ LƯỢNG ITEMS NẾU NGƯỜI DÙNG YÊU CẦU ===
+            requested_limit = analysis.get('limit')
+            if requested_limit and len(items) > requested_limit:
+                items = items[:requested_limit]
+                print(f"📊 Limited to {requested_limit} items as requested")
+            
+            # === CẬP NHẬT CONTEXT SAU KHI SEARCH ===
+            if len(items) > 0:
+                update_conversation_context(analysis, len(items))
             
             if len(items) > 0:
                 # Có items - tạo context CHI TIẾT với thông tin items thực tế
@@ -926,7 +1142,7 @@ async def chat(message: Message):
                     'attraction': 'Điểm tham quan'
                 }
                 
-                # Tạo mô tả cho TẤT CẢ items (không giới hạn 5)
+                # Tạo mô tả cho items (đã giới hạn nếu có yêu cầu)
                 items_summary = []
                 for idx, item in enumerate(items, 1):
                     price_str = f"{int(item['price']):,}".replace(',', '.') + " VND"
@@ -935,7 +1151,12 @@ async def chat(message: Message):
                 
                 items_text = "\n".join(items_summary)
                 
-                context = f"""[SERVICE_FOUND] Tìm thấy {len(items)} dịch vụ tại {location_text}.
+                # Thêm note nếu người dùng yêu cầu số lượng cụ thể
+                limit_note = ""
+                if analysis.get('limit'):
+                    limit_note = f"\n⚠️ LƯU Ý: Người dùng yêu cầu ĐÚNG {analysis['limit']} dịch vụ. CHỈ giới thiệu {len(items)} dịch vụ trong danh sách, KHÔNG thêm."
+                
+                context = f"""[SERVICE_FOUND] Tìm thấy {len(items)} dịch vụ tại {location_text}.{limit_note}
 
 DANH SÁCH DỊCH VỤ THỰC TẾ TỪ HỆ THỐNG (PHẢI MÔ TẢ ĐẦY ĐỦ {len(items)} DỊCH VỤ):
 {items_text}
@@ -973,6 +1194,27 @@ QUY TẮC TRẢ LỜI BẮT BUỘC:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/reset")
+async def reset_chat():
+    """Reset conversation context và memory khi bắt đầu chat mới"""
+    try:
+        reset_conversation_context()
+        memory.clear()
+        return {"status": "ok", "message": "Conversation reset successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/context")
+async def get_context():
+    """Debug endpoint: Xem conversation context hiện tại"""
+    return {
+        "context": conversation_context,
+        "memory_buffer": str(memory.buffer) if hasattr(memory, 'buffer') else "N/A"
+    }
+
 
 # Chạy ngrok nếu được bật
 if USE_INTERNAL_NGROK:
